@@ -78,7 +78,7 @@ input:disabled { opacity: 0.45; }
 .apagado { color: var(--apagado); }
 
 /* ---------- indicadores ---------- */
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; }
 .kpi { background: var(--superficie); border-radius: 14px; padding: 16px 20px; box-shadow: var(--sombra); border: 1px solid var(--borde); display: flex; flex-direction: column; gap: 6px; }
 .kpi-cab { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 500; }
 .kpi-v { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
@@ -164,6 +164,19 @@ details summary { cursor: pointer; color: var(--enlace); font-size: 14px; }
 .tabla-editar input[type="number"] { width: 84px; }
 .campo-linea { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--tinta-2); max-width: 420px; }
 
+/* ---------- modelo de medida ---------- */
+.modelo { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 4px 0; }
+.modelo-col { position: relative; background: var(--superficie-2); border: 1px solid var(--borde); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; }
+.modelo-col > b { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--enlace); }
+.modelo-col ul { margin: 0; padding-left: 16px; display: grid; gap: 6px; font-size: 14px; color: var(--tinta-2); }
+.modelo-col ul b { color: var(--tinta); font-weight: 500; }
+.modelo-col:not(:last-child)::after { content: ""; position: absolute; right: -9px; top: 50%; width: 6px; height: 6px; border-top: 2px solid var(--borde-fuerte); border-right: 2px solid var(--borde-fuerte); transform: translateY(-50%) rotate(45deg); }
+.modelo-centro { background: var(--navy); border-color: var(--navy); }
+.modelo-centro > b { color: var(--turquesa); }
+.modelo-centro ul { color: #c3c9da; }
+.fila-coste th, .fila-coste td { background: var(--banda); }
+.tabla-grupos .fila-coste th { padding-left: 8px; }
+
 /* ---------- entrada ---------- */
 .inicio { min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; background: radial-gradient(ellipse at top, #1b2a5c 0%, var(--navy) 60%); color: #f3f4f7; }
 .inicio-in { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 20px; }
@@ -205,12 +218,15 @@ details summary { cursor: pointer; color: var(--enlace); font-size: 14px; }
 @media (max-width: 1000px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dos, .rec-mas, .pasos { grid-template-columns: 1fr; }
+  .modelo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modelo-col::after { display: none; }
   .leido-cab { grid-template-columns: 1fr auto; }
   .leido-cab > b { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
   .cab-in, .pagina { padding-left: 16px; padding-right: 16px; }
   .kpis { grid-template-columns: 1fr; }
+  .modelo { grid-template-columns: 1fr; }
   .titular h1 { font-size: 26px; }
   .claim { font-size: 34px; }
   .defs, .leyenda { grid-template-columns: 1fr; }

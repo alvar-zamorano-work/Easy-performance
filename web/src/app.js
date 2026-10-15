@@ -40,9 +40,17 @@
     entregas: { nombre: 'Entregas', formato: 'num', unidad: 'por semana', que: 'Tareas terminadas cada semana. Las descartadas no cuentan.' },
     retrabajo: { nombre: 'Retrabajo', formato: 'pct', unidad: 'de lo terminado', que: 'Parte de lo terminado que volvió a un estado por el que ya había pasado.' },
     arrastradas: { nombre: 'Pasa de sprint', formato: 'pct', unidad: 'de lo terminado', que: 'Parte de lo terminado que pasó por más de un sprint.' },
-    agent_readiness: { nombre: 'Listo para agentes', formato: 'pct', unidad: 'de los tickets', que: 'Tickets que un agente de IA podría hacer sin preguntar: descripción, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas.' }
+    agent_readiness: { nombre: 'Listo para agentes', formato: 'pct', unidad: 'de los tickets', que: 'Tickets que un agente de IA podría hacer sin preguntar: descripción, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas.' },
+    coste: { nombre: 'Coste por entrega', formato: 'eur', unidad: 'por tarea', que: 'Coste del equipo al mes (FTE por lo que cuesta un FTE) entre las tareas terminadas al mes. Mejor cuanto más bajo. Solo si se indican FTE y coste.' }
   };
   var COLUMNAS = ['ciclo', 'entregas', 'retrabajo', 'arrastradas', 'agent_readiness'];
+  // El coste por entrega solo aparece si se ha indicado el coste de algún equipo; no cuenta para el titular
+  // porque repite lo que ya dicen las entregas, visto desde el dinero.
+  function hayCoste() { var c = App.cfg.coste; return !!(c && Object.keys(c).some(function (k) { return c[k] > 0; })); }
+  function columnas() { return hayCoste() ? COLUMNAS.concat(['coste']) : COLUMNAS; }
+  function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Indica el FTE y el coste de cada equipo en Cómo funciona.' } : eq.medidas[id]; }
+  // Siempre con punto de miles (en castellano, toLocaleString no lo pone en las cifras de cuatro dígitos)
+  function euros(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €'; }
   var KPI_AREA = ['ciclo', 'entregas', 'retrabajo', 'agent_readiness'];
   var KPI_EQUIPO = ['ciclo', 'entregas', 'retrabajo', 'arrastradas'];
   var ESTADO = { bien: 'Bien', atencion: 'Atención', critico: 'Crítico', sin: 'Sin datos' };
@@ -53,6 +61,7 @@
     var f = MED[id] ? MED[id].formato : 'num';
     if (f === 'pct') return Math.round(v * 100) + '%';
     if (f === 'dias') return n1(v) + (Math.abs(v - 1) < 0.05 ? ' día' : ' días');
+    if (f === 'eur') return euros(v);
     return n1(v);
   }
   // "6,5 a 7,1 días": la unidad una sola vez
@@ -61,6 +70,7 @@
     if (v == null || isNaN(v)) return { g: 's/d', u: '' };
     var f = MED[id].formato;
     if (f === 'pct') return { g: Math.round(v * 100) + '%', u: MED[id].unidad };
+    if (f === 'eur') return { g: euros(v), u: MED[id].unidad };
     return { g: n1(v), u: f === 'dias' && Math.abs(v - 1) < 0.05 ? 'día' : MED[id].unidad };
   }
   function estadoDe(m) { return !m || !m.disponible ? 'sin' : (m.estado === 'atencion' || m.estado === 'critico' ? m.estado : (m.estado === 'bien' ? 'bien' : 'neutro')); }
@@ -87,7 +97,7 @@
     if (!v1) return {};
     // Configuración de la versión anterior: se aprovecha lo que sigue teniendo sentido
     var out = {};
-    ['nombre', 'campoEquipo', 'equipos', 'equiposInfo', 'fte', 'fteOrigen', 'mapeoEstados', 'etapas', 'iniciativas'].forEach(function (k) { if (v1[k] != null) out[k] = v1[k]; });
+    ['nombre', 'campoEquipo', 'equipos', 'equiposInfo', 'fte', 'fteOrigen', 'coste', 'mapeoEstados', 'etapas', 'iniciativas'].forEach(function (k) { if (v1[k] != null) out[k] = v1[k]; });
     return out;
   }
   function guardarCfg() {
@@ -116,7 +126,11 @@
     if (!App.cfg.mapeoEstados && App.cfg.etapas) Object.assign(m, N.etapasV0AMapeo(App.cfg.etapas, App.det.mapeoEstados));
     return Object.assign(m, App.cfg.mapeoEstados || {});
   }
-  function cfgCalculo() { return { campoEquipo: campo(), equipos: equipos(), mapeoEstados: mapeo(), fte: App.cfg.fte || {}, limites: {} }; }
+  function cfgCalculo() {
+    var c = { campoEquipo: campo(), equipos: equipos(), mapeoEstados: mapeo(), fte: App.cfg.fte || {}, limites: {} };
+    if (hayCoste()) c.coste = App.cfg.coste;
+    return c;
+  }
   function mesTexto(d) { return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1); }
   function clienteDe(modelo) {
     var c = App.cfg, info = c.equiposInfo || {}, fte = c.fte || {}, orig = c.fteOrigen || {}, periodo = mesTexto(modelo ? modelo.semanaFin : new Date());
@@ -251,7 +265,7 @@
     if (!App.demo) App.real = { lectura: App.lectura, det: App.det, cfg: App.cfg, iniciativas: App.iniciativas, contexto: App.contexto, r: App.r, origen: App.origen, ver: App.ver, vista: App.vista };
     enSegundoPlano(function () {
       App.demo = true;
-      App.cfg = { nombre: dc.nombre || 'Banco ficticio', equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {} };
+      App.cfg = { nombre: dc.nombre || 'Banco ficticio', equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {} };
       App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null;
       procesar([{ nombre: 'datos-de-ejemplo.csv', texto: t }], 'ejemplo');
       render(); window.scrollTo(0, 0);
@@ -289,7 +303,7 @@
       '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="actualizar">Actualizar</button></div></header>';
   }
   function bandaDemo() {
-    return '<div class="banda-demo"><span><b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia.</span>' +
+    return '<div class="banda-demo"><span><b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.</span>' +
       '<span class="banda-acc"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
   }
 
@@ -351,14 +365,14 @@
       (nRec ? ' <button class="btn-txt" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>' : '') + '</p></div>' + selector() + '</section>';
     var nAvisos = avisosCalidad();
     if (nAvisos) html += '<div class="aviso-datos"><span class="chip chip-atencion">Datos</span><span>Hay ' + (nAvisos === 1 ? 'un aviso' : nAvisos + ' avisos') + ' sobre la calidad de los datos. Conviene revisarlos antes de sacar conclusiones.</span><button class="btn-txt" data-accion="editar" data-e="calidad">Verlos</button></div>';
-    html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.map(function (id) { return tarjetaKpi(id, a.medidas[id], false); }).join('') + '</section>';
+    html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), false); }).join('') + '</section>';
     if (eqs.length > 1) {
       html += '<section class="bloque"><h2>Equipos</h2><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Equipo</th>' +
-        COLUMNAS.map(function (id) { return '<th scope="col">' + MED[id].nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        columnas().map(function (id) { return '<th scope="col">' + MED[id].nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
         eqs.map(function (eq) {
           var info = (App.cfg.equiposInfo || {})[eq.nombre] || {}, tipo = info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') : (info.tipo === 'interno' ? 'Interno' : '');
           return '<tr><th scope="row"><button class="enlace" data-accion="ver" data-e="' + esc(eq.nombre) + '">' + esc(eq.nombre) + '</button>' + (tipo ? '<span class="sub">' + esc(tipo) + '</span>' : '') + '</th>' +
-            COLUMNAS.map(function (id) { var m = eq.medidas[id], v = m && m.disponible ? valor(id, m.valor) : null; return '<td>' + (v ? '<b>' + esc(v) + '</b> ' + chip(estadoDe(m)) : '<span class="apagado">s/d</span>') + '</td>'; }).join('') + '</tr>';
+            columnas().map(function (id) { var m = med(eq, id), v = m && m.disponible ? valor(id, m.valor) : null; return '<td>' + (v ? '<b>' + esc(v) + '</b> ' + chip(estadoDe(m)) : '<span class="apagado">s/d</span>') + '</td>'; }).join('') + '</tr>';
         }).join('') + '</tbody></table></div><p class="nota">Sin etiqueta: dentro de lo normal para ese equipo. Pulsa un equipo para ver su detalle.</p></section>';
     }
     var bloques = [bloqueGrupos(), bloqueIniciativas()].filter(Boolean);
@@ -371,6 +385,13 @@
     var g = c.grupos, peor = {}; c.diferencias.forEach(function (d) { peor[d.medida + '|' + d.peor] = 1; });
     var filas = [['plazo_p80', 'Plazo', 'ciclo'], ['retrabajo', 'Retrabajo', 'retrabajo'], ['arrastradas', 'Pasa de sprint', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
     if (!filas.length) return '';
+    var cg = N.costeDeGrupos(c, cfgCalculo());
+    var capac = function (titulo, f) {
+      if (!g.some(function (x) { return f(cg[x.id]) != null; })) return '';
+      return '<tr class="fila-coste"><th scope="row">' + titulo + '</th>' + g.map(function (x) { var v = f(cg[x.id]); return '<td>' + (v != null ? esc(v) : '<span class="apagado">falta FTE o coste</span>') + '</td>'; }).join('') + '</tr>';
+    };
+    var filasCoste = capac('Entregas al mes por FTE', function (x) { return x.entregasPorFte != null ? n1(x.entregasPorFte) : null; }) +
+      capac('Coste por entrega', function (x) { return x.costePorEntrega != null ? euros(x.costePorEntrega) : null; });
     return '<section class="bloque"><h2>Internos y proveedores</h2><table class="tabla-grupos"><thead><tr><th scope="col">Medida</th>' + g.map(function (x) { return '<th scope="col">' + esc(x.nombre) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       filas.map(function (f) {
         var seg = c.medidas[f[0]].segmentos[0];
@@ -378,7 +399,7 @@
           var cel = seg.porGrupo[x.id], v = cel && cel.valor != null ? valor(f[2], cel.valor) : null, mal = peor[f[0] + '|' + x.id];
           return '<td' + (mal ? ' class="peor"' : '') + '>' + (v ? esc(v) + (mal ? ' · peor' : '') : '<span class="apagado">pocos datos</span>') + '</td>';
         }).join('') + '</tr>';
-      }).join('') + '</tbody></table><p class="nota">Con el mismo tipo y tamaño de tarea. Es una pregunta para la reunión, no un ranking.</p></section>';
+      }).join('') + filasCoste + '</tbody></table><p class="nota">Plazo, retrabajo y paso de sprint, con el mismo tipo y tamaño de tarea. ' + (filasCoste ? 'Entregas y coste, con todo lo terminado en 12 semanas: dependen del tamaño de las tareas. ' : 'Con el FTE y el coste de cada equipo (en <button class="btn-txt" data-accion="editar" data-e="equipos">Cómo funciona</button>) se ven también entregas por FTE y coste por entrega. ') + 'Es una pregunta para la reunión, no un ranking.</p></section>';
   }
   function textoIni(ev) {
     var x = ev.resultados[0];
@@ -403,7 +424,7 @@
     var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') + ' · ' : '') + 'comparado con sus propias 12 semanas anteriores';
     var recs = recomendaciones().filter(function (x) { return x.equipos.indexOf(eq.nombre) >= 0; });
     var html = '<section class="titular"><div><button class="btn-txt" data-accion="ver" data-e="area">Volver al área</button><h1>' + esc(titular) + '</h1><p>' + esc(sub) + '</p></div>' + selector() + '</section>';
-    html += '<section class="kpis" aria-label="Indicadores del equipo">' + KPI_EQUIPO.map(function (id) { return tarjetaKpi(id, eq.medidas[id], true); }).join('') + '</section>';
+    html += '<section class="kpis" aria-label="Indicadores del equipo">' + KPI_EQUIPO.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
     html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>El plazo, semana a semana</h2><p class="nota">Días para terminar 8 de cada 10 tareas. La franja es lo normal en este equipo.</p>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
       '<section class="bloque bloque-oscuro"><h2>' + (recs.length ? (recs.length === 1 ? 'Una recomendación' : (NUMEROS[recs.length] || recs.length) + ' recomendaciones') + ' para ' + esc(eq.nombre) : 'Sin recomendaciones para ' + esc(eq.nombre)) + '</h2>' +
       (recs.length ? '<ol>' + recs.map(function (x) { return '<li>' + esc(x.titulo) + '</li>'; }).join('') + '</ol><button class="btn btn-claro" data-accion="vista" data-v="recomendaciones">Ver qué hacer</button>' : '<p>No hay nada fuera de lo normal que pida actuar.</p>') + '</section></div>';
@@ -488,9 +509,9 @@
     var html = '<section class="titular estrecho"><div><h1>Cómo funciona</h1><p>Lee lo que ya exportáis de Jira, mide cada equipo contra su propia historia y propone qué hacer. No hay nada que configurar: todo se calcula al cargar los datos.</p></div></section>';
     html += '<ol class="pasos estrecho">' +
       '<li><span>1</span><b>Exportáis de Jira</b><p>Un CSV con todos los campos, como hoy. Se deja en la carpeta exports y se pulsa Actualizar.</p></li>' +
-      '<li><span>2</span><b>Medimos cada equipo</b><p>Cinco medidas, siempre las mismas, comparadas con lo normal en ese equipo.</p></li>' +
+      '<li><span>2</span><b>Medimos cada equipo</b><p>Cinco medidas, siempre las mismas, comparadas con lo normal en ese equipo. Con la plantilla y su coste, también el coste por entrega.</p></li>' +
       '<li><span>3</span><b>Proponemos qué hacer</b><p>Recomendaciones con su evidencia. Un consultor de Capgemini las revisa con vosotros cada mes.</p></li></ol>';
-    html += '<section class="bloque estrecho"><h2>Las cinco medidas</h2><dl class="defs">' + COLUMNAS.map(function (id) { return '<dt>' + MED[id].nombre + '</dt><dd>' + esc(MED[id].que) + '</dd>'; }).join('') + '</dl></section>';
+    html += '<section class="bloque estrecho"><h2>Las medidas</h2><dl class="defs">' + COLUMNAS.concat(['coste']).map(function (id) { return '<dt>' + MED[id].nombre + '</dt><dd>' + esc(MED[id].que) + '</dd>'; }).join('') + '</dl></section>';
     html += '<section class="bloque estrecho"><h2>Cómo se lee el estado</h2><p class="nota">Lo normal es el rango en el que está la medida 7 de cada 10 semanas en ese equipo, mirando las 12 semanas anteriores.</p><dl class="leyenda">' +
       '<dt>' + chip('bien', true) + '</dt><dd>Dentro de lo normal o mejor.</dd><dt>' + chip('atencion') + '</dt><dd>Peor que lo normal.</dd><dt>' + chip('critico') + '</dt><dd>Bastante peor que lo normal, o por encima de un límite fijo (por ejemplo, retrabajo del 30%).</dd></dl></section>';
     // Así hemos leído los datos, con lo que se puede cambiar
@@ -501,15 +522,43 @@
     html += '<section class="bloque estrecho" id="leido"><div class="bloque-cab"><h2>Así hemos leído vuestros datos</h2></div>' +
       fila('fichero', 'Ficheros', esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + inf.tareas.toLocaleString('es-ES') + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) + '. Sin épicas ni subtareas.') +
       fila('campo', 'Equipos', 'Según ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
-      fila('equipos', 'Proveedores, áreas y FTE', provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.', panelEquipos) +
+      fila('equipos', 'Proveedores, áreas, FTE y coste', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.') + ' ' + textoCapacidad(eqs), panelEquipos) +
       fila('estados', 'Estados', esc(det.estados.map(function (e) { return e.nombre + ' es ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }) ? ' <span class="chip chip-atencion">Revisar</span>' : ''), panelEstados) +
       calidad() + '</section>';
+    html += modeloDeMedida();
     html += '<section class="bloque estrecho"><h2>Documentos para el consultor</h2><p class="nota">El documento de definiciones recoge todo lo anterior para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas para la IA del consultor.</p>' +
       '<label class="campo-linea">Nombre del cliente <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
-      '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button></p>' +
+      '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button><button class="btn btn-sec" data-accion="modelo">Descargar el modelo de medida</button></p>' +
       (App.demo ? '' : '<p class="nota">Para enseñarlo: <button class="btn-txt" data-accion="presentacion">ver la presentación</button> o <button class="btn-txt" data-accion="demo">ver con datos de ejemplo</button>. La demo no toca vuestros datos.</p>') + '</section>';
-    html += '<section class="bloque bloque-oscuro estrecho"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
+    html += '<section class="bloque bloque-oscuro estrecho"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea. El coste es el del equipo, nunca el salario de nadie.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
     return html;
+  }
+  // Resumen de FTE y coste para "Así hemos leído vuestros datos"
+  function textoCapacidad(eqs) {
+    var cap = N.capacidadArea(cfgCalculo(), eqs);
+    if (cap.costeMes != null) return 'Plantilla de ' + n1(cap.fteTotal) + ' FTE con un coste de ' + euros(cap.costeMes) + ' al mes.';
+    if (cap.fteTotal != null) return 'Plantilla de ' + n1(cap.fteTotal) + ' FTE. Indica el coste de un FTE de cada equipo para ver el coste por entrega.';
+    return 'Indica el FTE y el coste de cada equipo para ver entregas por FTE y coste por entrega.';
+  }
+  // El modelo de medida: las mismas definiciones, de cualquier fuente a cualquier herramienta
+  function modeloDeMedida() {
+    var col = function (titulo, items, oscuro) {
+      return '<div class="modelo-col' + (oscuro ? ' modelo-centro' : '') + '"><b>' + titulo + '</b><ul>' + items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
+    };
+    return '<section class="bloque estrecho" id="modelo"><h2>El modelo de medida</h2>' +
+      '<p>Lo que da valor no es el número de campos conectados, sino que todos midan con las mismas definiciones y que el trabajo, la plantilla y el coste se unan por el mismo equipo. Eso es el modelo de medida (lo que en una plataforma de datos se llama capa semántica). Esta página es una forma de usarlo.</p>' +
+      '<div class="modelo" role="group" aria-label="De las fuentes a las salidas">' +
+      col('Fuentes', ['<b>Gestión del trabajo:</b> Jira hoy, Azure DevOps u otra con su adaptador', '<b>Plantilla:</b> FTE de cada equipo por mes', '<b>Finanzas y contratos:</b> coste de un FTE']) +
+      col('Modelo común', ['Tarea, equipo, capacidad, coste e iniciativa', 'Unidos por el equipo y el mes', 'Estados de cada herramienta traducidos a nueve estados comunes'], true) +
+      col('Definiciones', ['Una por medida, firmada con el cliente', 'Cada equipo frente a su propia historia', 'Comparaciones solo con medidas normalizadas']) +
+      col('Salidas', ['<b>Piloto:</b> esta página, sin servidor', '<b>Escala:</b> la plataforma de datos del cliente con conectores', '<b>IA:</b> paquete de diagnóstico solo con cifras agregadas']) +
+      '</div>' +
+      '<p class="nota">Probado con datos sintéticos: 200 equipos y 62.000 tareas al año (unos 1.000 desarrolladores) cargan en unos 13 segundos en un portátil. Con miles de desarrolladores, el mismo modelo se monta en la plataforma de datos del cliente. Lo que suele faltar para escalar es un identificador de equipo común en las tres fuentes.</p>' +
+      '</section>';
+  }
+  function descargarModelo() {
+    var m = N.modeloDeMedida({ generado: new Date() }), nombre = 'modelo-de-medida.json', texto = JSON.stringify(m, null, 2);
+    escribirEnCarpeta('configuracion', nombre, texto).then(function (ok) { if (ok) aviso('Modelo guardado en la carpeta configuracion.'); else descargar(nombre, texto); });
   }
   // Número de avisos distintos sobre la calidad de los datos (del export y de los equipos)
   function avisosCalidad() {
@@ -534,16 +583,17 @@
     }).join('') + '</select></label>';
   }
   function panelEquipos() {
-    var eqs = App.r.modelo.equipos.map(function (e) { return e.nombre; }), info = App.cfg.equiposInfo || {}, fte = App.cfg.fte || {}, orig = App.cfg.fteOrigen || {};
-    return '<div class="tabla-caja"><table class="tabla-editar"><thead><tr><th scope="col">Equipo</th><th scope="col">Tipo</th><th scope="col">Proveedor</th><th scope="col">Área</th><th scope="col">FTE</th><th scope="col">De dónde sale el FTE</th></tr></thead><tbody>' +
+    var eqs = App.r.modelo.equipos.map(function (e) { return e.nombre; }), info = App.cfg.equiposInfo || {}, fte = App.cfg.fte || {}, orig = App.cfg.fteOrigen || {}, coste = App.cfg.coste || {};
+    return '<div class="tabla-caja"><table class="tabla-editar"><thead><tr><th scope="col">Equipo</th><th scope="col">Tipo</th><th scope="col">Proveedor</th><th scope="col">Área</th><th scope="col">FTE</th><th scope="col">De dónde sale el FTE</th><th scope="col">Coste de un FTE al mes</th></tr></thead><tbody>' +
       eqs.map(function (e) {
         var i = info[e] || {}, prov = i.tipo === 'proveedor', o = orig[e] || 'declarado', a = ' data-e="' + esc(e) + '"';
         return '<tr><th scope="row">' + esc(e) + '</th><td><select data-cambio="eq" data-campo="tipo"' + a + ' aria-label="Tipo de ' + esc(e) + '"><option value="interno"' + (prov ? '' : ' selected') + '>Interno</option><option value="proveedor"' + (prov ? ' selected' : '') + '>Proveedor</option></select></td>' +
           '<td><input type="text" data-cambio="eq" data-campo="proveedor"' + a + ' value="' + esc(i.proveedor || '') + '" placeholder="Nombre"' + (prov ? '' : ' disabled') + ' aria-label="Proveedor de ' + esc(e) + '"></td>' +
           '<td><input type="text" data-cambio="eq" data-campo="area"' + a + ' value="' + esc(i.area || '') + '" placeholder="Área" aria-label="Área de ' + esc(e) + '"></td>' +
           '<td><input type="number" min="0" step="0.5" data-cambio="eq" data-campo="fte"' + a + ' value="' + (fte[e] != null ? fte[e] : '') + '" aria-label="FTE de ' + esc(e) + '"></td>' +
-          '<td><select data-cambio="eq" data-campo="fteOrigen"' + a + ' aria-label="Origen del FTE de ' + esc(e) + '">' + [['contrato', 'Contrato'], ['declarado', 'Declarado'], ['estimado', 'Estimado']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === o ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></td></tr>';
-      }).join('') + '</tbody></table></div><p class="nota">FTE: personas a jornada completa. Jira no lo trae; sin él no se calcula Throughput / FTE.</p>';
+          '<td><select data-cambio="eq" data-campo="fteOrigen"' + a + ' aria-label="Origen del FTE de ' + esc(e) + '">' + [['contrato', 'Contrato'], ['declarado', 'Declarado'], ['estimado', 'Estimado']].map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === o ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></td>' +
+          '<td><input type="number" min="0" step="100" data-cambio="eq" data-campo="coste"' + a + ' value="' + (coste[e] != null ? coste[e] : '') + '" placeholder="€" aria-label="Coste de un FTE de ' + esc(e) + ' al mes, en euros"></td></tr>';
+      }).join('') + '</tbody></table></div><p class="nota">FTE: personas a jornada completa. Coste de un FTE: coste interno cargado en los equipos propios y tarifa del contrato en los de proveedores, en euros al mes. Jira no trae ninguno de los dos; salen de la herramienta de plantilla, del contrato o de finanzas. Es un dato de equipo, nunca el salario de una persona.</p>';
   }
   var ORDEN_COMUN = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
   function panelEstados() {
@@ -576,13 +626,14 @@
 
   // ---------- presentación ----------
   var LAMINAS = []; try { LAMINAS = JSON.parse(document.getElementById('laminas').textContent || '[]'); } catch (e) { LAMINAS = []; }
-  var NOMBRES_LAMINA = ['Portada', 'La idea', 'Dónde estamos', 'La demo', 'Lo siguiente'];
+  var NOMBRES_LAMINA = ['Portada', 'El problema', 'La propuesta', 'Qué se mide', 'Cómo escala', 'La demo', 'Lo siguiente'];
+  var LAMINA_DEMO = 5;
   function presentacion() {
     var i = App.lamina = Math.max(0, Math.min(App.lamina, LAMINAS.length - 1));
     var cuerpo = (LAMINAS[i] || '').replace(/<span class="lz-ico" data-icp="([a-z]+)" style="([^"]*)"><\/span>/g, function (m, k, st) { return '<span class="lz-ico" style="' + st + '">' + icp(k) + '</span>'; });
     var nav = '<nav class="pres-nav" aria-label="Presentación"><button class="btn-txt" data-accion="lamina" data-d="-1"' + (i ? '' : ' disabled') + '>Anterior</button><ol>' +
       LAMINAS.map(function (x, k) { return '<li><button data-accion="lamina-ir" data-i="' + k + '"' + (k === i ? ' aria-current="true"' : '') + '><span>0' + (k + 1) + '</span> ' + esc(NOMBRES_LAMINA[k] || '') + '</button></li>'; }).join('') + '</ol>' +
-      (i >= 3 ? '<button class="btn btn-peq" data-accion="demo">Ver la demo</button>' : '<button class="btn-txt" data-accion="lamina" data-d="1">Siguiente</button>') + '</nav>';
+      (i >= LAMINA_DEMO ? '<button class="btn btn-peq" data-accion="demo">Ver la demo</button>' : '<button class="btn-txt" data-accion="lamina" data-d="1">Siguiente</button>') + '</nav>';
     return '<div class="presentacion"><header class="cab"><div class="cab-in">' + marca() + '<span class="hueco"></span><button class="btn btn-cab" data-accion="salir-presentacion">Ir a la herramienta</button></div></header>' +
       '<div class="lienzo-marco" id="lienzo-marco" aria-label="' + esc(NOMBRES_LAMINA[i] || '') + '"><div class="lienzo" id="lienzo">' + cuerpo + '</div></div>' + nav + '</div>';
   }
@@ -625,6 +676,7 @@
     },
     definiciones: function (el) { definiciones(el.getAttribute('data-f')); },
     paquete: paquete,
+    modelo: descargarModelo,
     'ver-demo': verDemo
   };
   document.addEventListener('click', function (e) {
@@ -648,6 +700,7 @@
       return cambiar(function () {
         if (k === 'fte') { App.cfg.fte = App.cfg.fte || {}; var v = parseFloat(String(el.value).replace(',', '.')); if (isNaN(v) || v <= 0) delete App.cfg.fte[en]; else App.cfg.fte[en] = v; return; }
         if (k === 'fteOrigen') { App.cfg.fteOrigen = App.cfg.fteOrigen || {}; App.cfg.fteOrigen[en] = el.value; return; }
+        if (k === 'coste') { App.cfg.coste = App.cfg.coste || {}; var cv = parseFloat(String(el.value).replace(',', '.')); if (isNaN(cv) || cv <= 0) delete App.cfg.coste[en]; else App.cfg.coste[en] = cv; return; }
         App.cfg.equiposInfo = App.cfg.equiposInfo || {};
         var i = App.cfg.equiposInfo[en] = App.cfg.equiposInfo[en] || {};
         i[k] = el.value.trim() || null;

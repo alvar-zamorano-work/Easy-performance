@@ -8,7 +8,8 @@ export function formatear(x: number | null | undefined, formato?: string | null)
   if (formato === 'pct') return Math.round(x * 100) + '%';
   if (formato === 'dias') return n1(x) + (Math.abs(x - 1) < 0.05 ? ' día' : ' días');
   if (formato === 'horas') return n1(x) + ' h';
-  if (formato === 'eur') return Math.round(x).toLocaleString('es-ES') + ' €';
+  // Siempre con punto de miles: en castellano, toLocaleString no lo pone en las cifras de cuatro dígitos
+  if (formato === 'eur') return String(Math.round(x)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €';
   if (formato === 'dec') return (Math.round(x * 100) / 100).toLocaleString('es-ES');
   return n1(x);
 }

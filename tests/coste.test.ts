@@ -85,3 +85,14 @@ test('modelo de medida: todas las medidas, uniones con equipo y ningún campo de
   assert.ok(!/[—–]/.test(JSON.stringify(m)), 'sin rayas');
   JSON.parse(JSON.stringify(m));
 });
+
+test('documento de definiciones: con coste lleva la tabla de capacidad y coste; sin coste, no', async () => {
+  const { definiciones } = await import('../nucleo/definiciones.ts');
+  const { aMarkdown } = await import('../nucleo/documento.ts');
+  const det = detectar(lectura);
+  const con = aMarkdown(definiciones(lectura, cliente, { config: cfg, det, modelo: r.modelo, generado: new Date(2026, 9, 15) }));
+  assert.match(con, /Capacidad y coste/);
+  assert.match(con, /\| Pagos \| 5 \| 6\.500 € \| 32\.500 € \|/);
+  const sin = aMarkdown(definiciones(lectura, cliente, { config: base, det, generado: new Date(2026, 9, 15) }));
+  assert.doesNotMatch(sin, /Capacidad y coste/);
+});

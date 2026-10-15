@@ -31,7 +31,11 @@ function demoCliente(): string {
     equiposInfo[e.nombre] = { tipo: e.tipo, proveedor: e.proveedor, area: e.area };
     if (e.fte.length) { fte[e.nombre] = e.fte[e.fte.length - 1].valor; fteOrigen[e.nombre] = e.fte[e.fte.length - 1].origen; }
   }
-  return JSON.stringify({ nombre: 'Banco ficticio', sector: cliente.sector, equiposInfo, fte, fteOrigen, iniciativas, contexto });
+  // Costes inventados para la demo: coste interno cargado de un FTE y tarifa mensual de cada proveedor
+  const COSTE_DEMO: Record<string, number> = { interno: 6500, 'Proveedor Norte': 8200, 'Proveedor Sur': 7400 };
+  const coste: Record<string, number> = {};
+  for (const e of cliente.equipos.lista) { const c = COSTE_DEMO[e.tipo === 'proveedor' ? e.proveedor : 'interno']; if (c) coste[e.nombre] = c; }
+  return JSON.stringify({ nombre: 'Banco ficticio', sector: cliente.sector, equiposInfo, fte, fteOrigen, coste, iniciativas, contexto });
 }
 
 export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance')): Promise<string> {

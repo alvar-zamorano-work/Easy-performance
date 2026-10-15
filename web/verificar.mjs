@@ -80,8 +80,8 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
     if (m.alto > h + 1 || m.ancho > 1) fallos.push(`lámina ${i + 1}: alto ${m.alto}`);
     if (w === 1280) await p.screenshot({ path: join(SALIDA, `lamina-${i + 1}.png`) });
   }
-  ok(`presentación de ${n} láminas sin scroll en ${w}x${h}`, n === 5 && !fallos.length, fallos.join('; '));
-  await A(p, () => { window.EasyPerformance.lamina = 3; window.EasyPerformance.render(); });
+  ok(`presentación de ${n} láminas sin scroll en ${w}x${h}`, n === 7 && !fallos.length, fallos.join('; '));
+  await A(p, () => { window.EasyPerformance.lamina = 5; window.EasyPerformance.render(); });
   await clic(p, '#lienzo [data-accion="ver-demo"]');
   await listo(p);
   const enDemo = await A(p, () => ({ demo: window.EasyPerformance.demo, vista: window.EasyPerformance.vista }));
@@ -102,9 +102,11 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   const ini = await p.$$eval('.fila-ini', (t) => t.map((x) => x.textContent));
   ok('demo: el titular nombra a los dos equipos sembrados con problemas', /App móvil/.test(titular) && /Portal clientes/.test(titular), titular);
   ok('demo: tabla de equipos, internos y proveedores e iniciativas', filas === 4 && grupos.length >= 3 && ini.length === 2 && ini.some((x) => /Funciona/.test(x)), `${filas} equipos · ${grupos.length} medidas peor en proveedores · ${ini.length} iniciativas`);
+  const coste = await A(p, () => ({ fila: [...document.querySelectorAll('.fila-coste th')].map((x) => x.textContent), celdas: [...document.querySelectorAll('.fila-coste td')].map((x) => x.textContent) }));
+  ok('demo: entregas por FTE y coste por entrega de internos y proveedores', coste.fila.includes('Coste por entrega') && coste.celdas.every((x) => /\d/.test(x)) && coste.celdas.some((x) => /^\d\.\d{3} €$/.test(x)), coste.fila.join(', ') + ' · ' + coste.celdas.join(' | '));
   await p.selectOption('select[data-cambio="ver"]', 'App móvil'); await p.waitForTimeout(200);
   const eq = await A(p, () => ({ t: document.querySelector('.titular h1').textContent, kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length }));
-  ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 4 && eq.graf && eq.recs >= 2 && /retrabajo/.test(eq.t), `${eq.t} · ${eq.recs} recomendaciones`);
+  ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 5 && eq.graf && eq.recs >= 2 && /retrabajo/.test(eq.t), `${eq.t} · ${eq.recs} recomendaciones`);
   await clic(p, '[data-accion="vista"][data-v="recomendaciones"]');
   const recs = await p.$$eval('.rec', (t) => t.map((x) => ({ t: x.querySelector('h2').textContent, crit: !!x.querySelector('.chip-critico'), paso: /Primer paso/.test(x.textContent), de: !!x.querySelector('.rec-de li') })));
   const funciona = await p.$$eval('.funciona', (t) => t.length);
