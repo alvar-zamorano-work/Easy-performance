@@ -16,7 +16,7 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 | datos-prueba/ | Exports de prueba que no son de cliente, cada uno con su .esperado.json. |
 | tests/ | Tests con node:test. tests/referencia-v0 guarda el motor de la v0 sin cambios; tests/banco genera variantes de exports. |
 | herramientas/ | Generadores de datos sintéticos (el de la v0 en Python y el de B3 en TypeScript) y resumen del núcleo por consola. |
-| web/, skill/ | Carcasa web (B5) y skill de IA (B6). |
+| web/, skill/ | La página (un solo HTML) y la skill de IA (B6). |
 
 ## Cómo fluyen los datos
 
@@ -32,27 +32,20 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 - Agent readiness: índice de 0 a 5 por ticket con catalogo/rubrica_agent_ready.json. Fuera solo salen agregados.
 - Paquete de diagnóstico: solo agregados. comprobarPaquete rechaza títulos, descripciones, claves de ticket, campos de personas, textos largos y los nombres que se le indiquen; se pueden usar alias para los equipos.
 
-## Carcasa web (B5)
+## La página (web/)
 
-Un solo HTML que se abre con doble clic, sin servidor ni instalación. Reutiliza la interfaz de la v0 (presentación, onboarding de cinco pasos, vistas por perfil, modo oscuro, impresión) y se apoya en el núcleo de este repositorio, empaquetado dentro del HTML.
+Un solo HTML que se abre con doble clic, sin servidor ni instalación. No hay puesta en marcha: se carga el export de Jira y se ve el tablero.
 
-- Pestañas nuevas: Comparar (internos frente a proveedores, entre proveedores y entre equipos de un área), Iniciativas (antes y después, efecto y confianza, alta de iniciativas) y Agentes (agent readiness por equipo y por criterio). Las dos primeras salen en el perfil de dirección; Agentes, cuando hay descripciones.
-- Ajustes: FTE con su origen, tipo de equipo (interno o proveedor), proveedor y área, y exportación del paquete de diagnóstico con alias opcionales.
+- Tablero: el área (cuatro indicadores, tabla de equipos, internos y proveedores, iniciativas) o un equipo (cuatro indicadores con su tendencia, el plazo semana a semana y sus recomendaciones). Cada cifra se compara con lo normal en ese equipo.
+- Recomendaciones: los casos del catálogo que se activan con las cifras, agrupados si se repiten en varios equipos y ordenados por gravedad. Cada una con su evidencia, el primer paso, cómo comprobarlo y el plan completo.
+- Cómo funciona: las cinco medidas, cómo se lee el estado y "Así hemos leído vuestros datos" (ficheros, campo de equipo, proveedores, áreas y FTE, estados y calidad), donde se corrige lo detectado. Desde ahí se descargan el documento de definiciones (Word y markdown) y el paquete de diagnóstico.
+- Se detecta solo: el campo que reconoce al equipo, los equipos y el estado común de cada estado de Jira. Lo que no se puede detectar (proveedores, áreas, FTE) se indica en Cómo funciona. Lo cambiado se guarda en el navegador y en configuracion/cliente.json si se usa la carpeta. Una configuración de la versión anterior se aprovecha.
+- Presentación de cinco láminas y demo con un banco ficticio (datos sintéticos de B3), que no toca los datos reales.
 - Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
-- Demo: un banco ficticio con dos equipos internos y dos de proveedores (los datos sintéticos de B3).
 
-`npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (presentación y vistas sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, Jira.csv de principio a fin, paquete, PDF, demo, carpeta con iniciativas, arranque paso a paso con el documento de definiciones y configuración de la v0) y deja capturas y los documentos generados en dist/verificacion. Ajustes es una página de formularios y puede tener scroll.
+Código: web/src/app.js (interfaz), app.css, laminas.json, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (entrada, presentación, demo en 1280x720 y 1920x1080, modo oscuro, móvil, Jira.csv de principio a fin con cambios en Cómo funciona, definiciones, paquete, carpeta con iniciativas y configuración anterior) y deja capturas y documentos en dist/verificacion. Las pantallas caben sin scroll a 1920x1080; en 1280x720 el tablero tiene algo de scroll vertical, y recomendaciones y Cómo funciona son páginas largas.
 
 Pendiente de probar: actualizar.ps1 en Windows.
-
-## Arranque del consultor (B4)
-
-La puesta en marcha de la web es el arranque del consultor, en ocho pasos: datos, equipos, estados, calidad, objetivos, medidas, vistas y listo.
-
-- Equipos: campo que reconoce al equipo, equipos incluidos y, por equipo, tipo (interno o proveedor), proveedor, área y FTE con su origen.
-- Estados: cada estado de Jira con su estado común (los nueve de catalogo/estados.json), propuesto y editable. Se marcan para revisar los que no se reconocen por su nombre. El mapeo se guarda en la configuración y manda en el cálculo. Una configuración de la v0 (con etapas) se convierte sola.
-- Calidad: avisos del export y por equipo (lo que comparten todos va una vez) y campos que faltan.
-- Listo: documento de definiciones en Word y en markdown (nucleo/definiciones.ts y nucleo/documento.ts, sin librerías). Recoge datos, equipos, estados, medidas, reglas de comparación e iniciativas, rúbrica de agentes, calidad, qué no mide y la firma. También se descarga desde Ajustes.
 
 ## Requisitos
 
@@ -92,5 +85,6 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 - B2 (modelo neutro, esquemas, adaptador Jira, banco de exports): hecho.
 - B3 (comparaciones entre grupos, iniciativas, agent readiness, paquete de diagnóstico): hecho.
 - B5 (carcasa web): hecho. Se adelantó a B4 para tener pronto el HTML con la experiencia de la v0.
-- B4 (arranque del consultor: equipos, mapeo editable, calidad y documento de definiciones): en la rama feat/b4-arranque.
+- B4 (equipos, mapeo editable, calidad y documento de definiciones): hecho. La puesta en marcha en pasos se quitó después: lo editable vive ahora en Cómo funciona.
+- Interfaz simplificada (tablero, recomendaciones y cómo funciona): en la rama feat/ui-simple.
 - Siguiente: B6, skill de IA del consultor con sus evals.

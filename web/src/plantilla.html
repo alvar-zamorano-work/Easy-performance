@@ -4,21 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Easy Performance</title>
-<meta name="description" content="Easy Performance: rendimiento de equipos desde Jira, con diagnóstico, comparaciones entre equipos y proveedores, iniciativas y planes de acción.">
+<meta name="description" content="Easy Performance: cómo va cada equipo de desarrollo desde Jira y qué hacer, con recomendaciones y comparaciones entre equipos internos y de proveedores.">
 <style>
 /*ESTILOS*/
 </style>
 </head>
 <body>
-<header class="barra" id="barra"></header>
-<main id="app" class="app"></main>
-<div id="tip" class="tip" role="tooltip" hidden></div>
-<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="app"></div>
+<div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
 <div id="ocupado" class="ocupado" hidden><div>Leyendo datos…</div></div>
 <input type="file" id="entrada-ficheros" accept=".csv,text/csv" multiple hidden>
-<input type="file" id="entrada-config" accept=".json,application/json" hidden>
 <script type="text/plain" id="demo-csv">/*DEMO*/</script>
 <script type="application/json" id="demo-cliente">/*DEMO_CLIENTE*/</script>
+<script type="application/json" id="laminas">/*LAMINAS*/</script>
 <script>window.EASY_PERFORMANCE_EXPORTS = null; window.EASY_PERFORMANCE_CONFIG = null; window.EASY_PERFORMANCE_INICIATIVAS = null; window.EASY_PERFORMANCE_CONTEXTO = null;</script>
 <!-- El script "actualizar" deja aquí los exports de la carpeta. Si no existe, no pasa nada. -->
 <script src="exports/datos.js" onerror="window.EASY_PERFORMANCE_SIN_DATOSJS = true"></script>
@@ -26,10 +24,7 @@
 /*NUCLEO*/
 </script>
 <script>
-/*GRAFICOS*/
-</script>
-<script>
-/*INTERFAZ*/
+/*APP*/
 </script>
 </body>
 </html>

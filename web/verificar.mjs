@@ -1,12 +1,12 @@
-// Verificación de la carcasa web en Chromium (criterios de B5 y B4 del plan).
+// Verificación de la página en Chromium: tablero, recomendaciones y cómo funciona, sin puesta en marcha.
 //   npm run web && CHROME=/ruta/a/chrome node web/verificar.mjs
-// B5: sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, impresión a PDF,
-// recorrido completo con el Jira.csv de prueba, demo sin pisar la configuración y carpeta con dos iniciativas.
-// B4: arranque del consultor paso a paso con el Jira.csv (equipos, mapeo de estados editado, calidad)
-// y documento de definiciones en Word y markdown; una configuración de la v0 sigue funcionando.
+// Comprueba: entrada, presentación, demo en 1280x720 y 1920x1080 (sin scroll horizontal, sin errores de consola),
+// modo oscuro, pantalla de móvil, Jira.csv de principio a fin (carga directa al tablero, mapeo de estados y proveedores
+// cambiados y guardados, documento de definiciones y paquete), demo sin pisar la configuración, carpeta con dos
+// iniciativas y una configuración de la versión anterior.
 
 import { chromium } from 'playwright-core';
-import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -19,16 +19,15 @@ const CHROME = process.env.CHROME || [
   '/Applications/Chromium.app/Contents/MacOS/Chromium',
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
 ].find((r) => existsSync(r));
-const TAMANOS = [[1280, 720], [1920, 1080]];
+rmSync(SALIDA, { recursive: true, force: true });
 mkdirSync(SALIDA, { recursive: true });
 
 const resultados = [];
 const ok = (nombre, bien, detalle = '') => { resultados.push({ nombre, bien, detalle }); console.log((bien ? 'OK   ' : 'FALLO') + ' ' + nombre + (detalle ? ' · ' + detalle : '')); };
-
 const navegador = await chromium.launch({ executablePath: CHROME });
 
 async function pagina(ancho, alto, opciones = {}) {
-  const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, colorScheme: opciones.oscuro ? 'dark' : 'light' });
+  const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, colorScheme: opciones.oscuro ? 'dark' : 'light', acceptDownloads: true });
   const p = await ctx.newPage();
   p.errores = [];
   p.on('console', (m) => { if (m.type() === 'error') p.errores.push(m.text().split('\n')[0]); });
@@ -37,229 +36,203 @@ async function pagina(ancho, alto, opciones = {}) {
   await p.waitForTimeout(400);
   return p;
 }
-const medir = (p) => p.evaluate(() => {
-  const pa = document.querySelector('.pantalla');
-  return { scroll: document.documentElement.scrollHeight - innerHeight, ancho: document.documentElement.scrollWidth - innerWidth, recorte: pa ? pa.scrollHeight - pa.clientHeight : 0 };
-});
-const accion = async (p, sel) => { await p.click(sel); await p.waitForTimeout(350); };
-const vistas = (p) => p.evaluate(() => [...document.querySelectorAll('[data-accion="vista"]')].map((b) => b.getAttribute('data-v')));
+const A = (p, fn, arg) => p.evaluate(fn, arg);
+const medir = (p) => A(p, () => ({ alto: document.documentElement.scrollHeight, ancho: document.documentElement.scrollWidth - innerWidth }));
+const clic = async (p, sel) => { await p.click(sel); await p.waitForTimeout(250); };
+const listo = (p) => p.waitForFunction(() => window.EasyPerformance.r && document.getElementById('ocupado').hidden, null, { timeout: 90000 });
+const texto = (p, sel) => p.$eval(sel, (e) => e.textContent.trim());
 
-/** Recorre todas las vistas con pantallas y comprueba que caben sin scroll. Devuelve los fallos. */
-async function recorrerVistas(p, etiqueta, capturas = false) {
-  const fallos = [];
-  for (const v of await vistas(p)) {
-    if (v === 'config') continue; // Ajustes es una página de formularios, como en la v0
-    await accion(p, `[data-accion="vista"][data-v="${v}"]`);
-    const n = await p.evaluate(() => (window.EasyPerformance.pantActual || {}).n || 1);
-    for (let i = 0; i < n; i++) {
-      if (i > 0) await accion(p, `.subnav [data-accion="pantalla"][data-i="${i}"]`);
-      const m = await medir(p);
-      if (m.scroll > 1 || m.ancho > 1 || m.recorte > 2) fallos.push(`${v} ${i + 1}: scroll ${m.scroll}, ancho ${m.ancho}, recorte ${m.recorte}`);
-      if (capturas) await p.screenshot({ path: join(SALIDA, `${etiqueta}-${v}-${i + 1}.png`) });
-    }
-  }
-  return fallos;
+/** Recorre tablero (área y cada equipo), recomendaciones y cómo funciona. Devuelve fallos de ancho y altos. */
+async function recorrer(p, etiqueta, capturas) {
+  const fallos = [], altos = [];
+  const mirar = async (nombre) => {
+    const m = await medir(p);
+    if (m.ancho > 1) fallos.push(`${nombre}: ${m.ancho}px de scroll horizontal`);
+    altos.push(`${nombre} ${m.alto}`);
+    if (capturas) await p.screenshot({ path: join(SALIDA, `${etiqueta}-${nombre}.png`), fullPage: true });
+  };
+  await clic(p, '[data-accion="vista"][data-v="tablero"]');
+  await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(200);
+  await mirar('area');
+  const eqs = await A(p, () => window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre));
+  for (const [i, e] of eqs.entries()) { await p.selectOption('select[data-cambio="ver"]', e); await p.waitForTimeout(200); await mirar('equipo-' + (i + 1)); }
+  await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(150);
+  await clic(p, '[data-accion="vista"][data-v="recomendaciones"]'); await mirar('recomendaciones');
+  await clic(p, '[data-accion="vista"][data-v="como"]'); await mirar('como');
+  await clic(p, '[data-accion="vista"][data-v="tablero"]');
+  return { fallos, altos };
 }
 
-// 1. Presentación y demo, sin scroll en los dos tamaños
-for (const [w, h] of TAMANOS) {
+// 1. Entrada y presentación
+for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   const p = await pagina(w, h);
-  const enPres = await p.evaluate(() => window.EasyPerformance.presentacion);
-  const fallosPres = [];
-  const nDiap = await p.evaluate(() => document.querySelectorAll('[data-accion="diap"]').length);
-  for (let i = 0; i < nDiap; i++) {
-    await p.evaluate((k) => { window.EasyPerformance.diap = k; window.EasyPerformance.render(); }, i);
-    await p.waitForTimeout(200);
+  const entrada = await A(p, () => ({ vista: window.EasyPerformance.vista, zona: !!document.getElementById('zona'), demo: !!document.querySelector('[data-accion="demo"]') }));
+  const m0 = await medir(p);
+  if (w === 1280) await p.screenshot({ path: join(SALIDA, 'entrada.png') });
+  ok(`entrada en ${w}x${h}: cargar datos, ver la demo y la presentación`, entrada.vista === 'inicio' && entrada.zona && entrada.demo && m0.ancho <= 1 && m0.alto <= h + 1, `alto ${m0.alto}`);
+  await clic(p, '[data-accion="presentacion"]');
+  const n = await A(p, () => document.querySelectorAll('[data-accion="lamina-ir"]').length);
+  const fallos = [];
+  for (let i = 0; i < n; i++) {
+    await A(p, (k) => { window.EasyPerformance.lamina = k; window.EasyPerformance.render(); }, i);
+    await p.waitForTimeout(120);
     const m = await medir(p);
-    if (m.scroll > 1 || m.ancho > 1) fallosPres.push(`diapositiva ${i + 1}: scroll ${m.scroll}`);
-    if (w === 1280) await p.screenshot({ path: join(SALIDA, `presentacion-${i + 1}.png`) });
+    if (m.alto > h + 1 || m.ancho > 1) fallos.push(`lámina ${i + 1}: alto ${m.alto}`);
+    if (w === 1280) await p.screenshot({ path: join(SALIDA, `lamina-${i + 1}.png`) });
   }
-  ok(`presentación de ${nDiap} pantallas sin scroll en ${w}x${h}`, enPres && nDiap === 6 && !fallosPres.length, fallosPres.join('; '));
-  await p.evaluate(() => window.EasyPerformance.ACC['ver-demo']());
-  await p.waitForTimeout(600);
-  const fallos = await recorrerVistas(p, `demo-${w}`, true);
-  ok(`demo: todas las pantallas sin scroll en ${w}x${h}`, !fallos.length, fallos.join('; '));
+  ok(`presentación de ${n} láminas sin scroll en ${w}x${h}`, n === 5 && !fallos.length, fallos.join('; '));
+  await A(p, () => { window.EasyPerformance.lamina = 3; window.EasyPerformance.render(); });
+  await clic(p, '#lienzo [data-accion="ver-demo"]');
+  await listo(p);
+  const enDemo = await A(p, () => ({ demo: window.EasyPerformance.demo, vista: window.EasyPerformance.vista }));
+  ok(`la lámina de la demo abre el tablero con datos de ejemplo en ${w}x${h}`, enDemo.demo && enDemo.vista === 'tablero');
+  const r = await recorrer(p, `demo-${w}`, true);
+  ok(`demo: tablero, equipos, recomendaciones y cómo funciona sin scroll horizontal en ${w}x${h}`, !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
   ok(`demo sin errores de consola en ${w}x${h}`, !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 
-// 2. Modo oscuro
+// 2. Contenido de la demo: lo sembrado en los datos sintéticos aparece donde toca
 {
-  const p = await pagina(1280, 720, { oscuro: true });
-  await p.evaluate(() => window.EasyPerformance.ACC['ver-demo']());
-  await p.waitForTimeout(500);
-  const fallos = await recorrerVistas(p, 'oscuro', false);
-  for (const v of ['equipo', 'grupos', 'agentes']) { await accion(p, `[data-accion="vista"][data-v="${v}"]`); await p.screenshot({ path: join(SALIDA, `oscuro-${v}.png`) }); }
-  const fondo = await p.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  ok('modo oscuro: sin errores, sin scroll y con fondo oscuro', !fallos.length && !p.errores.length && fondo === 'rgb(11, 16, 38)', `fondo ${fondo}; ${fallos.join('; ')} ${p.errores.join(' | ')}`);
+  const p = await pagina(1440, 900);
+  await clic(p, '[data-accion="demo"]'); await listo(p);
+  const titular = await texto(p, '.titular h1');
+  const filas = await p.$$eval('.tabla-equipos tbody tr', (t) => t.length);
+  const grupos = await p.$$eval('.tabla-grupos td.peor', (t) => t.map((x) => x.textContent));
+  const ini = await p.$$eval('.fila-ini', (t) => t.map((x) => x.textContent));
+  ok('demo: el titular nombra a los dos equipos sembrados con problemas', /App móvil/.test(titular) && /Portal clientes/.test(titular), titular);
+  ok('demo: tabla de equipos, internos y proveedores e iniciativas', filas === 4 && grupos.length >= 3 && ini.length === 2 && ini.some((x) => /Funciona/.test(x)), `${filas} equipos · ${grupos.length} medidas peor en proveedores · ${ini.length} iniciativas`);
+  await p.selectOption('select[data-cambio="ver"]', 'App móvil'); await p.waitForTimeout(200);
+  const eq = await A(p, () => ({ t: document.querySelector('.titular h1').textContent, kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length }));
+  ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 4 && eq.graf && eq.recs >= 2 && /retrabajo/.test(eq.t), `${eq.t} · ${eq.recs} recomendaciones`);
+  await clic(p, '[data-accion="vista"][data-v="recomendaciones"]');
+  const recs = await p.$$eval('.rec', (t) => t.map((x) => ({ t: x.querySelector('h2').textContent, crit: !!x.querySelector('.chip-critico'), paso: /Primer paso/.test(x.textContent), de: !!x.querySelector('.rec-de li') })));
+  const funciona = await p.$$eval('.funciona', (t) => t.length);
+  ok('recomendaciones: ordenadas, con evidencia y primer paso', recs.length >= 3 && recs[0].crit && recs.every((x) => x.paso && x.de) && funciona === 1, recs.map((x) => (x.crit ? 'crítico: ' : '') + x.t).join(' / '));
+  await p.click('.rec details summary'); await p.waitForTimeout(100);
+  const abierta = await p.$eval('.rec details', (d) => d.open && /Plan/.test(d.textContent));
+  ok('recomendaciones: causas y plan completo al desplegar', abierta);
+  ok('demo de contenido sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 
-// 3. Recorrido completo con el Jira.csv de prueba, configuración guardada, impresión y demo sin pisar nada
+// 3. Modo oscuro y móvil
+{
+  const p = await pagina(1280, 720, { oscuro: true });
+  await clic(p, '[data-accion="demo"]'); await listo(p);
+  const r = await recorrer(p, 'oscuro', false);
+  await p.screenshot({ path: join(SALIDA, 'oscuro-area.png'), fullPage: true });
+  const fondo = await A(p, () => getComputedStyle(document.body).backgroundColor);
+  ok('modo oscuro: fondo oscuro, sin scroll horizontal ni errores', fondo === 'rgb(11, 16, 38)' && !r.fallos.length && !p.errores.length, `fondo ${fondo} ${r.fallos.join('; ')} ${p.errores.join(' | ')}`);
+  await p.context().close();
+  const q = await pagina(390, 844);
+  await clic(q, '[data-accion="demo"]'); await listo(q);
+  const rq = await recorrer(q, 'movil', false);
+  await q.screenshot({ path: join(SALIDA, 'movil-area.png'), fullPage: true });
+  ok('móvil (390 px): sin scroll horizontal en ninguna pantalla', !rq.fallos.length && !q.errores.length, rq.fallos.join('; ') + q.errores.join(' | '));
+  await q.context().close();
+}
+
+// 4. Jira.csv de principio a fin: directo al tablero, cambios en Cómo funciona, definiciones y paquete
 {
   const p = await pagina(1280, 720);
   const t0 = Date.now();
-  await accion(p, '[data-accion="saltar-presentacion"]');
   await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
-  await p.waitForFunction(() => window.EasyPerformance.det, null, { timeout: 60000 });
-  await p.screenshot({ path: join(SALIDA, 'jira-paso-1.png') });
-  await accion(p, '[data-accion="aceptar-todo"]');
-  await p.screenshot({ path: join(SALIDA, 'jira-paso-6.png') });
-  // Perfil de dirección para ver también El área, Comparar e Iniciativas
-  await p.evaluate(() => { const b = window.EasyPerformance.borrador; if (b.perfiles.indexOf('direccion') < 0) b.perfiles.push('direccion'); });
-  await accion(p, '[data-accion="terminar"]');
-  const tiempo = Date.now() - t0;
-  const estado = await p.evaluate(() => ({ eqs: window.EasyPerformance.modelo.equipos.map((e) => e.nombre), cfg: !!localStorage.getItem('easyperformance.configuracion.v1') }));
-  ok('recorrido con Jira.csv: carga, puesta en marcha y configuración guardada', estado.eqs.length >= 3 && estado.cfg, `${estado.eqs.join(', ')} · ${Math.round(tiempo / 1000)} s`);
-  const fallos = await recorrerVistas(p, 'jira', true);
-  ok('Jira.csv: todas las pantallas sin scroll en 1280x720', !fallos.length, fallos.join('; '));
-  // Marcar dos equipos como proveedor y exportar el paquete de diagnóstico
-  await p.evaluate(() => {
-    const A = window.EasyPerformance, eqs = A.modelo.equipos.map((e) => e.nombre);
-    A.cfg.equiposInfo = {}; eqs.forEach((e, i) => { A.cfg.equiposInfo[e] = i % 2 ? { tipo: 'proveedor', proveedor: 'Proveedor ' + (i + 1) } : { tipo: 'interno' }; });
-    A.diag = null;
-  });
-  const paq = await p.evaluate(() => { const d = window.EasyPerformance.diagnostico(); return { problemas: d.problemas, comparaciones: d.comparaciones.length, tam: JSON.stringify(d.paquete).length }; });
-  ok('Jira.csv: diagnóstico y paquete sin problemas', paq.problemas.length === 0 && paq.comparaciones >= 1, `${paq.comparaciones} comparaciones · ${Math.round(paq.tam / 1024)} KB · ${paq.problemas.join(' | ')}`);
-  // Impresión: todas las pantallas seguidas
-  await accion(p, '[data-accion="vista"][data-v="todos"]');
-  await p.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
-  await p.emulateMedia({ media: 'print' });
-  const pdf = await p.pdf({ format: 'A4', printBackground: true });
-  writeFileSync(join(SALIDA, 'impresion-el-area.pdf'), pdf);
-  await p.emulateMedia({ media: 'screen' });
-  await p.evaluate(() => window.dispatchEvent(new Event('afterprint')));
-  const paginas = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-  ok('impresión a PDF de El área (todas sus pantallas)', paginas >= 2, `${paginas} páginas`);
-  // Demo y vuelta: la configuración real no cambia
-  const antes = await p.evaluate(() => localStorage.getItem('easyperformance.configuracion.v1'));
-  await p.evaluate(() => window.EasyPerformance.ACC['ver-demo']());
-  await p.waitForTimeout(500);
-  const enDemo = await p.evaluate(() => window.EasyPerformance.modelo.equipos.map((e) => e.nombre).join(','));
-  await p.evaluate(() => window.EasyPerformance.ACC['empezar']());
-  await p.waitForTimeout(500);
-  const despues = await p.evaluate(() => ({ cfg: localStorage.getItem('easyperformance.configuracion.v1'), eqs: window.EasyPerformance.modelo.equipos.map((e) => e.nombre).join(',') }));
-  ok('demo sin pisar la configuración real', antes === despues.cfg && enDemo !== despues.eqs && despues.eqs === estado.eqs.join(','), `demo: ${enDemo} · vuelta: ${despues.eqs}`);
+  await listo(p);
+  const seg = Math.round((Date.now() - t0) / 1000);
+  const inicio = await A(p, () => ({ vista: window.EasyPerformance.vista, eqs: window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', '), recs: window.EasyPerformance.recomendaciones().length }));
+  await p.screenshot({ path: join(SALIDA, 'jira-area.png'), fullPage: true });
+  ok('Jira.csv: de la carga al tablero sin puesta en marcha', inicio.vista === 'tablero' && inicio.eqs === 'Infrastructure, Mobile, Web', `${inicio.eqs} · ${inicio.recs} recomendaciones · ${seg} s`);
+  const r = await recorrer(p, 'jira', true);
+  ok('Jira.csv: todas las pantallas sin scroll horizontal', !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
+  // Estados: In Progress pasa a En revisión
+  await clic(p, '[data-accion="vista"][data-v="como"]');
+  await clic(p, '[data-accion="editar"][data-e="estados"]');
+  const antes = await A(p, () => window.EasyPerformance.r.preparacion.mapeo['In Progress']);
+  await p.selectOption('select[data-cambio="estado"][data-e="In Progress"]', 'en_revision');
+  await listo(p); await p.waitForTimeout(300);
+  const despues = await A(p, () => ({ m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], g: JSON.parse(localStorage.getItem('easyperformance.config.v2') || '{}') }));
+  ok('Cómo funciona: un estado cambiado se recalcula y se guarda', antes === 'en_curso' && despues.m === 'en_revision' && despues.g.mapeoEstados && despues.g.mapeoEstados['In Progress'] === 'en_revision', `In Progress: ${antes} a ${despues.m}`);
+  // Proveedores: Mobile pasa a ser de un proveedor y aparece la comparación
+  await clic(p, '[data-accion="editar"][data-e="equipos"]');
+  const cmpAntes = await A(p, () => window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length);
+  await p.selectOption('select[data-cambio="eq"][data-campo="tipo"][data-e="Mobile"]', 'proveedor'); await listo(p); await p.waitForTimeout(300);
+  await p.fill('input[data-cambio="eq"][data-campo="proveedor"][data-e="Mobile"]', 'Proveedor Uno'); await p.press('input[data-campo="proveedor"][data-e="Mobile"]', 'Tab'); await listo(p); await p.waitForTimeout(300);
+  const cmp = await A(p, () => ({ n: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length, g: JSON.parse(localStorage.getItem('easyperformance.config.v2')).equiposInfo }));
+  ok('Cómo funciona: marcar un proveedor activa la comparación y se guarda', cmpAntes === 0 && cmp.n === 1 && cmp.g.Mobile.tipo === 'proveedor' && cmp.g.Mobile.proveedor === 'Proveedor Uno', JSON.stringify(cmp.g));
+  await p.screenshot({ path: join(SALIDA, 'jira-como.png'), fullPage: true });
+  // Documentos
+  await p.fill('input[data-cambio="nombre"]', 'Cliente de prueba'); await p.press('input[data-cambio="nombre"]', 'Tab');
+  const bajar = async (sel) => {
+    const [d] = await Promise.all([p.waitForEvent('download'), p.click(sel)]);
+    const ruta = join(SALIDA, d.suggestedFilename()); await d.saveAs(ruta);
+    return { nombre: d.suggestedFilename(), datos: readFileSync(ruta) };
+  };
+  const docx = await bajar('[data-accion="definiciones"][data-f="docx"]'), md = await bajar('[data-accion="definiciones"][data-f="md"]'), paq = await bajar('[data-accion="paquete"]');
+  const mdT = md.datos.toString('utf8');
+  ok('documento de definiciones en Word y markdown con los cambios', docx.datos.slice(0, 2).toString() === 'PK' && docx.datos.toString('latin1').includes('word/document.xml') &&
+    mdT.includes('Cliente de prueba') && mdT.includes('| In Progress | In Progress | En revisión |') && mdT.includes('Proveedor: Proveedor Uno') && !/[\u2014\u2013]/.test(mdT), `${docx.nombre} · ${md.nombre}`);
+  const paquete = JSON.parse(paq.datos.toString('utf8'));
+  const problemas = await A(p, (x) => window.Nucleo.comprobarPaquete(x), paquete);
+  ok('paquete de diagnóstico exportado y sin campos prohibidos', problemas.length === 0 && !!paquete.equipos, `${paq.nombre} · ${Math.round(paq.datos.length / 1024)} KB`);
+  // Demo desde Cómo funciona y vuelta: la configuración real no cambia
+  const cfgAntes = await A(p, () => localStorage.getItem('easyperformance.config.v2'));
+  await clic(p, '[data-accion="vista"][data-v="como"]');
+  await clic(p, '.pagina [data-accion="demo"]'); await listo(p); await p.waitForTimeout(300);
+  const enDemo = await A(p, () => window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', '));
+  await clic(p, '[data-accion="salir-demo"]'); await p.waitForTimeout(300);
+  const vuelta = await A(p, () => ({ cfg: localStorage.getItem('easyperformance.config.v2'), eqs: window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', ') }));
+  ok('demo sin pisar la configuración ni los datos reales', cfgAntes === vuelta.cfg && enDemo !== vuelta.eqs && vuelta.eqs === 'Infrastructure, Mobile, Web', `demo: ${enDemo} · vuelta: ${vuelta.eqs}`);
+  // Al volver a abrir la página y cargar el mismo export, los cambios siguen
+  await p.reload(); await p.waitForTimeout(400);
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv')); await listo(p);
+  const otraVez = await A(p, () => ({ m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], n: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length }));
+  ok('los cambios se conservan al volver a abrir la página', otraVez.m === 'en_revision' && otraVez.n === 1, JSON.stringify(otraVez));
   ok('recorrido con Jira.csv sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 
-// 4. Carpeta compartida con dos ficheros de iniciativa (carpeta simulada con la misma interfaz que la de Chrome)
+// 5. Carpeta compartida con dos iniciativas y contexto (carpeta simulada con la interfaz de la de Chrome)
 {
   const p = await pagina(1280, 720);
   const csv = readFileSync(join(RAIZ, 'datos-sinteticos', 'b3', 'jira-b3.csv'), 'utf8');
   const dir = join(RAIZ, 'datos-sinteticos', 'b3', 'cliente');
   const inis = ['limite-wip-pagos.json', 'formacion-pruebas-riesgos.json'].map((f) => ({ nombre: f, texto: readFileSync(join(dir, 'iniciativas', f), 'utf8') }));
   const ctx = readFileSync(join(dir, 'contexto', 'contexto.json'), 'utf8');
-  const leidas = await p.evaluate(async ({ csv, inis, ctx }) => {
+  await A(p, async ({ csv, inis, ctx }) => {
     const fichero = (nombre, texto) => ({ kind: 'file', name: nombre, getFile: async () => new File([texto], nombre) });
     const carpeta = (nombre, entradas, subs = {}) => ({
-      kind: 'directory', name: nombre,
-      queryPermission: async () => 'granted', requestPermission: async () => 'granted',
+      kind: 'directory', name: nombre, queryPermission: async () => 'granted', requestPermission: async () => 'granted',
       getDirectoryHandle: async (n) => { if (subs[n]) return subs[n]; throw new DOMException('No existe', 'NotFoundError'); },
-      values: () => entradas[Symbol.iterator] ? (async function* () { yield* entradas; })() : null,
+      values: () => (async function* () { yield* entradas; })(),
     });
     const raiz = carpeta('cliente-prueba', [], {
       exports: carpeta('exports', [fichero('jira-b3.csv', csv)]),
       iniciativas: carpeta('iniciativas', inis.map((i) => fichero(i.nombre, i.texto))),
       contexto: carpeta('contexto', [fichero('contexto.json', ctx)]),
     });
-    const A = window.EasyPerformance;
-    A.carpeta = raiz;
-    await A.leerCarpeta(raiz);
-    await new Promise((r) => setTimeout(r, 300));
-    return { iniciativas: A.iniciativasCarpeta.map((i) => i.id), contexto: A.contexto ? A.contexto.documentos.length : 0, det: !!A.det };
+    window.EasyPerformance.carpeta = raiz;
+    await window.EasyPerformance.leerCarpeta(raiz);
   }, { csv, inis, ctx });
-  await p.evaluate(() => { const A = window.EasyPerformance; A.ACC['aceptar-todo'](); const b = A.borrador; if (b.perfiles.indexOf('direccion') < 0) b.perfiles.push('direccion'); A.ACC['terminar'](); });
-  await p.waitForTimeout(400);
-  await accion(p, '[data-accion="vista"][data-v="iniciativas"]');
-  await p.screenshot({ path: join(SALIDA, 'carpeta-iniciativas.png') });
-  const tarjetas = await p.evaluate(() => [...document.querySelectorAll('.ini h3')].map((h) => h.textContent));
-  ok('carpeta compartida: dos ficheros de iniciativa leídos y evaluados', leidas.iniciativas.length === 2 && tarjetas.length === 2 && leidas.contexto === 2, `${leidas.iniciativas.join(', ')} · contexto ${leidas.contexto} documentos · ${tarjetas.join(' / ')}`);
+  await listo(p); await p.waitForTimeout(300);
+  const r = await A(p, () => ({ ini: window.EasyPerformance.r.iniciativas.map((x) => x.iniciativa.id), ctx: window.EasyPerformance.contexto ? window.EasyPerformance.contexto.documentos.length : 0, filas: document.querySelectorAll('.fila-ini').length }));
+  await p.screenshot({ path: join(SALIDA, 'carpeta-area.png'), fullPage: true });
+  ok('carpeta compartida: dos iniciativas leídas y evaluadas, y el contexto', r.ini.length === 2 && r.filas === 2 && r.ctx === 2, `${r.ini.join(', ')} · contexto ${r.ctx} documentos`);
   ok('carpeta compartida sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 
-// 5. B4: arranque del consultor paso a paso con el Jira.csv y documento de definiciones
+// 6. Una configuración guardada por la versión anterior se aprovecha
 {
   const p = await pagina(1280, 720);
-  const t0 = Date.now();
-  let clics = 0;
-  const clic = async (sel) => { clics++; await accion(p, sel); };
-  const paso = () => p.evaluate(() => window.EasyPerformance.paso);
-  await clic('[data-accion="saltar-presentacion"]');
-  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
-  await p.waitForFunction(() => window.EasyPerformance.det, null, { timeout: 60000 });
-  const pasos = [];
-  pasos.push(await paso());
-  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
-  // Paso 2: un equipo de proveedor, áreas y FTE
-  const filas = await p.$$eval('.eq-tabla tbody tr', (trs) => trs.map((tr) => tr.querySelector('td b').textContent));
-  await p.selectOption(`select[data-cambio="eq-info"][data-campo="tipo"][data-e="${filas[1]}"]`, 'proveedor'); clics++;
-  await p.waitForTimeout(250);
-  for (const [i, e] of filas.entries()) {
-    if (i === 1) { await p.fill(`input[data-campo="proveedor"][data-e="${e}"]`, 'Proveedor Uno'); await p.press(`input[data-campo="proveedor"][data-e="${e}"]`, 'Tab'); clics++; }
-    await p.fill(`input[data-campo="area"][data-e="${e}"]`, 'Canales'); await p.press(`input[data-campo="area"][data-e="${e}"]`, 'Tab');
-    await p.fill(`input[data-cambio="fte"][data-e="${e}"]`, String(4 + i)); await p.press(`input[data-cambio="fte"][data-e="${e}"]`, 'Tab');
-    clics += 2;
-  }
-  await p.screenshot({ path: join(SALIDA, 'arranque-2-equipos.png') });
-  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
-  // Paso 3: el consultor cambia un estado
-  const antesEstado = await p.evaluate(() => window.EasyPerformance.borrador.mapeoEstados['In Progress']);
-  const prePrevio = await p.evaluate(() => window.EasyPerformance.pre && window.EasyPerformance.pre.equipos.map((e) => e.medidas.espera && e.medidas.espera.valor));
-  await p.selectOption('select[data-cambio="estado-comun"][data-estado="In Progress"]', 'en_revision'); clics++;
-  await p.waitForTimeout(300);
-  await p.screenshot({ path: join(SALIDA, 'arranque-3-estados.png') });
-  const etiqueta = await p.$eval('select[data-estado="In Progress"] + .q-etapa', (x) => x.textContent);
-  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
-  await p.screenshot({ path: join(SALIDA, 'arranque-4-calidad.png') });
-  const espera = await p.evaluate(() => window.EasyPerformance.pre.equipos.map((e) => e.medidas.espera && e.medidas.espera.valor));
-  for (let i = 0; i < 4; i++) { await clic('[data-accion="siguiente"]'); pasos.push(await paso()); }
-  await p.fill('input[data-cambio="nombre-cliente"]', 'Cliente de prueba'); await p.press('input[data-cambio="nombre-cliente"]', 'Tab'); clics++;
-  await p.screenshot({ path: join(SALIDA, 'arranque-8-listo.png') });
-  const bajar = async (f) => {
-    const [d] = await Promise.all([p.waitForEvent('download'), p.click(`[data-accion="definiciones"][data-f="${f}"]`)]);
-    clics++;
-    const ruta = join(SALIDA, d.suggestedFilename());
-    await d.saveAs(ruta);
-    return { nombre: d.suggestedFilename(), datos: readFileSync(ruta) };
-  };
-  const docx = await bajar('docx'), md = await bajar('md');
-  await clic('[data-accion="terminar"]');
-  const tiempo = Math.round((Date.now() - t0) / 1000);
-  const fin = await p.evaluate(() => { const c = JSON.parse(localStorage.getItem('easyperformance.configuracion.v1')); return { mapeo: c.mapeoEstados, info: c.equiposInfo, fte: c.fte, nombre: c.nombre, vista: window.EasyPerformance.vista, onboarding: window.EasyPerformance.onboarding }; });
-  ok('arranque B4: los ocho pasos en orden con el Jira.csv', pasos.join(',') === '1,2,3,4,5,6,7,8' && !fin.onboarding, `pasos ${pasos.join(',')} · ${clics} acciones · ${tiempo} s de máquina`);
-  ok('arranque B4: el mapeo editado se guarda y cambia el cálculo', antesEstado === 'en_curso' && fin.mapeo['In Progress'] === 'en_revision' && /espera/.test(etiqueta) && JSON.stringify(espera) !== JSON.stringify(prePrevio),
-    `In Progress: ${antesEstado} a ${fin.mapeo['In Progress']} · "${etiqueta}" · tiempo en espera ${JSON.stringify(prePrevio)} a ${JSON.stringify(espera)}`);
-  ok('arranque B4: tipo, proveedor, área y FTE de los equipos guardados', fin.info[filas[1]].tipo === 'proveedor' && fin.info[filas[1]].proveedor === 'Proveedor Uno' && Object.keys(fin.fte).length === filas.length && fin.nombre === 'Cliente de prueba',
-    filas.map((e) => `${e}: ${(fin.info[e] || {}).tipo || 'interno'}, ${fin.fte[e]} FTE`).join('; '));
-  const texto = docx.datos.toString('latin1');
-  const mdT = md.datos.toString('utf8');
-  ok('documento de definiciones en Word y markdown', docx.datos.slice(0, 2).toString() === 'PK' && texto.includes('word/document.xml') && docx.nombre.endsWith('.docx') &&
-    mdT.includes('Cliente de prueba') && mdT.includes('| In Progress | In Progress | En revisión |') && mdT.includes('Proveedor: Proveedor Uno') && !/[—–]/.test(mdT),
-    `${docx.nombre} (${Math.round(docx.datos.length / 1024)} KB) · ${md.nombre} (${Math.round(md.datos.length / 1024)} KB)`);
-  ok('arranque B4 sin errores de consola', !p.errores.length, p.errores.join(' | '));
-  await p.context().close();
-}
-
-// 6. Una configuración guardada por la v0 (con etapas en vez de estados comunes) sigue funcionando
-{
-  const p = await pagina(1280, 720);
-  await p.evaluate(() => localStorage.setItem('easyperformance.configuracion.v1', JSON.stringify({
+  await A(p, () => localStorage.setItem('easyperformance.configuracion.v1', JSON.stringify({
     version: 1, campoEquipo: 'componentes', equipos: ['Infrastructure', 'Mobile', 'Web'], etapas: { 'To Do': 'pendiente', 'In Progress': 'curso', 'Done': 'hecho' },
-    objetivos: ['tardamos'], medidas: ['ciclo', 'entregas', 'espera', 'edad'], perfiles: ['responsable'], graficos: { ciclo: 'puntos', evolucion: 'banda', pendiente: 'entradas' }, limites: {}, textos: {}, noAplica: {},
+    equiposInfo: { Web: { tipo: 'proveedor', proveedor: 'Proveedor Web' } }, objetivos: ['tardamos'], medidas: ['ciclo'], perfiles: ['responsable'],
   })));
   await p.reload(); await p.waitForTimeout(400);
-  await p.evaluate(() => { if (window.EasyPerformance.presentacion) window.EasyPerformance.ACC['empezar'](); });
-  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
-  await p.waitForFunction(() => window.EasyPerformance.modelo && !window.EasyPerformance.onboarding, null, { timeout: 60000 });
-  const r = await p.evaluate(() => ({ eqs: window.EasyPerformance.modelo.equipos.map((e) => e.nombre).join(', ') }));
-  await accion(p, '[data-accion="vista"][data-v="config"]');
-  await accion(p, '[data-accion="rehacer"][data-paso="3"]');
-  const mapeo = await p.evaluate(() => ({ paso: window.EasyPerformance.paso, m: window.EasyPerformance.borrador.mapeoEstados }));
-  ok('configuración de la v0: tablero directo y estados convertidos al revisarlos', r.eqs === 'Infrastructure, Mobile, Web' && mapeo.paso === 3 && mapeo.m['In Progress'] === 'en_curso' && mapeo.m['Done'] === 'terminado' && !p.errores.length,
-    `${r.eqs} · paso ${mapeo.paso} · ${JSON.stringify(mapeo.m)} ${p.errores.join(' | ')}`);
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv')); await listo(p);
+  const r = await A(p, () => ({ eqs: window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', '), m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], cmp: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length }));
+  ok('configuración de la versión anterior: equipos, estados y proveedores', r.eqs === 'Infrastructure, Mobile, Web' && r.m === 'en_curso' && r.cmp === 1 && !p.errores.length, JSON.stringify(r) + ' ' + p.errores.join(' | '));
   await p.context().close();
 }
 

@@ -31,7 +31,7 @@ function demoCliente(): string {
     equiposInfo[e.nombre] = { tipo: e.tipo, proveedor: e.proveedor, area: e.area };
     if (e.fte.length) { fte[e.nombre] = e.fte[e.fte.length - 1].valor; fteOrigen[e.nombre] = e.fte[e.fte.length - 1].origen; }
   }
-  return JSON.stringify({ sector: cliente.sector, equiposInfo, fte, fteOrigen, iniciativas, contexto });
+  return JSON.stringify({ nombre: 'Banco ficticio', sector: cliente.sector, equiposInfo, fte, fteOrigen, iniciativas, contexto });
 }
 
 export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance')): Promise<string> {
@@ -43,12 +43,12 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
   const demoCsv = readFileSync(join(DEMO, 'jira-b3.csv'), 'utf8');
   if (/<\/script/i.test(demoCsv)) throw new Error('El CSV de la demo contiene </script');
   const piezas: Record<string, string> = {
-    '/*ESTILOS*/': readFileSync(join(SRC, 'estilos.css'), 'utf8').replace('/*FUENTES*/', fuentes()),
+    '/*ESTILOS*/': readFileSync(join(SRC, 'app.css'), 'utf8').replace('/*FUENTES*/', fuentes()),
     '/*DEMO*/': demoCsv,
     '/*DEMO_CLIENTE*/': seguro(demoCliente()),
+    '/*LAMINAS*/': seguro(JSON.stringify(JSON.parse(readFileSync(join(SRC, 'laminas.json'), 'utf8')))),
     '/*NUCLEO*/': seguro(nucleo),
-    '/*GRAFICOS*/': seguro(readFileSync(join(SRC, 'graficos.js'), 'utf8')),
-    '/*INTERFAZ*/': seguro(readFileSync(join(SRC, 'interfaz.js'), 'utf8')),
+    '/*APP*/': seguro(readFileSync(join(SRC, 'app.js'), 'utf8')),
   };
   let html = readFileSync(join(SRC, 'plantilla.html'), 'utf8');
   for (const [marca, contenido] of Object.entries(piezas)) {
@@ -61,11 +61,11 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
   // Carpeta de trabajo del cliente, como en la v0, más iniciativas/ y contexto/
   const leeme: Record<string, string> = {
     exports: 'Deja aquí los CSV exportados de Jira (con Todos los campos). Easy Performance los une y quita los repetidos.\n',
-    configuracion: 'Aquí va cliente.json: la configuración que sale de la puesta en marcha.\n',
-    iniciativas: 'Un fichero .json por iniciativa de mejora. Los crea la página (pantalla Iniciativas) o el consultor.\n',
+    configuracion: 'Aquí va cliente.json: lo que se ha cambiado en Cómo funciona (proveedores, áreas, FTE, estados). También los documentos de definiciones.\n',
+    iniciativas: 'Un fichero .json por iniciativa de mejora. Los crea el consultor.\n',
     contexto: 'contexto.json: resúmenes que escribe o aprueba el consultor (método, organización, stack, contratos). Solo los usa el paquete de diagnóstico.\n',
     historico: 'Fotos semanales de lo abierto. Las guarda la página al leer la carpeta.\n',
-    diagnostico: 'Paquetes de diagnóstico exportados desde Ajustes. Solo llevan cifras agregadas.\n',
+    diagnostico: 'Paquetes de diagnóstico exportados desde Cómo funciona. Solo llevan cifras agregadas.\n',
   };
   for (const [sub, texto] of Object.entries(leeme)) { mkdirSync(join(destino, sub), { recursive: true }); writeFileSync(join(destino, sub, 'LEEME.txt'), texto); }
   // datos.js vacío: así la página no da error al abrirla antes de ejecutar actualizar
