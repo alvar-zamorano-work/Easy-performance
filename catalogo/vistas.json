@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "perfiles": [
+    {
+      "id": "responsable",
+      "nombre": "Responsable de equipo",
+      "vista": "Mi equipo",
+      "descripcion": "Cada semana: qué está bloqueado, cómo va su equipo y qué hacer.",
+      "fijo": true
+    },
+    {
+      "id": "direccion",
+      "nombre": "Dirección",
+      "vista": "El área",
+      "descripcion": "Cada mes: cómo va el área en conjunto, qué se repite entre equipos y cada equipo frente a sí mismo."
+    },
+    {
+      "id": "pmo",
+      "nombre": "PMO o delivery lead",
+      "vista": "Compromisos y riesgos",
+      "descripcion": "Cada dos semanas: previsibilidad, salud del dato y casos abiertos."
+    },
+    {
+      "id": "negocio",
+      "nombre": "Producto o negocio",
+      "vista": "Cuándo y en qué",
+      "descripcion": "Cuando lo necesita: cuánto tardará algo y en qué se va la capacidad."
+    }
+  ],
+  "graficos": {
+    "ciclo": {
+      "pregunta": "¿Cuánto tardamos?",
+      "opciones": [
+        {
+          "id": "puntos",
+          "nombre": "Un punto por tarea",
+          "ayuda": "Cada tarea terminada es un punto; dos líneas marcan la mitad y el plazo de 8 de cada 10."
+        },
+        {
+          "id": "tramos",
+          "nombre": "Barras por tramos de días",
+          "ayuda": "Cuántas tareas terminan en 1, 2, 3... días."
+        }
+      ]
+    },
+    "evolucion": {
+      "pregunta": "¿Cómo evoluciona cada medida?",
+      "opciones": [
+        {
+          "id": "banda",
+          "nombre": "Línea con su rango habitual",
+          "ayuda": "La banda es lo normal para el equipo; lo que sale de la banda llama la atención."
+        },
+        {
+          "id": "columnas",
+          "nombre": "Columnas por semana",
+          "ayuda": "Un valor por semana, sin banda."
+        }
+      ]
+    },
+    "pendiente": {
+      "pregunta": "¿Crece el pendiente?",
+      "opciones": [
+        {
+          "id": "entradas",
+          "nombre": "Entradas y salidas",
+          "ayuda": "Dos líneas: lo que entra y lo que sale cada semana."
+        },
+        {
+          "id": "tamano",
+          "nombre": "Tamaño del pendiente",
+          "ayuda": "Una línea con las tareas sin empezar."
+        }
+      ]
+    }
+  },
+  "kpis": [
+    {
+      "id": "throughput",
+      "unidad": "tareas al mes por persona (FTE)",
+      "formato": "num",
+      "dir": "mas"
+    },
+    {
+      "id": "entrega",
+      "unidad": "para terminar 8 de cada 10 tareas",
+      "formato": "dias",
+      "dir": "menos"
+    },
+    {
+      "id": "valor",
+      "unidad": "de lo terminado son funcionalidades nuevas",
+      "formato": "pct",
+      "dir": "mas"
+    },
+    {
+      "id": "calidad",
+      "unidad": "de lo terminado se reabrió",
+      "formato": "pct",
+      "dir": "menos"
+    },
+    {
+      "id": "carga",
+      "unidad": "de antigüedad típica de lo pendiente",
+      "formato": "dias",
+      "dir": "menos"
+    }
+  ]
+}

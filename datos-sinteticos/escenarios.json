@@ -1,0 +1,30 @@
+{
+  "tareas": 1446,
+  "fecha_export": "2026-10-12T09:00:00",
+  "equipos": [
+    "Pagos",
+    "App móvil",
+    "Portal clientes",
+    "Datos"
+  ],
+  "casos_sembrados": {
+    "Pagos": [],
+    "App móvil": [
+      "atascado",
+      "mucha_espera",
+      "demasiado_a_la_vez"
+    ],
+    "Portal clientes": [
+      "pendiente_crece",
+      "todo_urgente",
+      "urgente_no_rapido"
+    ],
+    "Datos": [
+      "errores_capacidad",
+      "retrabajo",
+      "todo_al_final",
+      "estimaciones_no_predicen",
+      "datos_poco_fiables"
+    ]
+  }
+}

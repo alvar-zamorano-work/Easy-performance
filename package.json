@@ -1,0 +1,21 @@
+{
+  "name": "easy-performance-acelerador",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Easy Performance v1: acelerador del consultor para medir y mejorar la productividad de equipos de desarrollo",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "TZ=Europe/Madrid node --test --test-reporter=spec \"tests/**/*.test.ts\"",
+    "tipos": "tsc --noEmit -p .",
+    "comprobar": "npm run tipos && npm test",
+    "probar": "TZ=Europe/Madrid node herramientas/probar-nucleo.ts datos-sinteticos/jira-ejemplo-completo-2026-10-12.csv",
+    "datos": "python3 herramientas/generar_datos_sinteticos.py datos-sinteticos"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3"
+  }
+}

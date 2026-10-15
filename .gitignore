@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+# Nada de datos de cliente en el repositorio
+datos-cliente/
+*.cliente.csv

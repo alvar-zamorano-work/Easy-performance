@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "textos": {
+    "equipo.titulo": "Informe semanal",
+    "equipo.intro": "Cada equipo se compara solo con sus 12 semanas anteriores. Nunca con otros equipos ni por personas.",
+    "equipo.casos": "Qué hacer esta semana",
+    "equipo.atascado": "Qué está bloqueado hoy",
+    "equipo.medidas": "Cómo van las medidas",
+    "equipo.evolucion": "Cómo han evolucionado",
+    "todos.titulo": "El área",
+    "todos.intro": "El área en conjunto, frente a su propia historia. Y cada equipo, frente a la suya: sin rankings.",
+    "pmo.titulo": "Compromisos y riesgos",
+    "pmo.intro": "Previsibilidad, salud del dato y casos abiertos de cada equipo.",
+    "negocio.titulo": "Plazos y reparto",
+    "negocio.intro": "Cuánto tarda una petición y en qué se va la capacidad de cada equipo.",
+    "chequeo.titulo": "Fiabilidad de los datos",
+    "kpi.throughput": "Throughput / FTE",
+    "kpi.entrega": "Tiempo de entrega",
+    "kpi.valor": "Valor entregado",
+    "kpi.calidad": "Calidad de entrega",
+    "kpi.carga": "Carga de trabajo",
+    "pres.claim": "Deja de montar el informe. Empieza a usarlo.",
+    "pres.claim.destacado": "Empieza a usarlo.",
+    "pres.apoyo": "Carga lo que ya exportas de Jira. En unos minutos ves cómo va cada equipo, qué necesita atención y qué hacer con cada cosa.",
+    "pres.hoy": "Hoy, el informe de cada equipo se monta a mano, cada semana.",
+    "pres.hoy.intro": "Cinco pasos y cuatro herramientas entre lo que pasa en Jira y lo que se cuenta en la reunión.",
+    "pres.mercado": "Las opciones habituales enseñan cifras. Lo difícil es saber qué hacer con ellas.",
+    "pres.mercado.intro": "Cada una resuelve una parte. Lo que falta es juntar el informe hecho, el plan de acción y la comprobación de los datos, sin meses de proyecto.",
+    "pres.cambia": "Cada semana, de cinco pasos a mano a pulsar Actualizar.",
+    "pres.como": "La primera vez, tres pasos. Después, exportar y pulsar Actualizar."
+  }
+}

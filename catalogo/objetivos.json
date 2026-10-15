@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "objetivos": [
+    {
+      "id": "cumplir",
+      "titulo": "Cumplir lo que prometemos",
+      "frase": "Queremos entregar lo comprometido y cuando lo dijimos.",
+      "medidas": [
+        "regularidad",
+        "arrastradas",
+        "entregas",
+        "estimacion",
+        "fiabilidad"
+      ],
+      "casos": [
+        "sprint_no_cumple",
+        "todo_al_final",
+        "entregas_irregulares",
+        "estimaciones_no_predicen"
+      ]
+    },
+    {
+      "id": "tardamos",
+      "titulo": "Tardamos demasiado",
+      "frase": "Queremos saber cuánto tarda una tarea y dónde se para.",
+      "medidas": [
+        "ciclo",
+        "total",
+        "espera",
+        "edad"
+      ],
+      "casos": [
+        "atascado",
+        "mucha_espera"
+      ]
+    },
+    {
+      "id": "avez",
+      "titulo": "Hacemos demasiadas cosas a la vez",
+      "frase": "Queremos terminar antes de empezar.",
+      "medidas": [
+        "wip",
+        "edad",
+        "entregas"
+      ],
+      "casos": [
+        "demasiado_a_la_vez",
+        "atascado"
+      ]
+    },
+    {
+      "id": "arreglos",
+      "titulo": "Arreglamos más que construimos",
+      "frase": "Queremos saber cuánto esfuerzo se va en errores y en repetir.",
+      "medidas": [
+        "errores",
+        "retrabajo",
+        "reparto"
+      ],
+      "casos": [
+        "errores_capacidad",
+        "retrabajo"
+      ]
+    },
+    {
+      "id": "pendiente",
+      "titulo": "El pendiente no para de crecer",
+      "frase": "Queremos que no entre más de lo que sale.",
+      "medidas": [
+        "pendiente",
+        "entregas"
+      ],
+      "casos": [
+        "pendiente_crece"
+      ]
+    },
+    {
+      "id": "tiempo",
+      "titulo": "¿En qué se nos va el tiempo?",
+      "frase": "Queremos que el esfuerzo vaya a lo que prioriza el negocio.",
+      "medidas": [
+        "reparto",
+        "total",
+        "primera"
+      ],
+      "casos": [
+        "todo_urgente",
+        "urgente_no_rapido"
+      ]
+    },
+    {
+      "id": "datos",
+      "titulo": "Fiarnos de los datos",
+      "frase": "Queremos que Jira refleje lo que pasa de verdad.",
+      "fijo": true,
+      "medidas": [],
+      "casos": [
+        "datos_poco_fiables"
+      ]
+    }
+  ]
+}
