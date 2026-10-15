@@ -9,6 +9,7 @@ import { compararTodo } from './grupos.ts';
 import { casosAgentReady, casosDeGrupo } from './casos-grupo.ts';
 import { evaluarIniciativa } from './iniciativas.ts';
 import { generarPaquete, comprobarPaquete } from './paquete.ts';
+import { capacidadArea } from './coste.ts';
 import type { Contexto, Iniciativa, Lectura } from './modelo.ts';
 
 export const NOMBRE_AREA = 'El área';
@@ -20,9 +21,11 @@ export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: 
   const preparacion = preparar(lectura.tareas, det, cfg);
   const modelo = calcularDesde(preparacion);
   const fteArea = Object.values(cfg.fte || {});
+  const capacidad = capacidadArea(cfg, cliente.equipos.lista.map((e) => e.nombre));
   const area = calcularDesde(preparar(lectura.tareas, det, {
     ...cfg, unirComo: NOMBRE_AREA,
     fte: fteArea.length === cliente.equipos.lista.length ? { [NOMBRE_AREA]: fteArea.reduce((s, v) => s + v, 0) } : {},
+    ...(cfg.coste ? { coste: capacidad.costeFteMedio != null ? { [NOMBRE_AREA]: capacidad.costeFteMedio } : {} } : {}),
   }));
   const comparaciones = compararTodo(preparacion, cliente.equipos.lista);
   const casosGrupo = casosDeGrupo(comparaciones);
@@ -33,5 +36,5 @@ export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: 
     iniciativas: evaluaciones, contexto, alias: opciones.alias, generado: opciones.generado || new Date(),
   });
   const problemas = comprobarPaquete(paquete);
-  return { det, preparacion, modelo, area, comparaciones, casosGrupo, casosAgentReady: casosAR, iniciativas: evaluaciones, paquete, problemas };
+  return { det, preparacion, modelo, area, capacidad, comparaciones, casosGrupo, casosAgentReady: casosAR, iniciativas: evaluaciones, paquete, problemas };
 }

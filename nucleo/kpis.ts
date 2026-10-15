@@ -30,6 +30,13 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
   // Throughput / FTE: tareas terminadas al mes (media de 4 semanas) entre las personas equivalentes del equipo.
   if (fte) out.throughput = desdeSerie('throughput', s.entregasMedia.map((x) => (x == null ? null : x * 52 / 12 / fte)), K, { dir: 'mas', formato: 'num' });
   else out.throughput = { id: 'throughput', disponible: false, falta: 'fte', motivo: 'Indica cuántas personas (FTE) tiene el equipo en Ajustes.' };
+  // Coste por entrega: lo que cuesta el equipo al mes (FTE por el coste mensual de un FTE) entre las tareas terminadas al mes.
+  // Solo si se ha indicado algún coste: sin él, los resultados son los mismos que en la v0.
+  if (c.cfg.coste) {
+    const costeFte = c.cfg.coste[nombre] != null && c.cfg.coste[nombre] > 0 ? +c.cfg.coste[nombre] : null;
+    if (fte && costeFte) out.coste = desdeSerie('coste', s.entregasMedia.map((x) => (x == null || x <= 0 ? null : fte * costeFte / (x * 52 / 12))), K, { dir: 'menos', formato: 'eur' });
+    else out.coste = { id: 'coste', disponible: false, falta: fte ? 'coste' : 'fte', motivo: fte ? 'Indica el coste mensual de un FTE de este equipo.' : 'Indica cuántas personas (FTE) tiene el equipo y lo que cuesta cada una al mes.' };
+  }
   out.entrega = copia('entrega', 'ciclo');
   // Valor entregado: parte de lo terminado que es funcionalidad nueva (historias), frente a su propia historia.
   const rep = s.reparto.map((r) => (r ? r.historia : null));

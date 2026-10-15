@@ -89,6 +89,18 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
     return [eq.nombre, n(tareasDe(eq.nombre)), tipo, (e && e.area) || 'Sin indicar', fte];
   }), [3, 1.5, 3, 2.5, 2.5]);
   p('FTE son las personas a jornada completa de cada equipo. ' + plataforma + ' no lo trae: sale del contrato, lo declara el equipo o se estima. Sin FTE, la medida Throughput / FTE no se calcula para ese equipo.', true);
+  if (cfg.coste && Object.keys(cfg.coste).length) {
+    h2('Capacidad y coste');
+    p('El coste de cada equipo sale de su FTE por el coste mensual de un FTE: el coste interno cargado para los equipos propios y la tarifa del contrato para los de proveedores. Es un dato de equipo, nunca el salario de una persona.');
+    tabla(['Equipo', 'FTE', 'Coste de un FTE al mes', 'Coste del equipo al mes'], modelo.equipos.map((eq) => {
+      const f = cfg.fte && cfg.fte[eq.nombre], c = cfg.coste![eq.nombre];
+      return [eq.nombre, f ? formatear(f, 'num') : 'Sin indicar', c ? formatear(c, 'eur') : 'Sin indicar', f && c ? formatear(f * c, 'eur') : 'Sin calcular'];
+    }), [3, 1.5, 2.75, 2.75]);
+    lista([
+      [{ b: 'Coste por entrega. ' }, 'Coste del equipo al mes entre las tareas terminadas al mes (media de las últimas 4 semanas). Las descartadas no cuentan. Mejor cuanto más bajo.'],
+      [{ b: 'Cómo se lee. ' }, 'Una tarea no es una unidad fija de trabajo. El coste por entrega sirve para ver la tendencia de cada equipo frente a su propia historia y, entre grupos, solo con un reparto de trabajo parecido.'],
+    ]);
+  }
 
   // 4. Estados
   h1('4. Estados');

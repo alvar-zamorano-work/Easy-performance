@@ -64,6 +64,8 @@ export interface ConfigCalculo {
   unirComo?: string;
   limites?: Record<string, Record<string, Limites>>;
   fte?: Record<string, number>;
+  /** Coste mensual de un FTE de cada equipo (coste interno cargado o tarifa del proveedor). Jira no lo trae. */
+  coste?: Record<string, number>;
 }
 
 /** Datos derivados de cada tarea dentro del cálculo. */
