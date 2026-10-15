@@ -25,12 +25,20 @@
     "pres.hoy": "Hoy, el informe de cada equipo se monta a mano, cada semana.",
     "pres.hoy.intro": "Cinco pasos y cuatro herramientas entre lo que pasa en Jira y lo que se cuenta en la reunión.",
     "pres.mercado": "Las opciones habituales enseñan cifras. Lo difícil es saber qué hacer con ellas.",
-    "pres.mercado.intro": "Cada una resuelve una parte. Lo que falta es juntar el informe hecho, el plan de acción y la comprobación de los datos, sin meses de proyecto.",
+    "pres.mercado.intro": "Cada una resuelve una parte. Lo que falta es medir a todos los equipos con las mismas definiciones y que alguien convierta la medida en acción, sin meses de proyecto.",
     "pres.cambia": "Cada semana, de cinco pasos a mano a pulsar Actualizar.",
-    "pres.como": "La primera vez, tres pasos. Después, exportar y pulsar Actualizar.",
+    "pres.como": "Tres pasos con un consultor. Después, exportar y pulsar Actualizar.",
     "comparacion.aviso": "Compara solo medidas normalizadas y dentro del mismo tipo y tamaño de tarea. No mide el esfuerzo, la dificultad ni a las personas. Una diferencia es una pregunta para la reunión, no un ranking.",
     "comparacion.pocosDatos": "Pocos datos",
     "iniciativa.aviso": "No es un experimento controlado: indica si merece la pena seguir, no demuestra la causa.",
-    "agentes.aviso": "Se calcula sobre el texto de los tickets en este navegador. Fuera solo salen cifras agregadas, nunca el texto."
+    "agentes.aviso": "Se calcula sobre el texto de los tickets en este navegador. Fuera solo salen cifras agregadas, nunca el texto.",
+    "pres.comprador": "Para dirección: las mismas definiciones para equipos internos y proveedores, y saber qué iniciativas de mejora funcionan.",
+    "pres.siguiente": "Medir igual a todos y saber qué funciona.",
+    "pres.siguiente.intro": "Tres funciones nuevas, ya en el tablero: Comparar, Iniciativas y Agentes.",
+    "grupos.titulo": "Comparar con las mismas reglas",
+    "iniciativas.titulo": "Iniciativas de mejora",
+    "iniciativas.intro": "Cada iniciativa, con el antes y el después de su medida, frente a los equipos que no participan.",
+    "agentes.titulo": "Backlog listo para agentes",
+    "agentes.intro": "Cuánto del trabajo nuevo podría completar un agente de IA sin preguntar."
   }
 }

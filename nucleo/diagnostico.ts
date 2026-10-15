@@ -4,6 +4,7 @@
 import { detectar } from './detectar.ts';
 import { calcularDesde, preparar } from './calcular.ts';
 import { configDesdeCliente, type ClienteV2 } from './cliente.ts';
+import type { ConfigCalculo } from './tipos.ts';
 import { compararTodo } from './grupos.ts';
 import { casosAgentReady, casosDeGrupo } from './casos-grupo.ts';
 import { evaluarIniciativa } from './iniciativas.ts';
@@ -12,9 +13,10 @@ import type { Contexto, Iniciativa, Lectura } from './modelo.ts';
 
 export const NOMBRE_AREA = 'El área';
 
-export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: Iniciativa[], contexto: Contexto | null, opciones: { alias?: Record<string, string>; generado?: Date } = {}) {
+export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: Iniciativa[], contexto: Contexto | null, opciones: { alias?: Record<string, string>; generado?: Date; config?: ConfigCalculo } = {}) {
   const det = detectar(lectura);
-  const cfg = configDesdeCliente(cliente);
+  // La web aún guarda la configuración de la v0 (etapas, fte...): puede pasarla tal cual.
+  const cfg = opciones.config || configDesdeCliente(cliente);
   const preparacion = preparar(lectura.tareas, det, cfg);
   const modelo = calcularDesde(preparacion);
   const fteArea = Object.values(cfg.fte || {});

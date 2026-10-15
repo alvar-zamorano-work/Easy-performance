@@ -3,3 +3,4 @@ node_modules/
 # Nada de datos de cliente en el repositorio
 datos-cliente/
 *.cliente.csv
+dist/

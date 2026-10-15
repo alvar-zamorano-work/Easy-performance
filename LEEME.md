@@ -2,7 +2,7 @@
 
 Acelerador para el consultor de Capgemini que entra en un proyecto de medición y mejora de la productividad de equipos de desarrollo. El plan completo está en el proyecto de Claude (claude/plan-v1-acelerador.md).
 
-La v0 (carpetas easy-performance y easy-performance-v2) sigue siendo la demo comercial hasta que el bloque B5 la supere. No se toca.
+La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa web de B5 (dist/EasyPerformance) ya cubre todo lo de la v0 y añade lo nuevo.
 
 ## Estructura
 
@@ -32,9 +32,22 @@ La v0 (carpetas easy-performance y easy-performance-v2) sigue siendo la demo com
 - Agent readiness: índice de 0 a 5 por ticket con catalogo/rubrica_agent_ready.json. Fuera solo salen agregados.
 - Paquete de diagnóstico: solo agregados. comprobarPaquete rechaza títulos, descripciones, claves de ticket, campos de personas, textos largos y los nombres que se le indiquen; se pueden usar alias para los equipos.
 
+## Carcasa web (B5)
+
+Un solo HTML que se abre con doble clic, sin servidor ni instalación. Reutiliza la interfaz de la v0 (presentación, onboarding de cinco pasos, vistas por perfil, modo oscuro, impresión) y se apoya en el núcleo de este repositorio, empaquetado dentro del HTML.
+
+- Pestañas nuevas: Comparar (internos frente a proveedores, entre proveedores y entre equipos de un área), Iniciativas (antes y después, efecto y confianza, alta de iniciativas) y Agentes (agent readiness por equipo y por criterio). Las dos primeras salen en el perfil de dirección; Agentes, cuando hay descripciones.
+- Ajustes: FTE con su origen, tipo de equipo (interno o proveedor), proveedor y área, y exportación del paquete de diagnóstico con alias opcionales.
+- Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
+- Demo: un banco ficticio con dos equipos internos y dos de proveedores (los datos sintéticos de B3).
+
+`npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (presentación y vistas sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, Jira.csv de principio a fin, paquete, PDF, demo y carpeta con iniciativas) y deja capturas en dist/verificacion. Ajustes es una página de formularios y puede tener scroll.
+
+Pendiente de probar: actualizar.ps1 en Windows.
+
 ## Requisitos
 
-Node 22.18 o posterior (ejecuta TypeScript sin compilar). Python 3 solo para regenerar los datos sintéticos.
+Node 22.18 o posterior (ejecuta TypeScript sin compilar). Python 3 solo para regenerar los datos sintéticos. Para verificar-web, Chrome o Chromium instalado (o su ruta en la variable CHROME).
 
 ## Comandos
 
@@ -46,6 +59,8 @@ npm run comprobar    # tipos y tests
 npm run probar       # resumen por equipo del export sintético completo
 npm run datos        # regenera los CSV sintéticos de la v0 (deben salir idénticos)
 npm run datos-b3     # regenera los datos sintéticos de B3 (deben salir idénticos)
+npm run web          # genera la carcasa web en dist/EasyPerformance
+npm run verificar-web  # recorre la carcasa con Chromium y guarda capturas
 ```
 
 ## Banco de exports
@@ -66,5 +81,6 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 
 - B1 (núcleo en TypeScript): hecho. Mismos resultados que la v0.
 - B2 (modelo neutro, esquemas, adaptador Jira, banco de exports): hecho.
-- B3 (comparaciones entre grupos, iniciativas, agent readiness, paquete de diagnóstico): en la rama feat/b3-comparaciones.
-- Siguiente: B4, arranque del consultor (ingesta, mapeo editable, chequeo de calidad y documento de definiciones).
+- B3 (comparaciones entre grupos, iniciativas, agent readiness, paquete de diagnóstico): hecho.
+- B5 (carcasa web): en la rama feat/b5-web. Se adelantó a B4 para tener pronto el HTML con la experiencia de la v0.
+- Siguiente: B4, arranque del consultor (ingesta, mapeo editable de estados normalizados, chequeo de calidad y documento de definiciones), ya dentro de esta carcasa.

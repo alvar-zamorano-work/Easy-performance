@@ -13,12 +13,16 @@
     "comprobar": "npm run tipos && npm test",
     "probar": "TZ=Europe/Madrid node herramientas/probar-nucleo.ts datos-sinteticos/jira-ejemplo-completo-2026-10-12.csv",
     "datos": "python3 herramientas/generar_datos_sinteticos.py datos-sinteticos",
-    "datos-b3": "TZ=Europe/Madrid node herramientas/generar-sinteticos-b3.ts"
+    "datos-b3": "TZ=Europe/Madrid node herramientas/generar-sinteticos-b3.ts",
+    "web": "TZ=Europe/Madrid node web/construir.ts",
+    "verificar-web": "npm run web && node web/verificar.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
     "ajv": "8.17.1",
     "ajv-formats": "3.0.1",
+    "esbuild": "0.25.10",
+    "playwright-core": "1.55.0",
     "typescript": "5.9.3"
   }
 }
