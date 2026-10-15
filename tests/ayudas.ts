@@ -48,3 +48,15 @@ export function escenarios(): Escenario[] {
   }
   return lista;
 }
+
+import { leerJira } from '../adaptadores/jira/ingerir.ts';
+import { detectar } from '../nucleo/detectar.ts';
+import { calcular } from '../nucleo/calcular.ts';
+import type { ConfigCalculo } from '../nucleo/tipos.ts';
+
+/** Recorrido completo con el núcleo nuevo: adaptador Jira, detección y cálculo. */
+export function recorrido(ficheros: FicheroEntrada[], cfg: ConfigCalculo = {}) {
+  const lectura = leerJira(ficheros);
+  const det = detectar(lectura);
+  return { lectura, det, modelo: calcular(lectura.tareas, det, cfg) };
+}

@@ -1,42 +1,35 @@
-// Detección automática: fecha de referencia, unidad del Tiempo en estado, nombres de estado,
-// etapa propuesta de cada estado, campo que identifica a los equipos y si los sprints son fiables.
+// Detección sobre el modelo neutro: fecha de referencia, estados con su etapa, campo que reconoce
+// a los equipos y si los sprints son fiables. No sabe de qué plataforma vienen los datos.
 
-import { DIA, cuantil, inicioSemana, media, norm } from './util.ts';
+import { DIA, cuantil, inicioSemana, media } from './util.ts';
 import { fechaCorta } from './formato.ts';
-import { esBloqueo, etapaPropuesta } from './estados.ts';
-import type { Deteccion, EstadoDetectado, Etapa, InformeIngesta, Tarea } from './tipos.ts';
+import { etapaDe } from './estados.ts';
+import type { Deteccion, EstadoDetectado } from './tipos.ts';
+import type { CampoAgrupador, Etapa, Lectura, Tarea } from './modelo.ts';
 
-export interface OpcionEquipo { id: string; nombre: string; valor: (t: Tarea) => string }
+export const TODOS = 'todos';
+const NOMBRE_TODOS = 'Todo el trabajo';
 
-export const OPCIONES_EQUIPO: OpcionEquipo[] = [
-  { id: 'equipo', nombre: 'Campo Equipo', valor: (t) => t.equipoCampo },
-  { id: 'componentes', nombre: 'Componente', valor: (t) => t.componentes[0] || '' },
-  { id: 'proyecto', nombre: 'Proyecto', valor: (t) => t.proyecto },
-  { id: 'etiquetas', nombre: 'Etiqueta', valor: (t) => t.etiquetas[0] || '' },
-  { id: 'todos', nombre: 'En ninguno: todo es un solo equipo', valor: () => 'Todo el trabajo' },
-];
-
-export function valorEquipo(campo: string): (t: Tarea) => string {
-  const o = OPCIONES_EQUIPO.filter((x) => x.id === campo)[0] || OPCIONES_EQUIPO[OPCIONES_EQUIPO.length - 1];
-  return o.valor;
+/** Valor que identifica al equipo de una tarea según el campo elegido. */
+export function valorEquipo(campo: string, campos: CampoAgrupador[]): (t: Tarea) => string {
+  if (campo !== TODOS && campos.some((c) => c.id === campo)) return (t) => t.agrupadores[campo] || '';
+  return () => NOMBRE_TODOS;
 }
 
-const PESO_OPCION: Record<string, number> = { equipo: 0.3, componentes: 0.1, proyecto: 0.05, etiquetas: 0 };
 const ORDEN_ETAPA: Record<Etapa, number> = { pendiente: 0, curso: 1, espera: 2, hecho: 3 };
-/** Estados de sistema de Jira por id, para los ids que el export no nombra. */
-const CONOCIDOS: Record<string, string> = { '1': 'Open', '3': 'In Progress', '4': 'Reopened', '5': 'Resolved', '6': 'Closed' };
 
-export function detectar(tareas: Tarea[], _informe?: InformeIngesta): Deteccion {
-  const det = { avisos: [] } as unknown as Deteccion;
+export function detectar(lectura: Lectura): Deteccion {
+  const tareas = lectura.tareas;
+  const det = { plataforma: lectura.plataforma, avisos: [], camposEquipo: lectura.camposEquipo } as unknown as Deteccion;
   // Fecha de referencia: la última actividad real (creación, cierre o cambio de estado).
   // "Actualizada" no sirve: cambia con ediciones masivas que no son trabajo.
   let ref = 0, min = Infinity;
   const actividad: number[] = [];
   tareas.forEach((t) => {
-    [t.resuelta, t.creada, t.cambioCategoria].forEach((d) => {
+    [t.fechas.terminada, t.fechas.creada, t.fechas.cambio_estado].forEach((d) => {
       if (d) { actividad.push(d.getTime()); if (d.getTime() > ref) ref = d.getTime(); }
     });
-    if (t.creada && t.creada.getTime() < min) min = t.creada.getTime();
+    if (t.fechas.creada && t.fechas.creada.getTime() < min) min = t.fechas.creada.getTime();
   });
   det.fechaMin = new Date(isFinite(min) ? min : Date.now());
   det.fechaMax = new Date(ref || Date.now());
@@ -54,99 +47,44 @@ export function detectar(tareas: Tarea[], _informe?: InformeIngesta): Deteccion 
       det.avisos.push({ tipo: 'aviso', texto: 'Las últimas semanas del export casi no tienen actividad. Las medidas llegan hasta la semana del ' + fechaCorta(new Date(s0 + ultimaActiva * 7 * DIA)) + '.' });
     }
   }
+  det.hayTiempos = tareas.some((t) => t.tiempos_estado.length);
 
-  // Unidad del campo Tiempo en estado (milisegundos, segundos o minutos), calibrada con las fechas.
-  const ratios: number[] = [];
-  tareas.forEach((t) => {
-    if (!t.resuelta || !t.tis.length) return;
-    const lead = t.resuelta.getTime() - t.creada.getTime();
-    if (lead < 3600e3) return;
-    let s = 0;
-    t.tis.forEach((x) => { s += x.v; });
-    if (s > 0) ratios.push(s / lead);
-  });
-  const r = cuantil(ratios, 0.5);
-  let factor = 1;
-  if (r != null) {
-    let mejor = Infinity;
-    [1, 1000, 60000].forEach((f) => { const e = Math.abs(Math.log(r * f)); if (e < mejor) { mejor = e; factor = f; } });
-  }
-  det.factorTis = factor;
-  det.hayTis = tareas.some((t) => t.tis.length);
-
-  // Nombres de estado por id: el estado actual suele aparecer con tiempo cero.
-  const votos: Record<string, Record<string, number>> = {};
-  tareas.forEach((t) => {
-    const ceros = t.tis.filter((x) => x.v === 0 && x.n >= 1);
-    if (ceros.length === 1 && t.estado) {
-      const id = ceros[0].id;
-      votos[id] = votos[id] || {};
-      votos[id][t.estado] = (votos[id][t.estado] || 0) + 1;
-    }
-  });
-  det.nombrePorId = {};
-  Object.keys(votos).forEach((id) => {
-    let mejor: string | null = null, max = 0;
-    Object.keys(votos[id]).forEach((nom) => { if (votos[id][nom] > max) { max = votos[id][nom]; mejor = nom; } });
-    det.nombrePorId[id] = mejor as unknown as string;
-  });
-
-  // Ids sin nombre: primero los estados de sistema de Jira, después por descarte.
-  const ids: Record<string, 1> = {}, actuales: Record<string, string> = {};
-  tareas.forEach((t) => {
-    t.tis.forEach((x) => { ids[x.id] = 1; });
-    if (t.estado) actuales[t.estado] = t.categoria || '';
-  });
-  const usados = () => { const u: Record<string, 1> = {}; Object.keys(det.nombrePorId).forEach((k) => { u[det.nombrePorId[k]] = 1; }); return u; };
-  Object.keys(ids).forEach((id) => {
-    if (det.nombrePorId[id] || !CONOCIDOS[id]) return;
-    const conocido = CONOCIDOS[id], u = usados();
-    const igual = Object.keys(actuales).filter((n) => norm(n) === norm(conocido) && !u[n])[0];
-    const misma = Object.keys(actuales).filter((n) => !u[n] && etapaPropuesta(n, actuales[n]) === etapaPropuesta(conocido, ''));
-    det.nombrePorId[id] = igual || (misma.length === 1 ? misma[0] : conocido);
-  });
-  const sinId = Object.keys(ids).filter((id) => !det.nombrePorId[id]);
-  const u2 = usados(), libres = Object.keys(actuales).filter((n) => !u2[n]);
-  if (sinId.length === 1 && libres.length === 1) det.nombrePorId[sinId[0]] = libres[0];
-
-  // Lista de estados con su etapa propuesta.
-  interface Acumulado { nombre: string; actuales: number; categorias: Record<string, number>; horas: number[]; visitas: number }
+  // Estados de origen con su estado normalizado propuesto
+  det.mapeoEstados = { ...lectura.mapeoPropuesto };
+  const categoria: Record<string, string> = {};
+  lectura.estados.forEach((e) => { categoria[e.nombre] = e.categoria; });
+  interface Acumulado { nombre: string; actuales: number; horas: number[]; visitas: number }
   const estados: Record<string, Acumulado> = {};
   const estadoInfo = (nombre: string): Acumulado => {
-    if (!estados[nombre]) estados[nombre] = { nombre, actuales: 0, categorias: {}, horas: [], visitas: 0 };
+    if (!estados[nombre]) estados[nombre] = { nombre, actuales: 0, horas: [], visitas: 0 };
     return estados[nombre];
   };
   tareas.forEach((t) => {
-    if (t.estado) {
-      const e = estadoInfo(t.estado);
-      e.actuales++;
-      if (t.categoria) e.categorias[t.categoria] = (e.categorias[t.categoria] || 0) + 1;
-    }
-    t.tis.forEach((x) => {
-      const e = estadoInfo(det.nombrePorId[x.id] || ('Estado ' + x.id));
+    if (t.estado_origen) estadoInfo(t.estado_origen).actuales++;
+    t.tiempos_estado.forEach((x) => {
+      const e = estadoInfo(x.estado);
       e.visitas++;
-      if (x.v > 0) e.horas.push(x.v * factor / 36e5);
+      if (x.ms > 0) e.horas.push(x.ms / 36e5);
     });
   });
   det.estados = Object.keys(estados).map((k): EstadoDetectado => {
     const e = estados[k];
-    let cat = '', max = 0;
-    Object.keys(e.categorias).forEach((c) => { if (e.categorias[c] > max) { max = e.categorias[c]; cat = c; } });
-    return { nombre: e.nombre, actuales: e.actuales, visitas: e.visitas, categoria: cat,
-      horasMedias: media(e.horas), etapa: etapaPropuesta(e.nombre, cat), bloqueo: esBloqueo(e.nombre) };
+    const estado = det.mapeoEstados[e.nombre] || 'pendiente';
+    return { nombre: e.nombre, actuales: e.actuales, visitas: e.visitas, categoria: categoria[e.nombre] || '',
+      horasMedias: media(e.horas), estado, etapa: etapaDe(estado), bloqueo: estado === 'bloqueado' };
   }).sort((a, b) => ORDEN_ETAPA[a.etapa] - ORDEN_ETAPA[b.etapa] || b.visitas - a.visitas);
-  const sinNombre = det.estados.filter((e) => /^Estado \d+$/.test(e.nombre));
-  if (sinNombre.length) det.avisos.push({ tipo: 'aviso', texto: sinNombre.length + ' estado(s) del campo Tiempo en estado no tienen nombre en el export. Revisa a qué etapa pertenecen.' });
 
-  // Candidatos para reconocer equipos.
-  det.opcionesEquipo = OPCIONES_EQUIPO.map((o) => {
+  // Candidatos para reconocer equipos
+  const opciones = [...lectura.camposEquipo, { id: TODOS, nombre: 'En ninguno: todo es un solo equipo', peso: 0 }];
+  det.opcionesEquipo = opciones.map((o) => {
+    const valor = valorEquipo(o.id, lectura.camposEquipo);
     const cuenta: Record<string, number> = {};
     let conValor = 0;
-    tareas.forEach((t) => { const v = o.valor(t); if (v) { conValor++; cuenta[v] = (cuenta[v] || 0) + 1; } });
+    tareas.forEach((t) => { const v = valor(t); if (v) { conValor++; cuenta[v] = (cuenta[v] || 0) + 1; } });
     const valores = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]);
     const cobertura = tareas.length ? conValor / tareas.length : 0;
-    const valida = o.id === 'todos' || (valores.length >= 2 && valores.length <= 25 && cobertura >= 0.6);
-    const puntuacion = o.id === 'todos' ? 0.1 : (valida ? cobertura + PESO_OPCION[o.id] - (valores.length > 12 ? 0.3 : 0) : -1);
+    const valida = o.id === TODOS || (valores.length >= 2 && valores.length <= 25 && cobertura >= 0.6);
+    const puntuacion = o.id === TODOS ? 0.1 : (valida ? cobertura + o.peso - (valores.length > 12 ? 0.3 : 0) : -1);
     return { id: o.id, nombre: o.nombre, valores: valores.map((v) => ({ valor: v, n: cuenta[v] })), cobertura, valida, puntuacion };
   });
   const mejorOpcion = det.opcionesEquipo.slice().sort((a, b) => b.puntuacion - a.puntuacion)[0];

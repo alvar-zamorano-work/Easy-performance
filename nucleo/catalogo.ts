@@ -6,9 +6,10 @@ import casosJson from '../catalogo/casos.json' with { type: 'json' };
 import objetivosJson from '../catalogo/objetivos.json' with { type: 'json' };
 import textosJson from '../catalogo/textos.json' with { type: 'json' };
 import vistasJson from '../catalogo/vistas.json' with { type: 'json' };
-import type { Limites } from './tipos.ts';
+import estadosJson from '../catalogo/estados.json' with { type: 'json' };
+import type { Etapa, EstadoNormalizado, Limites } from './modelo.ts';
 
-export type Requisito = 'tis' | 'inicio' | 'puntos' | 'errores' | 'primera' | 'sprints' | 'api';
+export type Requisito = 'tiempos' | 'inicio' | 'puntos' | 'errores' | 'primera' | 'sprints' | 'api';
 
 export interface MedidaDef {
   nombre: string;
@@ -51,6 +52,18 @@ export interface ObjetivoDef {
   fijo?: boolean;
 }
 
+export interface EstadoDef { nombre: string; etapa: Etapa; descripcion: string }
+export interface ReglaEstado { estado: EstadoNormalizado; patron: string; categoria?: string }
+export interface CatalogoEstados {
+  version: number;
+  estados: Record<EstadoNormalizado, EstadoDef>;
+  /** Reglas en orden sobre el nombre del estado (sin acentos y en minúsculas); gana la primera. */
+  reglas: ReglaEstado[];
+  /** Si ninguna regla encaja, se mira la categoría de estado de la plataforma. */
+  porCategoria: { patron: string; estado: EstadoNormalizado }[];
+  porDefecto: EstadoNormalizado;
+}
+
 export interface Catalogo {
   version: number;
   medidas: Record<string, MedidaDef>;
@@ -61,6 +74,7 @@ export interface Catalogo {
   perfiles: typeof vistasJson.perfiles;
   graficos: typeof vistasJson.graficos;
   kpis: typeof vistasJson.kpis;
+  estados: CatalogoEstados;
 }
 
 export const CATALOGO: Catalogo = {
@@ -73,4 +87,5 @@ export const CATALOGO: Catalogo = {
   perfiles: vistasJson.perfiles,
   graficos: vistasJson.graficos,
   kpis: vistasJson.kpis,
+  estados: estadosJson as CatalogoEstados,
 };

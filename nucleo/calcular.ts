@@ -3,7 +3,7 @@
 
 import { DIA, cuantil, desv, inicioSemana, media, spearman, sumarDias } from './util.ts';
 import { CATALOGO, type Catalogo } from './catalogo.ts';
-import { etapaPropuesta } from './estados.ts';
+import { etapaDe, etapasV0AMapeo } from './estados.ts';
 import { valorEquipo } from './detectar.ts';
 import { estadoMedida, rangoDe, tendencia } from './semaforo.ts';
 import { analizarSprints } from './sprints.ts';
@@ -12,9 +12,10 @@ import { calidadEquipo, cierresEnBloque } from './calidad.ts';
 import { kpisComite } from './kpis.ts';
 import { evaluarCasos } from './casos.ts';
 import type {
-  ConfigCalculo, ContextoCalculo, Derivada, Deteccion, Etapa, InfoSprints, MedidaCalculada, Modelo,
-  ResultadoEquipo, Series, Tarea, TareaEnCurso,
+  ConfigCalculo, ContextoCalculo, Derivada, Deteccion, InfoSprints, MedidaCalculada, Modelo,
+  ResultadoEquipo, Series, TareaEnCurso,
 } from './tipos.ts';
+import type { EstadoNormalizado, Tarea } from './modelo.ts';
 
 /** Semanas que abarca el valor actual de cada medida ('P' = ventana larga de proporciones). */
 const VENTANA: Record<string, number | 'P'> = { errores: 'P', retrabajo: 'P', arrastradas: 'P', reparto: 'P', regularidad: 8, estimacion: 12 };
@@ -22,11 +23,13 @@ const VENTANA: Record<string, number | 'P'> = { errores: 'P', retrabajo: 'P', ar
 export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCalculo, catalogo: Catalogo = CATALOGO): Modelo {
   const cfg: ConfigCalculo = cfgEntrada || {};
   const K = cfg.semanasActuales || 4, KP = cfg.semanasProporciones || 8, R = cfg.semanasReferencia || 12;
-  const etapas = cfg.etapas || {};
-  const etapaDe: Record<string, Etapa> = {}, bloqueoDe: Record<string, boolean> = {};
-  det.estados.forEach((e) => { etapaDe[e.nombre] = etapas[e.nombre] || e.etapa; bloqueoDe[e.nombre] = e.bloqueo; });
-  const f = det.factorTis || 1;
-  const valor = valorEquipo(cfg.campoEquipo || det.equipoRecomendado);
+  // Mapeo de estados: el del cliente manda sobre la propuesta. Un cliente.json de la v0 trae etapas.
+  const mapeo: Record<string, EstadoNormalizado> = {
+    ...det.mapeoEstados,
+    ...(cfg.etapas ? etapasV0AMapeo(cfg.etapas, det.mapeoEstados) : {}),
+    ...(cfg.mapeoEstados || {}),
+  };
+  const valor = valorEquipo(cfg.campoEquipo || det.equipoRecomendado, det.camposEquipo);
   const incluidos = cfg.equipos && cfg.equipos.length ? cfg.equipos : null;
 
   const fechaRef = det.fechaRef;
@@ -50,37 +53,40 @@ export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     let eq = valor(t) || 'Sin equipo';
     if (incluidos && incluidos.indexOf(eq) < 0) return;
     if (cfg.unirComo) eq = cfg.unirComo; // visión del área: los equipos incluidos, juntos como uno solo
-    const etapa = etapaDe[t.estado] || etapaPropuesta(t.estado, t.categoria);
+    const f = t.fechas;
+    const estado = mapeo[t.estado_origen] || t.estado_normalizado;
+    const etapa = etapaDe(estado);
     let curso = 0, espera = 0, entradasCurso = 0, extra = 0, bloqueos = 0;
     const porEstado: Record<string, number> = {};
-    t.tis.forEach((x) => {
-      const nom = det.nombrePorId[x.id] || ('Estado ' + x.id);
-      const et = etapaDe[nom] || 'pendiente';
-      const ms = x.v * f;
-      if (et === 'curso') { curso += ms; entradasCurso += x.n; }
-      if (et === 'espera') { espera += ms; entradasCurso += x.n; porEstado[nom] = (porEstado[nom] || 0) + ms; }
+    t.tiempos_estado.forEach((x) => {
+      const est = mapeo[x.estado];
+      const et = est ? etapaDe(est) : 'pendiente';
+      const ms = x.ms;
+      if (et === 'curso') { curso += ms; entradasCurso += x.visitas; }
+      if (et === 'espera') { espera += ms; entradasCurso += x.visitas; porEstado[x.estado] = (porEstado[x.estado] || 0) + ms; }
       if (et === 'curso' || et === 'espera') {
-        if (bloqueoDe[nom]) bloqueos += x.n; else extra += Math.max(0, x.n - 1);
+        if (est === 'bloqueado') bloqueos += x.visitas; else extra += Math.max(0, x.visitas - 1);
       }
     });
+    const descartada = !!(f.terminada && (t.descartada || estado === 'descartado'));
     const d: Derivada = {
-      t, equipo: eq, etapa, cursoMs: curso, esperaMs: espera, porEstado,
-      entregada: !!(t.resuelta && !t.descartada && (etapa === 'hecho' || !t.estado)),
-      descartada: !!(t.resuelta && t.descartada),
-      conTis: t.tis.length > 0,
+      t, equipo: eq, estado, etapa, cursoMs: curso, esperaMs: espera, porEstado,
+      entregada: !!(f.terminada && !descartada && (etapa === 'hecho' || !t.estado_origen)),
+      descartada,
+      conTiempos: t.tiempos_estado.length > 0,
       retrabajo: false,
       primeraH: null,
     };
-    if (d.entregada && d.conTis && entradasCurso === 0) d.salto = true;
+    if (d.entregada && d.conTiempos && entradasCurso === 0) d.salto = true;
     if (d.entregada && (curso + espera) > 0) {
       d.ciclo = (curso + espera) / DIA;
-      d.inicio = new Date(t.resuelta!.getTime() - curso - espera);
-    } else if (!t.resuelta && (d.etapa === 'curso' || d.etapa === 'espera')) {
-      d.inicio = t.cambioCategoria || (t.actualizada ? new Date(t.actualizada.getTime() - curso - espera) : null);
+      d.inicio = f.empezada || new Date(f.terminada!.getTime() - curso - espera);
+    } else if (!f.terminada && (d.etapa === 'curso' || d.etapa === 'espera')) {
+      d.inicio = f.empezada || f.cambio_estado || (f.actualizada ? new Date(f.actualizada.getTime() - curso - espera) : null);
     }
-    if (d.entregada) d.total = (t.resuelta!.getTime() - t.creada.getTime()) / DIA;
-    d.retrabajo = d.entregada && d.conTis && (extra - bloqueos) > 0;
-    d.primeraH = (t.primera && t.primera >= t.creada) ? (t.primera.getTime() - t.creada.getTime()) / 36e5 : null;
+    if (d.entregada) d.total = (f.terminada!.getTime() - f.creada.getTime()) / DIA;
+    d.retrabajo = d.entregada && d.conTiempos && (t.reaperturas != null ? t.reaperturas > 0 : (extra - bloqueos) > 0);
+    d.primeraH = (f.primera_respuesta && f.primera_respuesta >= f.creada) ? (f.primera_respuesta.getTime() - f.creada.getTime()) / 36e5 : null;
     (porEquipo[eq] = porEquipo[eq] || []).push(d);
   });
 
@@ -106,12 +112,12 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   // Conteos semanales
   items.forEach((d) => {
     const t = d.t;
-    const wc = c.semanaDe(t.creada);
+    const wc = c.semanaDe(t.fechas.creada);
     if (wc >= 0) s.entradas[wc]++;
-    if (t.resuelta) {
-      const wr = c.semanaDe(t.resuelta);
+    if (t.fechas.terminada) {
+      const wr = c.semanaDe(t.fechas.terminada);
       if (wr >= 0) {
-        if (d.entregada) { s.entregas[wr]++; if (t.puntos) s.velocidad[wr] += t.puntos; }
+        if (d.entregada) { s.entregas[wr]++; if (t.estimacion) s.velocidad[wr] += t.estimacion; }
         if (d.entregada || d.descartada) s.salidas[wr]++;
       }
     }
@@ -122,10 +128,10 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     const edades: number[] = [];
     for (let i = 0; i < items.length; i++) {
       const d = items[i], t = d.t;
-      if (t.creada >= fin) continue;
-      const abierta = !t.resuelta || t.resuelta >= fin;
+      if (t.fechas.creada >= fin) continue;
+      const abierta = !t.fechas.terminada || t.fechas.terminada >= fin;
       if (!abierta) continue;
-      if (d.inicio && d.inicio < fin) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.creada.getTime()) / DIA); }
+      if (d.inicio && d.inicio < fin) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
     }
     s.pendiente[w] = pend;
     s.wip[w] = wip;
@@ -134,7 +140,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   // Ventanas móviles
   const ventana = (w: number, k: number) => {
     const desde = c.semanas[Math.max(0, w - k + 1)], hasta = c.finDe(w);
-    return entregadas.filter((d) => d.t.resuelta! >= desde && d.t.resuelta! < hasta);
+    return entregadas.filter((d) => d.t.fechas.terminada! >= desde && d.t.fechas.terminada! < hasta);
   };
   const KP = c.KP;
   const sprintsInfo = analizarSprints(items, c);
@@ -157,7 +163,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     const vp = ventana(w, KP);
     if (w >= KP - 1 && vp.length >= 8) {
       s.errores[w] = vp.filter((d) => d.t.tipo === 'error').length / vp.length;
-      const conT = vp.filter((d) => d.conTis);
+      const conT = vp.filter((d) => d.conTiempos);
       if (conT.length >= 8) s.retrabajo[w] = conT.filter((d) => d.retrabajo).length / conT.length;
       if (sprintsInfo.fiables) s.arrastradas[w] = vp.filter((d) => d.t.sprints.length > 1).length / vp.length;
       const rep: Record<string, number> = { historia: 0, error: 0, tarea: 0, otro: 0 };
@@ -169,21 +175,21 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       const sem = s.entregas.slice(w - 7, w + 1), m = media(sem)!;
       s.regularidad[w] = m >= 1 ? desv(sem)! / m : null;
     }
-    const v12 = ventana(w, 12).filter((d) => d.t.puntos != null && d.ciclo != null && d.ciclo > 0);
-    if (v12.length >= 20) s.estimacion[w] = spearman(v12.map((d) => d.t.puntos!), v12.map((d) => d.ciclo!));
+    const v12 = ventana(w, 12).filter((d) => d.t.estimacion != null && d.ciclo != null && d.ciclo > 0);
+    if (v12.length >= 20) s.estimacion[w] = spearman(v12.map((d) => d.t.estimacion!), v12.map((d) => d.ciclo!));
     const desde = c.semanas[Math.max(0, w - K + 1)], hasta = c.finDe(w);
-    const pr = items.filter((d) => d.primeraH != null && d.t.creada >= desde && d.t.creada < hasta).map((d) => d.primeraH);
+    const pr = items.filter((d) => d.primeraH != null && d.t.fechas.creada >= desde && d.t.fechas.creada < hasta).map((d) => d.primeraH);
     if (pr.length >= 5) s.primera85[w] = cuantil(pr, 0.85);
   }
 
   // Trabajo bloqueado hoy. "Lo habitual" sale del periodo de referencia (antes de las últimas semanas),
   // no de las semanas que se están evaluando.
   const Lr = N - 1, refDesde = c.semanas[Math.max(0, Lr - K - R + 1)], refHasta = c.semanas[Math.max(0, Lr - K + 1)];
-  let deRef = entregadas.filter((d) => d.ciclo != null && d.t.resuelta! >= refDesde && d.t.resuelta! < refHasta);
-  if (deRef.length < 5) deRef = entregadas.filter((d) => d.ciclo != null && d.t.resuelta! >= sumarDias(c.semanaFin, -7 * 16));
+  let deRef = entregadas.filter((d) => d.ciclo != null && d.t.fechas.terminada! >= refDesde && d.t.fechas.terminada! < refHasta);
+  if (deRef.length < 5) deRef = entregadas.filter((d) => d.ciclo != null && d.t.fechas.terminada! >= sumarDias(c.semanaFin, -7 * 16));
   const umbralEdad = deRef.length >= 5 ? cuantil(deRef.map((d) => d.ciclo), 0.85) : null;
-  const enCurso: TareaEnCurso[] = items.filter((d) => !d.t.resuelta && d.inicio && (d.etapa === 'curso' || d.etapa === 'espera'))
-    .map((d) => ({ clave: d.t.clave, resumen: d.t.resumen, estado: d.t.estado, etapa: d.etapa, edad: (c.fechaRef.getTime() - d.inicio!.getTime()) / DIA }))
+  const enCurso: TareaEnCurso[] = items.filter((d) => !d.t.fechas.terminada && d.inicio && (d.etapa === 'curso' || d.etapa === 'espera'))
+    .map((d) => ({ clave: d.t.clave_origen, resumen: d.t.titulo, estado: d.t.estado_origen, etapa: d.etapa, edad: (c.fechaRef.getTime() - d.inicio!.getTime()) / DIA }))
     .sort((a, b) => b.edad - a.edad);
   const atascadas = umbralEdad == null ? [] : enCurso.filter((x) => x.edad > umbralEdad);
 
@@ -231,23 +237,23 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   const kpis = kpisComite(base, c, nombre);
   const neg = negocio(items, c);
   const calidad = calidadEquipo(items, c, sprintsInfo, det);
-  const ciclos = entregadas.filter((d) => d.ciclo != null && d.t.resuelta! >= sumarDias(c.semanaFin, -7 * 16))
-    .map((d) => ({ clave: d.t.clave, resumen: d.t.resumen, dias: d.ciclo!, fecha: d.t.resuelta!, puntos: d.t.puntos }));
+  const ciclos = entregadas.filter((d) => d.ciclo != null && d.t.fechas.terminada! >= sumarDias(c.semanaFin, -7 * 16))
+    .map((d) => ({ clave: d.t.clave_origen, resumen: d.t.titulo, dias: d.ciclo!, fecha: d.t.fechas.terminada!, puntos: d.t.estimacion }));
   const info = { ...base, kpis, negocio: neg, calidad, ciclos };
   return { ...info, casos: evaluarCasos(info, items, c) };
 }
 
 function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo): Record<string, true | string> {
-  const hayTis = items.some((d) => d.conTis);
+  const hayTiempos = items.some((d) => d.conTiempos);
   const hayInicio = items.some((d) => d.inicio);
-  const conPuntos = items.filter((d) => d.t.puntos != null).length;
-  const hayErrores = items.some((d) => d.t.tipo === 'error') || items.some((d) => d.t.tipoTxt);
+  const conPuntos = items.filter((d) => d.t.estimacion != null).length;
+  const hayErrores = items.some((d) => d.t.tipo === 'error') || items.some((d) => d.t.tipo_origen);
   const hayPrimera = items.some((d) => d.primeraH != null);
   const out: Record<string, true | string> = {};
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
-    else if (req === 'tis') out[id] = hayTis ? true : 'El export no trae el campo Tiempo en estado. Exporta con Todos los campos.';
+    else if (req === 'tiempos') out[id] = hayTiempos ? true : 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.';
     else if (req === 'inicio') out[id] = hayInicio ? true : 'No se puede saber cuándo empezó cada tarea con este export.';
     else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : 'Hay muy pocas tareas con puntos de historia.';
     else if (req === 'errores') out[id] = hayErrores ? true : 'El export no trae el tipo de tarea.';

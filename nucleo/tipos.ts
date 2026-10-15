@@ -1,60 +1,12 @@
-// Tipos del núcleo en B1. Reproducen la forma de los datos de la v0.
-// En B2 se sustituyen por el modelo neutro del plan (apartado 5).
+// Tipos de la detección y de los resultados del cálculo. Los datos de entrada están en modelo.ts.
 
-export type TipoTarea = 'historia' | 'error' | 'tarea' | 'subtarea' | 'epica' | 'otro';
-export type Etapa = 'pendiente' | 'curso' | 'espera' | 'hecho';
+import type { Aviso, CampoAgrupador, Etapa, EstadoNormalizado, Limites, Tarea } from './modelo.ts';
+
+export type * from './modelo.ts';
+
 export type Semaforo = 'bien' | 'atencion' | 'critico' | 'sin' | 'neutro';
 export type Gravedad = 'critico' | 'atencion';
 export type Confianza = 'alta' | 'media' | 'baja';
-
-export interface Aviso { tipo: 'aviso' | 'error'; texto: string }
-
-/** Una entrada del campo "Tiempo en estado": id de estado, visitas y tiempo acumulado. */
-export interface TiempoEnEstado { id: string; n: number; v: number }
-
-/** Tarea tal como la lee el adaptador de Jira de la v0. Nunca lleva personas. */
-export interface TareaLeida {
-  clave: string;
-  resumen: string;
-  tipoTxt: string;
-  estado: string;
-  categoria: string;
-  creada: Date | null;
-  actualizada: Date | null;
-  resuelta: Date | null;
-  resolucion: string;
-  prioridad: string;
-  componentes: string[];
-  etiquetas: string[];
-  sprints: string[];
-  puntos: number | null;
-  equipoCampo: string;
-  proyecto: string;
-  padre: string;
-  tis: TiempoEnEstado[];
-  primera: Date | null;
-  cambioCategoria: Date | null;
-  tipo: TipoTarea;
-  urgente: boolean;
-  descartada: boolean;
-}
-
-/** Tarea válida para el cálculo: siempre tiene fecha de creación. */
-export type Tarea = TareaLeida & { creada: Date };
-
-export interface FicheroEntrada { nombre: string; texto: string }
-
-export interface InformeIngesta {
-  ficheros: { nombre: string; filas: number; columnas: number; columnasConDatos: number }[];
-  avisos: Aviso[];
-  filasLeidas: number;
-  duplicadas: number;
-  epicas: number;
-  subtareas: number;
-  sinClave: number;
-  campos: Record<string, true | 'vacio'>;
-  tareas?: number;
-}
 
 export interface EstadoDetectado {
   nombre: string;
@@ -62,6 +14,7 @@ export interface EstadoDetectado {
   visitas: number;
   categoria: string;
   horasMedias: number | null;
+  estado: EstadoNormalizado;
   etapa: Etapa;
   bloqueo: boolean;
 }
@@ -76,26 +29,30 @@ export interface OpcionEquipoDetectada {
 }
 
 export interface Deteccion {
+  plataforma: string;
   avisos: Aviso[];
   fechaMin: Date;
   fechaMax: Date;
   fechaRef: Date;
-  factorTis: number;
-  hayTis: boolean;
-  nombrePorId: Record<string, string>;
+  hayTiempos: boolean;
   estados: EstadoDetectado[];
+  /** Mapeo propuesto: estado de origen -> estado normalizado. */
+  mapeoEstados: Record<string, EstadoNormalizado>;
+  /** Campos por los que el adaptador sabe reconocer equipos. */
+  camposEquipo: CampoAgrupador[];
   opcionesEquipo: OpcionEquipoDetectada[];
   equipoRecomendado: string;
   haySprints: boolean;
   sprintsComoFecha: boolean;
 }
 
-export interface Limites { atencion?: number | null; critico?: number | null }
-
 export interface ConfigCalculo {
   semanasActuales?: number;
   semanasProporciones?: number;
   semanasReferencia?: number;
+  /** Mapeo del cliente: estado de origen -> estado normalizado. Manda sobre la propuesta. */
+  mapeoEstados?: Record<string, EstadoNormalizado>;
+  /** Mapeo de la v0 (estado -> etapa). Solo para leer cliente.json antiguos; se convierte a mapeoEstados. */
   etapas?: Record<string, Etapa>;
   campoEquipo?: string;
   equipos?: string[];
@@ -109,13 +66,14 @@ export interface ConfigCalculo {
 export interface Derivada {
   t: Tarea;
   equipo: string;
+  estado: EstadoNormalizado;
   etapa: Etapa;
   cursoMs: number;
   esperaMs: number;
   porEstado: Record<string, number>;
   entregada: boolean;
   descartada: boolean;
-  conTis: boolean;
+  conTiempos: boolean;
   salto?: boolean;
   ciclo?: number;
   inicio?: Date | null;
@@ -176,6 +134,7 @@ export interface SprintResumen {
 
 export interface InfoSprints { fiables: boolean; motivo: string | null; ultimos: SprintResumen[] }
 
+/** Tarea en curso. "clave" y "resumen" solo se usan en pantalla; nunca van al paquete de diagnóstico. */
 export interface TareaEnCurso { clave: string; resumen: string; estado: string; etapa: Etapa; edad: number }
 
 export interface Negocio {

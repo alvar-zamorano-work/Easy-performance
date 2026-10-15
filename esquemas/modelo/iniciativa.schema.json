@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/modelo/iniciativa.schema.json",
+  "title": "Iniciativa de mejora",
+  "description": "Un fichero por iniciativa en la carpeta iniciativas/. La evaluación la calcula el núcleo (apartado 8 del plan).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "nombre", "descripcion", "fecha_inicio", "fecha_fin", "equipos", "medidas_objetivo", "efecto_esperado", "estado", "origen", "evaluacion", "notas"],
+  "properties": {
+    "id": { "$ref": "comun.schema.json#/$defs/id" },
+    "nombre": { "type": "string", "minLength": 1 },
+    "descripcion": { "type": "string" },
+    "fecha_inicio": { "$ref": "comun.schema.json#/$defs/dia" },
+    "fecha_fin": { "oneOf": [{ "$ref": "comun.schema.json#/$defs/dia" }, { "type": "null" }] },
+    "equipos": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "medidas_objetivo": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["medida", "direccion"],
+        "properties": { "medida": { "type": "string" }, "direccion": { "enum": ["subir", "bajar"] } }
+      }
+    },
+    "efecto_esperado": { "type": "string" },
+    "estado": { "enum": ["planificada", "en_curso", "evaluada", "descartada"] },
+    "origen": { "type": "string", "description": "Id del caso del catálogo del que sale, o \"propia\"." },
+    "evaluacion": { "type": ["object", "null"] },
+    "notas": { "type": "string" }
+  }
+}

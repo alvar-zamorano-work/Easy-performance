@@ -41,7 +41,7 @@
       "unidad": "días",
       "dir": "menos",
       "formato": "dias",
-      "requiere": "tis",
+      "requiere": "tiempos",
       "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que terminan 8 de cada 10 tareas de las últimas 4 semanas."
     },
     "total": {
@@ -58,7 +58,7 @@
       "unidad": "del tiempo de ciclo",
       "dir": "menos",
       "formato": "pct",
-      "requiere": "tis",
+      "requiere": "tiempos",
       "como": "Parte del tiempo de ciclo que las tareas pasan en estados de espera de Jira (revisión, pruebas o el estado Bloqueado). Últimas 4 semanas.",
       "limites": {
         "atencion": 0.5,
@@ -128,7 +128,7 @@
       "unidad": "de lo terminado",
       "dir": "menos",
       "formato": "pct",
-      "requiere": "tis",
+      "requiere": "tiempos",
       "como": "Parte de las tareas terminadas en las últimas 8 semanas que volvieron a un estado por el que ya habían pasado. No cuenta las vueltas tras un bloqueo.",
       "limites": {
         "atencion": 0.2,

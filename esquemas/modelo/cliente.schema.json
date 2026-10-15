@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/modelo/cliente.schema.json",
+  "title": "Configuración del cliente (cliente.json, versión 2)",
+  "description": "Sale de la puesta en marcha y se guarda en la carpeta del cliente. Un cliente.json de la v0 (version 1) se convierte con migrarClienteV0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "nombre", "sector", "plataforma", "mapeoEstados", "equipos", "objetivos", "medidas"],
+  "properties": {
+    "version": { "const": 2 },
+    "nombre": { "type": "string", "minLength": 1 },
+    "sector": { "type": "string" },
+    "plataforma": { "type": "string", "minLength": 1 },
+    "periodo": {
+      "type": "object", "additionalProperties": false,
+      "properties": { "desde": { "$ref": "comun.schema.json#/$defs/dia" }, "hasta": { "$ref": "comun.schema.json#/$defs/dia" } }
+    },
+    "creada": { "$ref": "comun.schema.json#/$defs/fecha" },
+    "actualizada": { "$ref": "comun.schema.json#/$defs/fecha" },
+    "mapeoEstados": {
+      "description": "Estado de origen -> estado normalizado. Lo propone el adaptador y lo firma el cliente.",
+      "type": "object", "additionalProperties": { "$ref": "comun.schema.json#/$defs/estadoNormalizado" }
+    },
+    "equipos": {
+      "type": "object", "additionalProperties": false, "required": ["campo", "lista"],
+      "properties": {
+        "campo": { "type": "string", "description": "Campo por el que se reconoce el equipo (equipo, componentes, proyecto, etiquetas o todos)." },
+        "lista": { "type": "array", "items": { "$ref": "equipo.schema.json" } }
+      }
+    },
+    "objetivos": { "type": "array", "items": { "type": "string" } },
+    "medidas": { "type": "array", "items": { "type": "string" } },
+    "perfiles": { "type": "array", "items": { "type": "string" } },
+    "graficos": { "type": "object", "additionalProperties": { "type": "string" } },
+    "textos": { "type": "object", "additionalProperties": { "type": "string" } },
+    "noAplica": { "type": "object", "additionalProperties": { "type": "boolean" } },
+    "planHecho": { "type": "object", "additionalProperties": { "type": "boolean" } }
+  }
+}

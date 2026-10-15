@@ -5,6 +5,7 @@ import { interior, norm } from '../../nucleo/util.ts';
 export const ALIAS: Record<string, string[]> = {
   clave: ['issue key', 'work item key', 'key', 'clave', 'clave de incidencia', 'clave de la incidencia', 'clave del elemento de trabajo', 'clave de elemento de trabajo'],
   resumen: ['summary', 'resumen'],
+  descripcion: ['description', 'descripcion'],
   tipo: ['issue type', 'work type', 'work item type', 'tipo de incidencia', 'tipo de trabajo', 'tipo de elemento de trabajo', 'tipo de la incidencia'],
   estado: ['status', 'estado'],
   categoria: ['status category', 'categoria de estado', 'categoria del estado'],
@@ -22,6 +23,7 @@ export const ALIAS: Record<string, string[]> = {
   tis: ['[chart] time in status', 'time in status', 'tiempo en estado', '[chart] tiempo en estado'],
   primera: ['[chart] date of first response', 'date of first response', 'fecha de primera respuesta', '[chart] fecha de primera respuesta'],
   padre: ['parent summary', 'resumen del principal', 'resumen principal', 'resumen del elemento principal'],
+  padreClave: ['parent key', 'clave del principal', 'clave principal', 'clave del elemento principal'],
   proyecto: ['project name', 'nombre del proyecto', 'proyecto'],
 };
 
@@ -41,4 +43,11 @@ export function mapearColumnas(cab: string[]): MapaColumnas {
     if (encontrados.length) mapa[campo] = MULTIPLES[campo] ? encontrados : encontrados[0];
   });
   return mapa;
+}
+
+/** Columnas de vínculos entre tareas ("Outward issue link (Blocks)", "Vínculo de incidencia saliente (...)"). */
+export function columnasDeEnlaces(cab: string[]): number[] {
+  const out: number[] = [];
+  cab.forEach((h, i) => { if (/^(outward|inward) issue link|^vinculo de (la )?incidencia|^enlace de (la )?incidencia/.test(norm(h))) out.push(i); });
+  return out;
 }

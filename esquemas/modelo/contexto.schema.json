@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/modelo/contexto.schema.json",
+  "title": "Contexto del cliente",
+  "description": "Lo único que la IA puede usar además de los datos. Si una categoría está vacía, la IA no opina sobre ella.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["documentos"],
+  "properties": {
+    "documentos": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["categoria", "titulo", "resumen", "fuente", "fecha"],
+        "properties": {
+          "categoria": { "enum": ["metodo", "organizacion", "stack", "contratos", "otro"] },
+          "titulo": { "type": "string", "minLength": 1 },
+          "resumen": { "type": "string", "minLength": 1, "description": "Texto que escribe o aprueba el consultor." },
+          "fuente": { "type": "string" },
+          "fecha": { "$ref": "comun.schema.json#/$defs/dia" }
+        }
+      }
+    }
+  }
+}

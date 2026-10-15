@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["nucleo", "adaptadores", "tests", "herramientas"],
+  "include": ["nucleo", "adaptadores", "esquemas", "tests", "herramientas"],
   "exclude": ["tests/referencia-v0"]
 }

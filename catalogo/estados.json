@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "estados": {
+    "nuevo": {
+      "nombre": "Nuevo",
+      "etapa": "pendiente",
+      "descripcion": "Recién creado, aún sin revisar ni priorizar."
+    },
+    "pendiente": {
+      "nombre": "Pendiente",
+      "etapa": "pendiente",
+      "descripcion": "Listo o priorizado, sin empezar."
+    },
+    "en_curso": {
+      "nombre": "En curso",
+      "etapa": "curso",
+      "descripcion": "Alguien está trabajando en ello."
+    },
+    "bloqueado": {
+      "nombre": "Bloqueado",
+      "etapa": "espera",
+      "descripcion": "Parado por algo que el equipo no controla. Las vueltas tras un bloqueo no cuentan como retrabajo."
+    },
+    "en_revision": {
+      "nombre": "En revisión",
+      "etapa": "espera",
+      "descripcion": "Esperando revisión o aprobación."
+    },
+    "en_pruebas": {
+      "nombre": "En pruebas",
+      "etapa": "espera",
+      "descripcion": "Esperando o pasando pruebas y validación."
+    },
+    "en_espera": {
+      "nombre": "En espera",
+      "etapa": "espera",
+      "descripcion": "Esperando a algo o a alguien: despliegue, respuesta, otro equipo."
+    },
+    "terminado": {
+      "nombre": "Terminado",
+      "etapa": "hecho",
+      "descripcion": "Entregado."
+    },
+    "descartado": {
+      "nombre": "Descartado",
+      "etapa": "hecho",
+      "descripcion": "Cerrado sin hacer: duplicado, no se hará, obsoleto. No cuenta como entrega."
+    }
+  },
+  "reglas": [
+    {
+      "estado": "terminado",
+      "patron": "\\b(done|hecho|hecha|finaliz|cerrad|closed|resolved|resuelt|complet|terminad|released|desplegad|entregad)|\\blisto\\b(?!\\s*para)"
+    },
+    {
+      "estado": "pendiente",
+      "patron": "(selected for|seleccionad[oa]s? para|ready for (dev|develop)|listo para (el )?desarroll)"
+    },
+    {
+      "estado": "bloqueado",
+      "patron": "(block|bloque|imped|hold|pausa)"
+    },
+    {
+      "estado": "en_revision",
+      "patron": "(review|revis|aprobac|approval)"
+    },
+    {
+      "estado": "en_pruebas",
+      "patron": "(\\bqa\\b|test|prueba|valid)"
+    },
+    {
+      "estado": "en_espera",
+      "patron": "(wait|esper|ready for|listo para|por desplegar|to deploy)"
+    },
+    {
+      "estado": "en_curso",
+      "patron": "(progress|curso|progreso|doing|desarroll|develop|haciendo|implement|working|trabaj|in dev|coding)"
+    },
+    {
+      "estado": "nuevo",
+      "patron": "(backlog|open|abiert|nuev|\\bnew\\b)"
+    },
+    {
+      "estado": "pendiente",
+      "patron": "(to do|todo|por hacer|pendiente|ready|selected|seleccionad|refin|analis|analys)"
+    },
+    {
+      "estado": "descartado",
+      "patron": "(cancel|descart|rechaz|won.?t|obsolet|duplicad|duplicat|invalid|declin)",
+      "categoria": "(done|hecho|finaliz|complet|\\blisto\\b)"
+    }
+  ],
+  "porCategoria": [
+    {
+      "patron": "(done|hecho|finaliz|complet|\\blisto\\b)",
+      "estado": "terminado"
+    },
+    {
+      "patron": "(progress|curso|progreso)",
+      "estado": "en_curso"
+    }
+  ],
+  "porDefecto": "pendiente"
+}

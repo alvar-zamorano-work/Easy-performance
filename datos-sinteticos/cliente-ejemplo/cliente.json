@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "nombre": "Cliente de ejemplo",
+  "sector": "banca",
+  "plataforma": "jira",
+  "periodo": { "desde": "2025-10-13", "hasta": "2026-10-12" },
+  "mapeoEstados": { "To Do": "pendiente", "In Progress": "en_curso", "In Review": "en_revision", "Blocked": "bloqueado", "Done": "terminado" },
+  "equipos": {
+    "campo": "equipo",
+    "lista": [
+      { "id": "pagos", "nombre": "Pagos", "tipo": "interno", "proveedor": null, "area": "Canales digitales", "usa_sprints": true,
+        "fte": [{ "periodo": "2026-09", "valor": 5, "origen": "declarado" }], "limites": {} },
+      { "id": "datos", "nombre": "Datos", "tipo": "interno", "proveedor": null, "area": "Plataforma", "usa_sprints": true,
+        "fte": [{ "periodo": "2026-09", "valor": 6, "origen": "declarado" }], "limites": { "retrabajo": { "atencion": 0.15, "critico": 0.25 } } },
+      { "id": "app-movil", "nombre": "App móvil", "tipo": "proveedor", "proveedor": "Proveedor Norte", "area": "Canales digitales", "usa_sprints": true,
+        "fte": [{ "periodo": "2026-09", "valor": 4, "origen": "contrato" }], "limites": {} },
+      { "id": "portal-clientes", "nombre": "Portal clientes", "tipo": "proveedor", "proveedor": "Proveedor Sur", "area": "Canales digitales", "usa_sprints": true,
+        "fte": [{ "periodo": "2026-09", "valor": 5, "origen": "contrato" }], "limites": {} }
+    ]
+  },
+  "objetivos": ["tardamos", "avez", "arreglos", "datos"],
+  "medidas": ["ciclo", "edad", "espera", "wip", "entregas", "errores", "retrabajo", "reparto"],
+  "perfiles": ["responsable", "direccion"]
+}

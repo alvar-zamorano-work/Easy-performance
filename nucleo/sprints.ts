@@ -20,11 +20,11 @@ export function analizarSprints(items: Derivada[], c: ContextoCalculo): InfoSpri
     d.t.sprints.forEach((sp, i) => {
       const x = porSprint[sp] = porSprint[sp] || { nombre: sp, tareas: [], cierres: [] };
       x.tareas.push({ d, ultimo: i === d.t.sprints.length - 1 });
-      if (i === d.t.sprints.length - 1 && d.entregada) x.cierres.push(d.t.resuelta!);
+      if (i === d.t.sprints.length - 1 && d.entregada) x.cierres.push(d.t.fechas.terminada!);
     });
   });
   const lista = Object.keys(porSprint).map((k) => porSprint[k]).filter((x) => x.cierres.length >= 3);
-  const recientes = items.filter((d) => d.entregada && d.t.resuelta! >= sumarDias(c.semanaFin, -84));
+  const recientes = items.filter((d) => d.entregada && d.t.fechas.terminada! >= sumarDias(c.semanaFin, -84));
   const conSprint = recientes.filter((d) => d.t.sprints.length).length;
   if (!recientes.length || conSprint / recientes.length < 0.5) { out.motivo = 'Menos de la mitad del trabajo reciente está en sprints.'; return out; }
   const semanasSpan = Math.max(1, (c.fechaRef.getTime() - c.det.fechaMin.getTime()) / (7 * DIA));

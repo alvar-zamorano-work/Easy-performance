@@ -1,25 +1,49 @@
-// Etapa propuesta para cada estado (pendiente, en curso, en espera, hecho) a partir de su nombre.
-// En B2 pasa a catalogo/estados.json con los estados normalizados del plan.
+// Estados: propuesta de estado normalizado a partir del nombre de origen, con las reglas de catalogo/estados.json.
 
 import { norm } from './util.ts';
-import type { Etapa } from './tipos.ts';
+import { CATALOGO, type CatalogoEstados } from './catalogo.ts';
+import type { Etapa, EstadoNormalizado } from './modelo.ts';
 
-const CLAVES_ETAPA: [Etapa, RegExp][] = [
-  ['hecho', /\b(done|hecho|hecha|finaliz|cerrad|closed|resolved|resuelt|complet|terminad|released|desplegad|entregad)/],
-  ['espera', /(review|revis|\bqa\b|test|prueba|valid|block|bloque|wait|esper|hold|pausa|imped|ready for|listo para|por desplegar|to deploy|aprobac|approval)/],
-  ['curso', /(progress|curso|progreso|doing|desarroll|develop|haciendo|implement|working|trabaj|in dev|coding)/],
-  ['pendiente', /(to do|todo|por hacer|backlog|open|abiert|nuev|\bnew\b|pendiente|ready|selected|seleccionad|refin|analis|analys)/],
-];
+const compiladas = new WeakMap<CatalogoEstados, { reglas: { estado: EstadoNormalizado; re: RegExp; cat: RegExp | null }[]; cats: { estado: EstadoNormalizado; re: RegExp }[] }>();
 
-export function etapaPropuesta(nombre: unknown, categoria: unknown): Etapa {
-  const n = norm(nombre);
-  for (let i = 0; i < CLAVES_ETAPA.length; i++) if (CLAVES_ETAPA[i][1].test(n)) return CLAVES_ETAPA[i][0];
-  const c = norm(categoria);
-  if (/done|hecho|finaliz|complet/.test(c)) return 'hecho';
-  if (/progress|curso|progreso/.test(c)) return 'curso';
-  return 'pendiente';
+function reglasDe(cat: CatalogoEstados) {
+  let c = compiladas.get(cat);
+  if (!c) {
+    c = {
+      reglas: cat.reglas.map((r) => ({ estado: r.estado, re: new RegExp(r.patron), cat: r.categoria ? new RegExp(r.categoria) : null })),
+      cats: cat.porCategoria.map((r) => ({ estado: r.estado, re: new RegExp(r.patron) })),
+    };
+    compiladas.set(cat, c);
+  }
+  return c;
 }
 
-export function esBloqueo(nombre: unknown): boolean {
-  return /block|bloque|imped|hold|pausa/.test(norm(nombre));
+/** Estado normalizado propuesto para un estado de origen, con su categoría de estado si la plataforma la da. */
+export function proponerEstado(nombre: unknown, categoria: unknown, cat: CatalogoEstados = CATALOGO.estados): EstadoNormalizado {
+  const n = norm(nombre), c = norm(categoria), r = reglasDe(cat);
+  for (const regla of r.reglas) if (regla.re.test(n) && (!regla.cat || regla.cat.test(c))) return regla.estado;
+  for (const regla of r.cats) if (regla.re.test(c)) return regla.estado;
+  return cat.porDefecto;
+}
+
+export function etapaDe(estado: EstadoNormalizado, cat: CatalogoEstados = CATALOGO.estados): Etapa {
+  return cat.estados[estado].etapa;
+}
+
+export function esBloqueado(estado: EstadoNormalizado): boolean {
+  return estado === 'bloqueado';
+}
+
+/**
+ * Convierte el mapeo de la v0 (estado -> etapa) al mapeo normalizado. Sirve para leer cliente.json de la v0.
+ * Para "espera" se usa la propuesta si ya es un estado de espera; si no, "en_espera".
+ */
+export function etapasV0AMapeo(etapas: Record<string, Etapa>, propuesto: Record<string, EstadoNormalizado>): Record<string, EstadoNormalizado> {
+  const out: Record<string, EstadoNormalizado> = {};
+  Object.keys(etapas).forEach((nombre) => {
+    const etapa = etapas[nombre], p = propuesto[nombre];
+    if (p && etapaDe(p) === etapa) out[nombre] = p;
+    else out[nombre] = ({ pendiente: 'pendiente', curso: 'en_curso', espera: 'en_espera', hecho: 'terminado' } as const)[etapa];
+  });
+  return out;
 }

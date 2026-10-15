@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/vistas.schema.json",
+  "title": "Perfiles, gráficos e indicadores de comité",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "perfiles", "graficos", "kpis"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "perfiles": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "nombre", "vista", "descripcion"],
+        "properties": { "id": { "type": "string" }, "nombre": { "type": "string" }, "vista": { "type": "string" }, "descripcion": { "type": "string" }, "fijo": { "type": "boolean" } }
+      }
+    },
+    "graficos": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["pregunta", "opciones"],
+        "properties": {
+          "pregunta": { "type": "string" },
+          "opciones": {
+            "type": "array", "minItems": 2,
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["id", "nombre", "ayuda"],
+              "properties": { "id": { "type": "string" }, "nombre": { "type": "string" }, "ayuda": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "kpis": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "unidad", "formato", "dir"],
+        "properties": { "id": { "type": "string" }, "unidad": { "type": "string" }, "formato": { "enum": ["num", "pct", "dias", "horas", "dec"] }, "dir": { "enum": ["mas", "menos"] } }
+      }
+    }
+  }
+}

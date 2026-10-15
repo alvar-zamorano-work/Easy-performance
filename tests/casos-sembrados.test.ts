@@ -4,17 +4,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { Motor } from '../nucleo/index.ts';
-import { SINTETICOS, fichero, json } from './ayudas.ts';
+import { calcular } from '../nucleo/index.ts';
+import { SINTETICOS, fichero, json, recorrido } from './ayudas.ts';
 
 const esperado = JSON.parse(readFileSync(join(SINTETICOS, 'escenarios.json'), 'utf8')) as {
   tareas: number; equipos: string[]; casos_sembrados: Record<string, string[]>;
 };
 
 function modelo(...nombres: string[]) {
-  const { tareas, informe } = Motor.ingerir(nombres.map((n) => fichero(join(SINTETICOS, n))));
-  const det = Motor.detectar(tareas, informe);
-  return { tareas, informe, det, modelo: Motor.calcular(tareas, det, {}) };
+  const r = recorrido(nombres.map((n) => fichero(join(SINTETICOS, n))));
+  return { tareas: r.lectura.tareas, informe: r.lectura.informe, det: r.det, modelo: r.modelo };
 }
 
 const completo = modelo('jira-ejemplo-completo-2026-10-12.csv');
@@ -44,9 +43,9 @@ test('unir dos exports solapados da lo mismo que el export completo', () => {
 
 test('el área unida no cambia los resultados de cada equipo', () => {
   const det = completo.det;
-  const area = Motor.calcular(completo.tareas, det, { equipos: esperado.equipos, unirComo: 'El área' });
+  const area = calcular(completo.tareas, det, { equipos: esperado.equipos, unirComo: 'El área' });
   assert.equal(area.equipos.length, 1);
   assert.equal(area.equipos[0].n, completo.modelo.equipos.reduce((s, e) => s + e.n, 0));
-  const otraVez = Motor.calcular(completo.tareas, det, {});
+  const otraVez = calcular(completo.tareas, det, {});
   assert.deepEqual(json(otraVez.equipos), json(completo.modelo.equipos));
 });

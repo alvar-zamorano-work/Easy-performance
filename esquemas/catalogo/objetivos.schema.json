@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/objetivos.schema.json",
+  "title": "Objetivos que puede elegir el cliente",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "objetivos"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "objetivos": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "titulo", "frase", "medidas", "casos"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "titulo": { "type": "string", "minLength": 1 },
+          "frase": { "type": "string", "minLength": 1 },
+          "medidas": { "type": "array", "items": { "type": "string" } },
+          "casos": { "type": "array", "items": { "type": "string" } },
+          "fijo": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

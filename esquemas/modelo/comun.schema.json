@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/modelo/comun.schema.json",
+  "title": "Definiciones comunes del modelo neutro",
+  "$defs": {
+    "fecha": { "type": "string", "format": "date-time" },
+    "fechaONula": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+    "dia": { "type": "string", "format": "date" },
+    "estadoNormalizado": {
+      "enum": ["nuevo", "pendiente", "en_curso", "bloqueado", "en_revision", "en_pruebas", "en_espera", "terminado", "descartado"]
+    },
+    "etapa": { "enum": ["pendiente", "curso", "espera", "hecho"] },
+    "limites": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "atencion": { "type": ["number", "null"] },
+        "critico": { "type": ["number", "null"] }
+      }
+    },
+    "limitesPorMedida": { "type": "object", "additionalProperties": { "$ref": "#/$defs/limites" } },
+    "id": { "type": "string", "minLength": 1 }
+  }
+}

@@ -47,7 +47,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
     const desde = c.semanas[Math.max(0, L - c.K + 1)];
     const acum: Record<string, number> = {};
     items.forEach((d) => {
-      if (d.entregada && d.t.resuelta! >= desde && d.ciclo != null) Object.keys(d.porEstado).forEach((k) => { acum[k] = (acum[k] || 0) + d.porEstado[k]; });
+      if (d.entregada && d.t.fechas.terminada! >= desde && d.ciclo != null) Object.keys(d.porEstado).forEach((k) => { acum[k] = (acum[k] || 0) + d.porEstado[k]; });
     });
     const top = Object.keys(acum).sort((a, b) => acum[b] - acum[a])[0];
     add('mucha_espera', M.espera.valor > 0.65, 'El ' + f(M.espera.valor, 'pct') + ' del tiempo de ciclo es espera.' + (top ? ' Donde más se para el trabajo es en "' + top + '".' : ''), { parte: M.espera.valor, estado: top });
@@ -85,9 +85,9 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   }
   // 11 todo es urgente
   const desde12 = c.semanas[Math.max(0, L - 11)];
-  const creadas12 = items.filter((d) => d.t.creada >= desde12 && d.t.creada < c.semanaFin);
+  const creadas12 = items.filter((d) => d.t.fechas.creada >= desde12 && d.t.fechas.creada < c.semanaFin);
   if (creadas12.length >= 20) {
-    const u = creadas12.filter((d) => d.t.urgente).length / creadas12.length;
+    const u = creadas12.filter((d) => d.t.prioridad === 'urgente').length / creadas12.length;
     if (u > 0.25) add('todo_urgente', u > 0.4, 'El ' + f(u, 'pct') + ' de lo que entró en las últimas 12 semanas tiene la prioridad máxima.', { parte: u });
   }
   // 12 lo urgente no va más rápido

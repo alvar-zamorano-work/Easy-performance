@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/estados.schema.json",
+  "title": "Estados normalizados y reglas para proponer el mapeo",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "estados", "reglas", "porCategoria", "porDefecto"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "estados": {
+      "type": "object",
+      "propertyNames": { "$ref": "../modelo/comun.schema.json#/$defs/estadoNormalizado" },
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["nombre", "etapa", "descripcion"],
+        "properties": {
+          "nombre": { "type": "string", "minLength": 1 },
+          "etapa": { "$ref": "../modelo/comun.schema.json#/$defs/etapa" },
+          "descripcion": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "reglas": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["estado", "patron"],
+        "properties": {
+          "estado": { "$ref": "../modelo/comun.schema.json#/$defs/estadoNormalizado" },
+          "patron": { "type": "string", "minLength": 1, "description": "Expresión regular sobre el nombre sin acentos y en minúsculas." },
+          "categoria": { "type": "string", "description": "Opcional: la regla solo vale si la categoría de estado encaja con esta expresión." }
+        }
+      }
+    },
+    "porCategoria": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["patron", "estado"],
+        "properties": { "patron": { "type": "string" }, "estado": { "$ref": "../modelo/comun.schema.json#/$defs/estadoNormalizado" } }
+      }
+    },
+    "porDefecto": { "$ref": "../modelo/comun.schema.json#/$defs/estadoNormalizado" }
+  }
+}

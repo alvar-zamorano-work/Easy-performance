@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/textos.schema.json",
+  "title": "Textos editables de pantallas y presentación",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "textos"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "textos": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z]+(\\.[a-zA-Z]+)+$" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    }
+  }
+}

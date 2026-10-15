@@ -1,0 +1,14 @@
+{
+  "id": "limite-wip-app-movil",
+  "nombre": "Límite de trabajo en curso en App móvil",
+  "descripcion": "No empezar nada nuevo mientras haya más tareas en curso que personas en el equipo.",
+  "fecha_inicio": "2026-08-03",
+  "fecha_fin": null,
+  "equipos": ["App móvil"],
+  "medidas_objetivo": [{ "medida": "wip", "direccion": "bajar" }, { "medida": "ciclo", "direccion": "bajar" }],
+  "efecto_esperado": "Menos tareas a la vez y tiempo de ciclo de vuelta a su rango habitual en cuatro semanas.",
+  "estado": "en_curso",
+  "origen": "demasiado_a_la_vez",
+  "evaluacion": null,
+  "notas": ""
+}

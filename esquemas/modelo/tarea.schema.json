@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/modelo/tarea.schema.json",
+  "title": "Tarea (modelo neutro)",
+  "description": "Una tarea de cualquier plataforma. Nunca lleva personas: no hay asignado, creador ni comentarios. Las fechas van en ISO 8601. titulo, descripcion y padre_titulo solo viven en memoria.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "clave_origen", "plataforma", "tipo", "tipo_origen", "titulo", "descripcion", "estado_origen", "estado_normalizado",
+    "agrupadores", "equipo_id", "prioridad", "prioridad_origen", "estimacion", "sprints", "fechas", "historial_estados", "tiempos_estado",
+    "descartada", "reaperturas", "etiquetas", "enlaces", "tiene_criterios", "padre_id", "padre_titulo"],
+  "properties": {
+    "id": { "$ref": "comun.schema.json#/$defs/id" },
+    "clave_origen": { "type": "string", "minLength": 1 },
+    "plataforma": { "type": "string", "minLength": 1 },
+    "tipo": { "enum": ["historia", "error", "tarea", "subtarea", "epica", "otro"] },
+    "tipo_origen": { "type": "string" },
+    "titulo": { "type": "string" },
+    "descripcion": { "type": "string" },
+    "estado_origen": { "type": "string" },
+    "estado_normalizado": { "$ref": "comun.schema.json#/$defs/estadoNormalizado" },
+    "agrupadores": { "type": "object", "additionalProperties": { "type": "string" } },
+    "equipo_id": { "type": ["string", "null"] },
+    "prioridad": { "enum": ["baja", "media", "alta", "urgente", null] },
+    "prioridad_origen": { "type": "string" },
+    "estimacion": { "type": ["number", "null"] },
+    "sprints": { "type": "array", "items": { "type": "string" } },
+    "fechas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["creada", "actualizada", "empezada", "terminada", "cambio_estado", "primera_respuesta"],
+      "properties": {
+        "creada": { "$ref": "comun.schema.json#/$defs/fecha" },
+        "actualizada": { "$ref": "comun.schema.json#/$defs/fechaONula" },
+        "empezada": { "$ref": "comun.schema.json#/$defs/fechaONula" },
+        "terminada": { "$ref": "comun.schema.json#/$defs/fechaONula" },
+        "cambio_estado": { "$ref": "comun.schema.json#/$defs/fechaONula" },
+        "primera_respuesta": { "$ref": "comun.schema.json#/$defs/fechaONula" }
+      }
+    },
+    "historial_estados": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["estado", "fecha"],
+        "properties": { "estado": { "type": "string" }, "fecha": { "$ref": "comun.schema.json#/$defs/fecha" } }
+      }
+    },
+    "tiempos_estado": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["estado", "visitas", "ms"],
+        "properties": { "estado": { "type": "string" }, "visitas": { "type": "integer", "minimum": 0 }, "ms": { "type": "number", "minimum": 0 } }
+      }
+    },
+    "descartada": { "type": "boolean" },
+    "reaperturas": { "type": ["integer", "null"], "minimum": 0 },
+    "etiquetas": { "type": "array", "items": { "type": "string" } },
+    "enlaces": { "type": "integer", "minimum": 0 },
+    "tiene_criterios": { "type": "boolean" },
+    "padre_id": { "type": ["string", "null"] },
+    "padre_titulo": { "type": "string" }
+  }
+}

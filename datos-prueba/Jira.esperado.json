@@ -1,0 +1,14 @@
+{
+  "descripcion": "Export de demostración de Jira Cloud (no es de cliente): 10.000 filas, tres componentes, sprints con nombre de fecha y casi todo cerrado. Los casos son los que da hoy el motor (igual que la v0); sirven para detectar cambios, no son una validación de negocio.",
+  "tareas": 9992,
+  "equipoRecomendado": "componentes",
+  "sprintsComoFecha": true,
+  "mapeoEstados": { "In Progress": "en_curso", "Done": "terminado", "To Do": "pendiente" },
+  "avisosContienen": ["justo 10.000 filas", "casi no tienen actividad", "parecen fechas y horas"],
+  "casos": {
+    "Infrastructure": ["atascado", "datos_poco_fiables", "estimaciones_no_predicen", "todo_urgente"],
+    "Mobile": ["atascado", "datos_poco_fiables", "estimaciones_no_predicen", "todo_urgente", "urgente_no_rapido"],
+    "Sin equipo": ["datos_poco_fiables"],
+    "Web": ["atascado", "datos_poco_fiables", "estimaciones_no_predicen", "todo_urgente", "urgente_no_rapido"]
+  }
+}

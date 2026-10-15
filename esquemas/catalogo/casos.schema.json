@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/casos.schema.json",
+  "title": "Banco de casos",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "casos"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "casos": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["accionArea", "comun", "titulo", "objetivos", "medida", "senal", "causas", "preguntas", "plan", "comprobar", "respaldo"],
+        "properties": {
+          "accionArea": { "type": "string", "minLength": 1 },
+          "comun": { "type": "string", "minLength": 1 },
+          "titulo": { "type": "string", "minLength": 1 },
+          "objetivos": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "medida": { "type": ["string", "null"] },
+          "requiere": { "enum": ["tiempos", "inicio", "puntos", "errores", "primera", "sprints", "api"] },
+          "senal": { "type": "string", "minLength": 1 },
+          "causas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+          "preguntas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
+          "plan": {
+            "type": "array", "minItems": 1,
+            "items": {
+              "type": "object", "additionalProperties": false, "required": ["paso", "quien", "esfuerzo"],
+              "properties": { "paso": { "type": "string", "minLength": 1 }, "quien": { "type": "string", "minLength": 1 }, "esfuerzo": { "type": "string", "minLength": 1 } }
+            }
+          },
+          "comprobar": { "type": "string", "minLength": 1 },
+          "respaldo": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

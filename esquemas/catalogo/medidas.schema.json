@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/catalogo/medidas.schema.json",
+  "title": "Catálogo de medidas",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "orden", "medidas"],
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "orden": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "medidas": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nombre", "pregunta", "unidad", "dir", "formato", "como"],
+        "properties": {
+          "nombre": { "type": "string", "minLength": 1 },
+          "pregunta": { "type": "string", "minLength": 1 },
+          "unidad": { "type": "string" },
+          "dir": { "enum": ["mas", "menos", null] },
+          "formato": { "enum": ["num", "pct", "dias", "horas", "dec"] },
+          "requiere": { "enum": ["tiempos", "inicio", "puntos", "errores", "primera", "sprints", "api"] },
+          "como": { "type": "string", "minLength": 1 },
+          "limites": { "$ref": "../modelo/comun.schema.json#/$defs/limites" }
+        }
+      }
+    }
+  }
+}
