@@ -3,7 +3,7 @@
 export { leerJira } from '../adaptadores/jira/ingerir.ts';
 export { detectar, valorEquipo, TODOS } from './detectar.ts';
 export { calcular } from './calcular.ts';
-export { proponerEstado, etapaDe, etapasV0AMapeo } from './estados.ts';
+export { proponerEstado, explicarEstado, etapaDe, etapasV0AMapeo } from './estados.ts';
 export { formatear, fechaCorta } from './formato.ts';
 export { CATALOGO } from './catalogo.ts';
 export type * from './tipos.ts';
@@ -17,3 +17,6 @@ export { casosDeGrupo, casosAgentReady } from './casos-grupo.ts';
 export { evaluarIniciativa, conEfecto } from './iniciativas.ts';
 export { evaluarTicket, agregar as agregarAgentReady, RUBRICA } from './agent-readiness.ts';
 export { generarPaquete, comprobarPaquete, anonimizar } from './paquete.ts';
+export { definiciones } from './definiciones.ts';
+export { aMarkdown, aDocx } from './documento.ts';
+export type { Documento, Bloque } from './documento.ts';

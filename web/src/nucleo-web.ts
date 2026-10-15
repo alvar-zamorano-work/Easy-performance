@@ -1,5 +1,5 @@
 // Puente entre el núcleo (TypeScript) y la interfaz heredada de la v0 (interfaz.js).
-// Expone en window: CATALOGO (catálogo en JSON), Motor (misma forma que el de la v0) y Nucleo (lo nuevo de B3).
+// Expone en window: CATALOGO (catálogo en JSON), Motor (misma forma que el de la v0) y Nucleo (lo nuevo de B3 y B4).
 
 import { leerJira } from '../../adaptadores/jira/ingerir.ts';
 import { detectar } from '../../nucleo/detectar.ts';
@@ -12,6 +12,9 @@ import { comprobarPaquete } from '../../nucleo/paquete.ts';
 import { conEfecto, MEDIDAS_INICIATIVA } from '../../nucleo/iniciativas.ts';
 import { RUBRICA, CRITERIOS_AR } from '../../nucleo/agent-readiness.ts';
 import { MUESTRA_MINIMA } from '../../nucleo/grupos.ts';
+import { etapasV0AMapeo } from '../../nucleo/estados.ts';
+import { definiciones } from '../../nucleo/definiciones.ts';
+import { aDocx, aMarkdown } from '../../nucleo/documento.ts';
 import type { FicheroEntrada, Lectura, Tarea } from '../../nucleo/modelo.ts';
 
 const lecturas = new WeakMap<Tarea[], Lectura>();
@@ -39,6 +42,7 @@ const Nucleo = {
   lecturaDe: (tareas: Tarea[]) => lecturas.get(tareas) || null,
   diagnosticar, comprobarPaquete, conEfecto, NOMBRE_AREA,
   MEDIDAS_INICIATIVA, RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA,
+  etapasV0AMapeo, definiciones, aDocx, aMarkdown,
 };
 
 const w = globalThis as unknown as Record<string, unknown>;

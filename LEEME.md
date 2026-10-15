@@ -41,9 +41,18 @@ Un solo HTML que se abre con doble clic, sin servidor ni instalación. Reutiliza
 - Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
 - Demo: un banco ficticio con dos equipos internos y dos de proveedores (los datos sintéticos de B3).
 
-`npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (presentación y vistas sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, Jira.csv de principio a fin, paquete, PDF, demo y carpeta con iniciativas) y deja capturas en dist/verificacion. Ajustes es una página de formularios y puede tener scroll.
+`npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (presentación y vistas sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, Jira.csv de principio a fin, paquete, PDF, demo, carpeta con iniciativas, arranque paso a paso con el documento de definiciones y configuración de la v0) y deja capturas y los documentos generados en dist/verificacion. Ajustes es una página de formularios y puede tener scroll.
 
 Pendiente de probar: actualizar.ps1 en Windows.
+
+## Arranque del consultor (B4)
+
+La puesta en marcha de la web es el arranque del consultor, en ocho pasos: datos, equipos, estados, calidad, objetivos, medidas, vistas y listo.
+
+- Equipos: campo que reconoce al equipo, equipos incluidos y, por equipo, tipo (interno o proveedor), proveedor, área y FTE con su origen.
+- Estados: cada estado de Jira con su estado común (los nueve de catalogo/estados.json), propuesto y editable. Se marcan para revisar los que no se reconocen por su nombre. El mapeo se guarda en la configuración y manda en el cálculo. Una configuración de la v0 (con etapas) se convierte sola.
+- Calidad: avisos del export y por equipo (lo que comparten todos va una vez) y campos que faltan.
+- Listo: documento de definiciones en Word y en markdown (nucleo/definiciones.ts y nucleo/documento.ts, sin librerías). Recoge datos, equipos, estados, medidas, reglas de comparación e iniciativas, rúbrica de agentes, calidad, qué no mide y la firma. También se descarga desde Ajustes.
 
 ## Requisitos
 
@@ -82,5 +91,6 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 - B1 (núcleo en TypeScript): hecho. Mismos resultados que la v0.
 - B2 (modelo neutro, esquemas, adaptador Jira, banco de exports): hecho.
 - B3 (comparaciones entre grupos, iniciativas, agent readiness, paquete de diagnóstico): hecho.
-- B5 (carcasa web): en la rama feat/b5-web. Se adelantó a B4 para tener pronto el HTML con la experiencia de la v0.
-- Siguiente: B4, arranque del consultor (ingesta, mapeo editable de estados normalizados, chequeo de calidad y documento de definiciones), ya dentro de esta carcasa.
+- B5 (carcasa web): hecho. Se adelantó a B4 para tener pronto el HTML con la experiencia de la v0.
+- B4 (arranque del consultor: equipos, mapeo editable, calidad y documento de definiciones): en la rama feat/b4-arranque.
+- Siguiente: B6, skill de IA del consultor con sus evals.

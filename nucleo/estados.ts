@@ -18,12 +18,19 @@ function reglasDe(cat: CatalogoEstados) {
   return c;
 }
 
+/** Por qué se propone un estado: por su nombre, por la categoría de la plataforma o por defecto (conviene revisarlo). */
+export type MotivoPropuesta = 'nombre' | 'categoria' | 'defecto';
+
+export function explicarEstado(nombre: unknown, categoria: unknown, cat: CatalogoEstados = CATALOGO.estados): { estado: EstadoNormalizado; por: MotivoPropuesta } {
+  const n = norm(nombre), c = norm(categoria), r = reglasDe(cat);
+  for (const regla of r.reglas) if (regla.re.test(n) && (!regla.cat || regla.cat.test(c))) return { estado: regla.estado, por: 'nombre' };
+  for (const regla of r.cats) if (regla.re.test(c)) return { estado: regla.estado, por: 'categoria' };
+  return { estado: cat.porDefecto, por: 'defecto' };
+}
+
 /** Estado normalizado propuesto para un estado de origen, con su categoría de estado si la plataforma la da. */
 export function proponerEstado(nombre: unknown, categoria: unknown, cat: CatalogoEstados = CATALOGO.estados): EstadoNormalizado {
-  const n = norm(nombre), c = norm(categoria), r = reglasDe(cat);
-  for (const regla of r.reglas) if (regla.re.test(n) && (!regla.cat || regla.cat.test(c))) return regla.estado;
-  for (const regla of r.cats) if (regla.re.test(c)) return regla.estado;
-  return cat.porDefecto;
+  return explicarEstado(nombre, categoria, cat).estado;
 }
 
 export function etapaDe(estado: EstadoNormalizado, cat: CatalogoEstados = CATALOGO.estados): Etapa {

@@ -1,7 +1,9 @@
-// Verificación de la carcasa web en Chromium (criterios de B5 del plan).
+// Verificación de la carcasa web en Chromium (criterios de B5 y B4 del plan).
 //   npm run web && CHROME=/ruta/a/chrome node web/verificar.mjs
-// Comprueba: sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, impresión a PDF,
+// B5: sin scroll en 1280x720 y 1920x1080, sin errores de consola, modo oscuro, impresión a PDF,
 // recorrido completo con el Jira.csv de prueba, demo sin pisar la configuración y carpeta con dos iniciativas.
+// B4: arranque del consultor paso a paso con el Jira.csv (equipos, mapeo de estados editado, calidad)
+// y documento de definiciones en Word y markdown; una configuración de la v0 sigue funcionando.
 
 import { chromium } from 'playwright-core';
 import { readFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
@@ -175,6 +177,89 @@ for (const [w, h] of TAMANOS) {
   const tarjetas = await p.evaluate(() => [...document.querySelectorAll('.ini h3')].map((h) => h.textContent));
   ok('carpeta compartida: dos ficheros de iniciativa leídos y evaluados', leidas.iniciativas.length === 2 && tarjetas.length === 2 && leidas.contexto === 2, `${leidas.iniciativas.join(', ')} · contexto ${leidas.contexto} documentos · ${tarjetas.join(' / ')}`);
   ok('carpeta compartida sin errores de consola', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// 5. B4: arranque del consultor paso a paso con el Jira.csv y documento de definiciones
+{
+  const p = await pagina(1280, 720);
+  const t0 = Date.now();
+  let clics = 0;
+  const clic = async (sel) => { clics++; await accion(p, sel); };
+  const paso = () => p.evaluate(() => window.EasyPerformance.paso);
+  await clic('[data-accion="saltar-presentacion"]');
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
+  await p.waitForFunction(() => window.EasyPerformance.det, null, { timeout: 60000 });
+  const pasos = [];
+  pasos.push(await paso());
+  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
+  // Paso 2: un equipo de proveedor, áreas y FTE
+  const filas = await p.$$eval('.eq-tabla tbody tr', (trs) => trs.map((tr) => tr.querySelector('td b').textContent));
+  await p.selectOption(`select[data-cambio="eq-info"][data-campo="tipo"][data-e="${filas[1]}"]`, 'proveedor'); clics++;
+  await p.waitForTimeout(250);
+  for (const [i, e] of filas.entries()) {
+    if (i === 1) { await p.fill(`input[data-campo="proveedor"][data-e="${e}"]`, 'Proveedor Uno'); await p.press(`input[data-campo="proveedor"][data-e="${e}"]`, 'Tab'); clics++; }
+    await p.fill(`input[data-campo="area"][data-e="${e}"]`, 'Canales'); await p.press(`input[data-campo="area"][data-e="${e}"]`, 'Tab');
+    await p.fill(`input[data-cambio="fte"][data-e="${e}"]`, String(4 + i)); await p.press(`input[data-cambio="fte"][data-e="${e}"]`, 'Tab');
+    clics += 2;
+  }
+  await p.screenshot({ path: join(SALIDA, 'arranque-2-equipos.png') });
+  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
+  // Paso 3: el consultor cambia un estado
+  const antesEstado = await p.evaluate(() => window.EasyPerformance.borrador.mapeoEstados['In Progress']);
+  const prePrevio = await p.evaluate(() => window.EasyPerformance.pre && window.EasyPerformance.pre.equipos.map((e) => e.medidas.espera && e.medidas.espera.valor));
+  await p.selectOption('select[data-cambio="estado-comun"][data-estado="In Progress"]', 'en_revision'); clics++;
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: join(SALIDA, 'arranque-3-estados.png') });
+  const etiqueta = await p.$eval('select[data-estado="In Progress"] + .q-etapa', (x) => x.textContent);
+  await clic('[data-accion="siguiente"]'); pasos.push(await paso());
+  await p.screenshot({ path: join(SALIDA, 'arranque-4-calidad.png') });
+  const espera = await p.evaluate(() => window.EasyPerformance.pre.equipos.map((e) => e.medidas.espera && e.medidas.espera.valor));
+  for (let i = 0; i < 4; i++) { await clic('[data-accion="siguiente"]'); pasos.push(await paso()); }
+  await p.fill('input[data-cambio="nombre-cliente"]', 'Cliente de prueba'); await p.press('input[data-cambio="nombre-cliente"]', 'Tab'); clics++;
+  await p.screenshot({ path: join(SALIDA, 'arranque-8-listo.png') });
+  const bajar = async (f) => {
+    const [d] = await Promise.all([p.waitForEvent('download'), p.click(`[data-accion="definiciones"][data-f="${f}"]`)]);
+    clics++;
+    const ruta = join(SALIDA, d.suggestedFilename());
+    await d.saveAs(ruta);
+    return { nombre: d.suggestedFilename(), datos: readFileSync(ruta) };
+  };
+  const docx = await bajar('docx'), md = await bajar('md');
+  await clic('[data-accion="terminar"]');
+  const tiempo = Math.round((Date.now() - t0) / 1000);
+  const fin = await p.evaluate(() => { const c = JSON.parse(localStorage.getItem('easyperformance.configuracion.v1')); return { mapeo: c.mapeoEstados, info: c.equiposInfo, fte: c.fte, nombre: c.nombre, vista: window.EasyPerformance.vista, onboarding: window.EasyPerformance.onboarding }; });
+  ok('arranque B4: los ocho pasos en orden con el Jira.csv', pasos.join(',') === '1,2,3,4,5,6,7,8' && !fin.onboarding, `pasos ${pasos.join(',')} · ${clics} acciones · ${tiempo} s de máquina`);
+  ok('arranque B4: el mapeo editado se guarda y cambia el cálculo', antesEstado === 'en_curso' && fin.mapeo['In Progress'] === 'en_revision' && /espera/.test(etiqueta) && JSON.stringify(espera) !== JSON.stringify(prePrevio),
+    `In Progress: ${antesEstado} a ${fin.mapeo['In Progress']} · "${etiqueta}" · tiempo en espera ${JSON.stringify(prePrevio)} a ${JSON.stringify(espera)}`);
+  ok('arranque B4: tipo, proveedor, área y FTE de los equipos guardados', fin.info[filas[1]].tipo === 'proveedor' && fin.info[filas[1]].proveedor === 'Proveedor Uno' && Object.keys(fin.fte).length === filas.length && fin.nombre === 'Cliente de prueba',
+    filas.map((e) => `${e}: ${(fin.info[e] || {}).tipo || 'interno'}, ${fin.fte[e]} FTE`).join('; '));
+  const texto = docx.datos.toString('latin1');
+  const mdT = md.datos.toString('utf8');
+  ok('documento de definiciones en Word y markdown', docx.datos.slice(0, 2).toString() === 'PK' && texto.includes('word/document.xml') && docx.nombre.endsWith('.docx') &&
+    mdT.includes('Cliente de prueba') && mdT.includes('| In Progress | In Progress | En revisión |') && mdT.includes('Proveedor: Proveedor Uno') && !/[—–]/.test(mdT),
+    `${docx.nombre} (${Math.round(docx.datos.length / 1024)} KB) · ${md.nombre} (${Math.round(md.datos.length / 1024)} KB)`);
+  ok('arranque B4 sin errores de consola', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// 6. Una configuración guardada por la v0 (con etapas en vez de estados comunes) sigue funcionando
+{
+  const p = await pagina(1280, 720);
+  await p.evaluate(() => localStorage.setItem('easyperformance.configuracion.v1', JSON.stringify({
+    version: 1, campoEquipo: 'componentes', equipos: ['Infrastructure', 'Mobile', 'Web'], etapas: { 'To Do': 'pendiente', 'In Progress': 'curso', 'Done': 'hecho' },
+    objetivos: ['tardamos'], medidas: ['ciclo', 'entregas', 'espera', 'edad'], perfiles: ['responsable'], graficos: { ciclo: 'puntos', evolucion: 'banda', pendiente: 'entradas' }, limites: {}, textos: {}, noAplica: {},
+  })));
+  await p.reload(); await p.waitForTimeout(400);
+  await p.evaluate(() => { if (window.EasyPerformance.presentacion) window.EasyPerformance.ACC['empezar'](); });
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
+  await p.waitForFunction(() => window.EasyPerformance.modelo && !window.EasyPerformance.onboarding, null, { timeout: 60000 });
+  const r = await p.evaluate(() => ({ eqs: window.EasyPerformance.modelo.equipos.map((e) => e.nombre).join(', ') }));
+  await accion(p, '[data-accion="vista"][data-v="config"]');
+  await accion(p, '[data-accion="rehacer"][data-paso="3"]');
+  const mapeo = await p.evaluate(() => ({ paso: window.EasyPerformance.paso, m: window.EasyPerformance.borrador.mapeoEstados }));
+  ok('configuración de la v0: tablero directo y estados convertidos al revisarlos', r.eqs === 'Infrastructure, Mobile, Web' && mapeo.paso === 3 && mapeo.m['In Progress'] === 'en_curso' && mapeo.m['Done'] === 'terminado' && !p.errores.length,
+    `${r.eqs} · paso ${mapeo.paso} · ${JSON.stringify(mapeo.m)} ${p.errores.join(' | ')}`);
   await p.context().close();
 }
 

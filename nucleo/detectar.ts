@@ -3,7 +3,7 @@
 
 import { DIA, cuantil, inicioSemana, media } from './util.ts';
 import { fechaCorta } from './formato.ts';
-import { etapaDe } from './estados.ts';
+import { etapaDe, explicarEstado } from './estados.ts';
 import type { Deteccion, EstadoDetectado } from './tipos.ts';
 import type { CampoAgrupador, Etapa, Lectura, Tarea } from './modelo.ts';
 
@@ -70,8 +70,10 @@ export function detectar(lectura: Lectura): Deteccion {
   det.estados = Object.keys(estados).map((k): EstadoDetectado => {
     const e = estados[k];
     const estado = det.mapeoEstados[e.nombre] || 'pendiente';
+    const explicado = explicarEstado(e.nombre, categoria[e.nombre] || '');
     return { nombre: e.nombre, actuales: e.actuales, visitas: e.visitas, categoria: categoria[e.nombre] || '',
-      horasMedias: media(e.horas), estado, etapa: etapaDe(estado), bloqueo: estado === 'bloqueado' };
+      horasMedias: media(e.horas), estado, etapa: etapaDe(estado), bloqueo: estado === 'bloqueado',
+      propuestaPor: explicado.estado === estado ? explicado.por : 'nombre' };
   }).sort((a, b) => ORDEN_ETAPA[a.etapa] - ORDEN_ETAPA[b.etapa] || b.visitas - a.visitas);
 
   // Candidatos para reconocer equipos

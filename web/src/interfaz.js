@@ -269,7 +269,7 @@
     var op = opcion(c.campoEquipo);
     return !!op && (op.id === 'todos' || op.valores.length > 0);
   }
-  function cfgMotor(c) { return { campoEquipo: c.campoEquipo, equipos: c.equipos, etapas: c.etapas, limites: c.limites, fte: c.fte || {} }; }
+  function cfgMotor(c) { return { campoEquipo: c.campoEquipo, equipos: c.equipos, mapeoEstados: c.mapeoEstados, etapas: c.mapeoEstados ? undefined : c.etapas, limites: c.limites, fte: c.fte || {} }; }
   function recalcular() {
     App.diag = null;
     App.modelo = Motor.calcular(App.tareas, App.det, cfgMotor(App.cfg));
@@ -291,9 +291,13 @@
     var b = base ? JSON.parse(JSON.stringify(base)) : {};
     if (!b.campoEquipo || !opcion(b.campoEquipo)) b.campoEquipo = App.det.equipoRecomendado;
     if (!b.equipos || !b.equipos.length) b.equipos = equiposPorDefecto(b.campoEquipo);
-    var etapas = {};
-    App.det.estados.forEach(function (e) { etapas[e.nombre] = e.etapa; });
-    b.etapas = Object.assign(etapas, b.etapas || {});
+    // Mapeo de estados: la propuesta del núcleo; una configuración de la v0 trae etapas y se convierte
+    var mapeo = {};
+    App.det.estados.forEach(function (e) { mapeo[e.nombre] = e.estado; });
+    if (!b.mapeoEstados && b.etapas) Object.assign(mapeo, Nucleo.etapasV0AMapeo(b.etapas, App.det.mapeoEstados));
+    b.mapeoEstados = Object.assign(mapeo, b.mapeoEstados || {});
+    delete b.etapas;
+    b.equiposInfo = b.equiposInfo || {}; b.fte = b.fte || {}; b.fteOrigen = b.fteOrigen || {};
     b.perfiles = b.perfiles || ['responsable', 'direccion'];
     b.graficos = b.graficos || { ciclo: 'puntos', evolucion: 'banda', pendiente: 'entradas' };
     b.limites = b.limites || {}; b.textos = b.textos || {}; b.noAplica = b.noAplica || {};
@@ -399,9 +403,9 @@
   function vistaPermitida(v) { return v === 'medida' || vistasDisponibles().some(function (x) { return x[0] === v; }); }
 
   // ---------- asistente ----------
-  var PASOS = ['Datos', 'Equipos', 'Objetivos', 'Medidas', 'Vistas', 'Listo'];
+  var PASOS = ['Datos', 'Equipos', 'Estados', 'Calidad', 'Objetivos', 'Medidas', 'Vistas', 'Listo'];
   function asistente() {
-    var cuerpo = [null, paso1, paso2, paso3, paso4, paso5, paso6][App.paso]();
+    var cuerpo = [null, paso1, paso2, pasoEstados, pasoCalidad, paso3, paso4, paso5, paso6][App.paso]();
     if (App.paso === 1 && !App.det && App.cfg && configGuardada()) return '<div class="asistente">' + cuerpo + '</div>';
     var pasos = '<ol class="pasos" aria-label="Pasos">' + PASOS.map(function (p, i) {
       var n = i + 1, cl = n < App.paso ? 'hecho' : (n === App.paso ? 'actual' : '');
@@ -414,7 +418,7 @@
     var atras = App.paso > 1 ? '<button class="btn btn-sec" data-accion="anterior">Atrás</button>' : (App.cfg ? '<button class="btn btn-sec" data-accion="cancelar">Volver al tablero</button>' : '<span></span>');
     var dcha;
     if (App.paso === 1) dcha = '<button class="btn btn-sec" data-accion="aceptar-todo">Usar todo lo recomendado</button> <button class="btn" data-accion="siguiente">Seguir</button>';
-    else if (App.paso < 6) dcha = '<button class="btn" data-accion="siguiente">Seguir</button>';
+    else if (App.paso < PASOS.length) dcha = '<button class="btn" data-accion="siguiente">Seguir</button>';
     else dcha = '<button class="btn" data-accion="terminar">Ver mi tablero</button>';
     return '<div class="pie-asistente">' + atras + '<div>' + dcha + '</div></div>';
   }
@@ -441,7 +445,7 @@
         '<aside class="tarjeta como-exportar"><h3>Para esta semana</h3><ol><li>Exporta de Jira lo actualizado en las últimas semanas, con <b>Todos los campos</b>.</li><li>Si usas la carpeta, deja el fichero en <b>exports</b> y pulsa Actualizar.</li><li>¿Quieres cambiar objetivos o medidas? Está en Ajustes, una vez cargados los datos.</li></ol></aside></div>';
     }
     if (!App.det) {
-      return cabecera('Paso 1 de 6 · Tus datos', 'Empecemos por tus datos', 'En seis pasos tendrás el tablero de tus equipos. En cada uno te proponemos una opción, y puedes aceptarla sin más.') +
+      return cabecera('Paso 1 de 8 · Tus datos', 'Empecemos por tus datos', 'En ocho pasos tendrás el tablero de tus equipos y el documento de definiciones. En cada uno te proponemos una opción, y puedes aceptarla sin más.') +
         '<div class="rejilla-carga">' + zona +
         '<aside class="tarjeta como-exportar"><h3>Cómo sacar el fichero de Jira</h3><ol>' +
         '<li>Abre la búsqueda de Jira y filtra por los proyectos de tus equipos. Para empezar, un año de historia.</li>' +
@@ -459,7 +463,7 @@
     var op = opcion(App.borrador.campoEquipo);
     var avisos = inf.avisos.concat(det.avisos);
     var origen = { ficheros: 'ficheros elegidos', carpeta: 'carpeta', datosjs: 'carpeta (datos.js)', ejemplo: 'datos de ejemplo' }[App.origen] || '';
-    return cabecera('Paso 1 de 6 · Tus datos', 'Esto es lo que traen tus datos', 'Lo que hemos encontrado (' + origen + ') y lo que se podrá medir con ello.', '<button class="btn btn-sec btn-peq" data-accion="cargar-otros">Cargar otros datos</button>') +
+    return cabecera('Paso 1 de 8 · Tus datos', 'Esto es lo que traen tus datos', 'Lo que hemos encontrado (' + origen + ') y lo que se podrá medir con ello.', '<button class="btn btn-sec btn-peq" data-accion="cargar-otros">Cargar otros datos</button>') +
       '<div class="tarjeta datos-res">' +
       datoPeriodo(det.fechaMin, new Date(Math.min(det.fechaRef, det.fechaMax))) +
       dato(inf.tareas.toLocaleString('es-ES'), 'tareas (sin épicas ni subtareas)') +
@@ -482,7 +486,7 @@
   function paso2() {
     var b = App.borrador, det = App.det;
     var ops = det.opcionesEquipo.filter(function (o) { return o.valida; });
-    var html = cabecera('Paso 2 de 6 · Equipos', 'Tus equipos y tus estados', 'Cada equipo se mide solo consigo mismo. Para eso necesitamos saber de qué equipo es cada tarea y qué significa cada estado.');
+    var html = cabecera('Paso 2 de 8 · Equipos', 'Tus equipos', 'Cada equipo se mide consigo mismo. Para eso necesitamos saber de qué equipo es cada tarea y, para comparar con las mismas reglas, cómo es cada equipo.');
     html += '<div class="tarjeta"><h2>¿Dónde pone en Jira de qué equipo es cada tarea?</h2><p class="muted small">Te proponemos el campo que mejor reparte las tareas. Debajo de cada opción ves los equipos que saldrían.</p><div class="opciones" style="margin-top:14px">' +
       ops.map(function (o) {
         var marcada = b.campoEquipo === o.id;
@@ -500,15 +504,105 @@
       }).join('') + '</div>';
     }
     html += '</div>';
-    var nombresEtapa = { pendiente: 'Pendiente', curso: 'En curso', espera: 'En espera', hecho: 'Hecho' };
-    html += '<div class="tarjeta"><h2>¿Qué significa cada estado?</h2><p class="muted small">Con esto se calcula cuánto tarda una tarea y cuánto tiempo espera. "En espera" son los estados donde la tarea está parada: revisión, pruebas o el estado Bloqueado de Jira.</p>' +
-      '<div class="tabla-wrap" style="margin-top:12px"><table><thead><tr><th>Estado en Jira</th><th class="num">Tareas ahora</th><th class="num">Tiempo medio</th><th>Etapa</th></tr></thead><tbody>' +
-      det.estados.map(function (e) {
-        var sel = b.etapas[e.nombre] || e.etapa;
-        return '<tr><td><b class="medio">' + esc(e.nombre) + '</b></td><td class="num">' + e.actuales.toLocaleString('es-ES') + '</td><td class="num">' + (e.horasMedias != null ? F(e.horasMedias / 24, 'dias') : '') + '</td><td><select data-cambio="etapa" data-estado="' + esc(e.nombre) + '" aria-label="Etapa de ' + esc(e.nombre) + '">' +
-          ['pendiente', 'curso', 'espera', 'hecho'].map(function (k) { return '<option value="' + k + '"' + (sel === k ? ' selected' : '') + '>' + nombresEtapa[k] + '</option>'; }).join('') + '</select></td></tr>';
-      }).join('') + '</tbody></table></div></div>';
+    if (op && op.id !== 'todos' && b.equipos.length) {
+      var orden = op.valores.map(function (v) { return v.valor; });
+      html += tablaEquiposInfo(b, b.equipos.slice().sort(function (x, y) { return orden.indexOf(x) - orden.indexOf(y); }));
+    }
     return html;
+  }
+
+
+  // Tipo, proveedor, área y FTE de cada equipo, en el arranque
+  var ORIGENES_FTE = [['contrato', 'Contrato'], ['declarado', 'Declarado'], ['estimado', 'Estimado']];
+  function tablaEquiposInfo(c, nombres) {
+    var info = c.equiposInfo || {}, fte = c.fte || {}, orig = c.fteOrigen || {}, op = opcion(c.campoEquipo);
+    var tareas = function (e) { var v = op ? op.valores.filter(function (x) { return x.valor === e; })[0] : null; return v ? v.n.toLocaleString('es-ES') : ''; };
+    return '<div class="tarjeta"><h2>¿Cómo es cada equipo?</h2><p class="muted small">Si es interno o de un proveedor, a qué área pertenece y cuántas personas a jornada completa (FTE) tiene. Sirve para comparar con las mismas reglas. Si aún no lo sabes, déjalo en blanco y complétalo después en Ajustes.</p>' +
+      '<div class="tabla-wrap eq-tabla" style="margin-top:12px"><table><thead><tr><th>Equipo</th><th class="num">Tareas</th><th>Tipo</th><th>Proveedor</th><th>Área</th><th>FTE</th><th>De dónde sale el FTE</th></tr></thead><tbody>' +
+      nombres.map(function (e) {
+        var i = info[e] || {}, prov = i.tipo === 'proveedor', o = orig[e] || 'declarado';
+        return '<tr><td><b class="medio">' + esc(e) + '</b></td><td class="num">' + tareas(e) + '</td>' +
+          '<td><select data-cambio="eq-info" data-campo="tipo" data-e="' + esc(e) + '" aria-label="Tipo de ' + esc(e) + '"><option value="interno"' + (prov ? '' : ' selected') + '>Interno</option><option value="proveedor"' + (prov ? ' selected' : '') + '>Proveedor</option></select></td>' +
+          '<td><input type="text" data-cambio="eq-info" data-campo="proveedor" data-e="' + esc(e) + '" value="' + esc(i.proveedor || '') + '" placeholder="Nombre"' + (prov ? '' : ' disabled') + ' aria-label="Proveedor de ' + esc(e) + '"></td>' +
+          '<td><input type="text" data-cambio="eq-info" data-campo="area" data-e="' + esc(e) + '" value="' + esc(i.area || '') + '" placeholder="Área" aria-label="Área de ' + esc(e) + '"></td>' +
+          '<td><input type="number" min="0" step="0.5" inputmode="decimal" data-cambio="fte" data-e="' + esc(e) + '" value="' + (fte[e] != null ? fte[e] : '') + '" aria-label="FTE de ' + esc(e) + '"></td>' +
+          '<td><select data-cambio="fte-origen" data-e="' + esc(e) + '" aria-label="De dónde sale el FTE de ' + esc(e) + '">' + ORIGENES_FTE.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === o ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  }
+
+  // Paso 3: cada estado de origen con su estado común (los nueve de catalogo/estados.json)
+  var ORDEN_COMUN = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
+  var NOMBRE_ETAPA = { pendiente: 'pendiente', curso: 'en curso', espera: 'en espera', hecho: 'hecho' };
+  function porRevisar(b) {
+    return App.det.estados.filter(function (e) { return e.propuestaPor !== 'nombre' && !(b.estadosCambiados || {})[e.nombre]; });
+  }
+  function pasoEstados() {
+    var b = App.borrador, det = App.det, E = C.estados.estados, revisar = porRevisar(b);
+    var html = cabecera('Paso 3 de 8 · Estados', 'Qué significa cada estado', 'Cada estado de Jira se traduce a un estado común. Así todos los equipos se miden con las mismas reglas. Te proponemos uno para cada estado: revisa los marcados.',
+      '<span class="contador"><b>' + det.estados.length + '</b> estados' + (revisar.length ? ' · <b>' + revisar.length + '</b> por revisar' : '') + '</span>');
+    html += '<div class="rejilla-estados"><div class="tabla-wrap"><table class="tabla-estados"><thead><tr><th>Estado en Jira</th><th>Categoría en Jira</th><th class="num">Tareas ahora</th><th class="num">Tiempo medio</th><th>Estado común</th></tr></thead><tbody>' +
+      det.estados.map(function (e) {
+        var sel = b.mapeoEstados[e.nombre] || e.estado, rev = revisar.indexOf(e) >= 0;
+        var porque = e.propuestaPor === 'categoria' ? 'No se reconoce por su nombre: se propone por su categoría en Jira.' : 'No se reconoce por su nombre ni por su categoría: se propone por defecto.';
+        return '<tr' + (rev ? ' class="revisar"' : '') + '><td><b class="medio">' + esc(e.nombre) + '</b>' + (rev ? '<span class="marca-revisar" data-tip="' + esc(porque) + '">Revisar</span>' : '') + '</td>' +
+          '<td>' + esc(e.categoria || '') + '</td><td class="num">' + e.actuales.toLocaleString('es-ES') + '</td><td class="num">' + (e.horasMedias != null ? F(e.horasMedias / 24, 'dias') : '') + '</td>' +
+          '<td><select data-cambio="estado-comun" data-estado="' + esc(e.nombre) + '" aria-label="Estado común de ' + esc(e.nombre) + '">' +
+          ORDEN_COMUN.map(function (k) { return '<option value="' + k + '"' + (sel === k ? ' selected' : '') + '>' + esc(E[k].nombre) + '</option>'; }).join('') + '</select>' +
+          '<span class="q-etapa">Cuenta como ' + NOMBRE_ETAPA[E[sel].etapa] + (sel === 'descartado' ? ', no es entrega' : '') + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>';
+    html += '<aside class="tarjeta leyenda-estados"><h3>Los estados comunes</h3><dl>' + ORDEN_COMUN.map(function (k) {
+      return '<dt>' + esc(E[k].nombre) + ' <span class="muted small">· cuenta como ' + NOMBRE_ETAPA[E[k].etapa] + '</span></dt><dd>' + esc(E[k].descripcion) + '</dd>';
+    }).join('') + '</dl></aside></div>';
+    return html;
+  }
+
+  // Paso 4: calidad de los datos por equipo, con la configuración elegida
+  function pasoCalidad() {
+    if (!App.pre) calcularPre();
+    var inf = App.informe, det = App.det, eqs = App.pre.equipos;
+    var generales = inf.avisos.concat(det.avisos);
+    var conAvisos = eqs.filter(function (e) { return e.calidad.avisos.length; }).length;
+    var faltan = Object.keys(CAMPOS).filter(function (k) { return inf.campos[k] !== true; });
+    var html = cabecera('Paso 4 de 8 · Calidad', '¿Nos podemos fiar de los datos?', 'Señales de que Jira no refleja bien lo que pasa. Revísalas con cada equipo antes de sacar conclusiones. Todo esto va al documento de definiciones.');
+    html += '<div class="tarjeta datos-res">' + dato(eqs.length - conAvisos, eqs.length - conAvisos === 1 ? 'equipo sin avisos' : 'equipos sin avisos') + dato(conAvisos, conAvisos === 1 ? 'equipo con avisos' : 'equipos con avisos') +
+      dato(generales.length, generales.length === 1 ? 'aviso del export' : 'avisos del export') + dato(faltan.length, faltan.length === 1 ? 'campo que falta' : 'campos que faltan') + '</div>';
+    // Lo que se repite en todos los equipos se cuenta una sola vez
+    var comunes = eqs.length > 1 ? eqs[0].calidad.avisos.filter(function (a) { return eqs.every(function (eq) { return eq.calidad.avisos.indexOf(a) >= 0; }); }) : [];
+    var lista = function (a) { return '<ul class="cal-lista">' + a.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; };
+    if (comunes.length) html += '<div class="tarjeta"><h3>En todos los equipos<span class="cal-est cal-aviso">' + comunes.length + (comunes.length === 1 ? ' aviso' : ' avisos') + '</span></h3>' + lista(comunes) + '</div>';
+    html += '<div class="rejilla-equipos">' + eqs.map(function (eq) {
+      var a = eq.calidad.avisos.filter(function (x) { return comunes.indexOf(x) < 0; });
+      return '<div class="tarjeta"><h3>' + esc(eq.nombre) + '<span class="cal-est ' + (a.length ? 'cal-aviso' : 'cal-bien') + '">' + (a.length ? a.length + (a.length === 1 ? ' aviso propio' : ' avisos propios') : (comunes.length ? 'Nada más' : 'Sin avisos')) + '</span></h3>' +
+        (a.length ? lista(a) : '<p class="muted small" style="margin-top:8px">' + eq.n.toLocaleString('es-ES') + ' tareas.' + (comunes.length ? ' Solo lo que tienen todos.' : ' Sin señales de que se registre mal.') + '</p>') + '</div>';
+    }).join('') + '</div>';
+    if (generales.length) html += '<div class="avisos">' + generales.map(function (a) { return '<div class="aviso">' + IC.aviso + '<span>' + esc(a.texto) + '</span></div>'; }).join('') + '</div>';
+    if (faltan.length) html += '<div class="tarjeta"><h3>Campos que faltan en el export</h3><ul class="lista-check" style="margin-top:10px">' + faltan.map(function (k) {
+      return '<li class="no">' + IC.no + '<span>' + esc(CAMPOS[k]) + ' <span class="muted small">(' + (inf.campos[k] === 'vacio' ? 'columna vacía' : 'no está') + ')</span></span></li>';
+    }).join('') + '</ul></div>';
+    return html;
+  }
+
+  // Documento de definiciones: lo que firman el cliente y Capgemini (markdown y Word)
+  function tarjetaDefiniciones(c, nivel) {
+    return '<div class="tarjeta"><h' + nivel + '>Documento de definiciones</h' + nivel + '><p class="muted small">Recoge de dónde salen los datos, los equipos, qué significa cada estado, cómo se calcula cada medida y la calidad de los datos. Es lo que firman el cliente y Capgemini.</p>' +
+      '<label class="campo-linea"><span>Nombre del cliente</span><input type="text" data-cambio="nombre-cliente" value="' + esc(c.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
+      '<p class="botones-fila"><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="docx">Descargar en Word</button><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="md">Descargar en markdown</button></p></div>';
+  }
+  function slug(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  function documentoDefiniciones() {
+    var c = App.onboarding ? App.borrador : App.cfg;
+    if (App.onboarding && !App.pre) calcularPre();
+    var modelo = App.onboarding ? App.pre : App.modelo;
+    return Nucleo.definiciones(App.lectura, clienteDe(c, modelo), { config: cfgMotor(c), det: App.det, modelo: modelo, generado: new Date() });
+  }
+  function generarDefiniciones(formato) {
+    var doc;
+    try { doc = documentoDefiniciones(); } catch (e) { if (window.console) console.error(e); aviso('No se pudo generar el documento.'); return; }
+    var c = App.onboarding ? App.borrador : App.cfg;
+    var nombre = 'definiciones-' + (slug(c.nombre) || 'cliente') + '-' + new Date().toISOString().slice(0, 10) + (formato === 'docx' ? '.docx' : '.md');
+    var datos = formato === 'docx' ? Nucleo.aDocx(doc, new Date()) : Nucleo.aMarkdown(doc);
+    var tipo = formato === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'text/markdown;charset=utf-8';
+    escribirEnCarpeta('configuracion', nombre, datos).then(function (ok) { if (ok) aviso('Documento guardado en la carpeta configuracion.'); else descargar(nombre, datos, tipo); });
   }
 
   function paso3() {
@@ -516,7 +610,7 @@
     var b = App.borrador;
     if (!b.objetivos) b.objetivos = objetivosRecomendados();
     var señ = señalesPorObjetivo();
-    var html = cabecera('Paso 3 de 6 · Objetivos', '¿Qué queréis conseguir?', 'Elige hasta tres objetivos. Cada uno trae sus medidas y sus casos. Marcamos los que ya muestran señales en tus datos.', '<span class="contador"><b>' + b.objetivos.length + '</b> de 3</span>');
+    var html = cabecera('Paso 5 de 8 · Objetivos', '¿Qué queréis conseguir?', 'Elige hasta tres objetivos. Cada uno trae sus medidas y sus casos. Marcamos los que ya muestran señales en tus datos.', '<span class="contador"><b>' + b.objetivos.length + '</b> de 3</span>');
     html += '<div class="opciones">' + C.objetivos.map(function (o) {
       var marcada = o.fijo || b.objetivos.indexOf(o.id) >= 0;
       var s = señ[o.id];
@@ -532,7 +626,7 @@
     var clave = b.objetivos.slice().sort().join(',');
     if (!b.medidas || b._objetivosMedidas !== clave) { b.medidas = medidasRecomendadas(b.objetivos); b._objetivosMedidas = clave; }
     var reco = medidasRecomendadas(b.objetivos);
-    var html = cabecera('Paso 4 de 6 · Medidas', '¿Qué queréis medir?', 'Ya están marcadas las medidas que recomendamos para tus objetivos. Las seis primeras van al resumen del equipo.', '<span class="contador"><b>' + b.medidas.length + '</b> marcadas</span>');
+    var html = cabecera('Paso 6 de 8 · Medidas', '¿Qué queréis medir?', 'Ya están marcadas las medidas que recomendamos para tus objetivos. Las seis primeras van al resumen del equipo.', '<span class="contador"><b>' + b.medidas.length + '</b> marcadas</span>');
     function bloque(titulo, ids) {
       if (!ids.length) return '';
       return '<p class="grupo-titulo">' + titulo + '</p><div class="opciones">' + ids.map(function (id) {
@@ -551,7 +645,7 @@
 
   function paso5() {
     var b = App.borrador;
-    var html = cabecera('Paso 5 de 6 · Vistas', '¿Cómo lo queréis ver?', 'Cada perfil tiene su vista. El responsable de equipo siempre la tiene: es quien más la usa.');
+    var html = cabecera('Paso 7 de 8 · Vistas', '¿Cómo lo queréis ver?', 'Cada perfil tiene su vista. El responsable de equipo siempre la tiene: es quien más la usa.');
     html += '<div class="opciones">' + C.perfiles.map(function (p) {
       var marcada = p.fijo || b.perfiles.indexOf(p.id) >= 0;
       return opcionHtml({ marcada: marcada, inactiva: p.fijo, icono: ICO[p.id], input: '<input type="checkbox" data-cambio="perfil" data-p="' + p.id + '"' + (marcada ? ' checked' : '') + (p.fijo ? ' disabled' : '') + '>',
@@ -576,7 +670,7 @@
     var objs = C.objetivos.filter(function (o) { return o.fijo || b.objetivos.indexOf(o.id) >= 0; });
     var casosObj = {};
     objs.forEach(function (o) { o.casos.forEach(function (c) { casosObj[c] = 1; }); });
-    var html = cabecera('Paso 6 de 6 · Listo', 'Tu tablero está listo', 'Esto es lo que verás y lo primero que hemos detectado. Puedes cambiar cualquier cosa después en Ajustes.');
+    var html = cabecera('Paso 8 de 8 · Listo', 'Tu tablero está listo', 'Esto es lo que verás y lo primero que hemos detectado. Puedes cambiar cualquier cosa después en Ajustes.');
     html += '<div class="tarjeta datos-res">' + dato(eqs.length, eqs.length === 1 ? 'equipo' : 'equipos') + dato(b.medidas.length, 'medidas') +
       dato(C.perfiles.filter(function (p) { return p.fijo || b.perfiles.indexOf(p.id) >= 0; }).length, 'vistas') + dato(objs.length, 'objetivos') + '</div>';
     html += '<div class="tarjeta"><h2>Primer diagnóstico</h2><div class="diagnostico">' +
@@ -588,6 +682,7 @@
         return '<div class="diag-fila"><div class="diag-eq"><b>' + esc(eq.nombre) + '</b><span class="cuentas">' + cuentaEstado(cs) + '</span></div>' +
           '<p class="titular">' + t + (fuera ? ' <span class="small muted">Y ' + fuera + ' caso' + (fuera > 1 ? 's' : '') + ' fuera de tus objetivos.</span>' : '') + '</p></div>';
       }).join('') + '</div></div>';
+    html += tarjetaDefiniciones(b, 2);
     html += '<div class="tarjeta"><h2>Guarda la configuración</h2><p class="muted">Se guarda en este navegador' + (App.carpeta ? ' y en la carpeta configuracion' : '') + '. Para usarla en otro ordenador, descárgala y ponla en la carpeta configuracion de Easy Performance.</p><button class="btn btn-sec btn-peq" data-accion="descargar-config">Descargar cliente.json</button></div>';
     return html;
   }
@@ -1147,7 +1242,8 @@
   function vistaConfig() {
     var c = App.cfg;
     var html = cabecera('Ajustes', 'Ajustes', 'Todo lo que elegiste en la puesta en marcha se puede cambiar aquí.') + '<div class="rejilla-ajustes">';
-    html += '<div class="tarjeta"><h3>Objetivos, medidas y vistas</h3><p class="muted small">Objetivos: ' + esc(objetivosCfg().map(function (o) { return o.titulo; }).join(', ')) + '.</p><p class="muted small">Medidas: ' + esc(medidasCfg().map(function (id) { return C.medidas[id].nombre; }).join(', ')) + '.</p><button class="btn btn-sec btn-peq" data-accion="rehacer">Repetir la puesta en marcha</button></div>';
+    html += '<div class="tarjeta"><h3>Objetivos, medidas y vistas</h3><p class="muted small">Objetivos: ' + esc(objetivosCfg().map(function (o) { return o.titulo; }).join(', ')) + '.</p><p class="muted small">Medidas: ' + esc(medidasCfg().map(function (id) { return C.medidas[id].nombre; }).join(', ')) + '.</p><p class="botones-fila"><button class="btn btn-sec btn-peq" data-accion="rehacer">Repetir la puesta en marcha</button><button class="btn-txt" data-accion="rehacer" data-paso="3">Revisar los estados</button></p></div>';
+    html += tarjetaDefiniciones(c, 3);
     var fte = c.fte || {};
     html += '<div class="tarjeta"><h3>Personas por equipo (FTE)</h3><p class="muted small">Para el indicador Throughput / FTE: cuánto termina al mes una persona equivalente. Jira no lo trae: indica cuántas personas a jornada completa tiene cada equipo.</p><div class="fte-filas">' +
       App.modelo.equipos.map(function (e) {
@@ -1187,14 +1283,16 @@
   }
   function mesTexto(d) { return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1); }
   // Equipos del cliente con su tipo (interno o proveedor), área y FTE, tal como están en Ajustes
-  function clienteActual() {
-    var c = App.cfg || {}, info = c.equiposInfo || {}, fte = c.fte || {}, orig = c.fteOrigen || {}, periodo = mesTexto(App.modelo.semanaFin);
-    var lista = App.modelo.equipos.map(function (e) {
+  function clienteActual() { return clienteDe(App.cfg, App.modelo); }
+  function clienteDe(c, modelo) {
+    c = c || {};
+    var info = c.equiposInfo || {}, fte = c.fte || {}, orig = c.fteOrigen || {}, periodo = mesTexto(modelo.semanaFin);
+    var lista = modelo.equipos.map(function (e) {
       var i = info[e.nombre] || {}, prov = i.tipo === 'proveedor';
       return { id: e.nombre, nombre: e.nombre, tipo: prov ? 'proveedor' : 'interno', proveedor: prov ? (i.proveedor || 'Proveedor sin nombre') : null, area: i.area || null,
         usa_sprints: true, fte: fte[e.nombre] ? [{ periodo: periodo, valor: fte[e.nombre], origen: orig[e.nombre] || 'declarado' }] : [], limites: (c.limites || {})[e.nombre] || {} };
     });
-    return { version: 2, nombre: 'Cliente', sector: c.sector || '', plataforma: 'jira', mapeoEstados: {}, equipos: { campo: c.campoEquipo || 'equipo', lista: lista }, objetivos: c.objetivos || [], medidas: c.medidas || [] };
+    return { version: 2, nombre: c.nombre || '', sector: c.sector || '', plataforma: 'jira', mapeoEstados: c.mapeoEstados || {}, equipos: { campo: c.campoEquipo || 'equipo', lista: lista }, objetivos: c.objetivos || [], medidas: c.medidas || [] };
   }
   function aliasActual() {
     if (!App.cfg || !App.cfg.paqueteAlias) return null;
@@ -1593,15 +1691,15 @@
     guardarLocal(App.cfg);
     escribirEnCarpeta('configuracion', 'cliente.json', JSON.stringify(App.cfg, null, 2));
   }
-  function descargar(nombre, texto) {
+  function descargar(nombre, texto, tipo) {
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([texto], { type: 'application/json' }));
+    a.href = URL.createObjectURL(new Blob([texto], { type: tipo || 'application/json' }));
     a.download = nombre; document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function terminar() {
     var b = App.borrador;
-    delete b._objetivosMedidas;
+    delete b._objetivosMedidas; delete b.estadosCambiados;
     App.cfg = Object.assign({ version: 1, creada: new Date().toISOString() }, b, { actualizada: new Date().toISOString() });
     guardarCfg(); recalcular();
     App.onboarding = false; App.vista = 'equipo';
@@ -1612,10 +1710,10 @@
   function siguiente() {
     if (App.paso === 1 && !App.det) return;
     if (App.paso === 2 && opcion(App.borrador.campoEquipo).id !== 'todos' && !App.borrador.equipos.length) { aviso('Elige al menos un equipo.'); return; }
-    if (App.paso === 2) calcularPre();
-    if (App.paso === 3 && !App.borrador.objetivos.length) { aviso('Elige al menos un objetivo.'); return; }
-    if (App.paso === 4 && !App.borrador.medidas.length) { aviso('Elige al menos una medida.'); return; }
-    App.paso = Math.min(6, App.paso + 1); render(); window.scrollTo(0, 0);
+    if (App.paso === 2 || App.paso === 3) calcularPre();
+    if (App.paso === 5 && !App.borrador.objetivos.length) { aviso('Elige al menos un objetivo.'); return; }
+    if (App.paso === 6 && !App.borrador.medidas.length) { aviso('Elige al menos una medida.'); return; }
+    App.paso = Math.min(PASOS.length, App.paso + 1); render(); window.scrollTo(0, 0);
   }
   var ACC = {
     'cargar-ficheros': function () { document.getElementById('entrada-ficheros').click(); },
@@ -1644,7 +1742,7 @@
       App.borrador.objetivos = App.borrador.objetivos || objetivosRecomendados();
       App.borrador.medidas = medidasRecomendadas(App.borrador.objetivos);
       App.borrador._objetivosMedidas = App.borrador.objetivos.slice().sort().join(',');
-      App.paso = 6; render(); window.scrollTo(0, 0);
+      App.paso = PASOS.length; render(); window.scrollTo(0, 0);
     },
     'terminar': terminar,
     'cancelar': function () { App.onboarding = false; recalcular(); render(); },
@@ -1666,7 +1764,8 @@
       guardarCfg(); render();
     },
     'ver-no-aplica': function () { App.verNoAplica = !App.verNoAplica; render(); },
-    'rehacer': function () { App.borrador = borradorInicial(App.cfg); App.onboarding = true; App.paso = 2; calcularPre(); render(); window.scrollTo(0, 0); },
+    'rehacer': function (el) { App.borrador = borradorInicial(App.cfg); App.onboarding = true; App.paso = +el.getAttribute('data-paso') || 2; calcularPre(); render(); window.scrollTo(0, 0); },
+    'definiciones': function (el) { generarDefiniciones(el.getAttribute('data-f')); },
     'descargar-config': function () { descargar('cliente.json', JSON.stringify(App.cfg || App.borrador, null, 2)); },
     'cargar-config': function () { document.getElementById('entrada-config').click(); },
     'borrar-config': function () {
@@ -1708,23 +1807,30 @@
       return;
     }
     if (!tipo) return;
-    if (tipo === 'fte') {
-      var vf = String(el.value).replace(',', '.'), nf = vf === '' ? null : parseFloat(vf);
-      App.cfg.fte = App.cfg.fte || {};
-      if (nf == null || isNaN(nf) || nf <= 0) delete App.cfg.fte[el.getAttribute('data-e')]; else App.cfg.fte[el.getAttribute('data-e')] = nf;
-      guardarCfg(); recalcular(); render(); return;
+    if (tipo === 'fte' || tipo === 'fte-origen' || tipo === 'eq-info') {
+      // En el arranque se escribe en el borrador; con el tablero ya montado, en la configuración guardada
+      var enArranque = App.onboarding, dest = enArranque ? App.borrador : App.cfg, en = el.getAttribute('data-e');
+      if (tipo === 'fte') {
+        var vf = String(el.value).replace(',', '.'), nf = vf === '' ? null : parseFloat(vf);
+        dest.fte = dest.fte || {};
+        if (nf == null || isNaN(nf) || nf <= 0) delete dest.fte[en]; else dest.fte[en] = nf;
+      } else if (tipo === 'fte-origen') {
+        dest.fteOrigen = dest.fteOrigen || {}; dest.fteOrigen[en] = el.value;
+      } else {
+        dest.equiposInfo = dest.equiposInfo || {};
+        var inf = dest.equiposInfo[en] = dest.equiposInfo[en] || {};
+        inf[el.getAttribute('data-campo')] = el.value.trim() || null;
+      }
+      var repintar = tipo === 'eq-info' && el.getAttribute('data-campo') === 'tipo';
+      if (enArranque) App.pre = null;
+      else { guardarCfg(); App.diag = null; if (tipo === 'fte') { recalcular(); repintar = true; } }
+      if (repintar) { var y2 = window.scrollY; render(); window.scrollTo(0, y2); }
+      return;
     }
-    if (tipo === 'fte-origen') {
-      App.cfg.fteOrigen = App.cfg.fteOrigen || {}; App.cfg.fteOrigen[el.getAttribute('data-e')] = el.value;
-      guardarCfg(); App.diag = null; return;
-    }
-    if (tipo === 'eq-info') {
-      var en = el.getAttribute('data-e'), campo = el.getAttribute('data-campo');
-      App.cfg.equiposInfo = App.cfg.equiposInfo || {};
-      var inf = App.cfg.equiposInfo[en] = App.cfg.equiposInfo[en] || {};
-      inf[campo] = el.value.trim() || null;
-      guardarCfg(); App.diag = null;
-      if (campo === 'tipo') { var y2 = window.scrollY; render(); window.scrollTo(0, y2); }
+    if (tipo === 'nombre-cliente') {
+      var dn = App.onboarding ? App.borrador : App.cfg;
+      dn.nombre = el.value.trim();
+      if (!App.onboarding) guardarCfg();
       return;
     }
     if (tipo === 'paquete-alias') { App.cfg.paqueteAlias = el.checked; guardarCfg(); App.diag = null; return; }
@@ -1743,7 +1849,7 @@
     var b = App.borrador;
     if (tipo === 'campo-equipo') { b.campoEquipo = el.value; b.equipos = equiposPorDefecto(el.value); App.pre = null; }
     else if (tipo === 'equipo-incluir') { var v = el.getAttribute('data-e'), i = b.equipos.indexOf(v); if (el.checked && i < 0) b.equipos.push(v); if (!el.checked && i >= 0) b.equipos.splice(i, 1); App.pre = null; }
-    else if (tipo === 'etapa') { b.etapas[el.getAttribute('data-estado')] = el.value; App.pre = null; }
+    else if (tipo === 'estado-comun') { var ne = el.getAttribute('data-estado'); b.mapeoEstados[ne] = el.value; b.estadosCambiados = b.estadosCambiados || {}; b.estadosCambiados[ne] = true; App.pre = null; }
     else if (tipo === 'objetivo') {
       var o = el.getAttribute('data-o'), j = b.objetivos.indexOf(o);
       if (el.checked && j < 0) { if (b.objetivos.length >= 3) { el.checked = false; aviso('Elige como mucho tres objetivos: así el tablero se mantiene simple.'); return; } b.objetivos.push(o); }

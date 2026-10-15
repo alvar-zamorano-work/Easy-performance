@@ -1,5 +1,6 @@
 // Tipos de la detección y de los resultados del cálculo. Los datos de entrada están en modelo.ts.
 
+import type { MotivoPropuesta } from './estados.ts';
 import type { EvaluacionAR } from './agent-readiness.ts';
 import type { Aviso, CampoAgrupador, Etapa, EstadoNormalizado, Limites, Tarea } from './modelo.ts';
 
@@ -18,6 +19,8 @@ export interface EstadoDetectado {
   estado: EstadoNormalizado;
   etapa: Etapa;
   bloqueo: boolean;
+  /** Cómo se llegó a la propuesta: por el nombre, por la categoría o por defecto (revisar). */
+  propuestaPor: MotivoPropuesta;
 }
 
 export interface OpcionEquipoDetectada {
