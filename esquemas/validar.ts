@@ -15,6 +15,7 @@ const BASE = 'https://easy-performance/esquemas/';
 
 const ajv = new Ajv2020({ allErrors: true, strict: true });
 addFormats(ajv);
+ajv.addSchema(JSON.parse(readFileSync(join(DIR, 'paquete.schema.json'), 'utf8')));
 for (const sub of ['modelo', 'catalogo']) {
   for (const f of readdirSync(join(DIR, sub)).filter((n) => n.endsWith('.schema.json')).sort()) {
     ajv.addSchema(JSON.parse(readFileSync(join(DIR, sub, f), 'utf8')));
@@ -23,7 +24,8 @@ for (const sub of ['modelo', 'catalogo']) {
 
 export type NombreEsquema =
   | 'modelo/tarea' | 'modelo/equipo' | 'modelo/iniciativa' | 'modelo/contexto' | 'modelo/cliente'
-  | 'catalogo/medidas' | 'catalogo/casos' | 'catalogo/objetivos' | 'catalogo/textos' | 'catalogo/vistas' | 'catalogo/estados';
+  | 'catalogo/medidas' | 'catalogo/casos' | 'catalogo/objetivos' | 'catalogo/textos' | 'catalogo/vistas' | 'catalogo/estados'
+  | 'catalogo/rubrica_agent_ready' | 'paquete';
 
 export interface ResultadoValidacion { valido: boolean; errores: string[] }
 

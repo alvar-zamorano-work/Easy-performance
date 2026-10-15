@@ -9,7 +9,7 @@ import vistasJson from '../catalogo/vistas.json' with { type: 'json' };
 import estadosJson from '../catalogo/estados.json' with { type: 'json' };
 import type { Etapa, EstadoNormalizado, Limites } from './modelo.ts';
 
-export type Requisito = 'tiempos' | 'inicio' | 'puntos' | 'errores' | 'primera' | 'sprints' | 'api';
+export type Requisito = 'tiempos' | 'inicio' | 'puntos' | 'errores' | 'primera' | 'sprints' | 'api' | 'descripcion';
 
 export interface MedidaDef {
   nombre: string;

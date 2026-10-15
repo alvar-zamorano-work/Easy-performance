@@ -1,0 +1,21 @@
+{
+  "id": "limite-wip-pagos",
+  "nombre": "Límite de trabajo en curso en Pagos",
+  "descripcion": "No empezar nada nuevo mientras haya más tareas en curso que personas.",
+  "fecha_inicio": "2026-06-01",
+  "fecha_fin": null,
+  "equipos": [
+    "Pagos"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "ciclo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Tiempo de ciclo un 30% más bajo en dos meses.",
+  "estado": "en_curso",
+  "origen": "demasiado_a_la_vez",
+  "evaluacion": null,
+  "notas": ""
+}

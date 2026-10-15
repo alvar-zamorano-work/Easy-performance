@@ -16,7 +16,8 @@
     "estimacion",
     "velocidad",
     "primera",
-    "fiabilidad"
+    "fiabilidad",
+    "agent_readiness"
   ],
   "medidas": {
     "entregas": {
@@ -181,6 +182,15 @@
       "formato": "horas",
       "requiere": "primera",
       "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atienden 8 de cada 10 tareas creadas en las últimas 4 semanas."
+    },
+    "agent_readiness": {
+      "nombre": "Listo para agentes",
+      "pregunta": "¿Está el trabajo descrito para que lo haga un agente?",
+      "unidad": "de los tickets nuevos",
+      "dir": "mas",
+      "formato": "pct",
+      "requiere": "descripcion",
+      "como": "Parte de los tickets creados en las últimas 12 semanas que cumplen al menos 4 de los 5 criterios de la rúbrica: descripción con contenido, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas."
     }
   }
 }

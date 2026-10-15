@@ -1,5 +1,6 @@
 // Tipos de la detección y de los resultados del cálculo. Los datos de entrada están en modelo.ts.
 
+import type { EvaluacionAR } from './agent-readiness.ts';
 import type { Aviso, CampoAgrupador, Etapa, EstadoNormalizado, Limites, Tarea } from './modelo.ts';
 
 export type * from './modelo.ts';
@@ -80,6 +81,12 @@ export interface Derivada {
   total?: number;
   retrabajo: boolean;
   primeraH: number | null;
+  /** Tiempo en estados bloqueados (ms). */
+  bloqueoMs: number;
+  /** Volvió a abrirse después de terminada. */
+  reabierta: boolean;
+  /** Agent readiness del ticket (solo en memoria). */
+  ar: EvaluacionAR;
 }
 
 export interface Rango { lo: number; hi: number; med: number; n: number }
@@ -121,6 +128,8 @@ export interface Series {
   primera85: (number | null)[];
   velocidadMedia: (number | null)[];
   reparto: (Record<string, number> | null)[];
+  /** Parte de los tickets creados en 12 semanas que están listos para un agente. */
+  agentReady: (number | null)[];
 }
 
 export interface SprintResumen {

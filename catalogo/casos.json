@@ -532,6 +532,163 @@
       ],
       "comprobar": "Lo que entra a mitad de sprint debería bajar del 15%.",
       "respaldo": "Guía Scrum."
+    },
+    "grupo_plazo": {
+      "accionArea": "Revisar con el grupo que tarda más dónde se para el trabajo: revisiones, entornos o dependencias",
+      "comun": "Cuando un grupo tarda más en el mismo tipo y tamaño de tarea, suele haber un paso que espera más: revisión, pruebas, accesos o respuestas de otro equipo.",
+      "titulo": "Un grupo tarda más en el mismo tipo de trabajo",
+      "objetivos": [
+        "comparar"
+      ],
+      "medida": "ciclo",
+      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tarda claramente más que el resto.",
+      "causas": [
+        "Esperas más largas en revisión o pruebas",
+        "Dependencias de otros equipos o del cliente",
+        "Menos acceso a entornos, datos o personas que deciden",
+        "Tareas que llegan peor definidas"
+      ],
+      "preguntas": [
+        "¿En qué estado se para más el trabajo de este grupo?",
+        "¿Tiene el mismo acceso a entornos, revisiones y decisiones que el resto?",
+        "¿Llegan sus tareas igual de definidas?"
+      ],
+      "plan": [
+        {
+          "paso": "Comparar con el grupo el tiempo en cada estado y elegir el paso que más espera",
+          "quien": "Responsable del grupo y oficina de mejora",
+          "esfuerzo": "Una reunión"
+        },
+        {
+          "paso": "Acordar un plazo para ese paso y quién lo atiende",
+          "quien": "Responsables de los equipos implicados",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Revisar la diferencia en la siguiente comparación mensual",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En dos meses la diferencia en el plazo debería bajar de un 25%.",
+      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; métricas de flujo."
+    },
+    "grupo_calidad": {
+      "accionArea": "Revisar con el grupo cómo llegan los requisitos y qué se entiende por terminado",
+      "comun": "Cuando un grupo vuelve atrás o reabre más en el mismo tipo de trabajo, suele fallar el acuerdo de qué es terminado o cómo se valida.",
+      "titulo": "Un grupo vuelve atrás o reabre más",
+      "objetivos": [
+        "comparar"
+      ],
+      "medida": "retrabajo",
+      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tiene claramente más retrabajo o más tareas reabiertas.",
+      "causas": [
+        "Criterios de aceptación poco claros para ese grupo",
+        "Validación tardía o por otro equipo",
+        "Definición de terminado distinta a la del resto",
+        "Menos pruebas automáticas"
+      ],
+      "preguntas": [
+        "¿Usa este grupo la misma definición de terminado que el resto?",
+        "¿Quién valida su trabajo y cuándo?",
+        "¿Por qué se reabrieron las últimas tareas?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar con el grupo las últimas diez tareas que volvieron atrás y anotar el motivo",
+          "quien": "Responsable del grupo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Alinear la definición de terminado y los criterios de aceptación con el resto",
+          "quien": "Oficina de mejora y responsables",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Validar durante el trabajo, no solo al final",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En dos meses el retrabajo y las reaperturas del grupo deberían acercarse a las del resto.",
+      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; definición de terminado (Guía Scrum)."
+    },
+    "grupo_agent_ready": {
+      "accionArea": "Acordar con el grupo una plantilla de ticket con criterios de aceptación y referencias",
+      "comun": "Cuando un grupo escribe tickets menos completos, suele faltar una plantilla común o tiempo de refinamiento.",
+      "titulo": "Un grupo tiene el backlog menos preparado para agentes",
+      "objetivos": [
+        "comparar",
+        "agentes"
+      ],
+      "medida": "agent_readiness",
+      "senal": "La parte de tickets listos para un agente es claramente más baja en un grupo que en el resto.",
+      "causas": [
+        "No hay plantilla de ticket o no se usa",
+        "El refinamiento se hace de palabra y no queda escrito",
+        "Los criterios de aceptación se acuerdan fuera de la herramienta"
+      ],
+      "preguntas": [
+        "¿Qué plantilla de ticket usa este grupo?",
+        "¿Dónde quedan escritos los criterios de aceptación?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar con el grupo cinco tickets recientes con la rúbrica de agent readiness",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Adoptar una plantilla con descripción, criterios de aceptación y referencias",
+          "quien": "Responsable del grupo y producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Repetir la medida en un mes",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En un mes la parte de tickets listos del grupo debería acercarse a la del resto.",
+      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
+    },
+    "backlog_no_listo": {
+      "accionArea": "Acordar una plantilla de ticket común en el área",
+      "comun": "Cuando se repite en varios equipos, falta un acuerdo común sobre cómo se escribe un ticket.",
+      "titulo": "El backlog no está listo para agentes",
+      "objetivos": [
+        "agentes"
+      ],
+      "medida": "agent_readiness",
+      "senal": "Menos de la mitad de los tickets nuevos cumple cuatro de los cinco criterios de la rúbrica.",
+      "causas": [
+        "Descripciones cortas o que repiten el título",
+        "Sin criterios de aceptación escritos",
+        "Tickets demasiado grandes o con dependencias abiertas"
+      ],
+      "preguntas": [
+        "¿Qué criterio falla más en los tickets del equipo?",
+        "¿Podría alguien de fuera del equipo hacer este ticket sin preguntar?"
+      ],
+      "plan": [
+        {
+          "paso": "Mirar qué criterio de la rúbrica falla más y empezar por ese",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Añadir a la plantilla de ticket una sección de criterios de aceptación y otra de referencias",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Dividir los tickets de más de cinco puntos antes de empezarlos",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En un mes más de la mitad de los tickets nuevos debería estar listo para un agente.",
+      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
     }
   }
 }

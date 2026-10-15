@@ -1,0 +1,18 @@
+{
+  "documentos": [
+    {
+      "categoria": "metodo",
+      "titulo": "Cómo trabajan los equipos",
+      "resumen": "Scrum con sprints de dos semanas en los cuatro equipos. Revisión de código obligatoria.",
+      "fuente": "Entrevista con los responsables de equipo",
+      "fecha": "2026-10-05"
+    },
+    {
+      "categoria": "contratos",
+      "titulo": "Contratos con proveedores",
+      "resumen": "Proveedor Norte y Proveedor Sur trabajan por capacidad (FTE fijos al mes), sin compromiso de plazos.",
+      "fuente": "Dirección de tecnología",
+      "fecha": "2026-10-05"
+    }
+  ]
+}

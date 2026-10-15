@@ -31,6 +31,13 @@ function configuraciones(det: Deteccion): [string, ConfigCalculo][] {
 
 const textos = (a: { texto: string }[]) => a.map((x) => x.texto).sort();
 
+/** Lo que el núcleo añade después de la v0 (B3: agent readiness) no existe en la v0: se quita antes de comparar. */
+function sinNovedades(m: unknown): unknown {
+  const x = json(m) as { equipos: { medidas: Record<string, unknown>; series: Record<string, unknown> }[] };
+  x.equipos.forEach((e) => { delete e.medidas.agent_readiness; delete e.series.agentReady; });
+  return x;
+}
+
 for (const esc of escenarios()) {
   test('igual que la v0: ' + esc.nombre, async (t) => {
     const ficheros = esc.rutas.map(fichero);
@@ -89,7 +96,7 @@ for (const esc of escenarios()) {
         const mN = recorrido(ficheros, structuredClone(cfg)).modelo;
         const mV = motorV0.calcular(viejo.tareas, detV, structuredClone(cfg));
         assert.ok(mN.equipos.length > 0, 'hay equipos');
-        assert.deepEqual(json(mN), json(mV));
+        assert.deepEqual(sinNovedades(mN), json(mV));
       });
     }
   });

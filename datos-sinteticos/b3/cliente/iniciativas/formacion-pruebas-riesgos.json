@@ -1,0 +1,21 @@
+{
+  "id": "formacion-pruebas-riesgos",
+  "nombre": "Formación en pruebas automáticas en Riesgos",
+  "descripcion": "Dos sesiones de formación y una guía de pruebas automáticas.",
+  "fecha_inicio": "2026-06-01",
+  "fecha_fin": null,
+  "equipos": [
+    "Riesgos"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "retrabajo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Retrabajo por debajo del 10% en dos meses.",
+  "estado": "en_curso",
+  "origen": "retrabajo",
+  "evaluacion": null,
+  "notas": ""
+}

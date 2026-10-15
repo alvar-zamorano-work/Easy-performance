@@ -11,6 +11,7 @@ import { negocio } from './negocio.ts';
 import { calidadEquipo, cierresEnBloque } from './calidad.ts';
 import { kpisComite } from './kpis.ts';
 import { evaluarCasos } from './casos.ts';
+import { evaluarTicket, RUBRICA, type EvaluacionAR } from './agent-readiness.ts';
 import type {
   ConfigCalculo, ContextoCalculo, Derivada, Deteccion, InfoSprints, MedidaCalculada, Modelo,
   ResultadoEquipo, Series, TareaEnCurso,
@@ -18,9 +19,27 @@ import type {
 import type { EstadoNormalizado, Tarea } from './modelo.ts';
 
 /** Semanas que abarca el valor actual de cada medida ('P' = ventana larga de proporciones). */
-const VENTANA: Record<string, number | 'P'> = { errores: 'P', retrabajo: 'P', arrastradas: 'P', reparto: 'P', regularidad: 8, estimacion: 12 };
+const VENTANA: Record<string, number | 'P'> = { errores: 'P', retrabajo: 'P', arrastradas: 'P', reparto: 'P', regularidad: 8, estimacion: 12, agent_readiness: 12 };
+
+export interface Preparacion {
+  porEquipo: Record<string, Derivada[]>;
+  nombresEquipo: string[];
+  ctx: ContextoCalculo;
+  mapeo: Record<string, EstadoNormalizado>;
+}
 
 export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCalculo, catalogo: Catalogo = CATALOGO): Modelo {
+  return calcularDesde(preparar(tareas, det, cfgEntrada), catalogo);
+}
+
+/** Cálculo a partir de una preparación ya hecha (evita repetirla cuando se usa también para comparar). */
+export function calcularDesde(p: Preparacion, catalogo: Catalogo = CATALOGO): Modelo {
+  const equipos = p.nombresEquipo.map((nombre) => calcularEquipo(nombre, p.porEquipo[nombre], p.ctx, catalogo));
+  return { fechaRef: p.ctx.fechaRef, semanas: p.ctx.semanas, semanaFin: p.ctx.semanaFin, equipos, cierresBloque: p.ctx.cierresBloque };
+}
+
+/** Semanas del periodo, mapeo de estados y datos derivados de cada tarea, agrupados por equipo. */
+export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCalculo): Preparacion {
   const cfg: ConfigCalculo = cfgEntrada || {};
   const K = cfg.semanasActuales || 4, KP = cfg.semanasProporciones || 8, R = cfg.semanasReferencia || 12;
   // Mapeo de estados: el del cliente manda sobre la propuesta. Un cliente.json de la v0 trae etapas.
@@ -56,7 +75,7 @@ export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     const f = t.fechas;
     const estado = mapeo[t.estado_origen] || t.estado_normalizado;
     const etapa = etapaDe(estado);
-    let curso = 0, espera = 0, entradasCurso = 0, extra = 0, bloqueos = 0;
+    let curso = 0, espera = 0, entradasCurso = 0, extra = 0, bloqueos = 0, bloqueoMs = 0, vecesHecho = 0;
     const porEstado: Record<string, number> = {};
     t.tiempos_estado.forEach((x) => {
       const est = mapeo[x.estado];
@@ -67,6 +86,8 @@ export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
       if (et === 'curso' || et === 'espera') {
         if (est === 'bloqueado') bloqueos += x.visitas; else extra += Math.max(0, x.visitas - 1);
       }
+      if (est === 'bloqueado') bloqueoMs += ms;
+      if (et === 'hecho') vecesHecho += x.visitas;
     });
     const descartada = !!(f.terminada && (t.descartada || estado === 'descartado'));
     const d: Derivada = {
@@ -76,6 +97,9 @@ export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
       conTiempos: t.tiempos_estado.length > 0,
       retrabajo: false,
       primeraH: null,
+      bloqueoMs,
+      reabierta: t.reaperturas != null ? t.reaperturas > 0 : vecesHecho > 1,
+      ar: null as unknown as EvaluacionAR,
     };
     if (d.entregada && d.conTiempos && entradasCurso === 0) d.salto = true;
     if (d.entregada && (curso + espera) > 0) {
@@ -87,14 +111,14 @@ export function calcular(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     if (d.entregada) d.total = (f.terminada!.getTime() - f.creada.getTime()) / DIA;
     d.retrabajo = d.entregada && d.conTiempos && (t.reaperturas != null ? t.reaperturas > 0 : (extra - bloqueos) > 0);
     d.primeraH = (f.primera_respuesta && f.primera_respuesta >= f.creada) ? (f.primera_respuesta.getTime() - f.creada.getTime()) / 36e5 : null;
+    d.ar = evaluarTicket(t, estado, d.ciclo);
     (porEquipo[eq] = porEquipo[eq] || []).push(d);
   });
 
   const nombresEquipo = Object.keys(porEquipo).sort((a, b) => a.localeCompare(b, 'es'));
   const bloques = cierresEnBloque(tareas);
   const ctx: ContextoCalculo = { semanas, N, finDe, semanaDe, semanaFin, fechaRef, K, KP, R, det, cfg, cierresBloque: bloques };
-  const equipos = nombresEquipo.map((nombre) => calcularEquipo(nombre, porEquipo[nombre], ctx, catalogo));
-  return { fechaRef, semanas, semanaFin, equipos, cierresBloque: bloques };
+  return { porEquipo, nombresEquipo, ctx, mapeo };
 }
 
 function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, catalogo: Catalogo): ResultadoEquipo {
@@ -107,6 +131,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     entregasMedia: nula(), ciclo85: nula(), ciclo50: nula(), total85: nula(), espera: nula(), errores: nula(), retrabajo: nula(),
     arrastradas: nula(), regularidad: nula(), estimacion: nula(), primera85: nula(), velocidadMedia: nula(),
     reparto: nula<Record<string, number>>(),
+    agentReady: nula(),
   };
   const entregadas = items.filter((d) => d.entregada);
   // Conteos semanales
@@ -180,6 +205,9 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     const desde = c.semanas[Math.max(0, w - K + 1)], hasta = c.finDe(w);
     const pr = items.filter((d) => d.primeraH != null && d.t.fechas.creada >= desde && d.t.fechas.creada < hasta).map((d) => d.primeraH);
     if (pr.length >= 5) s.primera85[w] = cuantil(pr, 0.85);
+    const desde12 = c.semanas[Math.max(0, w - 11)];
+    const creadas = items.filter((d) => !d.descartada && d.t.fechas.creada >= desde12 && d.t.fechas.creada < hasta);
+    if (w >= 11 && creadas.length >= 10) s.agentReady[w] = creadas.filter((d) => d.ar.indice >= RUBRICA.listoDesde).length / creadas.length;
   }
 
   // Trabajo bloqueado hoy. "Lo habitual" sale del periodo de referencia (antes de las últimas semanas),
@@ -200,6 +228,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     wip: s.wip, arrastradas: s.arrastradas, errores: s.errores, retrabajo: s.retrabajo, pendiente: s.pendiente,
     estimacion: s.estimacion, velocidad: s.velocidadMedia, primera: s.primera85,
     reparto: s.reparto.map((r) => (r ? r.historia : null)),
+    agent_readiness: s.agentReady,
   };
   const disponibles = disponibilidad(items, sprintsInfo, catalogo);
   const medidas: Record<string, MedidaCalculada> = {};
@@ -249,6 +278,7 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
   const conPuntos = items.filter((d) => d.t.estimacion != null).length;
   const hayErrores = items.some((d) => d.t.tipo === 'error') || items.some((d) => d.t.tipo_origen);
   const hayPrimera = items.some((d) => d.primeraH != null);
+  const hayDescripciones = items.some((d) => d.t.descripcion);
   const out: Record<string, true | string> = {};
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
@@ -259,6 +289,7 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
     else if (req === 'errores') out[id] = hayErrores ? true : 'El export no trae el tipo de tarea.';
     else if (req === 'primera') out[id] = hayPrimera ? true : 'El export no trae la fecha de primera respuesta.';
     else if (req === 'sprints') out[id] = sp.fiables ? true : (sp.motivo as string);
+    else if (req === 'descripcion') out[id] = hayDescripciones ? true : 'El export no trae la descripción de las tareas.';
     else if (req === 'api') out[id] = 'Necesita saber qué había al empezar cada sprint: con la API de Jira o con fotos semanales.';
     else out[id] = true;
   });

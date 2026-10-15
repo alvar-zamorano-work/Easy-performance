@@ -1,0 +1,702 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://easy-performance/esquemas/paquete.schema.json",
+  "title": "Paquete de diagnóstico",
+  "description": "Lo único que pasa a la IA. Solo agregados: nunca títulos, descripciones, claves de ticket, personas ni comentarios (además, comprobarPaquete lo verifica).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "generado",
+    "cliente",
+    "equipos",
+    "medidas",
+    "casos_activos",
+    "casos_grupo",
+    "comparaciones",
+    "iniciativas",
+    "agent_readiness",
+    "datos",
+    "contexto",
+    "definiciones"
+  ],
+  "$defs": {
+    "num": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "dia": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "gravedad": {
+      "enum": [
+        "critico",
+        "atencion"
+      ]
+    },
+    "confianza": {
+      "enum": [
+        "baja",
+        "media",
+        "alta"
+      ]
+    },
+    "datos": {
+      "type": "object",
+      "additionalProperties": {
+        "type": [
+          "number",
+          "null"
+        ]
+      }
+    },
+    "medida": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disponible"
+      ],
+      "properties": {
+        "disponible": {
+          "type": "boolean"
+        },
+        "motivo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "valor": {
+          "$ref": "#/$defs/num"
+        },
+        "rango": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "lo",
+                "hi",
+                "mediana"
+              ],
+              "properties": {
+                "lo": {
+                  "$ref": "#/$defs/num"
+                },
+                "hi": {
+                  "$ref": "#/$defs/num"
+                },
+                "mediana": {
+                  "$ref": "#/$defs/num"
+                }
+              }
+            }
+          ]
+        },
+        "estado": {
+          "enum": [
+            "bien",
+            "atencion",
+            "critico",
+            "sin",
+            "neutro",
+            null
+          ]
+        },
+        "tendencia": {
+          "enum": [
+            "estable",
+            "sube",
+            "baja",
+            "mejora",
+            "empeora",
+            null
+          ]
+        },
+        "serie": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/num"
+          },
+          "maxItems": 26
+        }
+      }
+    },
+    "medidas": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/medida"
+      }
+    },
+    "categoriaContexto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vacia",
+        "documentos"
+      ],
+      "properties": {
+        "vacia": {
+          "type": "boolean"
+        },
+        "documentos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "documento",
+              "sintesis",
+              "fecha"
+            ],
+            "properties": {
+              "documento": {
+                "type": "string"
+              },
+              "sintesis": {
+                "type": "string"
+              },
+              "fecha": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "generado": {
+      "type": "string",
+      "format": "date"
+    },
+    "cliente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sector",
+        "plataforma",
+        "periodo",
+        "usa_sprints",
+        "objetivos"
+      ],
+      "properties": {
+        "sector": {
+          "type": "string"
+        },
+        "plataforma": {
+          "type": "string"
+        },
+        "periodo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "desde",
+            "hasta"
+          ],
+          "properties": {
+            "desde": {
+              "$ref": "#/$defs/dia"
+            },
+            "hasta": {
+              "$ref": "#/$defs/dia"
+            }
+          }
+        },
+        "usa_sprints": {
+          "type": "boolean"
+        },
+        "objetivos": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "equipos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tipo",
+          "proveedor",
+          "area",
+          "fte"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tipo": {
+            "enum": [
+              "interno",
+              "proveedor",
+              null
+            ]
+          },
+          "proveedor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "area": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fte": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "valor",
+                  "origen",
+                  "periodo"
+                ],
+                "properties": {
+                  "valor": {
+                    "type": "number"
+                  },
+                  "origen": {
+                    "enum": [
+                      "contrato",
+                      "declarado",
+                      "estimado"
+                    ]
+                  },
+                  "periodo": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "medidas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "equipos",
+        "area"
+      ],
+      "properties": {
+        "equipos": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/medidas"
+          }
+        },
+        "area": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/medidas"
+            }
+          ]
+        }
+      }
+    },
+    "casos_activos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "equipo",
+          "caso",
+          "gravedad",
+          "confianza",
+          "senal",
+          "datos"
+        ],
+        "properties": {
+          "equipo": {
+            "type": "string"
+          },
+          "caso": {
+            "type": "string"
+          },
+          "gravedad": {
+            "$ref": "#/$defs/gravedad"
+          },
+          "confianza": {
+            "$ref": "#/$defs/confianza"
+          },
+          "senal": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "datos": {
+            "$ref": "#/$defs/datos"
+          }
+        }
+      }
+    },
+    "casos_grupo": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "caso",
+          "dimension",
+          "ambito",
+          "grupo",
+          "gravedad",
+          "evidencia",
+          "datos"
+        ],
+        "properties": {
+          "caso": {
+            "enum": [
+              "grupo_plazo",
+              "grupo_calidad",
+              "grupo_agent_ready"
+            ]
+          },
+          "dimension": {
+            "enum": [
+              "tipo",
+              "proveedor",
+              "area"
+            ]
+          },
+          "ambito": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "grupo": {
+            "type": "string"
+          },
+          "gravedad": {
+            "$ref": "#/$defs/gravedad"
+          },
+          "evidencia": {
+            "type": "string"
+          },
+          "datos": {
+            "$ref": "#/$defs/datos"
+          }
+        }
+      }
+    },
+    "comparaciones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dimension",
+          "ambito",
+          "desde",
+          "hasta",
+          "grupos",
+          "medidas",
+          "porGrupo",
+          "reparto",
+          "diferencias",
+          "aviso"
+        ],
+        "properties": {
+          "dimension": {
+            "enum": [
+              "tipo",
+              "proveedor",
+              "area"
+            ]
+          },
+          "ambito": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "desde": {
+            "$ref": "#/$defs/dia"
+          },
+          "hasta": {
+            "$ref": "#/$defs/dia"
+          },
+          "grupos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "nombre",
+                "equipos"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "nombre": {
+                  "type": "string"
+                },
+                "equipos": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "medidas": {
+            "type": "object"
+          },
+          "porGrupo": {
+            "type": "object"
+          },
+          "reparto": {
+            "type": "object"
+          },
+          "diferencias": {
+            "type": "array"
+          },
+          "aviso": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "iniciativas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nombre",
+          "equipos",
+          "fecha_inicio",
+          "fecha_fin",
+          "estado",
+          "origen",
+          "medidas_objetivo",
+          "efecto_esperado",
+          "evaluacion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "equipos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fecha_inicio": {
+            "type": "string"
+          },
+          "fecha_fin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "estado": {
+            "type": "string"
+          },
+          "origen": {
+            "type": "string"
+          },
+          "medidas_objetivo": {
+            "type": "array"
+          },
+          "efecto_esperado": {
+            "type": "string"
+          },
+          "evaluacion": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fecha",
+              "aviso",
+              "resultados"
+            ],
+            "properties": {
+              "fecha": {
+                "$ref": "#/$defs/dia"
+              },
+              "aviso": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resultados": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "agent_readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "listoDesde",
+        "criterios",
+        "equipos"
+      ],
+      "properties": {
+        "listoDesde": {
+          "type": "integer"
+        },
+        "criterios": {
+          "type": "object"
+        },
+        "equipos": {
+          "type": "object"
+        }
+      }
+    },
+    "datos": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tareas",
+        "ficheros",
+        "avisos",
+        "porEquipo"
+      ],
+      "properties": {
+        "tareas": {
+          "type": "integer"
+        },
+        "ficheros": {
+          "type": "integer"
+        },
+        "avisos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "texto"
+            ],
+            "properties": {
+              "tipo": {
+                "enum": [
+                  "aviso",
+                  "error"
+                ]
+              },
+              "texto": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "porEquipo": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "contexto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metodo",
+        "organizacion",
+        "stack",
+        "contratos",
+        "otro"
+      ],
+      "properties": {
+        "metodo": {
+          "$ref": "#/$defs/categoriaContexto"
+        },
+        "organizacion": {
+          "$ref": "#/$defs/categoriaContexto"
+        },
+        "stack": {
+          "$ref": "#/$defs/categoriaContexto"
+        },
+        "contratos": {
+          "$ref": "#/$defs/categoriaContexto"
+        },
+        "otro": {
+          "$ref": "#/$defs/categoriaContexto"
+        }
+      }
+    },
+    "definiciones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nombre",
+          "como",
+          "unidad"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "como": {
+            "type": "string"
+          },
+          "unidad": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

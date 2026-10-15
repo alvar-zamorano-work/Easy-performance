@@ -27,6 +27,10 @@
     "pres.mercado": "Las opciones habituales enseñan cifras. Lo difícil es saber qué hacer con ellas.",
     "pres.mercado.intro": "Cada una resuelve una parte. Lo que falta es juntar el informe hecho, el plan de acción y la comprobación de los datos, sin meses de proyecto.",
     "pres.cambia": "Cada semana, de cinco pasos a mano a pulsar Actualizar.",
-    "pres.como": "La primera vez, tres pasos. Después, exportar y pulsar Actualizar."
+    "pres.como": "La primera vez, tres pasos. Después, exportar y pulsar Actualizar.",
+    "comparacion.aviso": "Compara solo medidas normalizadas y dentro del mismo tipo y tamaño de tarea. No mide el esfuerzo, la dificultad ni a las personas. Una diferencia es una pregunta para la reunión, no un ranking.",
+    "comparacion.pocosDatos": "Pocos datos",
+    "iniciativa.aviso": "No es un experimento controlado: indica si merece la pena seguir, no demuestra la causa.",
+    "agentes.aviso": "Se calcula sobre el texto de los tickets en este navegador. Fuera solo salen cifras agregadas, nunca el texto."
   }
 }

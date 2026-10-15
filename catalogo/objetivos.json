@@ -89,6 +89,33 @@
       ]
     },
     {
+      "id": "comparar",
+      "titulo": "Medir igual a internos y proveedores",
+      "frase": "Queremos comparar equipos y proveedores con las mismas reglas, sin rankings.",
+      "medidas": [
+        "ciclo",
+        "retrabajo",
+        "agent_readiness"
+      ],
+      "casos": [
+        "grupo_plazo",
+        "grupo_calidad",
+        "grupo_agent_ready"
+      ]
+    },
+    {
+      "id": "agentes",
+      "titulo": "Preparar el backlog para agentes",
+      "frase": "Queremos que el trabajo esté descrito para que lo pueda hacer un agente de IA.",
+      "medidas": [
+        "agent_readiness"
+      ],
+      "casos": [
+        "backlog_no_listo",
+        "grupo_agent_ready"
+      ]
+    },
+    {
       "id": "datos",
       "titulo": "Fiarnos de los datos",
       "frase": "Queremos que Jira refleje lo que pasa de verdad.",

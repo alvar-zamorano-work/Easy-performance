@@ -12,10 +12,10 @@ La v0 (carpetas easy-performance y easy-performance-v2) sigue siendo la demo com
 | adaptadores/ | Convierten un export al modelo neutro. Hoy: Jira CSV. Todo lo propio de Jira (columnas, ids de estado, unidad del Tiempo en estado) vive aquí. |
 | catalogo/ | Contenido editable en JSON: medidas, casos, objetivos, textos, vistas y estados normalizados con sus reglas. |
 | esquemas/ | Esquemas JSON del modelo (tarea, equipo, iniciativa, contexto, cliente) y del catálogo, y el validador. |
-| datos-sinteticos/ | Exports sintéticos con problemas sembrados y una carpeta de cliente de ejemplo (cliente.json, iniciativas, contexto). |
+| datos-sinteticos/ | Exports sintéticos de la v0 con problemas sembrados, una carpeta de cliente de ejemplo y b3/: dos equipos internos y dos de proveedores, dos iniciativas y descripciones de calidad conocida (lo sembrado está en b3/escenarios.json). |
 | datos-prueba/ | Exports de prueba que no son de cliente, cada uno con su .esperado.json. |
 | tests/ | Tests con node:test. tests/referencia-v0 guarda el motor de la v0 sin cambios; tests/banco genera variantes de exports. |
-| herramientas/ | Generador de datos sintéticos y resumen del núcleo por consola. |
+| herramientas/ | Generadores de datos sintéticos (el de la v0 en Python y el de B3 en TypeScript) y resumen del núcleo por consola. |
 | web/, skill/ | Carcasa web (B5) y skill de IA (B6). |
 
 ## Cómo fluyen los datos
@@ -23,6 +23,14 @@ La v0 (carpetas easy-performance y easy-performance-v2) sigue siendo la demo com
 1. El adaptador lee el export y devuelve una Lectura: tareas en el modelo neutro, estados de origen, campos por los que se puede reconocer el equipo y un mapeo de estados propuesto.
 2. La detección propone fecha de referencia, mapeo de estados, campo de equipo y si los sprints son fiables.
 3. El cliente firma el mapeo y los equipos en cliente.json. El cálculo usa ese mapeo; si no hay, la propuesta.
+4. diagnosticar() hace el recorrido completo: medidas por equipo y del área, comparaciones entre grupos, casos, iniciativas, agent readiness y paquete de diagnóstico.
+
+## Qué calcula el núcleo (B3)
+
+- Comparaciones entre grupos: internos frente a proveedores, entre proveedores y entre equipos de un área. Solo medidas normalizadas (plazo p80, retrabajo, reaperturas, bloqueo, arrastre entre sprints, antigüedad del pendiente, Throughput / FTE, agent readiness). Las medidas de lo terminado se comparan dentro del mismo tipo y tamaño de tarea con una prueba estratificada; una diferencia cuenta si es clara (z de 2 o más) y relevante (25% o más). Celdas con menos de 20 tareas: "pocos datos".
+- Iniciativas: antes y después con dos semanas de latencia, los equipos que no participan como control, diferencia de diferencias y confianza según la muestra y la variabilidad histórica.
+- Agent readiness: índice de 0 a 5 por ticket con catalogo/rubrica_agent_ready.json. Fuera solo salen agregados.
+- Paquete de diagnóstico: solo agregados. comprobarPaquete rechaza títulos, descripciones, claves de ticket, campos de personas, textos largos y los nombres que se le indiquen; se pueden usar alias para los equipos.
 
 ## Requisitos
 
@@ -36,7 +44,8 @@ npm test             # tests (siempre con hora de Madrid)
 npm run tipos        # comprobación de tipos
 npm run comprobar    # tipos y tests
 npm run probar       # resumen por equipo del export sintético completo
-npm run datos        # regenera los CSV sintéticos (deben salir idénticos)
+npm run datos        # regenera los CSV sintéticos de la v0 (deben salir idénticos)
+npm run datos-b3     # regenera los datos sintéticos de B3 (deben salir idénticos)
 ```
 
 ## Banco de exports
@@ -56,5 +65,6 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 ## Estado
 
 - B1 (núcleo en TypeScript): hecho. Mismos resultados que la v0.
-- B2 (modelo neutro, esquemas, adaptador Jira, banco de exports): en la rama feat/b2-modelo-neutro.
-- Siguiente: B3, novedades del núcleo (internos y proveedores, iniciativas, agent readiness, paquete de diagnóstico).
+- B2 (modelo neutro, esquemas, adaptador Jira, banco de exports): hecho.
+- B3 (comparaciones entre grupos, iniciativas, agent readiness, paquete de diagnóstico): en la rama feat/b3-comparaciones.
+- Siguiente: B4, arranque del consultor (ingesta, mapeo editable, chequeo de calidad y documento de definiciones).

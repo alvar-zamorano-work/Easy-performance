@@ -8,7 +8,7 @@ import { leerFecha } from './fechas.ts';
 import { nombreDeId, nombresDeEstado, unidadTiempo, type TiempoJira } from './tiempos.ts';
 import { norm } from '../../nucleo/util.ts';
 import { proponerEstado } from '../../nucleo/estados.ts';
-import { tieneCriterios } from '../comun/texto.ts';
+import { tieneCriterios } from '../../nucleo/agent-readiness.ts';
 import type {
   CampoAgrupador, EstadoNormalizado, EstadoOrigen, FicheroEntrada, InformeIngesta, Lectura, Prioridad, Tarea, TipoTarea,
 } from '../../nucleo/modelo.ts';

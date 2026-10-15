@@ -12,7 +12,8 @@
     "tipos": "tsc --noEmit -p .",
     "comprobar": "npm run tipos && npm test",
     "probar": "TZ=Europe/Madrid node herramientas/probar-nucleo.ts datos-sinteticos/jira-ejemplo-completo-2026-10-12.csv",
-    "datos": "python3 herramientas/generar_datos_sinteticos.py datos-sinteticos"
+    "datos": "python3 herramientas/generar_datos_sinteticos.py datos-sinteticos",
+    "datos-b3": "TZ=Europe/Madrid node herramientas/generar-sinteticos-b3.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

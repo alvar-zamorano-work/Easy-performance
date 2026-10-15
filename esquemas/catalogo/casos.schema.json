@@ -19,7 +19,7 @@
           "titulo": { "type": "string", "minLength": 1 },
           "objetivos": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
           "medida": { "type": ["string", "null"] },
-          "requiere": { "enum": ["tiempos", "inicio", "puntos", "errores", "primera", "sprints", "api"] },
+          "requiere": { "enum": ["tiempos", "inicio", "puntos", "errores", "primera", "sprints", "api", "descripcion"] },
           "senal": { "type": "string", "minLength": 1 },
           "causas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
           "preguntas": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 },
