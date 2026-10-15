@@ -172,7 +172,7 @@ export function modeloDeMedida(opciones: { catalogo?: Catalogo; generado?: Date 
       'Confianza alta, media o baja según la muestra y la variabilidad del equipo. Indica si merece seguir, no demuestra la causa.',
     ],
     despliegue: [
-      { fase: 'Arranque y piloto', como: 'Esta página: un fichero HTML que lee los exports de una carpeta y calcula en el navegador, sin servidor.', volumen: 'Decenas de equipos y cientos de miles de tareas, según la prueba de escala.' },
+      { fase: 'Arranque y piloto', como: 'Esta página: un fichero HTML que lee los exports de una carpeta y calcula en el navegador, sin servidor.', volumen: 'Probado hasta 200 equipos y 62.000 tareas al año (unos 1.000 FTE): unos 13 segundos de carga en un portátil.' },
       { fase: 'Escala', como: 'Las mismas entidades, uniones y medidas en la plataforma de datos del cliente, alimentadas por conectores con su herramienta de gestión, de plantilla y de finanzas.', volumen: 'Cientos de equipos y miles de desarrolladores.' },
     ],
     requisitos_para_escalar: [
