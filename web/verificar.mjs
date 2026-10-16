@@ -1,6 +1,6 @@
 // Verificación de la página en Chromium: tablero, recomendaciones y cómo funciona, sin puesta en marcha.
 //   npm run web && CHROME=/ruta/a/chrome node web/verificar.mjs
-// Comprueba: entrada, presentación, demo en 1280x720 y 1920x1080 (sin scroll horizontal, sin errores de consola),
+// Comprueba: entrada (sin presentación), demo en 1280x720 y 1920x1080 (sin scroll horizontal, sin errores de consola),
 // modo oscuro, pantalla de móvil, Jira.csv de principio a fin (carga directa al tablero, mapeo de estados y proveedores
 // cambiados y guardados, documento de definiciones y paquete), demo sin pisar la configuración, carpeta con dos
 // iniciativas y una configuración de la versión anterior. Además, con animaciones: conectores de la entrada,
@@ -80,29 +80,18 @@ async function recorrer(p, etiqueta, capturas) {
   return { fallos, altos };
 }
 
-// 1. Entrada y presentación
+// 1. Entrada y demo: el fichero es directamente la demo, sin presentación
 for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   const p = await pagina(w, h);
-  const entrada = await A(p, () => ({ vista: window.EasyPerformance.vista, zona: !!document.getElementById('zona'), demo: !!document.querySelector('[data-accion="demo"]') }));
+  const entrada = await A(p, () => ({ vista: window.EasyPerformance.vista, zona: !!document.getElementById('zona'), ejemplos: document.querySelectorAll('.ejemplo[data-accion="demo"]').length,
+    presentacion: !!document.querySelector('[data-accion="presentacion"]') || !!document.getElementById('laminas') }));
   const m0 = await medir(p);
   if (w === 1280) await p.screenshot({ path: join(SALIDA, 'entrada.png') });
-  ok(`entrada en ${w}x${h}: cargar datos, ver la demo y la presentación`, entrada.vista === 'inicio' && entrada.zona && entrada.demo && m0.ancho <= 1 && m0.alto <= h + 1, `alto ${m0.alto}`);
-  await clic(p, '[data-accion="presentacion"]');
-  const n = await A(p, () => document.querySelectorAll('[data-accion="lamina-ir"]').length);
-  const fallos = [];
-  for (let i = 0; i < n; i++) {
-    await A(p, (k) => { window.EasyPerformance.lamina = k; window.EasyPerformance.render(); }, i);
-    await p.waitForTimeout(120);
-    const m = await medir(p);
-    if (m.alto > h + 1 || m.ancho > 1) fallos.push(`lámina ${i + 1}: alto ${m.alto}`);
-    if (w === 1280) await p.screenshot({ path: join(SALIDA, `lamina-${i + 1}.png`) });
-  }
-  ok(`presentación de ${n} láminas sin scroll en ${w}x${h}`, n === 7 && !fallos.length, fallos.join('; '));
-  await A(p, () => { window.EasyPerformance.lamina = 5; window.EasyPerformance.render(); });
-  await clic(p, '#lienzo [data-accion="ver-demo"]');
+  ok(`entrada en ${w}x${h}: cargar datos y tres ejemplos, sin presentación`, entrada.vista === 'inicio' && entrada.zona && entrada.ejemplos === 3 && !entrada.presentacion && m0.ancho <= 1 && m0.alto <= h + 1, `alto ${m0.alto}`);
+  await clic(p, '[data-accion="demo"][data-d="b3"]');
   await listo(p);
   const enDemo = await A(p, () => ({ demo: window.EasyPerformance.demo, vista: window.EasyPerformance.vista }));
-  ok(`la lámina de la demo abre el tablero con datos de ejemplo en ${w}x${h}`, enDemo.demo && enDemo.vista === 'tablero');
+  ok(`el ejemplo abre el tablero con datos de ejemplo en ${w}x${h}`, enDemo.demo && enDemo.vista === 'tablero');
   const r = await recorrer(p, `demo-${w}`, true);
   ok(`demo: tablero, equipos, recomendaciones y cómo funciona sin scroll horizontal en ${w}x${h}`, !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
   ok(`demo sin errores de consola en ${w}x${h}`, !p.errores.length, p.errores.join(' | '));
@@ -113,11 +102,11 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
 {
   const p = await pagina(1440, 900);
   await clic(p, '[data-accion="demo"]'); await listo(p);
-  const titular = await texto(p, '.titular h1');
+  const cab = await A(p, () => ({ h1: document.querySelector('.cab-area h1').textContent, sub: document.querySelector('.cab-area p').textContent, foco: [...document.querySelectorAll('.estado-area .pill-eq')].map((x) => x.textContent), boton: !!document.querySelector('.cab-area [data-accion="generar"]') }));
   const filas = await p.$$eval('.tabla-equipos tbody tr', (t) => t.length);
   const grupos = await p.$$eval('.tabla-grupos td.peor', (t) => t.map((x) => x.textContent));
   const ini = await p.$$eval('.fila-ini', (t) => t.map((x) => x.textContent));
-  ok('demo: el titular nombra a los dos equipos sembrados con problemas', /App móvil/.test(titular) && /Portal clientes/.test(titular), titular);
+  ok('demo: cabecera con el área y el botón, y la franja de estado nombra a los dos equipos sembrados con problemas', cab.h1 === 'Banco ficticio' && /4 equipos: 2 internos y 2 de proveedores/.test(cab.sub) && cab.boton && cab.foco.length === 2 && cab.foco.some((x) => /App móvil/.test(x)) && cab.foco.some((x) => /Portal clientes/.test(x)), JSON.stringify(cab));
   ok('demo: tabla de equipos, internos y proveedores e iniciativas', filas === 4 && grupos.length >= 3 && ini.length === 2 && ini.some((x) => /Funciona/.test(x)), `${filas} equipos · ${grupos.length} medidas peor en proveedores · ${ini.length} iniciativas`);
   const coste = await A(p, () => ({ fila: [...document.querySelectorAll('.fila-coste th')].map((x) => x.textContent), celdas: [...document.querySelectorAll('.fila-coste td')].map((x) => x.textContent) }));
   ok('demo: entregas por FTE y coste por entrega de internos y proveedores', coste.fila.includes('Coste por entrega') && coste.celdas.every((x) => /\d/.test(x)) && coste.celdas.some((x) => /^\d\.\d{3} €$/.test(x)), coste.fila.join(', ') + ' · ' + coste.celdas.join(' | '));
@@ -128,8 +117,8 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   const gen = await A(p, () => ({ vista: window.EasyPerformance.vista, generadas: window.EasyPerformance.generadas, items: document.querySelectorAll('.rec-item').length }));
   ok('recomendaciones: se generan con el botón (sin animación con reducir movimiento)', antes.boton && !antes.cuenta && gen.vista === 'recomendaciones' && gen.generadas && gen.items >= 3, JSON.stringify(gen));
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
-  const eq = await A(p, () => ({ t: document.querySelector('.titular h1').textContent, kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length }));
-  ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 5 && eq.graf && eq.recs >= 2 && /retrabajo/.test(eq.t), `${eq.t} · ${eq.recs} recomendaciones`);
+  const eq = await A(p, () => ({ t: document.querySelector('.cab-area h1').textContent, fuera: [...document.querySelectorAll('.kpi.kpi-critico .kpi-cab, .kpi.kpi-atencion .kpi-cab')].map((x) => x.textContent).join(', '), kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length }));
+  ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 5 && eq.graf && eq.recs >= 2 && eq.t === 'App móvil' && /Retrabajo/.test(eq.fuera), `${eq.t} · fuera de lo normal: ${eq.fuera} · ${eq.recs} recomendaciones`);
   await clic(p, '.bloque-oscuro [data-accion="ver-recs"]');
   const filtro = await A(p, () => ({ f: window.EasyPerformance.recEquipo, items: document.querySelectorAll('.rec-item').length, todas: window.EasyPerformance.recomendaciones().filter((x) => x.equipos.includes('App móvil')).length }));
   ok('recomendaciones: "Ver qué hacer" filtra por el equipo', filtro.f === 'App móvil' && filtro.items === filtro.todas, JSON.stringify(filtro));

@@ -8,7 +8,7 @@
   var CLAVE = 'easyperformance.config.v2', CLAVE_V1 = 'easyperformance.configuracion.v1';
   var App = {
     vista: 'inicio', ver: 'area', editar: null, demo: false, carpeta: null, origen: null,
-    lectura: null, det: null, cfg: {}, iniciativas: [], contexto: null, r: null, lamina: 0, real: null, abiertas: {},
+    lectura: null, det: null, cfg: {}, iniciativas: [], contexto: null, r: null, real: null, abiertas: {},
     fuente: null, simulada: null, generadas: false, recSel: null, recEquipo: 'todos', tiempoMs: 0, como: 'metodo'
   };
   window.EasyPerformance = App;
@@ -19,21 +19,6 @@
   function lista(ns) { return ns.length < 2 ? (ns[0] || '') : ns.slice(0, -1).join(', ') + ' y ' + ns[ns.length - 1]; }
   function mayus(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
   var NUMEROS = ['Ningún', 'Un', 'Dos', 'Tres', 'Cuatro', 'Cinco', 'Seis', 'Siete', 'Ocho', 'Nueve', 'Diez'];
-  var ICO = {
-    responsable: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M15.8 14.2c2.3.2 4.1 1.8 4.7 4.8"/>',
-    cumplir: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/>'
-  };
-  var ICP = {
-    reloj: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
-    pregunta: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.1-2.4 3.6"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>',
-    escudo: '<path d="M12 3l7.5 3v5.5c0 4.5-3.2 8-7.5 9.5-4.3-1.5-7.5-5-7.5-9.5V6z"/><path d="M12 8.5v4"/><circle cx="12" cy="15.5" r=".6" fill="currentColor"/>',
-    equipo: ICO.responsable, espejo: '<path d="M4 12a8 8 0 0 1 14-5.3"/><path d="M18.5 3.5v3.5H15"/><path d="M20 12a8 8 0 0 1-14 5.3"/><path d="M5.5 20.5V17H9"/>',
-    candado: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
-    fichero: '<path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/><path d="M9 13h6M9 16.5h6"/>',
-    diana: ICO.cumplir, plan: '<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>',
-    check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>'
-  };
-  function icp(k) { return '<span class="icp" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + ICP[k] + '</svg></span>'; }
 
   // Las cinco medidas del tablero: siempre las mismas, para todos los clientes
   var MED = {
@@ -325,12 +310,9 @@
   // ---------- pintado ----------
   function render() {
     var html;
-    document.body.classList.toggle('en-presentacion', App.vista === 'presentacion');
-    if (App.vista === 'presentacion') html = presentacion();
-    else if (!App.r || App.vista === 'inicio') html = inicio();
+    if (!App.r || App.vista === 'inicio') html = inicio();
     else html = cabecera() + (App.demo ? bandaDemo() : '') + '<main class="pagina">' + ({ tablero: tablero, recomendaciones: vistaRecomendaciones, iniciativas: vistaIniciativas, como: comoFunciona }[App.vista] || tablero)() + '</main>';
     document.getElementById('app').innerHTML = html;
-    if (App.vista === 'presentacion') ajustarLienzo();
   }
   function marca() { return '<div class="marca"><span class="logo" aria-hidden="true"></span><b>Easy Performance</b></div>'; }
   function cabecera() {
@@ -344,19 +326,17 @@
       '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="actualizar">Actualizar</button></div></header>';
   }
   function bandaDemo() {
-    if (!App.simulada && App.demoId && App.demoId !== 'b3') {
-      var otros = Object.keys(DEMOS).filter(function (k) { return k !== App.demoId; });
-      return '<div class="banda-demo"><span>' + DEMOS[App.demoId].banda + '</span><span class="banda-acc">' +
-        (App.sembrados ? '<button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button>' : '') +
-        otros.map(function (k) { return '<button class="btn-txt" data-accion="demo" data-d="' + k + '">' + esc(DEMOS[k].nombre) + '</button>'; }).join('') +
-        '<button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
-    }
-    return '<div class="banda-demo"><span>' + (App.simulada ? '<b>Simulación de ' + esc(FUENTES[App.simulada].nombre) + ':</b> datos de ejemplo de un banco ficticio, con costes inventados.' :
-      '<b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.') + '</span>' +
-      '<span class="banda-acc"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
+    if (App.simulada) return '<div class="banda-demo"><span><b>Simulación de ' + esc(FUENTES[App.simulada].nombre) + ':</b> datos de ejemplo de un banco ficticio, con costes inventados.</span>' +
+      '<span class="banda-acc"><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
+    var id = DEMOS[App.demoId] ? App.demoId : 'b3';
+    var otros = Object.keys(DEMOS).filter(function (k) { return k !== id; });
+    return '<div class="banda-demo"><span>' + DEMOS[id].banda + '</span><span class="banda-acc">' +
+      (App.sembrados ? '<button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button>' : '') +
+      '<span class="banda-otros">Otros ejemplos: ' + otros.map(function (k) { return '<button class="btn-txt" data-accion="demo" data-d="' + k + '">' + esc(DEMOS[k].nombre) + '</button>'; }).join(' ') + '</span>' +
+      '<button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
   }
 
-  // Pantalla de entrada: conectar una herramienta (simulación), cargar exports, o ver la demo o la presentación
+  // Pantalla de entrada: conectar una herramienta (simulación), cargar exports o cargar un ejemplo
   function inicio() {
     var f = App.fuente && FUENTES[App.fuente];
     return '<div class="inicio"><div class="inicio-in"><div class="inicio-txt">' + marca() +
@@ -367,7 +347,6 @@
         var d = DEMOS[k], n = NIVEL[d.nivel];
         return '<button class="ejemplo" data-accion="demo" data-d="' + k + '"><b>' + esc(d.nombre) + '</b><small>' + esc(d.sub) + '</small><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span></button>';
       }).join('') + '</div>' +
-      '<p class="inicio-pie"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button></p>' +
       '<p class="nota">Los datos no salen de este ordenador: todo se calcula en el navegador.</p></div>' +
       '<section class="fuentes" aria-label="De dónde salen los datos">' + (f ? panelFuente(App.fuente, f) : panelFuentes()) + '</section></div></div>';
   }
@@ -425,7 +404,8 @@
       var quien = App.ver && App.ver !== 'area' ? 'este equipo' : 'el área';
       tip = 'Lo que ' + quien + ' empieza hoy estará terminado, casi seguro, en ' + c.g + ' ' + c.u + ' o menos. Si sube, ' + quien.replace('este ', 'el ') + ' tarda más en terminar lo que empieza.';
     }
-    return '<article class="kpi"><div class="kpi-cab">' + conTip(def.nombre, tip) + chip(e, true) + '</div>' +
+    // Solo se marca lo que está fuera de lo normal: sin etiqueta es que está bien
+    return '<article class="kpi kpi-' + e + '"><div class="kpi-cab">' + conTip(def.nombre, tip) + chip(e) + '</div>' +
       '<div class="kpi-v"><b>' + esc(c.g) + '</b><span>' + esc(c.u) + '</span></div><p class="kpi-n">' + esc(normal) + '</p>' + (conSerie ? chispa(m, e, def.nombre) : '') + '</article>';
   }
   function serieUltima(m, k) { var s = (m && m.serie) || []; return s.slice(Math.max(0, s.length - k)); }
@@ -441,25 +421,30 @@
     var r = App.r, eqs = r.modelo.equipos.slice(), a = r.area.equipos[0];
     var peso = function (eq) { var p = problemas(eq); return p.critico.length * 10 + p.atencion.length; };
     eqs.sort(function (x, y) { return peso(y) - peso(x) || x.nombre.localeCompare(y.nombre, 'es'); });
-    var criticos = eqs.filter(function (e) { return problemas(e).critico.length; }).map(function (e) { return e.nombre; });
-    var atencion = eqs.filter(function (e) { return !problemas(e).critico.length && problemas(e).atencion.length; }).map(function (e) { return e.nombre; });
-    var foco = criticos.length ? criticos : atencion;
-    var titular = !foco.length ? 'Todos los equipos están dentro de lo normal' :
-      (foco.length === 1 ? 'Un equipo necesita atención: ' + foco[0] : (NUMEROS[foco.length] || foco.length) + ' equipos necesitan atención: ' + lista(foco));
-    var nRec = recomendaciones().length;
-    var html = '<section class="titular"><div><h1>' + esc(titular) + '</h1><p>Cada cifra se compara con lo normal en ese mismo equipo.' +
-      (nRec ? ' ' + (App.generadas ? '<button class="btn-txt" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>' :
-        '<button class="btn-txt" data-accion="generar">Generar las recomendaciones</button>') : '') + '</p></div>' + selector() + '</section>';
-    html += tiraFiabilidad();
-    html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), false); }).join('') + '</section>';
+    var fuera = eqs.filter(function (e) { var p = problemas(e); return p.critico.length || p.atencion.length; });
+    var nRec = recomendaciones().length, info = App.cfg.equiposInfo || {};
+    var de = function (t) { return eqs.filter(function (e) { return (info[e.nombre] || {}).tipo === t; }).length; };
+    var nProv = de('proveedor'), nInt = de('interno');
+    var sub = eqs.length + ' ' + plural(eqs.length, 'equipo', 'equipos') + (nProv ? ': ' + nInt + ' ' + plural(nInt, 'interno', 'internos') + ' y ' + nProv + ' de ' + plural(nProv, 'proveedor', 'proveedores') : '');
+    var accion = !nRec ? '' : App.generadas ? '<button class="btn btn-sec" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>' :
+      '<button class="btn" data-accion="generar">Generar recomendaciones</button>';
+    var html = '<section class="titular cab-area"><div><h1>' + esc(App.cfg.nombre || 'Todo el área') + '</h1><p>' + esc(sub) + '</p></div><div class="cab-acc">' + selector() + accion + '</div></section>';
+    html += estadoArea(fuera);
+    html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), true); }).join('') + '</section>';
     if (eqs.length > 1) {
+      var marca_ = function (st) { return st === 'atencion' || st === 'critico' ? '<span class="sr"> (' + ESTADO[st].toLowerCase() + ')</span>' : ''; };
       html += '<section class="bloque"><h2>Equipos</h2><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Equipo</th>' +
         columnas().map(function (id) { return '<th scope="col">' + conTip(MED[id].nombre, MED[id].que) + '</th>'; }).join('') + '</tr></thead><tbody>' +
         eqs.map(function (eq) {
-          var info = (App.cfg.equiposInfo || {})[eq.nombre] || {}, tipo = info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') : (info.tipo === 'interno' ? 'Interno' : '');
-          return '<tr><th scope="row"><button class="enlace" data-accion="ver" data-e="' + esc(eq.nombre) + '">' + esc(eq.nombre) + '</button>' + (tipo ? '<span class="sub">' + esc(tipo) + '</span>' : '') + '</th>' +
-            columnas().map(function (id) { var m = med(eq, id), v = m && m.disponible ? valor(id, m.valor) : null; return '<td>' + (v ? '<b>' + esc(v) + '</b> ' + chip(estadoDe(m)) : '<span class="apagado">s/d</span>') + '</td>'; }).join('') + '</tr>';
-        }).join('') + '</tbody></table></div><p class="nota">Sin etiqueta: dentro de lo normal para ese equipo. Pulsa un equipo para ver su detalle.</p></section>';
+          var inf = info[eq.nombre] || {}, tipo = inf.tipo === 'proveedor' ? (inf.proveedor || 'Proveedor') : (inf.tipo === 'interno' ? 'Interno' : '');
+          var p = problemas(eq), peor = p.critico.length ? 'critico' : p.atencion.length ? 'atencion' : 'bien';
+          return '<tr><th scope="row"><span class="eq-nom"><span class="punto punto-' + peor + '" aria-hidden="true"></span><button class="enlace" data-accion="ver" data-e="' + esc(eq.nombre) + '">' + esc(eq.nombre) + '</button></span>' + (tipo ? '<span class="sub">' + esc(tipo) + '</span>' : '') + '</th>' +
+            columnas().map(function (id) {
+              var m = med(eq, id), v = m && m.disponible ? valor(id, m.valor) : null, st = estadoDe(m);
+              return '<td>' + (v ? '<span class="v v-' + st + '">' + esc(v) + marca_(st) + '</span>' : '<span class="apagado">s/d</span>') + '</td>';
+            }).join('') + '</tr>';
+        }).join('') + '</tbody></table></div>' +
+        '<p class="leyenda-mat"><span class="v v-atencion">Atención</span><span class="v v-critico">Crítico</span><span>Sin color: dentro de lo normal. Cada cifra se compara con lo normal en ese mismo equipo; pulsa un equipo para ver su detalle.</span></p></section>';
     }
     var bloques = [bloqueGrupos(), bloqueIniciativas()].filter(Boolean);
     if (bloques.length) html += '<div class="dos">' + bloques.join('') + '</div>';
@@ -504,11 +489,10 @@
   function vistaEquipo(eq) {
     if (!eq) { App.ver = 'area'; return vistaArea(); }
     var p = problemas(eq, KPI_EQUIPO), fuera = p.critico.concat(p.atencion).map(function (id) { return MED[id].nombre.toLowerCase(); });
-    var titular = eq.nombre + ': ' + (fuera.length ? lista(fuera) + ', fuera de lo normal' : 'todo dentro de lo normal');
     var info = (App.cfg.equiposInfo || {})[eq.nombre] || {};
-    var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') + ' · ' : '') + 'comparado con sus propias 12 semanas anteriores';
+    var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') + '. ' : info.tipo === 'interno' ? 'Interno. ' : '') + 'Comparado con sus propias 12 semanas anteriores.';
     var recs = recomendaciones().filter(function (x) { return x.equipos.indexOf(eq.nombre) >= 0; });
-    var html = '<section class="titular"><div><button class="btn-txt" data-accion="ver" data-e="area">Volver al área</button><h1>' + esc(titular) + '</h1><p>' + esc(sub) + '</p></div>' + selector() + '</section>';
+    var html = '<section class="titular cab-area"><div><button class="btn-txt" data-accion="ver" data-e="area">Volver al área</button><h1>' + esc(eq.nombre) + '</h1><p>' + esc(sub) + '</p></div><div class="cab-acc">' + selector() + '</div></section>';
     html += '<section class="kpis" aria-label="Indicadores del equipo">' + KPI_EQUIPO.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
     html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>El plazo, semana a semana</h2><p class="nota">Cuánto tarda el equipo en terminar lo que empieza, semana a semana. La franja es lo normal en este equipo.</p>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
       bloqueRecEquipo(eq, recs, fuera) + '</div>';
@@ -970,10 +954,17 @@
     return v;
   }
   var NIVEL = { alta: ['bien', 'Alta'], media: ['atencion', 'Media'], baja: ['critico', 'Baja'] };
-  function tiraFiabilidad() {
+  function estadoArea(fuera) {
     var f = fiab(), n = NIVEL[f.nivel], rev = f.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
-    return '<div class="fiab-tira fiab-' + f.nivel + '"><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span><span>' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones de los datos bien' +
-      (rev.length ? '. Revisar: ' + esc(lista(rev.map(function (c) { return c.nombre.toLowerCase(); }))) : '') + '.</span><button class="btn-txt" data-accion="fiabilidad">Ver la fiabilidad</button></div>';
+    var txt = !rev.length ? f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones de los datos bien.' :
+      rev.length <= 3 ? 'Por revisar: ' + lista(rev.map(function (c) { return c.nombre.toLowerCase(); })) + '.' : rev.length + ' de ' + f.comprobaciones.length + ' comprobaciones de los datos por revisar.';
+    var izq = '<div class="fiab-tira fiab-' + f.nivel + '"><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span><span>' + esc(txt) + '</span><button class="btn-txt" data-accion="fiabilidad">Ver la fiabilidad</button></div>';
+    var criticos = fuera.filter(function (e) { return problemas(e).critico.length; }), foco = criticos.length ? criticos : fuera, resto = fuera.length - foco.length;
+    var der = '<div class="fuera"><span class="fuera-tit">' + (foco.length ? 'Necesitan atención' : 'Todos los equipos dentro de lo normal') + '</span>' + foco.map(function (e) {
+      var g = problemas(e).critico.length ? 'critico' : 'atencion';
+      return '<button class="pill-eq" data-accion="ver" data-e="' + esc(e.nombre) + '"><span class="punto punto-' + g + '" aria-hidden="true"></span>' + esc(e.nombre) + '<span class="sr"> (' + ESTADO[g].toLowerCase() + ')</span></button>';
+    }).join('') + (resto ? '<span class="fuera-mas">y ' + resto + ' ' + plural(resto, 'equipo', 'equipos') + ' con algún aviso</span>' : '') + '</div>';
+    return '<section class="estado-area" aria-label="Estado del área">' + izq + der + '</section>';
   }
   var ICO_EST = { bien: CHECK, revisar: '!', sin: '' };
   var COLS_FIAB = { tiempos: 'Tiempo en cada estado', flujo: 'Pasan por en curso', registro: 'Registro a tiempo', estimacion: 'Historias estimadas', sprints: 'Sprints creíbles', historia: 'Historia' };
@@ -1142,17 +1133,6 @@
       ['Comment', 'Texto con nombres', 'Se descarta', 'critico'],
       ['Custom field (Cliente)', 'Sin reconocer', 'Se ignora y se lista', 'sin']
     ];
-    var niveles = [
-      ['N0', 'Solo foto', 'Estado actual y fechas: entregas, plazo desde que se crea y edad de lo pendiente.'],
-      ['N1', 'Tiempo en cada estado', 'Añade tiempo bloqueado y en espera, y reaperturas aproximadas.'],
-      ['N2', 'Historia de estados', 'Añade plazo desde que se empieza, reaperturas exactas y edad de lo bloqueado.'],
-      ['N3', 'Historia de estados y sprints', 'Añade paso de sprint y cumplimiento del compromiso.']
-    ];
-    var gr = [
-      ['critico', 'Bloquea', 'Sin arreglarlo no se puede medir. Por ejemplo: no se sabe de qué equipo es cada tarea, o hay estados sin traducir.'],
-      ['atencion', 'Resta medidas', 'Se mide, pero con menos. Por ejemplo: el export se cortó en 10.000 filas o no trae historia.'],
-      ['sin', 'Aviso', 'Se mide bien y conviene saberlo. Por ejemplo: filas repetidas o columnas de personas, que se descartan solas.']
-    ];
     return '<section class="bloque" id="semantica"><h2>Cómo reconoce cada columna</h2>' +
       '<p>Cada plataforma llama distinto a lo mismo, y cada cliente la configura a su manera. Capgemini mantiene un diccionario propio que dice, para cada plataforma, cómo se llama cada dato, cómo son sus valores y dónde va en el modelo común. Con él, al cargar un export la página sabe qué tipo de dato es cada columna, dónde colocarlo y qué hay que arreglar antes de medir.</p>' +
       '<div class="sem-dic"><div><b>Conceptos</b><small>Lo que el modelo sabe recibir</small><p>Clave, estado, fechas, sprint, estimación, equipo, enlaces. Y lo que nunca se usa: personas y comentarios.</p></div>' +
@@ -1164,13 +1144,58 @@
       ej.map(function (f) { return '<tr><th scope="row"><code>' + f[0] + '</code></th><td>' + f[1] + '</td><td><span class="chip chip-' + f[3] + '">' + f[2] + '</span></td></tr>'; }).join('') +
       '</tbody></table></div>') +
       '<p class="nota">Lo que se reconoce con seguridad se coloca solo. Lo dudoso lo confirma el consultor en el arranque. Una columna que puede ser de personas se descarta aunque haya dudas: es la única regla que prefiere perder un dato.</p>' +
-      '<div class="dos sem-dos"><div><h3 class="sem-h3">Qué hay que arreglar</h3><dl class="leyenda">' + gr.map(function (g) { return '<dt><span class="chip chip-' + g[0] + '">' + g[1] + '</span></dt><dd>' + g[2] + '</dd>'; }).join('') + '</dl></div>' +
-      '<div><h3 class="sem-h3">Cuánta historia trae el export</h3><dl class="sem-niveles">' + niveles.map(function (n) { return '<dt><b>' + n[0] + '</b> ' + n[1] + '</dt><dd>' + n[2] + '</dd>'; }).join('') + '</dl>' +
-      '<p class="nota">Con el diccionario completo, la página enseñará solo las medidas que esa historia permite calcular bien.</p></div></div>' +
+      hallazgosExport() + historiaExport() +
       '<div class="sem-estado"><div><span class="kicker">Hoy</span><p>Con Jira: reconoce el campo de equipo y los estados por su nombre, nunca lee personas y comprueba la calidad de los datos (en Fiabilidad de los datos).</p></div>' +
       '<div><span class="kicker">Siguiente' + prox + '</span><p>El diccionario completo en ficheros para Jira, Azure DevOps, GitLab y ServiceNow: confianza por columna, nivel de historia y aviso cuando el export cambia de una semana a otra. Un consultor lo amplía sin tocar código.</p></div></div>' +
       '</section>';
   }
+  // Qué ha encontrado en el export cargado, según quién lo resuelve: la página sola, el consultor o el cliente al exportar
+  var CAMPO_TXT = { equipo: 'del campo Equipo', componentes: 'del componente', proyecto: 'del proyecto', etiquetas: 'de las etiquetas' };
+  var nombresCol = function (cs) { return lista(cs.map(function (c) { return '«' + c.columna + '»'; })); };
+  function hallazgosExport() {
+    var fs = App.ficheros || [], inf = App.lectura.informe, det = App.det, E = C.estados.estados, mp = mapeo();
+    var cols = fs.length && fs[0].texto && N.describirColumnas ? N.describirColumnas(fs[0].texto) : [];
+    var fuera = cols.filter(function (c) { return c.accion === 'descarta'; }), ign = cols.filter(function (c) { return c.accion === 'ignora'; });
+    var solo = [], consultor = [], cliente = [];
+    if (fuera.length) solo.push('Descarta ' + fuera.length + ' ' + plural(fuera.length, 'columna', 'columnas') + ' con personas o comentarios: ' + nombresCol(fuera) + '. No se leen.');
+    if (inf.duplicadas) solo.push(miles(inf.duplicadas) + ' ' + plural(inf.duplicadas, 'tarea venía repetida', 'tareas venían repetidas') + ': cuenta la versión más reciente.');
+    if (inf.epicas + inf.subtareas) solo.push('Deja fuera ' + miles(inf.epicas + inf.subtareas) + ' épicas y subtareas: no son entregas.');
+    if (ign.length) solo.push('Ignora ' + ign.length + ' ' + plural(ign.length, 'columna que no reconoce', 'columnas que no reconoce') + (ign.length <= 4 ? ': ' + nombresCol(ign) : '') + '. No hacen falta para medir.');
+    if (!App.cfg.campoEquipo) consultor.push('Confirmar que el equipo de cada tarea sale ' + (CAMPO_TXT[campo()] || 'de la columna propuesta') + '.');
+    det.estados.filter(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }).forEach(function (e) {
+      var com = E[mp[e.nombre] || e.estado];
+      consultor.push('Confirmar el estado «' + e.nombre + '»: no se reconoce por el nombre y ahora cuenta como ' + (com ? com.nombre.toLowerCase() : 'sin traducir') + '.');
+    });
+    if (!det.hayTiempos) cliente.push('No trae el tiempo en cada estado. Sin él no hay plazo desde que se empieza, retrabajo ni bloqueo. Hay que exportar con ese campo.');
+    if (!det.haySprints) cliente.push('No trae sprints: no se ve lo que pasa de un sprint a otro. Si los equipos trabajan por sprints, hay que exportar con el campo Sprint.');
+    if ([1000, 10000].indexOf(inf.filasLeidas) >= 0) cliente.push('Tiene justo ' + miles(inf.filasLeidas) + ' filas: el export puede estar cortado. Hay que exportarlo por partes, por fechas o por equipos.');
+    var act = fiab().comprobaciones.filter(function (c) { return c.id === 'actividad'; })[0];
+    if (act && act.estado === 'revisar') cliente.push('Las últimas semanas casi no tienen actividad: parece que el export se cortó. Hay que exportar de nuevo todo el periodo.');
+    var grupo = function (cls, titulo, xs, vacio) {
+      return '<div class="hall hall-' + cls + (xs.length ? ' con' : '') + '"><h4>' + titulo + '</h4>' + (xs.length ? '<ul>' + xs.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>' : '<p>' + vacio + '</p>') + '</div>';
+    };
+    return '<h3 class="sem-h3">Qué ha encontrado en este export</h3><div class="hallazgos">' +
+      grupo('solo', 'Lo resuelve la página sola', solo, 'Nada que resolver.') +
+      grupo('consultor', 'Lo confirma el consultor', consultor, 'Nada pendiente.') +
+      grupo('cliente', 'Lo arregla el cliente al exportar', cliente, 'Nada: el export trae lo necesario.') + '</div>' +
+      '<p class="nota">Esto es sobre el export. Lo que los equipos registran mal en la herramienta se ve en <button class="btn-txt" data-accion="como-sec" data-s="fiabilidad">Fiabilidad de los datos</button>.</p>';
+  }
+  // Cuánta historia trae el export: de ella depende qué se puede medir
+  function historiaExport() {
+    var nivel = App.det.hayTiempos ? 1 : 0;
+    var pasos = [
+      ['Foto del día', 'El estado de cada tarea hoy y sus fechas.', 'Entregas, plazo desde que se crea la tarea y edad de lo pendiente.'],
+      ['Tiempo en cada estado', 'Cuánto pasó cada tarea en cada estado, sin el orden de los cambios.', 'Además: plazo desde que se empieza, tiempo bloqueado y en espera, y retrabajo.'],
+      ['Historia de cambios', 'Cada cambio de estado con su fecha. Llega por la API.', 'Además: reaperturas exactas y cuánto lleva bloqueada cada tarea.'],
+      ['Historia de sprints', 'Qué entró y qué salió de cada sprint. Llega por la API.', 'Además: si se cumple lo comprometido en cada sprint.']
+    ];
+    return '<h3 class="sem-h3">Cuánta historia trae este export</h3><ol class="escalera">' + pasos.map(function (p, k) {
+      return '<li class="' + (k === nivel ? 'actual' : k > nivel ? 'falta' : 'hecho') + '"><b>' + p[0] + '</b>' + (k === nivel ? '<span class="chip chip-bien">Este export</span>' : '') + '<p>' + p[1] + '</p><p class="esc-med">' + p[2] + '</p></li>';
+    }).join('') + '</ol>' +
+      '<p class="nota">' + (nivel ? 'Este export trae el tiempo en cada estado, así que se miden plazo, retrabajo y bloqueo.' : 'Este export solo trae la foto del día. Exportar con el campo Tiempo en estado añade plazo desde que se empieza, retrabajo y bloqueo.') +
+      ' Lo que pasa de un sprint a otro sale de las columnas Sprint. Los dos últimos pasos necesitan la conexión por API.</p>';
+  }
+
   // Cómo se ha leído el export cargado, columna a columna: qué es cada una y qué se hace con ella
   var ACCION_COL = { usa: ['bien', 'Se usa'], descarta: ['critico', 'Se descarta'], ignora: ['sin', 'Se ignora'] };
   function columnasLeidas() {
@@ -1263,7 +1288,7 @@
     html += '<section class="bloque"><h2>Documentos para el consultor</h2><p class="nota">El documento de definiciones recoge todo lo anterior para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas para la IA del consultor.</p>' +
       '<label class="campo-linea">Nombre del cliente <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
       '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button><button class="btn btn-sec" data-accion="modelo">Descargar el modelo de medida</button></p>' +
-      (App.demo ? '' : '<p class="nota">Para enseñarlo: <button class="btn-txt" data-accion="presentacion">ver la presentación</button> o <button class="btn-txt" data-accion="demo">ver con datos de ejemplo</button>. La demo no toca vuestros datos.</p>') + '</section>';
+      (App.demo ? '' : '<p class="nota">Para enseñarlo, <button class="btn-txt" data-accion="demo">carga los datos de ejemplo</button>. La demo no toca vuestros datos.</p>') + '</section>';
     html += '<section class="bloque bloque-oscuro"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea. El coste es el del equipo, nunca el salario de nadie.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
     return html;
   }
@@ -1353,26 +1378,6 @@
     escribirEnCarpeta('diagnostico', nombre, texto).then(function (ok) { if (ok) aviso('Paquete guardado en la carpeta diagnostico.'); else descargar(nombre, texto); });
   }
 
-  // ---------- presentación ----------
-  var LAMINAS = []; try { LAMINAS = JSON.parse(document.getElementById('laminas').textContent || '[]'); } catch (e) { LAMINAS = []; }
-  var NOMBRES_LAMINA = ['Portada', 'El problema', 'La propuesta', 'Qué se mide', 'Cómo escala', 'La demo', 'Lo siguiente'];
-  var LAMINA_DEMO = 5;
-  function presentacion() {
-    var i = App.lamina = Math.max(0, Math.min(App.lamina, LAMINAS.length - 1));
-    var cuerpo = (LAMINAS[i] || '').replace(/<span class="lz-ico" data-icp="([a-z]+)" style="([^"]*)"><\/span>/g, function (m, k, st) { return '<span class="lz-ico" style="' + st + '">' + icp(k) + '</span>'; });
-    var nav = '<nav class="pres-nav" aria-label="Presentación"><button class="btn-txt" data-accion="lamina" data-d="-1"' + (i ? '' : ' disabled') + '>Anterior</button><ol>' +
-      LAMINAS.map(function (x, k) { return '<li><button data-accion="lamina-ir" data-i="' + k + '"' + (k === i ? ' aria-current="true"' : '') + '><span>0' + (k + 1) + '</span> ' + esc(NOMBRES_LAMINA[k] || '') + '</button></li>'; }).join('') + '</ol>' +
-      (i >= LAMINA_DEMO ? '<button class="btn btn-peq" data-accion="demo">Ver la demo</button>' : '<button class="btn-txt" data-accion="lamina" data-d="1">Siguiente</button>') + '</nav>';
-    return '<div class="presentacion"><header class="cab"><div class="cab-in">' + marca() + '<span class="hueco"></span><button class="btn btn-cab" data-accion="salir-presentacion">Ir a la herramienta</button></div></header>' +
-      '<div class="lienzo-marco" id="lienzo-marco" aria-label="' + esc(NOMBRES_LAMINA[i] || '') + '"><div class="lienzo" id="lienzo">' + cuerpo + '</div></div>' + nav + '</div>';
-  }
-  function ajustarLienzo() {
-    var marco = document.getElementById('lienzo-marco'), lz = document.getElementById('lienzo');
-    if (!marco || !lz) return;
-    var w = marco.clientWidth, h = marco.clientHeight, e = Math.min(w / 1920, h / 1080);
-    lz.style.transform = 'translate(' + Math.round((w - 1920 * e) / 2) + 'px,' + Math.round((h - 1080 * e) / 2) + 'px) scale(' + e + ')';
-  }
-
   // ---------- acciones ----------
   function cambiar(fn) {
     // Cambio de configuración: se guarda, se recalcula todo y se vuelve a pintar en el mismo sitio
@@ -1401,10 +1406,6 @@
     'demo-fallos': function () { verDemo(null, 'fallos'); },
     'bajar-ejemplo': function () { var d = DEMOS[App.demoId] || DEMOS.b3; descargar(d.fichero, (document.getElementById(d.pre + 'csv') || {}).textContent || '', 'text/csv'); },
     'salir-demo': function () { salirDemo(); if (!App.r) { App.vista = 'inicio'; render(); } },
-    presentacion: function () { App.vista = 'presentacion'; App.lamina = 0; render(); },
-    'salir-presentacion': function () { App.vista = App.r ? 'tablero' : 'inicio'; render(); },
-    lamina: function (el) { App.lamina += +el.getAttribute('data-d'); render(); },
-    'lamina-ir': function (el) { App.lamina = +el.getAttribute('data-i'); render(); },
     actualizar: function () {
       if (App.demo) { aviso('En la demo los datos son fijos. Pulsa "Cargar mis datos" para usar los vuestros.'); return; }
       if (App.carpeta) return leerCarpeta(App.carpeta);
@@ -1421,8 +1422,7 @@
     },
     definiciones: function (el) { definiciones(el.getAttribute('data-f')); },
     paquete: paquete,
-    modelo: descargarModelo,
-    'ver-demo': function () { verDemo(null); }
+    modelo: descargarModelo
   };
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-accion]');
@@ -1457,13 +1457,6 @@
   document.addEventListener('dragover', function (e) { e.preventDefault(); var z = document.getElementById('zona'); if (z) z.classList.add('encima'); });
   document.addEventListener('dragleave', function (e) { var z = document.getElementById('zona'); if (z && !z.contains(e.relatedTarget)) z.classList.remove('encima'); });
   document.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer && e.dataTransfer.files.length) cargarFicheros(e.dataTransfer.files); });
-  document.addEventListener('keydown', function (e) {
-    if (App.vista !== 'presentacion' || e.altKey || e.ctrlKey || e.metaKey) return;
-    if (e.key === 'ArrowRight' && App.lamina < LAMINAS.length - 1) { App.lamina++; render(); }
-    if (e.key === 'ArrowLeft' && App.lamina > 0) { App.lamina--; render(); }
-  });
-  var tRes = null;
-  window.addEventListener('resize', function () { clearTimeout(tRes); tRes = setTimeout(ajustarLienzo, 100); });
 
   // ---------- arranque ----------
   function iniciar() {

@@ -64,7 +64,6 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
     '/*DEMO_FALLOS_CLIENTE*/': seguro(demoCliente(leerJson(FALLOS, 'cliente', 'cliente.json'), { sembrados: escenarios.sembrados })),
     '/*DEMO_ASEGURADORA*/': asegCsv,
     '/*DEMO_ASEGURADORA_CLIENTE*/': seguro(demoCliente(leerJson(ASEGURADORA, 'cliente', 'cliente.json'), { sembrados: escAseg.sembrados, sin_fallo: escAseg.sin_fallo }, 'Aseguradora ficticia', ASEGURADORA)),
-    '/*LAMINAS*/': seguro(JSON.stringify(JSON.parse(readFileSync(join(SRC, 'laminas.json'), 'utf8')))),
     '/*NUCLEO*/': seguro(nucleo),
     // proceso.js (la animación del método) va antes de la interfaz, que lo usa
     '/*APP*/': seguro(readFileSync(join(SRC, 'proceso.js'), 'utf8') + '\n' + readFileSync(join(SRC, 'app.js'), 'utf8')),
