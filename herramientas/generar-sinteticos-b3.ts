@@ -296,9 +296,11 @@ export function ficheros(): Record<string, string> {
   };
   for (const i of INICIATIVAS) {
     out[`cliente/iniciativas/${i.id}.json`] = JSON.stringify({
-      id: i.id, nombre: i.nombre, descripcion: i.conEfecto ? 'No empezar nada nuevo mientras haya más tareas en curso que personas.' : 'Dos sesiones de formación y una guía de pruebas automáticas.',
+      id: i.id, nombre: i.nombre, descripcion: i.conEfecto
+        ? 'Pagos no empieza una tarea nueva mientras tenga más tareas en curso que personas en el equipo (cinco). Lo nuevo espera en pendiente y, en la reunión diaria, se mira primero qué se puede terminar.'
+        : 'Dos sesiones de formación en pruebas automáticas para Riesgos y una guía con ejemplos. Cada historia nueva lleva sus pruebas antes de pasar a revisión.',
       fecha_inicio: i.inicio, fecha_fin: null, equipos: [i.equipo], medidas_objetivo: [{ medida: i.medida, direccion: i.direccion }],
-      efecto_esperado: i.medida === 'ciclo' ? 'Tiempo de ciclo un 30% más bajo en dos meses.' : 'Retrabajo por debajo del 10% en dos meses.',
+      efecto_esperado: i.medida === 'ciclo' ? 'Plazo un 30% más bajo en dos meses.' : 'Retrabajo por debajo del 10% en dos meses.',
       estado: 'en_curso', origen: i.medida === 'ciclo' ? 'demasiado_a_la_vez' : 'retrabajo', evaluacion: null, notas: '',
     }, null, 2) + '\n';
   }

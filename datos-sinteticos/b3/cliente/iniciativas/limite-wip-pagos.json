@@ -1,7 +1,7 @@
 {
   "id": "limite-wip-pagos",
   "nombre": "Límite de trabajo en curso en Pagos",
-  "descripcion": "No empezar nada nuevo mientras haya más tareas en curso que personas.",
+  "descripcion": "Pagos no empieza una tarea nueva mientras tenga más tareas en curso que personas en el equipo (cinco). Lo nuevo espera en pendiente y, en la reunión diaria, se mira primero qué se puede terminar.",
   "fecha_inicio": "2026-06-01",
   "fecha_fin": null,
   "equipos": [
@@ -13,7 +13,7 @@
       "direccion": "bajar"
     }
   ],
-  "efecto_esperado": "Tiempo de ciclo un 30% más bajo en dos meses.",
+  "efecto_esperado": "Plazo un 30% más bajo en dos meses.",
   "estado": "en_curso",
   "origen": "demasiado_a_la_vez",
   "evaluacion": null,

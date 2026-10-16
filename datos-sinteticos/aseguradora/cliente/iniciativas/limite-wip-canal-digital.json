@@ -1,7 +1,7 @@
 {
   "id": "limite-wip-canal-digital",
   "nombre": "Límite de trabajo en curso en Canal digital",
-  "descripcion": "No empezar nada nuevo mientras haya más tareas en curso que personas.",
+  "descripcion": "Canal digital no empieza nada nuevo mientras tenga más tareas en curso que personas (siete). Se ha pactado con el proveedor como parte del servicio y se revisa cada dos semanas.",
   "fecha_inicio": "2026-10-05",
   "fecha_fin": null,
   "equipos": [

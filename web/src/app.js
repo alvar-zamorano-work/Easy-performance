@@ -907,13 +907,22 @@
     if (!ult) return '';
     return '<div class="seg-cifras">' + celda('Ahora en estos equipos', ult.iniciativa) + (ult.control != null ? celda('Ahora en el resto', ult.control, 'seg-ctrl') : '') + '</div>';
   }
+  // En qué consiste la iniciativa: qué se hace, por qué y qué se espera. Si viene de una recomendación, su plan entero.
+  function fichaIni(ini, caso) {
+    var desdeRec = caso && caso.plan && caso.plan.length && ini.descripcion === caso.plan[0].paso;
+    var hace = desdeRec ? '<ol>' + caso.plan.map(function (p) { return '<li>' + esc(p.paso) + '</li>'; }).join('') + '</ol>' : '<p>' + esc(ini.descripcion || 'Sin descripción. Añádela en el fichero de la iniciativa.') + '</p>';
+    var parte = function (et, html) { return html ? '<div><h3 class="seg-h3">' + et + '</h3>' + html + '</div>' : ''; };
+    return '<div class="seg-ficha">' + parte('En qué consiste', hace) + parte('Por qué', caso && caso.senal ? '<p>' + esc(caso.senal) + '</p>' : '') +
+      parte('Qué se espera', ini.efecto_esperado ? '<p>' + esc(ini.efecto_esperado) + '</p>' : '') + '</div>';
+  }
   function tarjetaSeg(x) {
     var s = x.s, ini = x.ini, caso = C.casos[ini.origen];
     var dato = function (et, v) { return '<div><dt>' + et + '</dt><dd>' + v + '</dd></div>'; };
     var progreso = s.estado === 'planificada' ? 0 : s.progreso;
     return '<article class="seg">' +
       '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + (caso ? ', desde la recomendación «' + esc(caso.titulo) + '»' : '') + '</p></div>' + chipSeg(s.estado) + '</header>' +
-      '<div class="seg-cuerpo"><div class="seg-datos"><p class="seg-texto">' + esc(s.texto) + '</p>' +
+      fichaIni(ini, caso) +
+      '<div class="seg-cuerpo"><div class="seg-datos"><h3 class="seg-h3">Cómo va</h3><p class="seg-texto">' + esc(s.texto) + '</p>' +
       cifrasSeg(s) +
       '<dl class="seg-dl">' + dato('Medida objetivo', nomMed(s.medida) + ', ' + s.direccion) + dato('Inicio', esc(fechaCorta(s.inicio))) +
       dato('Se mide desde', esc(fechaCorta(s.desdeDespues))) + dato('Evaluación completa', esc(fechaCorta(s.completaEl))) + (s.confianza ? dato('Confianza', s.confianza) : '') + '</dl>' +

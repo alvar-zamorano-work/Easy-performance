@@ -139,8 +139,8 @@ export function ficherosAseguradora(): Record<string, string> {
     ] }, null, 2) + '\n',
   };
   const textos: Record<string, [string, string, string]> = {
-    'definicion-listo-siniestros': ['Ninguna historia entra en el sprint sin criterios de aceptación revisados con negocio.', 'Retrabajo por debajo del 12% en dos meses.', 'retrabajo'],
-    'limite-wip-canal-digital': ['No empezar nada nuevo mientras haya más tareas en curso que personas.', 'Plazo un 25% más bajo en dos meses.', 'demasiado_a_la_vez'],
+    'definicion-listo-siniestros': ['Ninguna historia entra en el sprint de Siniestros sin criterios de aceptación revisados con negocio. El responsable de producto los revisa en el refinamiento y, si faltan, la historia espera al siguiente sprint.', 'Retrabajo por debajo del 12% en dos meses.', 'retrabajo'],
+    'limite-wip-canal-digital': ['Canal digital no empieza nada nuevo mientras tenga más tareas en curso que personas (siete). Se ha pactado con el proveedor como parte del servicio y se revisa cada dos semanas.', 'Plazo un 25% más bajo en dos meses.', 'demasiado_a_la_vez'],
   };
   for (const i of INICIATIVAS_ASEGURADORA) {
     const [descripcion, efecto, origen] = textos[i.id];

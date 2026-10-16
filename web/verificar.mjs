@@ -144,6 +144,9 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await clic(p, '[data-accion="vista"][data-v="iniciativas"]');
   const seg = await A(p, () => [...document.querySelectorAll('.seg')].map((x) => ({ chip: x.querySelector('.seg-cab .chip').textContent, graf: !!x.querySelector('.seg-graf polyline.seg-ini'), fechas: x.querySelectorAll('.seg-dl dd').length })));
   ok('iniciativas: seguimiento automático con estado, gráfico y fechas', seg.length === 3 && seg.some((x) => x.chip === 'Funciona') && seg.some((x) => x.chip === 'Va a peor') && seg.some((x) => x.chip === 'Planificada') && seg.filter((x) => x.graf).length >= 2 && seg.every((x) => x.fechas >= 4), seg.map((x) => x.chip).join(', '));
+  // Cada iniciativa dice en qué consiste, por qué y qué se espera; la registrada desde una recomendación, con su plan entero
+  const ficha = await A(p, () => [...document.querySelectorAll('.seg')].map((x) => ({ chip: x.querySelector('.seg-cab .chip').textContent, f: x.querySelector('.seg-ficha') ? x.querySelector('.seg-ficha').textContent : '', pasos: x.querySelectorAll('.seg-ficha ol li').length })));
+  ok('iniciativas: cada una dice en qué consiste, por qué y qué se espera', ficha.length === 3 && ficha.every((x) => /En qué consiste/.test(x.f) && /Por qué/.test(x.f) && /Qué se espera/.test(x.f) && x.f.length > 150) && ficha.some((x) => x.chip === 'Planificada' && x.pasos >= 2), ficha.map((x) => x.chip + ' ' + x.f.length + ' car., ' + x.pasos + ' pasos').join(' · '));
   // Ayuda al pasar el cursor por una medida
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
   await p.hover('.kpi .con-tip'); await p.waitForTimeout(250);

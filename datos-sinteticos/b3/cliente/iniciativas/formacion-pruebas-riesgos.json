@@ -1,7 +1,7 @@
 {
   "id": "formacion-pruebas-riesgos",
   "nombre": "Formación en pruebas automáticas en Riesgos",
-  "descripcion": "Dos sesiones de formación y una guía de pruebas automáticas.",
+  "descripcion": "Dos sesiones de formación en pruebas automáticas para Riesgos y una guía con ejemplos. Cada historia nueva lleva sus pruebas antes de pasar a revisión.",
   "fecha_inicio": "2026-06-01",
   "fecha_fin": null,
   "equipos": [

@@ -1,7 +1,7 @@
 {
   "id": "definicion-listo-siniestros",
   "nombre": "Definición de listo en Siniestros",
-  "descripcion": "Ninguna historia entra en el sprint sin criterios de aceptación revisados con negocio.",
+  "descripcion": "Ninguna historia entra en el sprint de Siniestros sin criterios de aceptación revisados con negocio. El responsable de producto los revisa en el refinamiento y, si faltan, la historia espera al siguiente sprint.",
   "fecha_inicio": "2026-05-04",
   "fecha_fin": null,
   "equipos": [
