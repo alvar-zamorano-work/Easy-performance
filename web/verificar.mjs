@@ -291,6 +291,20 @@ for (const e of CON_FALLOS) {
   await q.screenshot({ path: join(SALIDA, 'movil-recomendaciones.png'), fullPage: true });
   ok('móvil (390 px): sin scroll horizontal en ninguna pantalla', !rq.fallos.length && !q.errores.length, rq.fallos.join('; ') + q.errores.join(' | '));
   await q.context().close();
+  // Portátil con Windows al 150 %: la ventana útil se queda en unos 1280 x 600 y todo debe reducirse en proporción
+  const w = await pagina(1280, 600);
+  const raiz = () => A(w, () => getComputedStyle(document.documentElement).fontSize);
+  const entrada = await medir(w), raizW = await raiz();
+  await clic(w, '[data-accion="demo"]'); await listo(w);
+  const matriz = await A(w, () => Math.round(document.querySelector('.tabla-caja').getBoundingClientRect().top));
+  const rw = await recorrer(w, 'portatil-150', false);
+  await w.screenshot({ path: join(SALIDA, 'portatil-150-area.png') });
+  ok('portátil al 150 % (1280 x 600): letra reducida, la entrada cabe y la tabla de equipos asoma', raizW === '13px' && entrada.alto <= 600 && matriz < 560 && !rw.fallos.length && !w.errores.length, `raíz ${raizW}, entrada ${entrada.alto}px, tabla en ${matriz}px ${rw.fallos.join('; ')} ${w.errores.join(' | ')}`);
+  await w.context().close();
+  const g = await pagina(1512, 860);
+  const raizG = await A(g, () => getComputedStyle(document.documentElement).fontSize);
+  ok('pantalla grande (1512 x 860): tamaño completo', raizG === '16px', 'raíz ' + raizG);
+  await g.context().close();
 }
 
 // 4. Jira.csv de principio a fin: directo al tablero, cambios en Cómo funciona, definiciones y paquete
