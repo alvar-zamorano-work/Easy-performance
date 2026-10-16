@@ -3,7 +3,9 @@
 // Comprueba: entrada, presentación, demo en 1280x720 y 1920x1080 (sin scroll horizontal, sin errores de consola),
 // modo oscuro, pantalla de móvil, Jira.csv de principio a fin (carga directa al tablero, mapeo de estados y proveedores
 // cambiados y guardados, documento de definiciones y paquete), demo sin pisar la configuración, carpeta con dos
-// iniciativas y una configuración de la versión anterior.
+// iniciativas y una configuración de la versión anterior. Además, con animaciones: conectores de la entrada,
+// el método de carga, la generación de recomendaciones, la lista con detalle y el registro de una iniciativa.
+// Salvo en ese bloque, el navegador pide "reducir movimiento": la página no anima y va directa al resultado.
 
 import { chromium } from 'playwright-core';
 import { readFileSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
@@ -27,7 +29,7 @@ const ok = (nombre, bien, detalle = '') => { resultados.push({ nombre, bien, det
 const navegador = await chromium.launch({ executablePath: CHROME });
 
 async function pagina(ancho, alto, opciones = {}) {
-  const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, colorScheme: opciones.oscuro ? 'dark' : 'light', acceptDownloads: true });
+  const ctx = await navegador.newContext({ viewport: { width: ancho, height: alto }, colorScheme: opciones.oscuro ? 'dark' : 'light', acceptDownloads: true, reducedMotion: opciones.animar ? 'no-preference' : 'reduce' });
   const p = await ctx.newPage();
   p.errores = [];
   p.on('console', (m) => { if (m.type() === 'error') p.errores.push(m.text().split('\n')[0]); });
@@ -104,17 +106,79 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   ok('demo: tabla de equipos, internos y proveedores e iniciativas', filas === 4 && grupos.length >= 3 && ini.length === 2 && ini.some((x) => /Funciona/.test(x)), `${filas} equipos · ${grupos.length} medidas peor en proveedores · ${ini.length} iniciativas`);
   const coste = await A(p, () => ({ fila: [...document.querySelectorAll('.fila-coste th')].map((x) => x.textContent), celdas: [...document.querySelectorAll('.fila-coste td')].map((x) => x.textContent) }));
   ok('demo: entregas por FTE y coste por entrega de internos y proveedores', coste.fila.includes('Coste por entrega') && coste.celdas.every((x) => /\d/.test(x)) && coste.celdas.some((x) => /^\d\.\d{3} €$/.test(x)), coste.fila.join(', ') + ' · ' + coste.celdas.join(' | '));
+  // Antes de generar, el equipo enseña qué está fuera de lo normal y el botón; sin animación, generar es inmediato
   await p.selectOption('select[data-cambio="ver"]', 'App móvil'); await p.waitForTimeout(200);
+  const antes = await A(p, () => ({ boton: !!document.querySelector('.bloque-oscuro [data-accion="generar"]'), cuenta: !!document.querySelector('.pestana .cuenta') }));
+  await clic(p, '.bloque-oscuro [data-accion="generar"]');
+  const gen = await A(p, () => ({ vista: window.EasyPerformance.vista, generadas: window.EasyPerformance.generadas, items: document.querySelectorAll('.rec-item').length }));
+  ok('recomendaciones: se generan con el botón (sin animación con reducir movimiento)', antes.boton && !antes.cuenta && gen.vista === 'recomendaciones' && gen.generadas && gen.items >= 3, JSON.stringify(gen));
+  await clic(p, '[data-accion="vista"][data-v="tablero"]');
   const eq = await A(p, () => ({ t: document.querySelector('.titular h1').textContent, kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length }));
   ok('demo: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 5 && eq.graf && eq.recs >= 2 && /retrabajo/.test(eq.t), `${eq.t} · ${eq.recs} recomendaciones`);
-  await clic(p, '[data-accion="vista"][data-v="recomendaciones"]');
-  const recs = await p.$$eval('.rec', (t) => t.map((x) => ({ t: x.querySelector('h2').textContent, crit: !!x.querySelector('.chip-critico'), paso: /Primer paso/.test(x.textContent), de: !!x.querySelector('.rec-de li') })));
+  await clic(p, '.bloque-oscuro [data-accion="ver-recs"]');
+  const filtro = await A(p, () => ({ f: window.EasyPerformance.recEquipo, items: document.querySelectorAll('.rec-item').length, todas: window.EasyPerformance.recomendaciones().filter((x) => x.equipos.includes('App móvil')).length }));
+  ok('recomendaciones: "Ver qué hacer" filtra por el equipo', filtro.f === 'App móvil' && filtro.items === filtro.todas, JSON.stringify(filtro));
+  await p.selectOption('select[data-cambio="rec-equipo"]', 'todos'); await p.waitForTimeout(200);
+  const lista = await p.$$eval('.rec-item', (t) => t.map((x) => ({ t: x.querySelector('b').textContent, crit: !!x.querySelector('.chip-critico') })));
+  const det = await A(p, () => { const d = document.querySelector('.rec-detalle'); return { h: d.querySelector('h2').textContent, paso: /Primer paso/.test(d.textContent), de: !!d.querySelector('.rec-de li'), plan: d.querySelectorAll('.rec-plan li').length, ini: /Iniciativa propuesta/.test(d.textContent) }; });
   const funciona = await p.$$eval('.funciona', (t) => t.length);
-  ok('recomendaciones: ordenadas, con evidencia y primer paso', recs.length >= 3 && recs[0].crit && recs.every((x) => x.paso && x.de) && funciona === 1, recs.map((x) => (x.crit ? 'crítico: ' : '') + x.t).join(' / '));
-  await p.click('.rec details summary'); await p.waitForTimeout(100);
-  const abierta = await p.$eval('.rec details', (d) => d.open && /Plan/.test(d.textContent));
-  ok('recomendaciones: causas y plan completo al desplegar', abierta);
+  ok('recomendaciones: lista ordenada y detalle con evidencia, plan e iniciativa', lista.length >= 3 && lista[0].crit && det.h === lista[0].t && det.paso && det.de && det.plan >= 2 && det.ini && funciona === 1, lista.map((x) => (x.crit ? 'crítico: ' : '') + x.t).join(' / '));
+  await clic(p, '.rec-item:nth-child(2)');
+  const det2 = await A(p, () => ({ h: document.querySelector('.rec-detalle h2').textContent, sel: document.querySelector('.rec-item[aria-current="true"] b').textContent }));
+  ok('recomendaciones: al elegir otra se ve su detalle', det2.h === lista[1].t && det2.sel === lista[1].t, det2.h);
+  await p.click('.rec-detalle details summary'); await p.waitForTimeout(100);
+  const abierta = await p.$eval('.rec-detalle details', (d) => d.open && /Causas habituales/.test(d.textContent));
+  ok('recomendaciones: causas y respaldo al desplegar', abierta);
+  const reg = await p.$('.rec-detalle [data-accion="registrar"]');
+  if (reg) { await reg.click(); await listo(p); await p.waitForTimeout(300); }
+  const tras = await A(p, () => ({ registrada: !!document.querySelector('.rec-detalle .registrada'), inis: window.EasyPerformance.r.iniciativas.map((x) => x.iniciativa.id) }));
+  await clic(p, '[data-accion="vista"][data-v="tablero"]');
+  await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(200);
+  const filasIni = await p.$$eval('.fila-ini', (t) => t.length);
+  ok('recomendaciones: registrar una iniciativa la lleva al tablero', !!reg && tras.registrada && tras.inis.length === 3 && filasIni === 3, tras.inis.join(', '));
   ok('demo de contenido sin errores de consola', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// 2b. Con animaciones: entrada con conectores, método de carga y generación de recomendaciones
+{
+  const p = await pagina(1280, 720, { animar: true });
+  const tiles = await p.$$eval('.conector', (t) => t.map((x) => x.querySelector('b').textContent));
+  await clic(p, '[data-accion="fuente"][data-f="ado"]');
+  const panel = await A(p, () => ({ h: document.querySelector('.fuentes h2').textContent, alto: document.documentElement.scrollHeight }));
+  ok('entrada: conectores y panel de conexión simulada sin scroll', tiles.length === 5 && tiles.includes('Azure DevOps') && tiles.includes('ServiceNow') && panel.h === 'Conectar Azure DevOps' && panel.alto <= 721, tiles.join(', ') + ' · alto ' + panel.alto);
+  await p.click('[data-accion="conectar"]');
+  await p.waitForSelector('.proc', { timeout: 10000 });
+  const est = await p.$$eval('.proc-est', (t) => t.map((x) => x.textContent.trim()));
+  await p.waitForSelector('.proc-escena .v-matriz', { timeout: 30000 });
+  await p.screenshot({ path: join(SALIDA, 'metodo-medir.png') });
+  await p.waitForSelector('.proc [data-proc="fin"]', { timeout: 30000 });
+  await p.waitForTimeout(1200);
+  const fin = await A(p, () => ({ alto: document.querySelector('.proc').scrollHeight, cifras: [...document.querySelectorAll('.proc .v-resumen b')].map((x) => x.textContent), fuente: document.querySelector('.proc-fuente').textContent }));
+  await p.screenshot({ path: join(SALIDA, 'metodo-final.png') });
+  ok('método de carga: seis pasos con las cifras reales y sin desbordar', est.length === 6 && fin.alto <= 721 && fin.cifras[0] === '1.232' && /Azure DevOps/.test(fin.fuente), est.join(' > ') + ' · ' + fin.cifras.join(', '));
+  await p.click('.proc [data-proc="fin"]'); await p.waitForTimeout(400);
+  const tras = await A(p, () => ({ proc: !!document.querySelector('.proc'), vista: window.EasyPerformance.vista, sim: window.EasyPerformance.simulada, banda: document.querySelector('.banda-demo').textContent }));
+  ok('método de carga: al terminar se ve el tablero de la simulación', !tras.proc && tras.vista === 'tablero' && tras.sim === 'ado' && /Simulación de Azure DevOps/.test(tras.banda), tras.banda.slice(0, 60));
+  await clic(p, '[data-accion="vista"][data-v="recomendaciones"]');
+  const previa = await A(p, () => ({ generar: !!document.querySelector('.generar [data-accion="generar"]'), pasos: document.querySelectorAll('.generar-pasos li').length }));
+  await p.click('.generar [data-accion="generar"]');
+  await p.waitForSelector('.proc-etiqueta', { timeout: 30000 });
+  const etiqueta = await texto(p, '.proc-etiqueta');
+  await p.screenshot({ path: join(SALIDA, 'generar-ia.png') });
+  await p.waitForSelector('.proc [data-proc="fin"]', { timeout: 30000 });
+  await p.waitForTimeout(800);
+  await p.click('.proc [data-proc="fin"]'); await p.waitForTimeout(400);
+  const res = await A(p, () => ({ items: document.querySelectorAll('.rec-item').length, n: window.EasyPerformance.recomendaciones().length, cuenta: (document.querySelector('.pestana .cuenta') || {}).textContent }));
+  await p.screenshot({ path: join(SALIDA, 'recomendaciones.png'), fullPage: true });
+  ok('generar recomendaciones: animación con la IA marcada como próxima fase y después la lista', previa.generar && previa.pasos === 6 && etiqueta === 'Próxima fase' && res.items === res.n && res.items >= 3 && res.cuenta === String(res.n), JSON.stringify(res));
+  // Esc salta la animación
+  await clic(p, '[data-accion="generar"]');
+  await p.waitForSelector('.proc', { timeout: 5000 });
+  await p.keyboard.press('Escape'); await p.waitForTimeout(400);
+  const salto = await A(p, () => ({ proc: !!document.querySelector('.proc'), items: document.querySelectorAll('.rec-item').length }));
+  ok('Esc salta la animación y deja el resultado', !salto.proc && salto.items >= 3, JSON.stringify(salto));
+  ok('animaciones sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 
@@ -131,6 +195,10 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await clic(q, '[data-accion="demo"]'); await listo(q);
   const rq = await recorrer(q, 'movil', false);
   await q.screenshot({ path: join(SALIDA, 'movil-area.png'), fullPage: true });
+  await clic(q, '[data-accion="generar"]');
+  const mr = await medir(q);
+  if (mr.ancho > 1) rq.fallos.push('recomendaciones generadas: ' + mr.ancho + 'px de scroll horizontal');
+  await q.screenshot({ path: join(SALIDA, 'movil-recomendaciones.png'), fullPage: true });
   ok('móvil (390 px): sin scroll horizontal en ninguna pantalla', !rq.fallos.length && !q.errores.length, rq.fallos.join('; ') + q.errores.join(' | '));
   await q.context().close();
 }

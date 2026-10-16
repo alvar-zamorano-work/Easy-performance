@@ -52,7 +52,8 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
     '/*DEMO_CLIENTE*/': seguro(demoCliente()),
     '/*LAMINAS*/': seguro(JSON.stringify(JSON.parse(readFileSync(join(SRC, 'laminas.json'), 'utf8')))),
     '/*NUCLEO*/': seguro(nucleo),
-    '/*APP*/': seguro(readFileSync(join(SRC, 'app.js'), 'utf8')),
+    // proceso.js (la animación del método) va antes de la interfaz, que lo usa
+    '/*APP*/': seguro(readFileSync(join(SRC, 'proceso.js'), 'utf8') + '\n' + readFileSync(join(SRC, 'app.js'), 'utf8')),
   };
   let html = readFileSync(join(SRC, 'plantilla.html'), 'utf8');
   for (const [marca, contenido] of Object.entries(piezas)) {

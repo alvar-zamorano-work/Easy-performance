@@ -36,14 +36,17 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 
 Un solo HTML que se abre con doble clic, sin servidor ni instalación. No hay puesta en marcha: se carga el export de Jira y se ve el tablero.
 
+- Entrada: conectores de Jira, Azure DevOps, ServiceNow, GitLab y otra herramienta. Hoy funciona el export CSV de Jira; la conexión directa y las demás fuentes son una simulación que carga los datos de ejemplo.
+- El método: al cargar desde la entrada, una animación de seis pasos (leer, equipos, estados, calidad, coste y medir) con las cifras reales de lo cargado. Con "reducir movimiento" en el sistema no se muestra.
+
 - Tablero: el área (cuatro indicadores, tabla de equipos, internos y proveedores, iniciativas) o un equipo (cuatro indicadores con su tendencia, el plazo semana a semana y sus recomendaciones). Cada cifra se compara con lo normal en ese equipo.
-- Recomendaciones: los casos del catálogo que se activan con las cifras, agrupados si se repiten en varios equipos y ordenados por gravedad. Cada una con su evidencia, el primer paso, cómo comprobarlo y el plan completo.
+- Recomendaciones: se generan con un botón y una animación de seis pasos (señales, contexto, banco de casos, priorizar, IA y revisión). La IA va marcada como próxima fase: hoy el plan sale del banco de casos. Después, lista y detalle: evidencia, plan de acción, iniciativa propuesta (que se puede registrar y se evalúa en el tablero), preguntas para la reunión, causas y respaldo.
 - Cómo funciona: las cinco medidas, cómo se lee el estado y "Así hemos leído vuestros datos" (ficheros, campo de equipo, proveedores, áreas y FTE, estados y calidad), donde se corrige lo detectado. Desde ahí se descargan el documento de definiciones (Word y markdown) y el paquete de diagnóstico.
 - Se detecta solo: el campo que reconoce al equipo, los equipos y el estado común de cada estado de Jira. Lo que no se puede detectar (proveedores, áreas, FTE) se indica en Cómo funciona. Lo cambiado se guarda en el navegador y en configuracion/cliente.json si se usa la carpeta. Una configuración de la versión anterior se aprovecha.
-- Presentación de cinco láminas y demo con un banco ficticio (datos sintéticos de B3), que no toca los datos reales.
+- Presentación de siete láminas y demo con un banco ficticio (datos sintéticos de B3), que no toca los datos reales.
 - Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
 
-Código: web/src/app.js (interfaz), app.css, laminas.json, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (entrada, presentación, demo en 1280x720 y 1920x1080, modo oscuro, móvil, Jira.csv de principio a fin con cambios en Cómo funciona, definiciones, paquete, carpeta con iniciativas y configuración anterior) y deja capturas y documentos en dist/verificacion. Las pantallas caben sin scroll a 1920x1080; en 1280x720 el tablero tiene algo de scroll vertical, y recomendaciones y Cómo funciona son páginas largas.
+Código: web/src/app.js (interfaz), proceso.js (animación del método), app.css, laminas.json, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (entrada, presentación, demo en 1280x720 y 1920x1080, conectores, método de carga y generación de recomendaciones con animación, modo oscuro, móvil, Jira.csv de principio a fin con cambios en Cómo funciona, definiciones, paquete, carpeta con iniciativas y configuración anterior) y deja capturas y documentos en dist/verificacion. Las pantallas caben sin scroll a 1920x1080; en 1280x720 el tablero tiene algo de scroll vertical, y recomendaciones y Cómo funciona son páginas largas.
 
 Pendiente de probar: actualizar.ps1 en Windows.
 
