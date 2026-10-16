@@ -34,7 +34,7 @@
         {
           "id": "puntos",
           "nombre": "Un punto por tarea",
-          "ayuda": "Cada tarea terminada es un punto; dos líneas marcan la mitad y el plazo de 8 de cada 10."
+          "ayuda": "Cada tarea terminada es un punto; dos líneas marcan la mitad y el plazo en el que se termina casi todo."
         },
         {
           "id": "tramos",
@@ -83,7 +83,7 @@
     },
     {
       "id": "entrega",
-      "unidad": "para terminar 8 de cada 10 tareas",
+      "unidad": "para terminar casi todo lo empezado",
       "formato": "dias",
       "dir": "menos"
     },

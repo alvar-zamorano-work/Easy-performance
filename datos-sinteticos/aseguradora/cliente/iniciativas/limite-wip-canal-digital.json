@@ -1,0 +1,21 @@
+{
+  "id": "limite-wip-canal-digital",
+  "nombre": "Límite de trabajo en curso en Canal digital",
+  "descripcion": "No empezar nada nuevo mientras haya más tareas en curso que personas.",
+  "fecha_inicio": "2026-10-05",
+  "fecha_fin": null,
+  "equipos": [
+    "Canal digital"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "ciclo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Plazo un 25% más bajo en dos meses.",
+  "estado": "en_curso",
+  "origen": "demasiado_a_la_vez",
+  "evaluacion": null,
+  "notas": ""
+}

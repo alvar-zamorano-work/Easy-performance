@@ -34,7 +34,7 @@
  "diferencia_entre_grupos": {
   "que": "Dentro del mismo tipo y tamaño de tarea, los proveedores tardan más (plazo) y vuelven atrás y reabren más que los internos.",
   "medidas": {
-   "plazo_p80": "proveedor",
+   "plazo_p85": "proveedor",
    "retrabajo": "proveedor",
    "reabiertas": "proveedor"
   }

@@ -92,7 +92,7 @@ test('un reparto de trabajo distinto no fabrica diferencias: la comparación es 
   });
   const p80 = (ds: typeof internos) => cuantil(ds.map((d) => d.ciclo!), 0.8)!;
   assert.ok(p80(a) / p80(b) - 1 > 0.25, 'sin segmentar parece que A tarda mucho más');
-  const est = diferenciaEstratificada('plazo_p80', a, b)!;
+  const est = diferenciaEstratificada('plazo_p85', a, b)!;
   assert.ok(Math.abs(est.z) < 2, 'segmentando por tipo y tamaño no hay diferencia clara (z = ' + est.z.toFixed(2) + ')');
 });
 

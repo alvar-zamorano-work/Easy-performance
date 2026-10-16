@@ -5,7 +5,8 @@
 // cambiados y guardados, documento de definiciones y paquete), demo sin pisar la configuración, carpeta con dos
 // iniciativas y una configuración de la versión anterior. Además, con animaciones: conectores de la entrada,
 // el método de carga, la generación de recomendaciones, la lista con detalle y el registro de una iniciativa.
-// Y el export con fallos: cada fallo sembrado lo detecta su comprobación, también al cargar el CSV desde la entrada.
+// Y los dos ejemplos con fallos (banco con un fallo por comprobación y aseguradora con tres): cada fallo lo detecta su
+// comprobación, sin falsas alarmas, también al cargar el CSV desde la entrada; y la tabla de columnas real.
 // Salvo en ese bloque, el navegador pide "reducir movimiento": la página no anima y va directa al resultado.
 
 import { chromium } from 'playwright-core';
@@ -158,7 +159,7 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
   await p.hover('.kpi .con-tip'); await p.waitForTimeout(250);
   const tip = await A(p, () => { const t = document.getElementById('tip'); return t && !t.hidden ? t.textContent : ''; });
-  ok('tooltips: al pasar por una medida se explica qué es', /8 de cada 10 tareas/.test(tip), tip);
+  ok('tooltips: al pasar por el plazo se explica qué significa, con su cifra', /^Lo que el área empieza hoy estará terminado, casi seguro, en [\d,]+ días o menos\./.test(tip), tip);
   // Fiabilidad: tira en el tablero y apartado propio
   const tira = await texto(p, '.fiab-tira');
   await clic(p, '.fiab-tira [data-accion="fiabilidad"]');
@@ -221,10 +222,15 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await p.context().close();
 }
 
-// 2c. Export con fallos: un fallo sembrado por comprobación, y la página los detecta todos
-{
+// 2c. Los dos ejemplos con fallos sembrados: la página detecta cada uno y no da falsas alarmas.
+// El mismo CSV, descargado y cargado desde la entrada sin la configuración de la demo, da las mismas comprobaciones.
+const CON_FALLOS = [
+  { id: 'fallos', nombre: 'export con fallos', csv: ['fallos', 'jira-con-fallos.csv'], fichero: 'export-jira-con-fallos.csv', nivel: 'Baja', n: 10, banda: /Export con fallos/ },
+  { id: 'aseguradora', nombre: 'aseguradora', csv: ['aseguradora', 'jira-aseguradora.csv'], fichero: 'export-jira-aseguradora.csv', nivel: 'Media', n: 3, banda: /Aseguradora ficticia/ },
+];
+for (const e of CON_FALLOS) {
   const p = await pagina(1280, 720);
-  await clic(p, '[data-accion="demo-fallos"]');
+  await clic(p, `[data-accion="demo"][data-d="${e.id}"]`);
   await listo(p); await p.waitForTimeout(300);
   const tira = await texto(p, '.fiab-tira'), banda = await texto(p, '.banda-demo');
   await clic(p, '.banda-demo [data-accion="fiabilidad"]');
@@ -233,21 +239,31 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
     revisar: [...document.querySelectorAll('.fiab-c.fiab-revisar h3')].map((x) => x.textContent).sort().join(', '),
     porEquipo: [...document.querySelectorAll('.tabla-fiab .fv-revisar')].length,
     sembrados: [...document.querySelectorAll('.tabla-sembrados tbody tr .chip')].map((x) => x.textContent),
+    nota: (document.querySelector('.sembrados .nota') || {}).textContent || '',
+    sinFallo: [...document.querySelectorAll('.sin-fallo .chip')].map((x) => x.textContent),
   }));
   const f = await leerFiab();
-  await p.screenshot({ path: join(SALIDA, 'fallos-fiabilidad.png'), fullPage: true });
-  ok('export con fallos: fiabilidad baja y los diez fallos sembrados detectados', /Fiabilidad baja/.test(tira) && /Export con fallos/.test(banda) && f.nivel === 'Baja' && f.sembrados.length === 10 && f.sembrados.every((x) => x === 'Detectado'), f.sembrados.filter((x) => x !== 'Detectado').length + ' sin detectar · ' + f.revisar);
-  const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-accion="bajar-fallos"]')]);
+  await p.screenshot({ path: join(SALIDA, e.id + '-fiabilidad.png'), fullPage: true });
+  ok(e.nombre + ': fiabilidad ' + e.nivel.toLowerCase() + ' y los ' + e.n + ' fallos sembrados detectados', new RegExp('Fiabilidad ' + e.nivel.toLowerCase()).test(tira) && e.banda.test(banda) && f.nivel === e.nivel && f.sembrados.length === e.n && f.sembrados.every((x) => x === 'Detectado'), f.sembrados.filter((x) => x !== 'Detectado').length + ' sin detectar · ' + f.revisar);
+  if (e.n < 10) ok(e.nombre + ': sin falsas alarmas y un equipo sin sprints no se marca', /sin falsas alarmas/.test(f.nota) && f.sinFallo.length === 1 && f.sinFallo[0] === 'No se marca' && f.revisar.split(', ').length === e.n, f.revisar + ' · ' + f.sinFallo.join(', '));
+  const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-accion="bajar-ejemplo"]')]);
   const bajado = readFileSync(await d.path(), 'utf8');
-  const original = readFileSync(join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv'), 'utf8');
-  ok('export con fallos: el CSV que se descarga es el del ejemplo', d.suggestedFilename() === 'export-jira-con-fallos.csv' && bajado === original, d.suggestedFilename() + ' ' + bajado.length);
-  // El mismo CSV cargado desde la entrada, sin la configuración de la demo: las comprobaciones salen igual
+  const original = readFileSync(join(RAIZ, 'datos-sinteticos', ...e.csv), 'utf8');
+  ok(e.nombre + ': el CSV que se descarga es el del ejemplo', d.suggestedFilename() === e.fichero && bajado === original, d.suggestedFilename() + ' ' + bajado.length);
+  if (e.id === 'aseguradora') {
+    // Cómo se ha leído cada columna: personas descartadas, campo propio ignorado y el equipo en Componentes
+    await clic(p, '[data-accion="como-sec"][data-s="fuentes"]');
+    const cols = await A(p, () => Object.fromEntries([...document.querySelectorAll('.tabla-cols tbody tr')].map((t) => [t.querySelector('th code').textContent, t.querySelector('td:last-child').textContent])));
+    const eq = await A(p, () => [...document.querySelectorAll('.tabla-cols tbody tr')].filter((t) => /Equipo de cada tarea/.test(t.textContent)).map((t) => t.querySelector('th code').textContent));
+    await p.screenshot({ path: join(SALIDA, 'aseguradora-columnas.png'), fullPage: true });
+    ok('aseguradora: tabla de columnas real (personas descartadas, Ramo ignorado, equipo en Componentes)', ['Persona asignada', 'Informador', 'Creador', 'Comentario'].every((k) => cols[k] === 'Se descarta') && cols['Campo personalizado (Ramo)'] === 'Se ignora' && cols['Estado'] === 'Se usa' && eq.join() === 'Componentes', JSON.stringify(eq));
+  }
   await clic(p, '[data-accion="salir-demo"]');
-  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv')); await listo(p); await p.waitForTimeout(300);
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-sinteticos', ...e.csv)); await listo(p); await p.waitForTimeout(300);
   await clic(p, '.fiab-tira [data-accion="fiabilidad"]');
   const g = await leerFiab();
-  ok('export con fallos cargado desde la entrada: las mismas comprobaciones por revisar', g.nivel === f.nivel && g.revisar === f.revisar && g.porEquipo === f.porEquipo && !g.sembrados.length, g.revisar);
-  ok('export con fallos sin errores de consola', !p.errores.length, p.errores.join(' | '));
+  ok(e.nombre + ' cargado desde la entrada: las mismas comprobaciones por revisar', g.nivel === f.nivel && g.revisar === f.revisar && g.porEquipo === f.porEquipo && !g.sembrados.length, g.revisar);
+  ok(e.nombre + ' sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 

@@ -1,0 +1,112 @@
+{
+  "version": 2,
+  "nombre": "Cliente sintético aseguradora",
+  "sector": "seguros",
+  "plataforma": "jira",
+  "mapeoEstados": {
+    "Tareas por hacer": "pendiente",
+    "En curso": "en_curso",
+    "En revisión": "en_revision",
+    "Bloqueado": "bloqueado",
+    "Listo": "terminado"
+  },
+  "equipos": {
+    "campo": "componentes",
+    "lista": [
+      {
+        "id": "sin",
+        "nombre": "Siniestros",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Negocio",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-09",
+            "valor": 6,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "pol",
+        "nombre": "Pólizas",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Negocio",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-09",
+            "valor": 5,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "can",
+        "nombre": "Canal digital",
+        "tipo": "proveedor",
+        "proveedor": "Proveedor Este",
+        "area": "Canales",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-09",
+            "valor": 7,
+            "origen": "contrato"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "int",
+        "nombre": "Integraciones",
+        "tipo": "proveedor",
+        "proveedor": "Proveedor Oeste",
+        "area": "Plataforma",
+        "usa_sprints": false,
+        "fte": [
+          {
+            "periodo": "2026-09",
+            "valor": 4,
+            "origen": "contrato"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "dat",
+        "nombre": "Datos y BI",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Plataforma",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-09",
+            "valor": 4,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      }
+    ]
+  },
+  "objetivos": [
+    "tardamos",
+    "arreglos",
+    "comparar",
+    "agentes",
+    "datos"
+  ],
+  "medidas": [
+    "ciclo",
+    "retrabajo",
+    "espera",
+    "entregas",
+    "agent_readiness"
+  ]
+}

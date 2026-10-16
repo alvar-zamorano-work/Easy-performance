@@ -16,10 +16,10 @@ export const DIFERENCIA_MINIMA = 0.25;
 
 export type Dimension = 'tipo' | 'proveedor' | 'area';
 export type Tamano = 'pequena' | 'media' | 'grande' | 'sin_estimar';
-export type MedidaComparable = 'plazo_p80' | 'retrabajo' | 'reabiertas' | 'bloqueo' | 'arrastradas';
-export const MEDIDAS_SEGMENTADAS: MedidaComparable[] = ['plazo_p80', 'retrabajo', 'reabiertas', 'bloqueo', 'arrastradas'];
+export type MedidaComparable = 'plazo_p85' | 'retrabajo' | 'reabiertas' | 'bloqueo' | 'arrastradas';
+export const MEDIDAS_SEGMENTADAS: MedidaComparable[] = ['plazo_p85', 'retrabajo', 'reabiertas', 'bloqueo', 'arrastradas'];
 /** Todas son "mejor cuanto más bajo". */
-const DELTA: Record<MedidaComparable, number> = { plazo_p80: DELTA_MIN.ciclo, retrabajo: 0.05, reabiertas: 0.03, bloqueo: 0.05, arrastradas: 0.05 };
+const DELTA: Record<MedidaComparable, number> = { plazo_p85: DELTA_MIN.ciclo, retrabajo: 0.05, reabiertas: 0.03, bloqueo: 0.05, arrastradas: 0.05 };
 
 export interface Grupo { id: string; nombre: string; equipos: string[] }
 export interface Celda { n: number; valor: number | null }
@@ -60,9 +60,9 @@ export function tamanoDe(d: Derivada): Tamano {
 }
 
 function valorMedida(m: MedidaComparable, ds: Derivada[]): Celda {
-  if (m === 'plazo_p80') {
+  if (m === 'plazo_p85') {
     const cs = ds.filter((d) => d.ciclo != null).map((d) => d.ciclo!);
-    return { n: cs.length, valor: cs.length >= MUESTRA_MINIMA ? cuantil(cs, 0.8) : null };
+    return { n: cs.length, valor: cs.length >= MUESTRA_MINIMA ? cuantil(cs, 0.85) : null };
   }
   const base = m === 'retrabajo' || m === 'bloqueo' ? ds.filter((d) => d.conTiempos) : ds;
   const n = base.length;
@@ -93,7 +93,7 @@ function sumaRangos(a: number[], b: number[]): number {
 
 const parteBloqueo = (d: Derivada) => (d.cursoMs + d.esperaMs ? d.bloqueoMs / (d.cursoMs + d.esperaMs) : 0);
 function continua(m: MedidaComparable): ((d: Derivada) => number | null) | null {
-  if (m === 'plazo_p80') return (d) => (d.ciclo != null ? d.ciclo : null);
+  if (m === 'plazo_p85') return (d) => (d.ciclo != null ? d.ciclo : null);
   if (m === 'bloqueo') return (d) => (d.conTiempos ? parteBloqueo(d) : null);
   return null;
 }
@@ -121,8 +121,8 @@ export function diferenciaEstratificada(m: MedidaComparable, a: Derivada[], b: D
       if (n1 < MINIMO_ESTRATO || n2 < MINIMO_ESTRATO) continue;
       num += sumaRangos(xa, xb) - n1 * (n1 + n2 + 1) / 2;
       varianza += n1 * n2 * (n1 + n2 + 1) / 12;
-      const va = m === 'plazo_p80' ? cuantil(xa, 0.8)! : xa.reduce((s, v) => s + v, 0) / n1;
-      const vb = m === 'plazo_p80' ? cuantil(xb, 0.8)! : xb.reduce((s, v) => s + v, 0) / n2;
+      const va = m === 'plazo_p85' ? cuantil(xa, 0.85)! : xa.reduce((s, v) => s + v, 0) / n1;
+      const vb = m === 'plazo_p85' ? cuantil(xb, 0.85)! : xb.reduce((s, v) => s + v, 0) / n2;
       const w = Math.min(n1, n2);
       sumaDif += w * (va - vb); sumaBase += w * vb; estratos++;
       if (vb && (va - vb) / vb >= DIFERENCIA_MINIMA) estratosPeor++;
@@ -182,7 +182,7 @@ export function comparar(p: Preparacion, equipos: Equipo[], dimension: Dimension
 
   const medidas = {} as Comparacion['medidas'];
   for (const m of MEDIDAS_SEGMENTADAS) {
-    const disponible = m === 'arrastradas' ? sprintsFiables : m === 'plazo_p80' || m === 'retrabajo' || m === 'bloqueo' ? p.ctx.det.hayTiempos : true;
+    const disponible = m === 'arrastradas' ? sprintsFiables : m === 'plazo_p85' || m === 'retrabajo' || m === 'bloqueo' ? p.ctx.det.hayTiempos : true;
     const segmentos: Segmento[] = [];
     const celda = (filtro: (d: Derivada) => boolean) => Object.fromEntries(grupos.map((g) => [g.id, valorMedida(m, terminadas[g.id].filter(filtro))]));
     segmentos.push({ tipo: 'todos', tamano: 'todos', porGrupo: celda(() => true) });

@@ -22,11 +22,11 @@ export function casosDeGrupo(comparaciones: Comparacion[]): CasoGrupo[] {
   for (const c of comparaciones) {
     const nombre = (id: string) => c.grupos.find((g) => g.id === id)?.nombre || id;
     const donde = NOMBRE_DIMENSION[c.dimension] + (c.ambito ? ' (' + c.ambito + ')' : '');
-    const plazo = c.diferencias.find((d) => d.medida === 'plazo_p80');
+    const plazo = c.diferencias.find((d) => d.medida === 'plazo_p85');
     if (plazo && plazo.peor) {
       const rel = plazo.valorResto ? plazo.valorPeor! / plazo.valorResto - 1 : null;
       out.push({ id: 'grupo_plazo', dimension: c.dimension, ambito: c.ambito, grupo: plazo.peor, gravedad: rel != null && rel >= 0.5 ? 'critico' : 'atencion',
-        evidencia: `En ${nombre(plazo.peor)}, 8 de cada 10 tareas se terminan en ${f(plazo.valorPeor, 'dias')}; en el resto, en ${f(plazo.valorResto, 'dias')}. La diferencia se mantiene dentro del mismo tipo y tamaño de tarea (${plazo.segmentosConDiferencia} de ${plazo.segmentosComparables} segmentos). Comparación: ${donde}.`,
+        evidencia: `En ${nombre(plazo.peor)}, lo que se empieza se termina, casi seguro, en ${f(plazo.valorPeor, 'dias')} o menos; en el resto, en ${f(plazo.valorResto, 'dias')}. La diferencia se mantiene dentro del mismo tipo y tamaño de tarea (${plazo.segmentosConDiferencia} de ${plazo.segmentosComparables} segmentos). Comparación: ${donde}.`,
         datos: { valor: plazo.valorPeor, resto: plazo.valorResto, segmentos: plazo.segmentosComparables } });
     }
     const calidad = c.diferencias.filter((d) => d.medida === 'retrabajo' || d.medida === 'reabiertas');

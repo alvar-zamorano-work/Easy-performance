@@ -1,6 +1,7 @@
 // Columnas del export CSV de Jira (inglés y castellano). Nunca se leen columnas de personas.
 
 import { interior, norm } from '../../nucleo/util.ts';
+import { leerCSV } from '../comun/csv.ts';
 
 export const ALIAS: Record<string, string[]> = {
   clave: ['issue key', 'work item key', 'key', 'clave', 'clave de incidencia', 'clave de la incidencia', 'clave del elemento de trabajo', 'clave de elemento de trabajo'],
@@ -49,5 +50,71 @@ export function mapearColumnas(cab: string[]): MapaColumnas {
 export function columnasDeEnlaces(cab: string[]): number[] {
   const out: number[] = [];
   cab.forEach((h, i) => { if (/^(outward|inward) issue link|^vinculo de (la )?incidencia|^enlace de (la )?incidencia/.test(norm(h))) out.push(i); });
+  return out;
+}
+
+// ---------- Cómo se ha leído cada columna (la parte de la capa semántica que ya funciona con Jira) ----------
+
+/** Columnas de personas o de texto libre con nombres. Se descartan siempre; ante la duda, también. */
+const PERSONAS = ['assignee', 'reporter', 'creator', 'watchers', 'persona asignada', 'responsable', 'informador', 'creador', 'observadores', 'votantes', 'voters', 'project lead', 'responsable del proyecto'];
+const TEXTO_CON_NOMBRES = ['comment', 'comments', 'comentario', 'comentarios', 'log work', 'registro de trabajo', 'attachment', 'archivo adjunto', 'adjuntos'];
+const PARECE_PERSONA = /\b(user|usuario|email|correo|account id|id de cuenta)\b/;
+
+/** Qué es cada campo, en palabras llanas. */
+const QUE_ES: Record<string, string> = {
+  clave: 'Clave de la tarea', resumen: 'Título: solo en memoria, no sale en el paquete', descripcion: 'Descripción: solo para ver si el ticket está bien definido',
+  tipo: 'Tipo: historia, error, tarea o épica', estado: 'Estado: se traduce a uno de los nueve comunes', categoria: 'Categoría del estado: ayuda si el nombre no basta',
+  cambioCategoria: 'Fecha del último cambio de estado', creada: 'Fecha de creación', actualizada: 'Fecha de la última actualización', resuelta: 'Fecha de terminado',
+  resolucion: 'Resolución: separa lo descartado de lo terminado', prioridad: 'Prioridad', componentes: 'Componente', etiquetas: 'Etiquetas',
+  sprint: 'Sprints por los que pasó: se juntan en una lista', puntos: 'Estimación', equipo: 'Campo Equipo', tis: 'Tiempo en cada estado',
+  primera: 'Fecha de la primera respuesta', padre: 'Épica a la que pertenece (título)', padreClave: 'Épica a la que pertenece (clave)', proyecto: 'Proyecto',
+};
+/** Campos de los que no se enseña un ejemplo: texto libre o valores ilegibles. */
+const SIN_EJEMPLO: Record<string, 1> = { resumen: 1, descripcion: 1, tis: 1 };
+
+export type AccionColumna = 'usa' | 'descarta' | 'ignora';
+export interface ColumnaLeida {
+  /** Nombre de la columna tal como viene en el export. */
+  columna: string;
+  /** Cuántas columnas tienen ese nombre (Sprint suele venir repetida). */
+  veces: number;
+  /** Campo del modelo al que va, o null si no se usa. */
+  campo: string | null;
+  que: string;
+  accion: AccionColumna;
+  /** Un valor de ejemplo, solo de columnas que se usan y sin texto libre. Nunca de personas. */
+  ejemplo: string | null;
+}
+
+/** Describe columna a columna cómo se lee un export de Jira: qué es, si se usa, se descarta o se ignora. */
+export function describirColumnas(texto: string): ColumnaLeida[] {
+  // Basta con la cabecera y unas filas para los ejemplos
+  const filas = leerCSV(texto.slice(0, 200000));
+  if (!filas.length) return [];
+  const cab = filas[0], muestra = filas.slice(1, 400);
+  const mapa = mapearColumnas(cab);
+  const campoDe: Record<number, string> = {};
+  Object.keys(mapa).forEach((campo) => { const v = mapa[campo]; (Array.isArray(v) ? v : [v]).forEach((i) => { campoDe[i] = campo; }); });
+  const out: ColumnaLeida[] = [], vistas: Record<string, ColumnaLeida> = {};
+  cab.forEach((h, i) => {
+    const nombre = String(h).trim();
+    if (vistas[nombre]) { vistas[nombre].veces++; return; }
+    const n = norm(nombre), x = interior(nombre);
+    const persona = PERSONAS.some((p) => n === p || x === p || n.startsWith(p + ' ')) || PARECE_PERSONA.test(n);
+    const conNombres = TEXTO_CON_NOMBRES.some((p) => n === p || x === p || n.startsWith(p + ' '));
+    const campo = persona || conNombres ? null : campoDe[i] || null;
+    let ejemplo: string | null = null;
+    if (campo && !SIN_EJEMPLO[campo]) {
+      const fila = muestra.find((f) => f[i] && String(f[i]).trim());
+      if (fila) { const v = String(fila[i]).trim().replace(/\s+/g, ' '); ejemplo = v.length > 32 ? v.slice(0, 31) + '…' : v; }
+    }
+    const c: ColumnaLeida = {
+      columna: nombre, veces: 1, campo, ejemplo,
+      que: persona ? 'Persona' : conNombres ? 'Texto que puede llevar nombres' : campo ? QUE_ES[campo] : 'Sin reconocer',
+      accion: persona || conNombres ? 'descarta' : campo ? 'usa' : 'ignora',
+    };
+    vistas[nombre] = c;
+    out.push(c);
+  });
   return out;
 }

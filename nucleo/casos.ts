@@ -18,7 +18,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   if (eq.umbralEdad != null && eq.atascadas.length) {
     const n = eq.atascadas.length, maxR = eq.atascadas[0].edad / eq.umbralEdad;
     if (n >= 2 || maxR >= 2) add('atascado', n >= 4 || maxR >= 2.5,
-      n + (n === 1 ? ' tarea en curso supera' : ' tareas en curso superan') + ' los ' + f(eq.umbralEdad, 'dias') + ' en los que el equipo termina 8 de cada 10 tareas. La más antigua, ' + eq.atascadas[0].clave + ', lleva ' + f(eq.atascadas[0].edad, 'dias') + '.',
+      n + (n === 1 ? ' tarea en curso supera' : ' tareas en curso superan') + ' los ' + f(eq.umbralEdad, 'dias') + ' en los que el equipo termina casi todo lo que empieza. La más antigua, ' + eq.atascadas[0].clave + ', lleva ' + f(eq.atascadas[0].edad, 'dias') + '.',
       { n, umbral: eq.umbralEdad, maxEdad: eq.atascadas[0].edad, clave: eq.atascadas[0].clave });
   }
   // 2 demasiado a la vez

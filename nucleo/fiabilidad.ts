@@ -126,7 +126,7 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
     { valor: String(bloques.length), estado: bloques.length ? 'revisar' : 'bien',
       detalle: bloques.length ? bloques.length + (bloques.length === 1 ? ' cierre en bloque' : ' cierres en bloque') + ', con ' + bloques.reduce((s, b) => s + b.n, 0) + ' tareas en total.' : 'No hay cierres masivos.' });
 
-  nuevo('registro', 'Registro a tiempo', 'Si las tareas se crean antes de hacer el trabajo y no después, para apuntarlo.', '8 de cada 10 tardan un día o más',
+  nuevo('registro', 'Registro a tiempo', 'Si las tareas se crean antes de hacer el trabajo y no después, para apuntarlo.', '15% o más: si casi todo se cierra el mismo día en que se crea, se apuntó al terminar',
     'Crear las tareas al planificar, no al terminar el trabajo.', conEquipos('registro', area.registro));
   nuevo('estimacion', 'Historias estimadas', 'Parte de las historias con estimación. Sin ella no se puede ver si las estimaciones predicen.', '70% o más',
     'Estimar las historias antes de empezar, aunque sea con tallas.', conEquipos('estimacion', area.estimacion));

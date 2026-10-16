@@ -30,9 +30,9 @@ export interface Sembrado {
   tareas: number;
 }
 
-interface Tiempo { id: string; n: number; v: number }
-const leerTis = (s: string): Tiempo[] => (s ? s.split('_*|*_').map((x) => { const [id, n, v] = x.split('_*:*_'); return { id, n: +n, v: +v }; }) : []);
-const escribirTis = (t: Tiempo[]) => t.map((x) => `${x.id}_*:*_${x.n}_*:*_${Math.max(0, Math.round(x.v))}`).join('_*|*_');
+export interface Tiempo { id: string; n: number; v: number }
+export const leerTis = (s: string): Tiempo[] => (s ? s.split('_*|*_').map((x) => { const [id, n, v] = x.split('_*:*_'); return { id, n: +n, v: +v }; }) : []);
+export const escribirTis = (t: Tiempo[]) => t.map((x) => `${x.id}_*:*_${x.n}_*:*_${Math.max(0, Math.round(x.v))}`).join('_*|*_');
 
 export function generarFallos() {
   const { cab, filas: limpias } = generar();

@@ -43,7 +43,7 @@
       "dir": "menos",
       "formato": "dias",
       "requiere": "tiempos",
-      "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que terminan 8 de cada 10 tareas de las últimas 4 semanas."
+      "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que se termina casi todo lo empezado: el 85% de las tareas de las últimas 4 semanas."
     },
     "total": {
       "nombre": "Tiempo total",
@@ -51,7 +51,7 @@
       "unidad": "días",
       "dir": "menos",
       "formato": "dias",
-      "como": "Días desde que se crea una tarea hasta que se termina. Plazo en el que terminan 8 de cada 10 tareas de las últimas 4 semanas."
+      "como": "Días desde que se crea una tarea hasta que se termina. Plazo en el que se termina casi todo: el 85% de las tareas de las últimas 4 semanas."
     },
     "espera": {
       "nombre": "Tiempo en espera",
@@ -73,7 +73,7 @@
       "dir": "menos",
       "formato": "num",
       "requiere": "inicio",
-      "como": "Tareas en curso que ya llevan más tiempo que el plazo en el que el equipo termina 8 de cada 10 tareas.",
+      "como": "Tareas en curso que ya llevan más tiempo que el plazo en el que el equipo termina casi todo lo que empieza (el 85% de las tareas).",
       "limites": {
         "atencion": 2,
         "critico": 4
@@ -181,7 +181,7 @@
       "dir": "menos",
       "formato": "horas",
       "requiere": "primera",
-      "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atienden 8 de cada 10 tareas creadas en las últimas 4 semanas."
+      "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atiende casi todo: el 85% de las tareas creadas en las últimas 4 semanas."
     },
     "agent_readiness": {
       "nombre": "Listo para agentes",

@@ -30,9 +30,10 @@ export function calidadEquipo(items: Derivada[], c: ContextoCalculo, sp: InfoSpr
   if (ent.length && saltos / ent.length > 0.05) avisos.push(Math.round(saltos / ent.length * 100) + '% de lo terminado pasó de pendiente a hecho sin estar en curso (' + saltos + ' tareas).');
   if (bloque.length) avisos.push(bloque.length === 1 ? 'Hay un cierre en bloque: ' + bloque[0].n + ' tareas cerradas en el mismo minuto (' + fechaCorta(bloque[0].fecha) + ').' : 'Hay ' + bloque.length + ' cierres en bloque (10 o más tareas cerradas en el mismo minuto).');
   const totales = ent.map((d) => d.total);
-  if (ent.length >= 30 && cuantil(totales, 0.85)! < 1) avisos.push('8 de cada 10 tareas se cierran en menos de un día desde que se crean: parece que se registran en Jira después de hacer el trabajo.');
+  if (ent.length >= 30 && cuantil(totales, 0.85)! < 1) avisos.push('Casi todas las tareas se cierran menos de un día después de crearse: parece que se registran en Jira después de hacer el trabajo.');
   if (historias.length >= 10 && sinPuntos / historias.length > 0.3) avisos.push(Math.round(sinPuntos / historias.length * 100) + '% de las historias no tienen puntos.');
-  if (det.haySprints && !sp.fiables && sp.motivo) avisos.push(sp.motivo);
+  // Un equipo que no usa sprints (Kanban) no es un fallo: solo se avisa si los usa y no son creíbles
+  if (det.haySprints && !sp.fiables && sp.motivo && items.some((d) => d.t.sprints.length > 0)) avisos.push(sp.motivo);
   if (det.hayTiempos && items.length && items.filter((d) => d.t.fechas.terminada && !d.conTiempos).length / items.length > 0.2) avisos.push('Muchas tareas cerradas no traen Tiempo en estado.');
   return { saltos, saltosParte: ent.length ? saltos / ent.length : 0, sinPuntos, historias: historias.length, cierresBloque: bloque, avisos };
 }

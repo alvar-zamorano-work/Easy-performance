@@ -39,6 +39,10 @@ export interface EquipoSintetico {
   pRetrabajo: number; pReabrir: number;
   /** Probabilidad de que cada criterio de agent readiness se cumpla en sus tickets. */
   pCriterio: number;
+  /** Trabaja sin sprints (Kanban). */
+  sinSprints?: boolean;
+  /** Tareas nuevas por semana, mínimo y máximo (por defecto 5 a 7). */
+  llegadas?: [number, number];
 }
 
 export const EQUIPOS: EquipoSintetico[] = [
@@ -130,33 +134,41 @@ const palabras = (s: string) => s.split(/\s+/).filter(Boolean).length;
 // ---------- generación ----------
 export interface TicketEsperado { equipo: string; criterios: Criterios; indice: number }
 
-export function generar() {
-  const az = azar(SEMILLA);
+/** Para generar otro cliente con el mismo motor. Sin opciones sale B3. */
+export interface OpcionesGenerar {
+  semilla?: number; equipos?: EquipoSintetico[]; iniciativas?: IniciativaSintetica[];
+  inicio?: Date; fin?: Date; semanas?: number; proyecto?: string; temas?: string[];
+}
+
+export function generar(o: OpcionesGenerar = {}) {
+  const az = azar(o.semilla ?? SEMILLA);
+  const EQS = o.equipos ?? EQUIPOS, INIS = o.iniciativas ?? INICIATIVAS, TEMAS_ = o.temas ?? TEMAS;
+  const INICIO_ = o.inicio ?? INICIO, FIN = o.fin ?? EXPORT, SEMANAS_ = o.semanas ?? SEMANAS, PROYECTO = o.proyecto ?? 'Plataforma Digital';
   const filas: string[][] = [];
   const esperado: Record<string, TicketEsperado> = {};
   const cab = ['Summary', 'Issue key', 'Issue id', 'Issue Type', 'Status', 'Project key', 'Project name', 'Priority', 'Resolution', 'Assignee', 'Reporter',
     'Created', 'Updated', 'Resolved', 'Components', 'Labels', 'Description', 'Custom field (Story Points)', 'Custom field (Team)', 'Sprint', 'Sprint',
     'Custom field ([CHART] Date of First Response)', 'Custom field ([CHART] Time in Status)', 'Parent key', 'Parent summary', 'Status category', 'Status category changed'];
   let id = 20000;
-  for (const eq of EQUIPOS) {
+  for (const eq of EQS) {
     let n = 0;
     const clave = () => `${eq.prefijo}-${++n}`;
     const epicas = ['Nuevas funciones', 'Calidad y deuda técnica', 'Cumplimiento normativo'].map((titulo) => {
       const k = clave();
-      filas.push([titulo, k, String(++id), 'Epic', 'In Progress', eq.prefijo, 'Plataforma Digital', 'Medium', '', `Persona ${eq.prefijo}1`, `Persona ${eq.prefijo}2`,
-        fechaJira(INICIO), fechaJira(INICIO), '', eq.nombre, '', '', '', eq.nombre, '', '', '', '', '', '', 'In Progress', fechaJira(INICIO)]);
+      filas.push([titulo, k, String(++id), 'Epic', 'In Progress', eq.prefijo, PROYECTO, 'Medium', '', `Persona ${eq.prefijo}1`, `Persona ${eq.prefijo}2`,
+        fechaJira(INICIO_), fechaJira(INICIO_), '', eq.nombre, '', '', '', eq.nombre, '', '', '', '', '', '', 'In Progress', fechaJira(INICIO_)]);
       return { k, titulo };
     });
-    const ini = INICIATIVAS.find((i) => i.equipo === eq.nombre);
+    const ini = INIS.find((i) => i.equipo === eq.nombre);
     const inicioIni = ini ? new Date(ini.inicio + 'T09:00:00').getTime() + 14 * DIA : Infinity;
-    for (let w = 0; w < SEMANAS; w++) {
-      const llegadas = az.entero(5, 7);
+    for (let w = 0; w < SEMANAS_; w++) {
+      const llegadas = az.entero(...(eq.llegadas ?? [5, 7]));
       for (let j = 0; j < llegadas; j++) {
-        const creada = laborable(new Date(INICIO.getTime() + w * 7 * DIA + az.entre(0, 5) * DIA + az.entre(0, 8) * 36e5));
-        if (creada >= EXPORT) continue;
+        const creada = laborable(new Date(INICIO_.getTime() + w * 7 * DIA + az.entre(0, 5) * DIA + az.entre(0, 8) * 36e5));
+        if (creada >= FIN) continue;
         const tipo = az.peso<[string, string]>([[['Story', 'historia'], 60], [['Bug', 'error'], 25], [['Task', 'tarea'], 15]]);
         const puntos = az.peso([[1, 15], [2, 25], [3, 30], [5, 20], [8, 10]]);
-        const tema = az.elegir(TEMAS);
+        const tema = az.elegir(TEMAS_);
         const titulo = (tipo[0] === 'Bug' ? 'Corregir ' : tipo[0] === 'Task' ? 'Preparar ' : 'Mejorar ') + tema;
         const k = clave();
         // Tiempos (días): espera sin empezar, trabajo, revisión y bloqueo
@@ -177,7 +189,7 @@ export function generar() {
         let estado: Estado;
         const tis: Record<Estado, [number, number]> = { 'To Do': [1, 0], 'In Progress': [0, 0], 'In Review': [0, 0], 'Blocked': [0, 0], 'Done': [0, 0] };
         let resuelta: Date | null = null, cambio: Date;
-        if (fin < EXPORT) {
+        if (fin < FIN) {
           estado = 'Done';
           resuelta = fin;
           cambio = fin;
@@ -186,8 +198,8 @@ export function generar() {
           tis['In Review'] = [vuelve ? 2 : 1, Math.round(revision * DIA)];
           if (bloqueo) tis['Blocked'] = [1, Math.round(bloqueo * DIA)];
           tis['Done'] = [reabre ? 2 : 1, 0];
-        } else if (inicio < EXPORT) {
-          const transcurrido = (EXPORT.getTime() - inicio.getTime()) / DIA;
+        } else if (inicio < FIN) {
+          const transcurrido = (FIN.getTime() - inicio.getTime()) / DIA;
           tis['To Do'] = [1, inicio.getTime() - creada.getTime()];
           if (bloqueo && transcurrido > trabajo * 0.5 && transcurrido < trabajo * 0.5 + bloqueo) {
             estado = 'Blocked';
@@ -223,13 +235,13 @@ export function generar() {
         c.contenido = c.contenido && palabras(texto) >= 40;
         esperado[k] = { equipo: eq.nombre, criterios: c, indice: Object.values(c).filter(Boolean).length };
         // Sprints de dos semanas
-        const sprintDe = (d: Date) => `${eq.prefijo} Sprint ${Math.floor((d.getTime() - INICIO.getTime()) / (14 * DIA)) + 1}`;
-        const sprints = estado === 'To Do' ? [] : [...new Set([sprintDe(inicio), sprintDe(resuelta || EXPORT)])];
+        const sprintDe = (d: Date) => `${eq.prefijo} Sprint ${Math.floor((d.getTime() - INICIO_.getTime()) / (14 * DIA)) + 1}`;
+        const sprints = estado === 'To Do' || eq.sinSprints ? [] : [...new Set([sprintDe(inicio), sprintDe(resuelta || FIN)])];
         const epica = az.elegir(epicas);
         const tisTexto = (Object.keys(tis) as Estado[]).filter((e) => tis[e][0] > 0 && (tis[e][1] > 0 || e === estado))
           .map((e) => `${ID_ESTADO[e]}_*:*_${tis[e][0]}_*:*_${Math.max(0, Math.round(tis[e][1]))}`).join('_*|*_');
         const actualizada = resuelta || cambio;
-        filas.push([titulo, k, String(++id), tipo[0], estado, eq.prefijo, 'Plataforma Digital', az.peso([['High', 20], ['Medium', 60], ['Low', 20]]),
+        filas.push([titulo, k, String(++id), tipo[0], estado, eq.prefijo, PROYECTO, az.peso([['High', 20], ['Medium', 60], ['Low', 20]]),
           resuelta ? 'Done' : '', `Persona ${eq.prefijo}${az.entero(1, 5)}`, `Persona ${eq.prefijo}${az.entero(1, 5)}`,
           fechaJira(creada), fechaJira(actualizada), resuelta ? fechaJira(resuelta) : '', eq.nombre, '', texto, puntos.toFixed(1), eq.nombre,
           sprints[0] || '', sprints[1] || '', fechaIso(new Date(creada.getTime() + az.entre(1, 20) * 36e5)), tisTexto, epica.k, epica.titulo,
@@ -253,7 +265,7 @@ export function ficheros(): Record<string, string> {
     equipos: EQUIPOS.map(({ nombre, tipo, proveedor, area, fte }) => ({ nombre, tipo, proveedor, area, fte })),
     diferencia_entre_grupos: {
       que: 'Dentro del mismo tipo y tamaño de tarea, los proveedores tardan más (plazo) y vuelven atrás y reabren más que los internos.',
-      medidas: { plazo_p80: 'proveedor', retrabajo: 'proveedor', reabiertas: 'proveedor' },
+      medidas: { plazo_p85: 'proveedor', retrabajo: 'proveedor', reabiertas: 'proveedor' },
     },
     agent_readiness_bajo: 'App móvil',
     iniciativas: INICIATIVAS.map(({ id, equipo, inicio, medida, direccion, conEfecto }) => ({ id, equipo, inicio, medida, direccion, conEfecto })),

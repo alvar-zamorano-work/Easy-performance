@@ -1,0 +1,21 @@
+{
+  "id": "definicion-listo-siniestros",
+  "nombre": "Definición de listo en Siniestros",
+  "descripcion": "Ninguna historia entra en el sprint sin criterios de aceptación revisados con negocio.",
+  "fecha_inicio": "2026-05-04",
+  "fecha_fin": null,
+  "equipos": [
+    "Siniestros"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "retrabajo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Retrabajo por debajo del 12% en dos meses.",
+  "estado": "en_curso",
+  "origen": "retrabajo",
+  "evaluacion": null,
+  "notas": ""
+}

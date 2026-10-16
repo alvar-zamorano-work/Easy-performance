@@ -1,0 +1,18 @@
+{
+  "documentos": [
+    {
+      "categoria": "metodo",
+      "titulo": "Cómo trabajan los equipos",
+      "resumen": "Scrum con sprints de dos semanas en Siniestros, Pólizas, Canal digital y Datos y BI. Integraciones trabaja en Kanban.",
+      "fuente": "Entrevista con los responsables de equipo",
+      "fecha": "2026-10-07"
+    },
+    {
+      "categoria": "contratos",
+      "titulo": "Contratos con proveedores",
+      "resumen": "Proveedor Este (Canal digital) y Proveedor Oeste (Integraciones) trabajan por capacidad, con FTE fijos al mes.",
+      "fuente": "Dirección de tecnología",
+      "fecha": "2026-10-07"
+    }
+  ]
+}

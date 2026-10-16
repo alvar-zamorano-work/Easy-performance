@@ -37,7 +37,7 @@
 
   // Las cinco medidas del tablero: siempre las mismas, para todos los clientes
   var MED = {
-    ciclo: { nombre: 'Plazo', formato: 'dias', unidad: 'días', que: 'Días para terminar 8 de cada 10 tareas, desde que empiezan. Mejor cuanto más bajo.' },
+    ciclo: { nombre: 'Plazo', formato: 'dias', unidad: 'días', que: 'Lo que se empieza hoy estará terminado, casi seguro, en este plazo o antes. Si sube, se tarda más en terminar lo que se empieza.' },
     entregas: { nombre: 'Entregas', formato: 'num', unidad: 'por semana', que: 'Tareas terminadas cada semana. Las descartadas no cuentan.' },
     retrabajo: { nombre: 'Retrabajo', formato: 'pct', unidad: 'de lo terminado', que: 'Parte de lo terminado que volvió a un estado por el que ya había pasado.' },
     arrastradas: { nombre: 'Pasa de sprint', formato: 'pct', unidad: 'de lo terminado', que: 'Parte de lo terminado que pasó por más de un sprint.' },
@@ -283,9 +283,19 @@
   }
 
   // ---------- demo con datos de ejemplo ----------
-  // conFallos: el mismo banco con un fallo sembrado por cada comprobación de fiabilidad
-  function verDemo(simulada, conFallos) {
-    var pre = conFallos ? 'demo-fallos-' : 'demo-';
+  // Tres ejemplos para cargar: el banco con datos limpios, una aseguradora con algunos fallos y el banco con un
+  // fallo sembrado por cada comprobación de fiabilidad. Cada uno lleva su export de Jira y su carpeta de cliente.
+  var DEMOS = {
+    b3: { pre: 'demo-', fichero: 'datos-de-ejemplo.csv', nombre: 'Banco ficticio', sub: 'Datos limpios', nivel: 'alta',
+      banda: '<b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.' },
+    aseguradora: { pre: 'demo-aseguradora-', fichero: 'export-jira-aseguradora.csv', nombre: 'Aseguradora ficticia', sub: 'Algunos datos por revisar', nivel: 'media',
+      banda: '<b>Aseguradora ficticia:</b> cinco equipos y un export de Jira en castellano, con el equipo en Componentes. Tres datos por revisar; el resto está bien.' },
+    fallos: { pre: 'demo-fallos-', fichero: 'export-jira-con-fallos.csv', nombre: 'Banco con fallos', sub: 'Un fallo en cada comprobación', nivel: 'baja',
+      banda: '<b>Export con fallos:</b> el mismo banco ficticio con un fallo sembrado en los datos por cada comprobación de fiabilidad.' }
+  };
+  function verDemo(simulada, cual) {
+    cual = DEMOS[cual] ? cual : 'b3';
+    var pre = DEMOS[cual].pre;
     var t = (document.getElementById(pre + 'csv') || {}).textContent || '';
     if (!t.trim()) { aviso('Esta copia no incluye datos de ejemplo.'); return; }
     var dc = {}; try { dc = JSON.parse(document.getElementById(pre + 'cliente').textContent || '{}'); } catch (e) { dc = {}; }
@@ -294,8 +304,8 @@
       App.demo = true;
       App.cfg = { nombre: dc.nombre || 'Banco ficticio', equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {} };
       App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null;
-      App.sembrados = conFallos ? (dc.sembrados || []) : null;
-      procesar([{ nombre: conFallos ? 'export-jira-con-fallos.csv' : 'datos-de-ejemplo.csv', texto: t }], 'ejemplo');
+      App.demoId = cual; App.sembrados = dc.sembrados || null; App.sinFallo = dc.sin_fallo || [];
+      procesar([{ nombre: DEMOS[cual].fichero, texto: t }], 'ejemplo');
       App.simulada = FUENTES[simulada] && !FUENTES[simulada].otra ? simulada : null; App.fuente = null;
       render(); window.scrollTo(0, 0);
       animarCarga(App.simulada);
@@ -307,7 +317,7 @@
     App.demo = false;
     App.lectura = r.lectura || null; App.det = r.det || null; App.cfg = r.cfg || cfgInicial(); App.iniciativas = r.iniciativas || [];
     App.contexto = r.contexto || null; App.r = r.r || null; App.origen = r.origen || null; App.ver = r.ver || 'area';
-    App.generadas = !!r.generadas; App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0; App.simulada = null; App.sembrados = null;
+    App.generadas = !!r.generadas; App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0; App.simulada = null; App.sembrados = null; App.sinFallo = null; App.demoId = null;
     App.vista = App.r ? 'tablero' : 'inicio'; App.real = null; App.editar = null;
     if (pintar !== false) { render(); window.scrollTo(0, 0); }
   }
@@ -334,8 +344,13 @@
       '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="actualizar">Actualizar</button></div></header>';
   }
   function bandaDemo() {
-    if (App.sembrados) return '<div class="banda-demo banda-fallos"><span><b>Export con fallos:</b> el mismo banco ficticio con ' + App.sembrados.length + ' fallos sembrados en los datos, uno por cada comprobación de fiabilidad.</span>' +
-      '<span class="banda-acc"><button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button><button class="btn-txt" data-accion="demo">Ver el ejemplo sin fallos</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
+    if (!App.simulada && App.demoId && App.demoId !== 'b3') {
+      var otros = Object.keys(DEMOS).filter(function (k) { return k !== App.demoId; });
+      return '<div class="banda-demo"><span>' + DEMOS[App.demoId].banda + '</span><span class="banda-acc">' +
+        (App.sembrados ? '<button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button>' : '') +
+        otros.map(function (k) { return '<button class="btn-txt" data-accion="demo" data-d="' + k + '">' + esc(DEMOS[k].nombre) + '</button>'; }).join('') +
+        '<button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
+    }
     return '<div class="banda-demo"><span>' + (App.simulada ? '<b>Simulación de ' + esc(FUENTES[App.simulada].nombre) + ':</b> datos de ejemplo de un banco ficticio, con costes inventados.' :
       '<b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.') + '</span>' +
       '<span class="banda-acc"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
@@ -348,7 +363,11 @@
       '<h1 class="claim">Deja de montar el informe. <em>Empieza a usarlo.</em></h1>' +
       '<p class="inicio-sub">Conecta la herramienta donde trabajan vuestros equipos. Verás cómo va cada uno, cuánto cuesta y qué hacer, con las mismas reglas para todos.</p>' +
       '<ol class="metodo-mini" aria-label="El método">' + ['Leer', 'Hacer fiable', 'Medir', 'Recomendar'].map(function (t, k) { return '<li><span>' + (k + 1) + '</span>' + t + '</li>'; }).join('') + '</ol>' +
-      '<p class="inicio-pie"><button class="btn-txt" data-accion="demo">Ver con datos de ejemplo</button><button class="btn-txt" data-accion="demo-fallos">Ver un ejemplo con fallos en los datos</button><button class="btn-txt" data-accion="presentacion">Ver la presentación</button></p>' +
+      '<div class="ejemplos" role="group" aria-label="Ejemplos para cargar"><p>O carga un ejemplo</p>' + Object.keys(DEMOS).map(function (k) {
+        var d = DEMOS[k], n = NIVEL[d.nivel];
+        return '<button class="ejemplo" data-accion="demo" data-d="' + k + '"><b>' + esc(d.nombre) + '</b><small>' + esc(d.sub) + '</small><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span></button>';
+      }).join('') + '</div>' +
+      '<p class="inicio-pie"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button></p>' +
       '<p class="nota">Los datos no salen de este ordenador: todo se calcula en el navegador.</p></div>' +
       '<section class="fuentes" aria-label="De dónde salen los datos">' + (f ? panelFuente(App.fuente, f) : panelFuentes()) + '</section></div></div>';
   }
@@ -400,7 +419,13 @@
     else if ((e === 'atencion' || e === 'critico') && m.estadoTexto) normal = m.estadoTexto.replace(/su rango habitual/g, 'lo normal');
     else if (m && m.ref) normal = 'Lo normal: ' + rango(id, m.ref.lo, m.ref.hi);
     else normal = def.que.split('.')[0] + '.';
-    return '<article class="kpi"><div class="kpi-cab">' + conTip(def.nombre, def.que) + chip(e, true) + '</div>' +
+    // La ayuda del plazo lleva la cifra real: qué se puede esperar de lo que se empieza hoy
+    var tip = def.que;
+    if (id === 'ciclo' && m && m.disponible && m.valor != null) {
+      var quien = App.ver && App.ver !== 'area' ? 'este equipo' : 'el área';
+      tip = 'Lo que ' + quien + ' empieza hoy estará terminado, casi seguro, en ' + c.g + ' ' + c.u + ' o menos. Si sube, ' + quien.replace('este ', 'el ') + ' tarda más en terminar lo que empieza.';
+    }
+    return '<article class="kpi"><div class="kpi-cab">' + conTip(def.nombre, tip) + chip(e, true) + '</div>' +
       '<div class="kpi-v"><b>' + esc(c.g) + '</b><span>' + esc(c.u) + '</span></div><p class="kpi-n">' + esc(normal) + '</p>' + (conSerie ? chispa(m, e, def.nombre) : '') + '</article>';
   }
   function serieUltima(m, k) { var s = (m && m.serie) || []; return s.slice(Math.max(0, s.length - k)); }
@@ -444,7 +469,7 @@
     var c = App.r.comparaciones.filter(function (x) { return x.dimension === 'tipo'; })[0];
     if (!c) return '<section class="bloque"><h2>Internos y proveedores</h2><p class="nota">Para comparar, indica qué equipos son de un proveedor en <button class="btn-txt" data-accion="editar" data-e="equipos">Cómo funciona</button>.</p></section>';
     var g = c.grupos, peor = {}; c.diferencias.forEach(function (d) { peor[d.medida + '|' + d.peor] = 1; });
-    var filas = [['plazo_p80', 'Plazo', 'ciclo'], ['retrabajo', 'Retrabajo', 'retrabajo'], ['arrastradas', 'Pasa de sprint', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
+    var filas = [['plazo_p85', 'Plazo', 'ciclo'], ['retrabajo', 'Retrabajo', 'retrabajo'], ['arrastradas', 'Pasa de sprint', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
     if (!filas.length) return '';
     var cg = N.costeDeGrupos(c, cfgCalculo());
     var capac = function (titulo, f, tip) {
@@ -485,7 +510,7 @@
     var recs = recomendaciones().filter(function (x) { return x.equipos.indexOf(eq.nombre) >= 0; });
     var html = '<section class="titular"><div><button class="btn-txt" data-accion="ver" data-e="area">Volver al área</button><h1>' + esc(titular) + '</h1><p>' + esc(sub) + '</p></div>' + selector() + '</section>';
     html += '<section class="kpis" aria-label="Indicadores del equipo">' + KPI_EQUIPO.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
-    html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>El plazo, semana a semana</h2><p class="nota">Días para terminar 8 de cada 10 tareas. La franja es lo normal en este equipo.</p>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
+    html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>El plazo, semana a semana</h2><p class="nota">Cuánto tarda el equipo en terminar lo que empieza, semana a semana. La franja es lo normal en este equipo.</p>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
       bloqueRecEquipo(eq, recs, fuera) + '</div>';
     return html;
   }
@@ -963,8 +988,18 @@
   function panelSembrados(f) {
     var filas = App.sembrados.map(function (s) { return { s: s, d: detectado(s, f) }; });
     var n = filas.filter(function (x) { return x.d.ok; }).length;
+    var ids = {}; App.sembrados.forEach(function (s) { ids[s.id] = 1; });
+    var resto = f.comprobaciones.filter(function (c) { return !ids[c.id]; });
+    var falsas = resto.filter(function (c) { return c.estado === 'revisar'; });
+    var intro = resto.length ? 'Estos datos se estropearon a propósito en solo ' + filas.length + ' sitios.' : 'Partimos del export limpio del banco ficticio y estropeamos los datos a propósito, un fallo por comprobación.';
+    var sinFallo = (App.sinFallo || []).map(function (s) {
+      var e = f.porEquipo.filter(function (x) { return x.equipo === s.equipo; })[0], v = e && e.valores[s.id];
+      var bien = !!v && v.estado !== 'revisar';
+      return '<li><span class="chip chip-' + (bien ? 'bien' : 'critico') + '">' + (bien ? 'No se marca' : 'Marcado por error') + '</span> ' + esc(s.que) + '</li>';
+    }).join('');
     return '<section class="bloque sembrados"><h2>Fallos sembrados en este ejemplo</h2>' +
-      '<p class="nota">Partimos del export limpio del banco ficticio y estropeamos los datos a propósito, un fallo por comprobación. Esta tabla se calcula en vivo: cruza cada fallo con la comprobación que debería saltar. <b>' + n + ' de ' + filas.length + ' detectados.</b></p>' +
+      '<p class="nota">' + intro + ' Esta tabla se calcula en vivo: cruza cada fallo con la comprobación que debería saltar. <b>' + n + ' de ' + filas.length + ' detectados.</b>' +
+      (resto.length ? ' <b>' + (falsas.length ? falsas.length + ' falsas alarmas' : 'Las otras ' + resto.length + ' comprobaciones salen bien: sin falsas alarmas.') + '</b>' : '') + '</p>' +
       '<div class="tabla-caja"><table class="tabla-sembrados"><thead><tr><th scope="col">Qué se estropeó</th><th scope="col">Lo detecta</th><th scope="col">Resultado</th></tr></thead><tbody>' +
       filas.map(function (x) {
         var s = x.s, d = x.d;
@@ -973,14 +1008,15 @@
           '<td><b>' + esc(d.nombre) + '</b><small>' + esc(donde) + ': ' + esc(d.valor) + '</small></td>' +
           '<td><span class="chip chip-' + (d.ok ? 'bien' : 'critico') + '">' + (d.ok ? 'Detectado' : 'No detectado') + '</span></td></tr>';
       }).join('') + '</tbody></table></div>' +
-      '<p class="nota">Es un export de Jira normal. Si lo <button class="btn-txt" data-accion="bajar-fallos">descargas</button> y lo cargas desde la entrada, las comprobaciones salen igual.</p></section>';
+      (sinFallo ? '<h3 class="sem-h3">Lo que parece un fallo y no lo es</h3><ul class="sin-fallo">' + sinFallo + '</ul>' : '') +
+      '<p class="nota">Es un export de Jira normal. Si lo <button class="btn-txt" data-accion="bajar-ejemplo">descargas</button> y lo cargas desde la entrada, las comprobaciones salen igual.</p></section>';
   }
   function secFiabilidad() {
     var f = fiab(), n = NIVEL[f.nivel];
     var html = '<section class="bloque fiab-cab"><div class="fiab-nivel fiab-' + f.nivel + '"><span>Fiabilidad</span><b>' + n[1] + '</b></div><div><h2>Fiabilidad de los datos</h2>' +
       '<p>Antes de sacar conclusiones comprobamos que la herramienta refleja bien el trabajo. ' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones están bien' + (f.revisar ? ' y ' + f.revisar + (f.revisar === 1 ? ' hay que revisarla' : ' hay que revisarlas') : '') + '. Las comprobaciones no cambian ninguna cifra: avisan.</p>' +
       '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p>' +
-      (App.sembrados ? '' : '<p class="nota">Para ver cómo se detectan los fallos: <button class="btn-txt" data-accion="demo-fallos">cargar un export de ejemplo con fallos sembrados</button>.</p>') + '</div></section>';
+      (App.sembrados ? '' : '<p class="nota">Para ver cómo se detectan los fallos, carga un ejemplo: <button class="btn-txt" data-accion="demo" data-d="aseguradora">con algunos fallos</button> o <button class="btn-txt" data-accion="demo" data-d="fallos">con un fallo en cada comprobación</button>.</p>') + '</div></section>';
     if (App.sembrados) html += panelSembrados(f);
     html += '<div class="fiab-grid">' + f.comprobaciones.map(function (c) {
       return '<article class="fiab-c fiab-' + c.estado + '"><div class="fiab-c-cab"><span class="v-ico ' + (c.estado === 'bien' ? 'ok' : c.estado === 'revisar' ? 'aviso' : 'pend') + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span>' +
@@ -1123,10 +1159,10 @@
       '<div><b>Firmas por plataforma</b><small>Cómo aparece cada concepto</small><p>Nombres de columna en inglés y castellano, columnas repetidas, formato de los valores y su traducción.</p></div>' +
       '<div><b>Valores</b><small>Estados, tipos y prioridades</small><p>Por ejemplo, Active, In Progress, En curso y Work in progress son todos el estado común En curso.</p></div></div>' +
       '<ol class="sem-pasos">' + pasos.map(function (p, k) { return '<li><span class="fl-n">' + (k + 1) + '</span><b>' + p[0] + '</b><p>' + p[1] + '</p></li>'; }).join('') + '</ol>' +
-      '<h3 class="sem-h3">Así se lee un export de Jira</h3>' +
+      (columnasLeidas() || '<h3 class="sem-h3">Así se lee un export de Jira</h3>' +
       '<div class="tabla-caja"><table class="tabla-sem"><thead><tr><th scope="col">Columna del export</th><th scope="col">Qué es</th><th scope="col">Qué se hace</th></tr></thead><tbody>' +
       ej.map(function (f) { return '<tr><th scope="row"><code>' + f[0] + '</code></th><td>' + f[1] + '</td><td><span class="chip chip-' + f[3] + '">' + f[2] + '</span></td></tr>'; }).join('') +
-      '</tbody></table></div>' +
+      '</tbody></table></div>') +
       '<p class="nota">Lo que se reconoce con seguridad se coloca solo. Lo dudoso lo confirma el consultor en el arranque. Una columna que puede ser de personas se descarta aunque haya dudas: es la única regla que prefiere perder un dato.</p>' +
       '<div class="dos sem-dos"><div><h3 class="sem-h3">Qué hay que arreglar</h3><dl class="leyenda">' + gr.map(function (g) { return '<dt><span class="chip chip-' + g[0] + '">' + g[1] + '</span></dt><dd>' + g[2] + '</dd>'; }).join('') + '</dl></div>' +
       '<div><h3 class="sem-h3">Cuánta historia trae el export</h3><dl class="sem-niveles">' + niveles.map(function (n) { return '<dt><b>' + n[0] + '</b> ' + n[1] + '</dt><dd>' + n[2] + '</dd>'; }).join('') + '</dl>' +
@@ -1135,6 +1171,34 @@
       '<div><span class="kicker">Siguiente' + prox + '</span><p>El diccionario completo en ficheros para Jira, Azure DevOps, GitLab y ServiceNow: confianza por columna, nivel de historia y aviso cuando el export cambia de una semana a otra. Un consultor lo amplía sin tocar código.</p></div></div>' +
       '</section>';
   }
+  // Cómo se ha leído el export cargado, columna a columna: qué es cada una y qué se hace con ella
+  var ACCION_COL = { usa: ['bien', 'Se usa'], descarta: ['critico', 'Se descarta'], ignora: ['sin', 'Se ignora'] };
+  function columnasLeidas() {
+    var fs = App.ficheros || [];
+    if (!fs.length || !fs[0].texto || !N.describirColumnas) return '';
+    var cols = N.describirColumnas(fs[0].texto);
+    if (!cols.length) return '';
+    var eqCampo = campo(), confirmado = !!App.cfg.campoEquipo;
+    var cuenta = { usa: 0, descarta: 0, ignora: 0 };
+    cols.forEach(function (c) { cuenta[c.accion] += c.veces; });
+    var fila = function (c) {
+      var que = c.que, a = ACCION_COL[c.accion];
+      if (c.campo && c.campo === eqCampo) que = 'Equipo de cada tarea: ' + (confirmado ? 'confirmado' : 'propuesto, lo confirma el consultor');
+      var ej = c.accion === 'descarta' ? '<span class="apagado">No se lee</span>' : c.ejemplo ? '<code>' + esc(c.ejemplo) + '</code>' : '';
+      return '<tr' + (c.accion === 'descarta' ? ' class="col-fuera"' : '') + '><th scope="row"><code>' + esc(c.columna) + '</code>' + (c.veces > 1 ? ' <small>(' + c.veces + ' columnas)</small>' : '') + '</th>' +
+        '<td>' + esc(que) + '</td><td>' + ej + '</td><td><span class="chip chip-' + a[0] + '">' + a[1] + '</span></td></tr>';
+    };
+    var vistas = cols.filter(function (c) { return c.accion !== 'ignora'; }), ignoradas = cols.filter(function (c) { return c.accion === 'ignora'; });
+    var pocas = ignoradas.length <= 8;
+    return '<h3 class="sem-h3">Así se ha leído este export</h3>' +
+      '<p class="nota">' + esc(fs[0].nombre) + (fs.length > 1 ? ' (y ' + (fs.length - 1) + ' ' + plural(fs.length - 1, 'fichero más', 'ficheros más') + ', con las mismas columnas)' : '') + ': ' +
+      miles(cuenta.usa) + ' columnas se usan, ' + miles(cuenta.descarta) + ' se descartan y ' + miles(cuenta.ignora) + ' no se reconocen y se ignoran. Se calcula con el export cargado.</p>' +
+      '<div class="tabla-caja"><table class="tabla-sem tabla-cols"><thead><tr><th scope="col">Columna del export</th><th scope="col">Qué es</th><th scope="col">Ejemplo</th><th scope="col">Qué se hace</th></tr></thead><tbody>' +
+      vistas.concat(pocas ? ignoradas : []).map(fila).join('') + '</tbody></table></div>' +
+      (pocas || !ignoradas.length ? '' : '<details class="cols-ign"><summary>' + miles(ignoradas.length) + ' columnas sin reconocer: se ignoran</summary><p>' +
+        ignoradas.map(function (c) { return '<code>' + esc(c.columna) + '</code>'; }).join(' ') + '</p></details>');
+  }
+
   // Las cifras de una recomendación: el valor de su medida en cada equipo frente a lo normal, con la frase de la evidencia
   function cifrasRec(x) {
     var c = x.caso, eqs = {}; App.r.modelo.equipos.forEach(function (e) { eqs[e.nombre] = e; });
@@ -1322,7 +1386,7 @@
     ficheros: function () { document.getElementById('entrada-ficheros').click(); },
     carpeta: elegirCarpeta,
     'leer-carpeta': function () { if (App.carpeta) leerCarpeta(App.carpeta); },
-    demo: function () { verDemo(null); },
+    demo: function (el) { verDemo(null, el && el.getAttribute('data-d')); },
     fuente: function (el) { App.fuente = el.getAttribute('data-f'); render(); },
     fuentes: function () { App.fuente = null; render(); },
     conectar: function (el) { verDemo(el.getAttribute('data-f')); },
@@ -1334,8 +1398,8 @@
     },
     registrar: function (el) { registrar(el.getAttribute('data-k')); },
     'ver-recs': function (el) { App.recEquipo = el.getAttribute('data-e') || 'todos'; App.recSel = null; App.vista = 'recomendaciones'; render(); window.scrollTo(0, 0); },
-    'demo-fallos': function () { verDemo(null, true); },
-    'bajar-fallos': function () { descargar('export-jira-con-fallos.csv', (document.getElementById('demo-fallos-csv') || {}).textContent || '', 'text/csv'); },
+    'demo-fallos': function () { verDemo(null, 'fallos'); },
+    'bajar-ejemplo': function () { var d = DEMOS[App.demoId] || DEMOS.b3; descargar(d.fichero, (document.getElementById(d.pre + 'csv') || {}).textContent || '', 'text/csv'); },
     'salir-demo': function () { salirDemo(); if (!App.r) { App.vista = 'inicio'; render(); } },
     presentacion: function () { App.vista = 'presentacion'; App.lamina = 0; render(); },
     'salir-presentacion': function () { App.vista = App.r ? 'tablero' : 'inicio'; render(); },

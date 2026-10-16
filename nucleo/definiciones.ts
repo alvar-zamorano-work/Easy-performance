@@ -170,7 +170,7 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
   h1(s++ + '. Comparaciones entre grupos');
   p(proveedores || areas.size ? 'Se comparan equipos internos y de proveedores, proveedores entre sí y equipos de una misma área, con estas reglas:' : 'Cuando haya equipos de proveedores o áreas con varios equipos, se compararán con estas reglas:');
   lista([
-    'Solo medidas que no dependen del tamaño del equipo: plazo en el que se terminan 8 de cada 10 tareas, retrabajo, reaperturas, tiempo bloqueado, tareas que pasan de sprint, antigüedad del pendiente, Throughput / FTE y tickets listos para agentes.',
+    'Solo medidas que no dependen del tamaño del equipo: plazo en el que se termina casi todo lo empezado (el 85% de las tareas), retrabajo, reaperturas, tiempo bloqueado, tareas que pasan de sprint, antigüedad del pendiente, Throughput / FTE y tickets listos para agentes.',
     'Nunca volumen bruto y nunca personas.',
     'Lo terminado se compara dentro del mismo tipo y tamaño de tarea. Al lado se muestra el reparto del trabajo de cada grupo.',
     'Se miran las últimas ' + SEMANAS_COMPARACION + ' semanas. Si una celda tiene menos de ' + MUESTRA_MINIMA + ' tareas, dice "pocos datos".',

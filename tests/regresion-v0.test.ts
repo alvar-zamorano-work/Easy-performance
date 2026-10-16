@@ -29,6 +29,16 @@ function configuraciones(det: Deteccion): [string, ConfigCalculo][] {
   ];
 }
 
+/** Cambios de redacción aprobados después de la v0 (oct 2026): mismas cifras, otro texto. Se aplican a lo de la v0 antes de comparar. */
+const REDACCION: [string, string][] = [
+  ['en los que el equipo termina 8 de cada 10 tareas', 'en los que el equipo termina casi todo lo que empieza'],
+  ['8 de cada 10 tareas se cierran en menos de un día desde que se crean', 'Casi todas las tareas se cierran menos de un día después de crearse'],
+];
+function redaccionNueva<T>(x: T): T {
+  let s = JSON.stringify(x);
+  for (const [viejo, nuevo] of REDACCION) s = s.split(viejo).join(nuevo);
+  return JSON.parse(s);
+}
 const textos = (a: { texto: string }[]) => a.map((x) => x.texto).sort();
 
 /** Lo que el núcleo añade después de la v0 (B3: agent readiness) no existe en la v0: se quita antes de comparar. */
@@ -52,7 +62,7 @@ for (const esc of escenarios()) {
         assert.deepEqual(json(inf[k]), json(infV[k]), k);
       }
       for (const k of Object.keys(infV.campos)) assert.equal(inf.campos[k], infV.campos[k], 'campo ' + k);
-      assert.deepEqual(textos([...inf.avisos, ...det.avisos]), textos([...infV.avisos, ...detV.avisos]), 'avisos');
+      assert.deepEqual(textos([...inf.avisos, ...det.avisos]), redaccionNueva(textos([...infV.avisos, ...detV.avisos])), 'avisos');
       assert.equal(lectura.detalle.unidadTiempoMs, detV.factorTis, 'unidad del Tiempo en estado');
       assert.deepEqual(lectura.detalle.nombrePorId, detV.nombrePorId, 'nombres de estado por id');
     });
@@ -96,7 +106,7 @@ for (const esc of escenarios()) {
         const mN = recorrido(ficheros, structuredClone(cfg)).modelo;
         const mV = motorV0.calcular(viejo.tareas, detV, structuredClone(cfg));
         assert.ok(mN.equipos.length > 0, 'hay equipos');
-        assert.deepEqual(sinNovedades(mN), json(mV));
+        assert.deepEqual(sinNovedades(mN), redaccionNueva(json(mV)));
       });
     }
   });

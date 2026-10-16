@@ -2,6 +2,7 @@
 // Expone en window: CATALOGO (catálogo en JSON), Motor (misma forma que el de la v0) y Nucleo (lo nuevo de B3 y B4).
 
 import { leerJira } from '../../adaptadores/jira/ingerir.ts';
+import { describirColumnas } from '../../adaptadores/jira/columnas.ts';
 import { detectar } from '../../nucleo/detectar.ts';
 import { calcular } from '../../nucleo/calcular.ts';
 import { formatear, fechaCorta } from '../../nucleo/formato.ts';
@@ -46,7 +47,7 @@ const Nucleo = {
   lecturaDe: (tareas: Tarea[]) => lecturas.get(tareas) || null,
   diagnosticar, comprobarPaquete, conEfecto, NOMBRE_AREA,
   MEDIDAS_INICIATIVA, RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA,
-  etapasV0AMapeo, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida, fiabilidad, seguimiento,
+  etapasV0AMapeo, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida, fiabilidad, seguimiento, describirColumnas,
 };
 
 const w = globalThis as unknown as Record<string, unknown>;
