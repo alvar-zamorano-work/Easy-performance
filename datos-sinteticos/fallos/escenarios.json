@@ -1,0 +1,77 @@
+{
+ "descripcion": "Fallos sembrados en jira-con-fallos.csv. Parte del export limpio de B3. Lo generan herramientas/generar-sinteticos-fallos.ts.",
+ "fecha_export": "2026-10-12T09:00:00",
+ "corte": "2026-09-21T09:00:00",
+ "sembrados": [
+  {
+   "id": "historia",
+   "ambito": "ambos",
+   "equipo": "Datos",
+   "tareas": 45,
+   "que": "Un equipo nuevo, Datos, solo tiene ocho semanas registradas. No basta para saber qué es lo normal en él."
+  },
+  {
+   "id": "actividad",
+   "ambito": "area",
+   "equipo": null,
+   "tareas": 109,
+   "que": "El export se cortó el 21 de septiembre: de las últimas tres semanas solo quedan unas pocas tareas nuevas."
+  },
+  {
+   "id": "estados",
+   "ambito": "area",
+   "equipo": "App móvil",
+   "tareas": 37,
+   "que": "App móvil usa un estado propio, «Ventana de paso a PRE». Es una espera, pero no se reconoce por el nombre y por su categoría se contaría como en curso."
+  },
+  {
+   "id": "flujo",
+   "ambito": "ambos",
+   "equipo": "Pagos",
+   "tareas": 44,
+   "que": "En Pagos, una de cada tres tareas se mueve de pendiente a hecho de golpe, sin pasar por en curso."
+  },
+  {
+   "id": "bloque",
+   "ambito": "area",
+   "equipo": "App móvil",
+   "tareas": 26,
+   "que": "App móvil cerró de golpe 14 y 12 tareas en el mismo minuto, al final de dos sprints, para limpiar el tablero."
+  },
+  {
+   "id": "registro",
+   "ambito": "ambos",
+   "equipo": "Portal clientes",
+   "tareas": 111,
+   "que": "Portal clientes registra las tareas en la herramienta cuando ya las ha terminado, unas horas antes de cerrarlas."
+  },
+  {
+   "id": "sprints",
+   "ambito": "ambos",
+   "equipo": "Portal clientes",
+   "tareas": 89,
+   "que": "Portal clientes dice trabajar por sprints, pero desde hace tres meses no los apunta en la herramienta."
+  },
+  {
+   "id": "estimacion",
+   "ambito": "ambos",
+   "equipo": "Riesgos",
+   "tareas": 101,
+   "que": "Riesgos deja sin estimar seis de cada diez historias."
+  },
+  {
+   "id": "tiempos",
+   "ambito": "ambos",
+   "equipo": "Riesgos",
+   "tareas": 118,
+   "que": "Riesgos cambió de flujo y desde mayo sus tareas cerradas no traen el tiempo en cada estado."
+  },
+  {
+   "id": "equipo",
+   "ambito": "area",
+   "equipo": null,
+   "tareas": 181,
+   "que": "Desde abril el campo Equipo no es obligatorio y casi una de cada tres tareas nuevas se crea sin él."
+  }
+ ]
+}

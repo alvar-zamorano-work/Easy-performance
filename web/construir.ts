@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(RAIZ, 'web', 'src');
 const DEMO = join(RAIZ, 'datos-sinteticos', 'b3');
+const FALLOS = join(RAIZ, 'datos-sinteticos', 'fallos');
+const leerJson = (...p: string[]) => JSON.parse(readFileSync(join(...p), 'utf8'));
 
 /** Sin "</script" dentro de un bloque <script>. */
 const seguro = (s: string) => s.replace(/<\/script/gi, '<\\/script');
@@ -20,9 +22,8 @@ function fuentes(): string {
   }).join('\n');
 }
 
-/** Datos de la demo: el export sintético de B3 y su carpeta de cliente (equipos, FTE, iniciativas y contexto). */
-function demoCliente(): string {
-  const cliente = JSON.parse(readFileSync(join(DEMO, 'cliente', 'cliente.json'), 'utf8'));
+/** Datos de una demo: equipos y FTE de su cliente, más las iniciativas y el contexto de B3. */
+function demoCliente(cliente: { sector: string; equipos: { lista: any[] } }, extra: Record<string, unknown> = {}): string {
   const dirIni = join(DEMO, 'cliente', 'iniciativas');
   const iniciativas = readdirSync(dirIni).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(dirIni, f), 'utf8')));
   const contexto = JSON.parse(readFileSync(join(DEMO, 'cliente', 'contexto', 'contexto.json'), 'utf8'));
@@ -35,7 +36,7 @@ function demoCliente(): string {
   const COSTE_DEMO: Record<string, number> = { interno: 6500, 'Proveedor Norte': 8200, 'Proveedor Sur': 7400 };
   const coste: Record<string, number> = {};
   for (const e of cliente.equipos.lista) { const c = COSTE_DEMO[e.tipo === 'proveedor' ? e.proveedor : 'interno']; if (c) coste[e.nombre] = c; }
-  return JSON.stringify({ nombre: 'Banco ficticio', sector: cliente.sector, equiposInfo, fte, fteOrigen, coste, iniciativas, contexto });
+  return JSON.stringify({ nombre: 'Banco ficticio', sector: cliente.sector, equiposInfo, fte, fteOrigen, coste, iniciativas, contexto, ...extra });
 }
 
 export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance')): Promise<string> {
@@ -46,10 +47,16 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
   const nucleo = r.outputFiles[0].text;
   const demoCsv = readFileSync(join(DEMO, 'jira-b3.csv'), 'utf8');
   if (/<\/script/i.test(demoCsv)) throw new Error('El CSV de la demo contiene </script');
+  // Segunda demo: el mismo banco con un fallo sembrado por cada comprobación de fiabilidad
+  const fallosCsv = readFileSync(join(FALLOS, 'jira-con-fallos.csv'), 'utf8');
+  if (/<\/script/i.test(fallosCsv)) throw new Error('El CSV con fallos contiene </script');
+  const escenarios = leerJson(FALLOS, 'escenarios.json');
   const piezas: Record<string, string> = {
     '/*ESTILOS*/': readFileSync(join(SRC, 'app.css'), 'utf8').replace('/*FUENTES*/', fuentes()),
     '/*DEMO*/': demoCsv,
-    '/*DEMO_CLIENTE*/': seguro(demoCliente()),
+    '/*DEMO_CLIENTE*/': seguro(demoCliente(leerJson(DEMO, 'cliente', 'cliente.json'))),
+    '/*DEMO_FALLOS*/': fallosCsv,
+    '/*DEMO_FALLOS_CLIENTE*/': seguro(demoCliente(leerJson(FALLOS, 'cliente', 'cliente.json'), { sembrados: escenarios.sembrados })),
     '/*LAMINAS*/': seguro(JSON.stringify(JSON.parse(readFileSync(join(SRC, 'laminas.json'), 'utf8')))),
     '/*NUCLEO*/': seguro(nucleo),
     // proceso.js (la animación del método) va antes de la interfaz, que lo usa

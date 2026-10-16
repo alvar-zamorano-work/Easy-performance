@@ -5,6 +5,7 @@
 // cambiados y guardados, documento de definiciones y paquete), demo sin pisar la configuración, carpeta con dos
 // iniciativas y una configuración de la versión anterior. Además, con animaciones: conectores de la entrada,
 // el método de carga, la generación de recomendaciones, la lista con detalle y el registro de una iniciativa.
+// Y el export con fallos: cada fallo sembrado lo detecta su comprobación, también al cargar el CSV desde la entrada.
 // Salvo en ese bloque, el navegador pide "reducir movimiento": la página no anima y va directa al resultado.
 
 import { chromium } from 'playwright-core';
@@ -217,6 +218,36 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   const salto = await A(p, () => ({ proc: !!document.querySelector('.proc'), items: document.querySelectorAll('.rec-item').length }));
   ok('Esc salta la animación y deja el resultado', !salto.proc && salto.items >= 3, JSON.stringify(salto));
   ok('animaciones sin errores de consola', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// 2c. Export con fallos: un fallo sembrado por comprobación, y la página los detecta todos
+{
+  const p = await pagina(1280, 720);
+  await clic(p, '[data-accion="demo-fallos"]');
+  await listo(p); await p.waitForTimeout(300);
+  const tira = await texto(p, '.fiab-tira'), banda = await texto(p, '.banda-demo');
+  await clic(p, '.banda-demo [data-accion="fiabilidad"]');
+  const leerFiab = () => A(p, () => ({
+    nivel: document.querySelector('.fiab-nivel b').textContent,
+    revisar: [...document.querySelectorAll('.fiab-c.fiab-revisar h3')].map((x) => x.textContent).sort().join(', '),
+    porEquipo: [...document.querySelectorAll('.tabla-fiab .fv-revisar')].length,
+    sembrados: [...document.querySelectorAll('.tabla-sembrados tbody tr .chip')].map((x) => x.textContent),
+  }));
+  const f = await leerFiab();
+  await p.screenshot({ path: join(SALIDA, 'fallos-fiabilidad.png'), fullPage: true });
+  ok('export con fallos: fiabilidad baja y los diez fallos sembrados detectados', /Fiabilidad baja/.test(tira) && /Export con fallos/.test(banda) && f.nivel === 'Baja' && f.sembrados.length === 10 && f.sembrados.every((x) => x === 'Detectado'), f.sembrados.filter((x) => x !== 'Detectado').length + ' sin detectar · ' + f.revisar);
+  const [d] = await Promise.all([p.waitForEvent('download'), p.click('[data-accion="bajar-fallos"]')]);
+  const bajado = readFileSync(await d.path(), 'utf8');
+  const original = readFileSync(join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv'), 'utf8');
+  ok('export con fallos: el CSV que se descarga es el del ejemplo', d.suggestedFilename() === 'export-jira-con-fallos.csv' && bajado === original, d.suggestedFilename() + ' ' + bajado.length);
+  // El mismo CSV cargado desde la entrada, sin la configuración de la demo: las comprobaciones salen igual
+  await clic(p, '[data-accion="salir-demo"]');
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv')); await listo(p); await p.waitForTimeout(300);
+  await clic(p, '.fiab-tira [data-accion="fiabilidad"]');
+  const g = await leerFiab();
+  ok('export con fallos cargado desde la entrada: las mismas comprobaciones por revisar', g.nivel === f.nivel && g.revisar === f.revisar && g.porEquipo === f.porEquipo && !g.sembrados.length, g.revisar);
+  ok('export con fallos sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
 

@@ -11,7 +11,7 @@ const DIA = 864e5;
 const SEMILLA = 20261015;
 
 /** Generador pseudoaleatorio mulberry32. */
-function azar(semilla: number) {
+export function azar(semilla: number) {
   let a = semilla >>> 0;
   const r = () => {
     a = (a + 0x6d2b79f5) >>> 0;
@@ -60,20 +60,20 @@ export const INICIATIVAS: IniciativaSintetica[] = [
 ];
 
 const INICIO = new Date(2025, 9, 13, 9, 0); // lunes 13 oct 2025
-const EXPORT = new Date(2026, 9, 12, 9, 0); // lunes 12 oct 2026
+export const EXPORT = new Date(2026, 9, 12, 9, 0); // lunes 12 oct 2026
 const SEMANAS = 52;
 const ID_ESTADO = { 'To Do': '10000', 'In Progress': '3', 'In Review': '10003', 'Blocked': '10004', 'Done': '10002' } as const;
 type Estado = keyof typeof ID_ESTADO;
 const CATEGORIA: Record<Estado, string> = { 'To Do': 'To Do', 'In Progress': 'In Progress', 'In Review': 'In Progress', 'Blocked': 'In Progress', 'Done': 'Done' };
 const MESES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function fechaJira(d: Date): string {
+export function fechaJira(d: Date): string {
   let h = d.getHours();
   const ap = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
   return `${String(d.getDate()).padStart(2, '0')}/${MESES[d.getMonth()]}/${String(d.getFullYear()).slice(2)} ${h}:${String(d.getMinutes()).padStart(2, '0')} ${ap}`;
 }
-function fechaIso(d: Date): string {
+export function fechaIso(d: Date): string {
   const p = (n: number, l = 2) => String(n).padStart(l, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.000`;
 }
@@ -240,7 +240,7 @@ export function generar() {
   return { cab, filas, esperado };
 }
 
-function csv(cab: string[], filas: string[][]): string {
+export function csv(cab: string[], filas: string[][]): string {
   const campo = (v: string) => (/[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
   return [cab, ...filas].map((f) => f.map(campo).join(',')).join('\n') + '\n';
 }

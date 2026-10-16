@@ -78,6 +78,24 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion): Record<stri
 export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, modelo: Modelo, cfg: ConfigCalculo = {}): Fiabilidad {
   const todas = Object.keys(p.porEquipo).flatMap((e) => p.porEquipo[e]);
   const area = deItems(todas, p, det);
+  const usaSprints = (nombre: string) => (p.porEquipo[nombre] || []).some((d) => d.t.sprints.length > 0);
+  // Por equipo
+  const porEquipo: FiabilidadEquipo[] = modelo.equipos.map((eq) => {
+    const x = deItems(p.porEquipo[eq.nombre] || [], p, det);
+    const sp: Parcial = !det.haySprints || det.sprintsComoFecha || !usaSprints(eq.nombre) ? { valor: 'No aplica', estado: 'sin', detalle: '' }
+      : { valor: eq.sprints.fiables ? 'Sí' : 'No', estado: eq.sprints.fiables ? 'bien' : 'revisar', detalle: eq.sprints.motivo || '' };
+    const hi: Parcial = { valor: eq.semanasConDatos + ' semanas', estado: eq.semanasConDatos >= SEMANAS_MINIMAS ? 'bien' : 'revisar', detalle: '' };
+    const valores: FiabilidadEquipo['valores'] = {};
+    const todosX: Record<string, Parcial> = { ...x, sprints: sp, historia: hi };
+    COMPROBACIONES_EQUIPO.forEach((k) => { valores[k] = { valor: todosX[k].valor, estado: todosX[k].estado }; });
+    return { equipo: eq.nombre, valores, revisar: COMPROBACIONES_EQUIPO.filter((k) => valores[k].estado === 'revisar').length };
+  });
+  // Una comprobación del área se revisa también si falla en algún equipo: una media buena puede esconder un equipo roto
+  const conEquipos = (id: string, x: Parcial): Parcial => {
+    const malos = porEquipo.filter((e) => e.valores[id] && e.valores[id].estado === 'revisar');
+    if (!malos.length) return x;
+    return { valor: x.valor, estado: 'revisar', detalle: x.detalle + ' Revisar en ' + malos.map((e) => e.equipo + ' (' + e.valores[id].valor + ')').join(', ') + '.' };
+  };
   const comp: Comprobacion[] = [];
   const nuevo = (id: string, nombre: string, que: string, umbral: string, arreglo: string, x: Parcial) => comp.push({ id, nombre, que, umbral, arreglo, valor: x.valor, estado: x.estado, detalle: x.detalle });
 
@@ -97,9 +115,9 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
       detalle: porRevisar.length ? 'Por confirmar: ' + porRevisar.map((e) => e.nombre).join(', ') + '.' : 'Todos se reconocen por su nombre o están confirmados.' });
 
   nuevo('tiempos', 'Tiempo en cada estado', 'Si lo terminado trae cuánto tiempo pasó en cada estado. Sin él no hay plazo, retrabajo ni bloqueo.', '80% o más',
-    'Exportar con el campo Tiempo en estado, o conectar con la API, que trae el historial de cambios.', area.tiempos);
+    'Exportar con el campo Tiempo en estado, o conectar con la API, que trae el historial de cambios.', conEquipos('tiempos', area.tiempos));
   nuevo('flujo', 'Pasan por en curso', 'Si las tareas se mueven por en curso al empezar, en lugar de saltar de pendiente a hecho.', '95% o más',
-    'Mover cada tarea a en curso cuando se empieza a trabajar en ella.', area.flujo);
+    'Mover cada tarea a en curso cuando se empieza a trabajar en ella.', conEquipos('flujo', area.flujo));
 
   // Cierres en bloque
   const bloques = modelo.cierresBloque;
@@ -109,12 +127,12 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
       detalle: bloques.length ? bloques.length + (bloques.length === 1 ? ' cierre en bloque' : ' cierres en bloque') + ', con ' + bloques.reduce((s, b) => s + b.n, 0) + ' tareas en total.' : 'No hay cierres masivos.' });
 
   nuevo('registro', 'Registro a tiempo', 'Si las tareas se crean antes de hacer el trabajo y no después, para apuntarlo.', '8 de cada 10 tardan un día o más',
-    'Crear las tareas al planificar, no al terminar el trabajo.', area.registro);
+    'Crear las tareas al planificar, no al terminar el trabajo.', conEquipos('registro', area.registro));
   nuevo('estimacion', 'Historias estimadas', 'Parte de las historias con estimación. Sin ella no se puede ver si las estimaciones predicen.', '70% o más',
-    'Estimar las historias antes de empezar, aunque sea con tallas.', area.estimacion);
+    'Estimar las historias antes de empezar, aunque sea con tallas.', conEquipos('estimacion', area.estimacion));
 
   // Sprints creíbles
-  const conSprints = modelo.equipos.filter((e) => e.sprints && e.sprints.ultimos && e.sprints.ultimos.length);
+  const conSprints = modelo.equipos.filter((e) => usaSprints(e.nombre));
   const fiables = conSprints.filter((e) => e.sprints.fiables);
   const sprints: Parcial = !det.haySprints ? { valor: 'No hay', estado: 'sin', detalle: 'Los datos no traen sprints.' }
     : det.sprintsComoFecha ? { valor: 'No creíbles', estado: 'revisar', detalle: 'Los nombres de sprint parecen fechas y horas.' }
@@ -136,18 +154,6 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
     'Cargar un periodo más largo en la primera ingesta.',
     { valor: (modelo.equipos.length - cortos.length) + ' de ' + modelo.equipos.length + ' equipos', estado: cortos.length ? 'revisar' : 'bien',
       detalle: cortos.length ? 'Con poca historia: ' + cortos.map((e) => e.nombre + ' (' + e.semanasConDatos + ' semanas)').join(', ') + '.' : 'Todos los equipos tienen historia suficiente.' });
-
-  // Por equipo
-  const porEquipo: FiabilidadEquipo[] = modelo.equipos.map((eq) => {
-    const x = deItems(p.porEquipo[eq.nombre] || [], p, det);
-    const sp: Parcial = !det.haySprints || !(eq.sprints && eq.sprints.ultimos && eq.sprints.ultimos.length) ? { valor: 'No aplica', estado: 'sin', detalle: '' }
-      : { valor: eq.sprints.fiables ? 'Sí' : 'No', estado: eq.sprints.fiables ? 'bien' : 'revisar', detalle: eq.sprints.motivo || '' };
-    const hi: Parcial = { valor: eq.semanasConDatos + ' semanas', estado: eq.semanasConDatos >= SEMANAS_MINIMAS ? 'bien' : 'revisar', detalle: '' };
-    const valores: FiabilidadEquipo['valores'] = {};
-    const todosX: Record<string, Parcial> = { ...x, sprints: sp, historia: hi };
-    COMPROBACIONES_EQUIPO.forEach((k) => { valores[k] = { valor: todosX[k].valor, estado: todosX[k].estado }; });
-    return { equipo: eq.nombre, valores, revisar: COMPROBACIONES_EQUIPO.filter((k) => valores[k].estado === 'revisar').length };
-  });
 
   const revisar = comp.filter((c) => c.estado === 'revisar').length, bien = comp.filter((c) => c.estado === 'bien').length;
   let nivel: NivelFiabilidad = revisar <= 1 ? 'alta' : revisar <= 3 ? 'media' : 'baja';

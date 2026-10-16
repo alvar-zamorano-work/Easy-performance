@@ -14,6 +14,7 @@
     "probar": "TZ=Europe/Madrid node herramientas/probar-nucleo.ts datos-sinteticos/jira-ejemplo-completo-2026-10-12.csv",
     "datos": "python3 herramientas/generar_datos_sinteticos.py datos-sinteticos",
     "datos-b3": "TZ=Europe/Madrid node herramientas/generar-sinteticos-b3.ts",
+    "datos-fallos": "TZ=Europe/Madrid node herramientas/generar-sinteticos-fallos.ts",
     "web": "TZ=Europe/Madrid node web/construir.ts",
     "verificar-web": "npm run web && node web/verificar.mjs"
   },

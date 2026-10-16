@@ -12,10 +12,10 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 | adaptadores/ | Convierten un export al modelo neutro. Hoy: Jira CSV. Todo lo propio de Jira (columnas, ids de estado, unidad del Tiempo en estado) vive aquí. |
 | catalogo/ | Contenido editable en JSON: medidas, casos, objetivos, textos, vistas y estados normalizados con sus reglas. |
 | esquemas/ | Esquemas JSON del modelo (tarea, equipo, iniciativa, contexto, cliente) y del catálogo, y el validador. |
-| datos-sinteticos/ | Exports sintéticos de la v0 con problemas sembrados, una carpeta de cliente de ejemplo y b3/: dos equipos internos y dos de proveedores, dos iniciativas y descripciones de calidad conocida (lo sembrado está en b3/escenarios.json). |
+| datos-sinteticos/ | Exports sintéticos de la v0 con problemas sembrados, una carpeta de cliente de ejemplo y b3/: dos equipos internos y dos de proveedores, dos iniciativas y descripciones de calidad conocida (lo sembrado está en b3/escenarios.json). Y fallos/: el export de B3 con un fallo sembrado por cada comprobación de fiabilidad (lista en fallos/escenarios.json). |
 | datos-prueba/ | Exports de prueba que no son de cliente, cada uno con su .esperado.json. |
 | tests/ | Tests con node:test. tests/referencia-v0 guarda el motor de la v0 sin cambios; tests/banco genera variantes de exports. |
-| herramientas/ | Generadores de datos sintéticos (el de la v0 en Python y el de B3 en TypeScript) y resumen del núcleo por consola. |
+| herramientas/ | Generadores de datos sintéticos (el de la v0 en Python, y el de B3 y el export con fallos en TypeScript) y resumen del núcleo por consola. |
 | web/, skill/ | La página (un solo HTML) y la skill de IA (B6). |
 
 ## Cómo fluyen los datos
@@ -42,14 +42,15 @@ Un solo HTML que se abre con doble clic, sin servidor ni instalación. No hay pu
 - Tablero: el área (cuatro indicadores, tabla de equipos, internos y proveedores, iniciativas) o un equipo (cuatro indicadores con su tendencia, el plazo semana a semana y sus recomendaciones). Cada cifra se compara con lo normal en ese equipo.
 - Recomendaciones: se generan con un botón y una animación de seis pasos (señales, contexto, banco de casos, priorizar, IA y revisión). La IA va marcada como próxima fase: hoy el plan sale del banco de casos. Después, lista y detalle: qué pasa y qué hacer primero, la cifra de cada equipo frente a lo normal, el plan de acción, cómo se sigue (registrar como iniciativa) y, plegado, preguntas para la reunión, causas y respaldo.
 - Iniciativas: seguimiento automático (nucleo/seguimiento.ts). En cada carga se recalcula su estado (planificada, midiendo, funciona, sin efecto claro, va a peor), la serie semanal de la medida frente al resto de equipos y cuándo estará completa la evaluación. Con la carpeta, cada carga deja una foto en historico/iniciativas-AAAA-MM-DD.json.
-- Fiabilidad de los datos (nucleo/fiabilidad.ts): diez comprobaciones con su valor, desde cuándo están bien y cómo se arreglan, una tabla por equipo y un nivel (alta, media o baja) que se ve también en el tablero.
+- Fiabilidad de los datos (nucleo/fiabilidad.ts): diez comprobaciones con su valor, desde cuándo están bien y cómo se arreglan, una tabla por equipo y un nivel (alta, media o baja) que se ve también en el tablero y en el paso de calidad de la animación. Una comprobación del área se marca para revisar también si falla en un equipo: una media buena no esconde un equipo roto. Los estados cuentan como reconocidos si se reconocen por su nombre o alguien los ha confirmado.
+- Export con fallos (datos-sinteticos/fallos): el mismo banco ficticio con diez fallos sembrados, uno por comprobación (equipo nuevo con ocho semanas, export cortado, estado propio sin reconocer, saltos de pendiente a hecho, cierres en bloque, tareas creadas al terminar, sprints sin apuntar, historias sin estimar, sin tiempo en cada estado y tareas sin equipo). Se abre desde la entrada ("Ver un ejemplo con fallos en los datos"). En Fiabilidad, una tabla cruza en vivo cada fallo con la comprobación que lo detecta; el CSV se puede descargar y cargar como un export normal.
 - Ayudas al pasar el cursor por el nombre de cada medida.
 - Cómo funciona, en cuatro secciones: el método (diagrama del dato al plan de acción y el banco de casos), fuentes e ingesta (cómo se trata cada plataforma, primera ingesta y cadencia de actualización, cómo automatizarla), fiabilidad de los datos y vuestros datos. En vuestros datos, "Así hemos leído vuestros datos" (ficheros, campo de equipo, proveedores, áreas y FTE, estados y calidad), donde se corrige lo detectado. Desde ahí se descargan el documento de definiciones (Word y markdown) y el paquete de diagnóstico.
 - Se detecta solo: el campo que reconoce al equipo, los equipos y el estado común de cada estado de Jira. Lo que no se puede detectar (proveedores, áreas, FTE) se indica en Cómo funciona. Lo cambiado se guarda en el navegador y en configuracion/cliente.json si se usa la carpeta. Una configuración de la versión anterior se aprovecha.
 - Presentación de siete láminas y demo con un banco ficticio (datos sintéticos de B3), que no toca los datos reales.
 - Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
 
-Código: web/src/app.js (interfaz), proceso.js (animación del método), app.css, laminas.json, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (entrada, presentación, demo en 1280x720 y 1920x1080, conectores, método de carga y generación de recomendaciones con animación, modo oscuro, móvil, Jira.csv de principio a fin con cambios en Cómo funciona, definiciones, paquete, carpeta con iniciativas y configuración anterior) y deja capturas y documentos en dist/verificacion. Las pantallas caben sin scroll a 1920x1080; en 1280x720 el tablero tiene algo de scroll vertical, y recomendaciones y Cómo funciona son páginas largas.
+Código: web/src/app.js (interfaz), proceso.js (animación del método), app.css, laminas.json, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance. `npm run verificar-web` la recorre con Chromium (entrada, presentación, demo en 1280x720 y 1920x1080, conectores, método de carga y generación de recomendaciones con animación, export con fallos (los diez detectados, también al cargar el CSV desde la entrada), modo oscuro, móvil, Jira.csv de principio a fin con cambios en Cómo funciona, definiciones, paquete, carpeta con iniciativas y configuración anterior) y deja capturas y documentos en dist/verificacion. Las pantallas caben sin scroll a 1920x1080; en 1280x720 el tablero tiene algo de scroll vertical, y recomendaciones y Cómo funciona son páginas largas.
 
 Pendiente de probar: actualizar.ps1 en Windows.
 
@@ -67,6 +68,7 @@ npm run comprobar    # tipos y tests
 npm run probar       # resumen por equipo del export sintético completo
 npm run datos        # regenera los CSV sintéticos de la v0 (deben salir idénticos)
 npm run datos-b3     # regenera los datos sintéticos de B3 (deben salir idénticos)
+npm run datos-fallos # regenera el export con fallos (debe salir idéntico)
 npm run web          # genera la carcasa web en dist/EasyPerformance
 npm run verificar-web  # recorre la carcasa con Chromium y guarda capturas
 ```

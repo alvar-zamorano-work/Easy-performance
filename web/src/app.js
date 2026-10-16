@@ -283,16 +283,19 @@
   }
 
   // ---------- demo con datos de ejemplo ----------
-  function verDemo(simulada) {
-    var t = (document.getElementById('demo-csv') || {}).textContent || '';
+  // conFallos: el mismo banco con un fallo sembrado por cada comprobación de fiabilidad
+  function verDemo(simulada, conFallos) {
+    var pre = conFallos ? 'demo-fallos-' : 'demo-';
+    var t = (document.getElementById(pre + 'csv') || {}).textContent || '';
     if (!t.trim()) { aviso('Esta copia no incluye datos de ejemplo.'); return; }
-    var dc = {}; try { dc = JSON.parse(document.getElementById('demo-cliente').textContent || '{}'); } catch (e) { dc = {}; }
+    var dc = {}; try { dc = JSON.parse(document.getElementById(pre + 'cliente').textContent || '{}'); } catch (e) { dc = {}; }
     if (!App.demo) App.real = { lectura: App.lectura, det: App.det, cfg: App.cfg, iniciativas: App.iniciativas, contexto: App.contexto, r: App.r, origen: App.origen, ver: App.ver, vista: App.vista, generadas: App.generadas, recSel: App.recSel, tiempoMs: App.tiempoMs };
     enSegundoPlano(function () {
       App.demo = true;
       App.cfg = { nombre: dc.nombre || 'Banco ficticio', equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {} };
       App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null;
-      procesar([{ nombre: 'datos-de-ejemplo.csv', texto: t }], 'ejemplo');
+      App.sembrados = conFallos ? (dc.sembrados || []) : null;
+      procesar([{ nombre: conFallos ? 'export-jira-con-fallos.csv' : 'datos-de-ejemplo.csv', texto: t }], 'ejemplo');
       App.simulada = FUENTES[simulada] && !FUENTES[simulada].otra ? simulada : null; App.fuente = null;
       render(); window.scrollTo(0, 0);
       animarCarga(App.simulada);
@@ -304,7 +307,7 @@
     App.demo = false;
     App.lectura = r.lectura || null; App.det = r.det || null; App.cfg = r.cfg || cfgInicial(); App.iniciativas = r.iniciativas || [];
     App.contexto = r.contexto || null; App.r = r.r || null; App.origen = r.origen || null; App.ver = r.ver || 'area';
-    App.generadas = !!r.generadas; App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0; App.simulada = null;
+    App.generadas = !!r.generadas; App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0; App.simulada = null; App.sembrados = null;
     App.vista = App.r ? 'tablero' : 'inicio'; App.real = null; App.editar = null;
     if (pintar !== false) { render(); window.scrollTo(0, 0); }
   }
@@ -331,6 +334,8 @@
       '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="actualizar">Actualizar</button></div></header>';
   }
   function bandaDemo() {
+    if (App.sembrados) return '<div class="banda-demo banda-fallos"><span><b>Export con fallos:</b> el mismo banco ficticio con ' + App.sembrados.length + ' fallos sembrados en los datos, uno por cada comprobación de fiabilidad.</span>' +
+      '<span class="banda-acc"><button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button><button class="btn-txt" data-accion="demo">Ver el ejemplo sin fallos</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
     return '<div class="banda-demo"><span>' + (App.simulada ? '<b>Simulación de ' + esc(FUENTES[App.simulada].nombre) + ':</b> datos de ejemplo de un banco ficticio, con costes inventados.' :
       '<b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.') + '</span>' +
       '<span class="banda-acc"><button class="btn-txt" data-accion="presentacion">Ver la presentación</button><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
@@ -343,7 +348,7 @@
       '<h1 class="claim">Deja de montar el informe. <em>Empieza a usarlo.</em></h1>' +
       '<p class="inicio-sub">Conecta la herramienta donde trabajan vuestros equipos. Verás cómo va cada uno, cuánto cuesta y qué hacer, con las mismas reglas para todos.</p>' +
       '<ol class="metodo-mini" aria-label="El método">' + ['Leer', 'Hacer fiable', 'Medir', 'Recomendar'].map(function (t, k) { return '<li><span>' + (k + 1) + '</span>' + t + '</li>'; }).join('') + '</ol>' +
-      '<p class="inicio-pie"><button class="btn-txt" data-accion="demo">Ver con datos de ejemplo</button><button class="btn-txt" data-accion="presentacion">Ver la presentación</button></p>' +
+      '<p class="inicio-pie"><button class="btn-txt" data-accion="demo">Ver con datos de ejemplo</button><button class="btn-txt" data-accion="demo-fallos">Ver un ejemplo con fallos en los datos</button><button class="btn-txt" data-accion="presentacion">Ver la presentación</button></p>' +
       '<p class="nota">Los datos no salen de este ordenador: todo se calcula en el navegador.</p></div>' +
       '<section class="fuentes" aria-label="De dónde salen los datos">' + (f ? panelFuente(App.fuente, f) : panelFuentes()) + '</section></div></div>';
   }
@@ -698,22 +703,16 @@
       resultado: cuenta(pares.length) + ' estados de ' + esc(origen) + ' con su estado común'
     };
     // 4. Calidad
-    var avisos = listaAvisos();
-    var checks = [
-      ['Tareas que se cierran sin pasar por en curso', /sin estar en curso/i],
-      ['Cierres en bloque', /en bloque/i],
-      ['Tiempo en cada estado', /tiempo en estado/i],
-      ['Sprints creíbles', /sprint/i],
-      ['Actividad hasta el final del periodo', /actividad/i],
-    ];
+    // 4. Fiabilidad: las mismas diez comprobaciones del apartado de Cómo funciona
+    var fz = fiab(), revs = fz.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
     var p4 = {
       nombre: 'Calidad', titulo: 'Comprobamos que los datos son fiables',
-      texto: 'Buscamos señales de que la herramienta no refleja el trabajo real. Si las hay, se avisan antes de sacar conclusiones, nunca se esconden.',
-      visual: '<div class="v-checks">' + checks.map(function (c, k) {
-        var malos = avisos.filter(function (a) { return c[1].test(a); });
-        return '<div class="v-check pe" style="--d:' + (k + 2) + '"><span class="v-ico ' + (malos.length ? 'aviso' : 'ok') + '" aria-hidden="true">' + (malos.length ? '!' : CHECK) + '</span><div><b>' + c[0] + '</b><span>' + (malos.length ? esc(recortar(malos[0], 110)) : 'Sin problemas') + '</span></div></div>';
+      texto: 'Diez comprobaciones buscan señales de que la herramienta no refleja el trabajo real. Si las hay, se avisan antes de sacar conclusiones, nunca se esconden.',
+      visual: '<div class="v-checks v-checks-2">' + fz.comprobaciones.map(function (c, k) {
+        var ico = c.estado === 'revisar' ? 'aviso' : c.estado === 'bien' ? 'ok' : 'pend';
+        return '<div class="v-check pe" style="--d:' + (Math.floor(k / 2) + 2) + '"><span class="v-ico ' + ico + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span><div><b>' + esc(c.nombre) + '</b><span>' + esc(c.valor) + (c.estado === 'revisar' ? ', revisar' : '') + '</span></div></div>';
       }).join('') + '</div>',
-      resultado: avisos.length ? cuenta(avisos.length) + ' ' + plural(avisos.length, 'aviso', 'avisos') + ' para revisar con los equipos' : '<b>Sin avisos</b>: los datos reflejan bien el trabajo'
+      resultado: '<b>Fiabilidad ' + NIVEL[fz.nivel][1].toLowerCase() + '</b>: ' + (revs.length ? cuenta(revs.length) + ' ' + plural(revs.length, 'comprobación', 'comprobaciones') + ' para revisar con los equipos' : 'los datos reflejan bien el trabajo')
     };
     // 5. Plantilla y coste
     var cfgC = cfgCalculo(), nombres = eqs.map(function (e) { return e.nombre; }), cap = N.capacidadArea(cfgC, nombres), fte = cfgC.fte || {}, coste = cfgC.coste || {};
@@ -937,7 +936,11 @@
   var cacheFiab = { r: null, v: null };
   function fiab() {
     if (cacheFiab.r === App.r) return cacheFiab.v;
-    var v = N.fiabilidad(App.lectura, App.r.det, App.r.preparacion, App.r.modelo, cfgCalculo());
+    // Para la fiabilidad cuentan como confirmados solo los estados que alguien ha fijado, no las propuestas de la detección
+    var c = cfgCalculo(), m = {};
+    if (!App.cfg.mapeoEstados && App.cfg.etapas) Object.assign(m, N.etapasV0AMapeo(App.cfg.etapas, App.det.mapeoEstados));
+    c.mapeoEstados = Object.assign(m, App.cfg.mapeoEstados || {});
+    var v = N.fiabilidad(App.lectura, App.r.det, App.r.preparacion, App.r.modelo, c);
     cacheFiab = { r: App.r, v: v };
     return v;
   }
@@ -948,17 +951,43 @@
       (rev.length ? '. Revisar: ' + esc(lista(rev.map(function (c) { return c.nombre.toLowerCase(); }))) : '') + '.</span><button class="btn-txt" data-accion="fiabilidad">Ver la fiabilidad</button></div>';
   }
   var ICO_EST = { bien: CHECK, revisar: '!', sin: '' };
+  var COLS_FIAB = { tiempos: 'Tiempo en cada estado', flujo: 'Pasan por en curso', registro: 'Registro a tiempo', estimacion: 'Historias estimadas', sprints: 'Sprints creíbles', historia: 'Historia' };
+  // Un fallo sembrado está detectado si su comprobación pide revisar donde se sembró: en el área, en su equipo o en los dos
+  function detectado(s, f) {
+    var c = f.comprobaciones.filter(function (x) { return x.id === s.id; })[0];
+    var e = s.equipo ? f.porEquipo.filter(function (x) { return x.equipo === s.equipo; })[0] : null;
+    var area = s.ambito === 'equipo' ? null : !!(c && c.estado === 'revisar');
+    var equipo = s.ambito === 'area' || !COLS_FIAB[s.id] ? null : !!(e && e.valores[s.id] && e.valores[s.id].estado === 'revisar');
+    return { nombre: c ? c.nombre : s.id, area: area, equipo: equipo, ok: area !== false && equipo !== false, valor: equipo !== null && e ? e.valores[s.id].valor : (c ? c.valor : '') };
+  }
+  function panelSembrados(f) {
+    var filas = App.sembrados.map(function (s) { return { s: s, d: detectado(s, f) }; });
+    var n = filas.filter(function (x) { return x.d.ok; }).length;
+    return '<section class="bloque sembrados"><h2>Fallos sembrados en este ejemplo</h2>' +
+      '<p class="nota">Partimos del export limpio del banco ficticio y estropeamos los datos a propósito, un fallo por comprobación. Esta tabla se calcula en vivo: cruza cada fallo con la comprobación que debería saltar. <b>' + n + ' de ' + filas.length + ' detectados.</b></p>' +
+      '<div class="tabla-caja"><table class="tabla-sembrados"><thead><tr><th scope="col">Qué se estropeó</th><th scope="col">Lo detecta</th><th scope="col">Resultado</th></tr></thead><tbody>' +
+      filas.map(function (x) {
+        var s = x.s, d = x.d;
+        var donde = d.area && d.equipo ? 'En el área y en ' + s.equipo : d.equipo ? 'En ' + s.equipo : 'En el área';
+        return '<tr><td>' + esc(s.que) + ' <small>' + miles(s.tareas) + ' ' + plural(s.tareas, 'tarea', 'tareas') + ' tocadas</small></td>' +
+          '<td><b>' + esc(d.nombre) + '</b><small>' + esc(donde) + ': ' + esc(d.valor) + '</small></td>' +
+          '<td><span class="chip chip-' + (d.ok ? 'bien' : 'critico') + '">' + (d.ok ? 'Detectado' : 'No detectado') + '</span></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<p class="nota">Es un export de Jira normal. Si lo <button class="btn-txt" data-accion="bajar-fallos">descargas</button> y lo cargas desde la entrada, las comprobaciones salen igual.</p></section>';
+  }
   function secFiabilidad() {
     var f = fiab(), n = NIVEL[f.nivel];
     var html = '<section class="bloque fiab-cab"><div class="fiab-nivel fiab-' + f.nivel + '"><span>Fiabilidad</span><b>' + n[1] + '</b></div><div><h2>Fiabilidad de los datos</h2>' +
       '<p>Antes de sacar conclusiones comprobamos que la herramienta refleja bien el trabajo. ' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones están bien' + (f.revisar ? ' y ' + f.revisar + (f.revisar === 1 ? ' hay que revisarla' : ' hay que revisarlas') : '') + '. Las comprobaciones no cambian ninguna cifra: avisan.</p>' +
-      '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p></div></section>';
+      '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p>' +
+      (App.sembrados ? '' : '<p class="nota">Para ver cómo se detectan los fallos: <button class="btn-txt" data-accion="demo-fallos">cargar un export de ejemplo con fallos sembrados</button>.</p>') + '</div></section>';
+    if (App.sembrados) html += panelSembrados(f);
     html += '<div class="fiab-grid">' + f.comprobaciones.map(function (c) {
       return '<article class="fiab-c fiab-' + c.estado + '"><div class="fiab-c-cab"><span class="v-ico ' + (c.estado === 'bien' ? 'ok' : c.estado === 'revisar' ? 'aviso' : 'pend') + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span>' +
         '<h3>' + conTip(esc(c.nombre), c.que) + '</h3><b class="fiab-valor">' + esc(c.valor) + '</b></div>' +
         '<p>' + esc(c.detalle) + '</p><p class="nota">Bien desde: ' + esc(c.umbral) + '.' + (c.estado === 'revisar' ? ' <b>Cómo se arregla:</b> ' + esc(c.arreglo) : '') + '</p></article>';
     }).join('') + '</div>';
-    var COLS = { tiempos: 'Tiempo en cada estado', flujo: 'Pasan por en curso', registro: 'Registro a tiempo', estimacion: 'Historias estimadas', sprints: 'Sprints creíbles', historia: 'Historia' };
+    var COLS = COLS_FIAB;
     var queDe = {}; f.comprobaciones.forEach(function (c) { queDe[c.id] = c.que; });
     html += '<section class="bloque"><h2>Por equipo</h2><div class="tabla-caja"><table class="tabla-fiab"><thead><tr><th scope="col">Equipo</th>' +
       Object.keys(COLS).map(function (k) { return '<th scope="col">' + conTip(COLS[k], queDe[k]) + '</th>'; }).join('') + '</tr></thead><tbody>' +
@@ -1255,6 +1284,8 @@
     },
     registrar: function (el) { registrar(el.getAttribute('data-k')); },
     'ver-recs': function (el) { App.recEquipo = el.getAttribute('data-e') || 'todos'; App.recSel = null; App.vista = 'recomendaciones'; render(); window.scrollTo(0, 0); },
+    'demo-fallos': function () { verDemo(null, true); },
+    'bajar-fallos': function () { descargar('export-jira-con-fallos.csv', (document.getElementById('demo-fallos-csv') || {}).textContent || '', 'text/csv'); },
     'salir-demo': function () { salirDemo(); if (!App.r) { App.vista = 'inicio'; render(); } },
     presentacion: function () { App.vista = 'presentacion'; App.lamina = 0; render(); },
     'salir-presentacion': function () { App.vista = App.r ? 'tablero' : 'inicio'; render(); },

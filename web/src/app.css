@@ -346,6 +346,9 @@ button.proc-punto:hover { border-color: var(--turquesa); }
 .v-check:last-child { border-bottom: 0; }
 .v-check b { display: block; font-weight: 500; }
 .v-check span:not(.v-ico) { display: block; color: #aeb8d6; font-size: 14px; }
+.v-checks-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+.v-checks-2 .v-check { padding: 8px 0; }
+.v-checks-2 .v-check:nth-last-child(-n+2) { border-bottom: 0; }
 .v-ico { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; }
 .v-ico svg { width: 13px; height: 13px; }
 .v-ico.ok { background: rgba(60, 207, 90, 0.18); color: #7fe0a0; }
@@ -492,8 +495,13 @@ button.proc-punto:hover { border-color: var(--turquesa); }
 .fiab-c .v-ico.ok { background: var(--bien-fondo); color: var(--bien-tinta); }
 .fiab-c .v-ico.aviso { background: var(--aten-fondo); color: var(--aten-tinta); }
 .fiab-c .v-ico.pend { border-color: var(--borde-fuerte); }
+.sembrados .nota b { color: var(--tinta); }
+.tabla-sembrados td { vertical-align: top; }
+.tabla-sembrados td small { display: block; color: var(--apagado); font-size: 13px; margin-top: 2px; }
+.tabla-sembrados td:first-child { max-width: 560px; }
+.tabla-sembrados td:last-child { white-space: nowrap; }
 .tabla-fiab { min-width: 720px; }
-.tabla-fiab thead th { text-transform: none; letter-spacing: 0; font-size: 13px; }
+.tabla-fiab thead th, .tabla-sembrados thead th { text-transform: none; letter-spacing: 0; font-size: 13px; }
 .fv { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .fv-bien { background: var(--bien-fondo); color: var(--bien-tinta); }
 .fv-revisar { background: var(--crit-fondo); color: var(--crit-tinta); font-weight: 700; }
@@ -583,7 +591,7 @@ button.proc-punto:hover { border-color: var(--turquesa); }
 .icp svg { width: 100%; height: 100%; display: block; }
 
 /* ---------- avisos ---------- */
-.aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); z-index: 30; max-width: min(92vw, 640px); }
+#aviso { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 12px 18px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25); z-index: 30; max-width: min(92vw, 640px); }
 .ocupado { position: fixed; inset: 0; background: rgba(11, 16, 38, 0.45); display: grid; place-items: center; z-index: 40; }
 .ocupado > div { background: var(--superficie); color: var(--tinta); padding: 16px 24px; border-radius: 12px; font-weight: 500; }
 [hidden] { display: none !important; }
@@ -611,6 +619,10 @@ button.proc-punto:hover { border-color: var(--turquesa); }
   .leido-cab > b { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
+  .tabla-sembrados thead { display: none; }
+  .tabla-sembrados tr { display: block; border-top: 1px solid var(--borde); padding: 10px 0; }
+  .tabla-sembrados td { display: block; border-top: 0; padding: 2px 0; max-width: none; }
+  .tabla-sembrados td:nth-child(2) { margin-top: 6px; }
   .cab-in, .pagina { padding-left: 16px; padding-right: 16px; }
   .kpis { grid-template-columns: 1fr; }
   .modelo { grid-template-columns: 1fr; }
