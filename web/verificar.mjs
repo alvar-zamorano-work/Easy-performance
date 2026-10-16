@@ -147,6 +147,19 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   // Cada iniciativa dice en qué consiste, por qué y qué se espera; la registrada desde una recomendación, con su plan entero
   const ficha = await A(p, () => [...document.querySelectorAll('.seg')].map((x) => ({ chip: x.querySelector('.seg-cab .chip').textContent, f: x.querySelector('.seg-ficha') ? x.querySelector('.seg-ficha').textContent : '', pasos: x.querySelectorAll('.seg-ficha ol li').length })));
   ok('iniciativas: cada una dice en qué consiste, por qué y qué se espera', ficha.length === 3 && ficha.every((x) => /En qué consiste/.test(x.f) && /Por qué/.test(x.f) && /Qué se espera/.test(x.f) && x.f.length > 150) && ficha.some((x) => x.chip === 'Planificada' && x.pasos >= 2), ficha.map((x) => x.chip + ' ' + x.f.length + ' car., ' + x.pasos + ' pasos').join(' · '));
+  // Cómo se ha evaluado: la animación paso a paso con las cifras reales, también si el sistema pide reducir movimiento
+  const botonesEval = await p.$$eval('[data-accion="ver-evaluacion"]', (x) => x.map((y) => y.getAttribute('data-i')));
+  await clic(p, '[data-accion="ver-evaluacion"][data-i="limite-wip-pagos"]');
+  await p.waitForSelector('.proc', { timeout: 5000 });
+  const estEval = await p.$$eval('.proc-est .proc-nombre', (t) => t.map((x) => x.textContent.trim()));
+  const resEval = [];
+  for (let k = 0; k < 6; k++) { resEval.push(await A(p, () => (document.querySelector('.proc-res') || {}).textContent || '')); const b = await p.$('.proc [data-proc="siguiente"]'); if (!b) break; await b.click(); await p.waitForTimeout(150); }
+  await avanzarHasta(p, '.proc [data-proc="fin"]');
+  const veredicto = await texto(p, '.proc-texto h3');
+  await p.screenshot({ path: join(SALIDA, 'evaluacion-iniciativa.png') });
+  await clic(p, '.proc [data-proc="fin"]');
+  const cerrada = !(await p.$('.proc'));
+  ok('iniciativas: "Ver cómo se ha evaluado" explica los seis pasos con sus cifras y acaba en el resultado', botonesEval.length === 2 && estEval.join(',') === 'Antes,Margen,Después,Resto,Efecto,Confianza' && /6,2 días/.test(resEval[0]) && /efecto propio/i.test(resEval[4]) && /Confianza alta/.test(resEval[5]) && veredicto === 'Funciona' && cerrada, estEval.join(' > ') + ' · ' + resEval.join(' | ') + ' · ' + veredicto);
   // Ayuda al pasar el cursor por una medida
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
   await p.hover('.kpi .con-tip'); await p.waitForTimeout(250);

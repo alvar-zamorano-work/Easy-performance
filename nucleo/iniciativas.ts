@@ -25,6 +25,8 @@ export interface ResultadoMedida {
   control?: { antes: number | null; despues: number | null } | null;
   efecto?: number | null;
   confianza?: 'baja' | 'media' | 'alta';
+  /** Lo que la medida suele variar sola en estos equipos (desviación entre ventanas anteriores al inicio). */
+  ruido?: number | null;
   enDireccionEsperada?: boolean | null;
   muestra?: { antes: number; despues: number; controlAntes: number; controlDespues: number };
   ventanas?: { antes: Ventana; despues: Ventana; completa: boolean };
@@ -106,7 +108,7 @@ export function evaluarIniciativa(ini: Iniciativa, p: Preparacion): EvaluacionIn
       ...base, disponible: a.valor != null && d.valor != null,
       ...(a.valor == null || d.valor == null ? { motivo: 'No hay tareas suficientes en alguna de las dos ventanas.' } : {}),
       antes: a.valor, despues: d.valor, control: control.length ? { antes: ca.valor, despues: cd.valor } : null,
-      efecto, confianza, enDireccionEsperada: enDireccion,
+      efecto, confianza, ruido, enDireccionEsperada: enDireccion,
       muestra: { antes: a.n, despues: d.n, controlAntes: ca.n, controlDespues: cd.n },
       ventanas: { antes, despues, completa },
     };

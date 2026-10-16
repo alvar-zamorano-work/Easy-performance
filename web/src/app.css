@@ -422,6 +422,27 @@ button.proc-punto:hover { border-color: var(--turquesa); }
 .v-linea { font-size: 14px; color: #4a5272; }
 .proc-escena.entra .v-linea { animation: v-escribe 900ms cubic-bezier(0.65, 0, 0.35, 1) both; animation-delay: calc(600ms + var(--d, 0) * 650ms); }
 @keyframes v-escribe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.v-tl { display: flex; gap: 4px; margin-bottom: 16px; }
+.v-tl-seg { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid #23305e; background: rgba(255, 255, 255, 0.04); color: #98a1bc; }
+.v-tl-seg b { font-weight: 500; color: #c3c9da; }
+.v-tl-seg small { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-tl-margen { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 6px, transparent 6px 12px); }
+.v-tl-seg.on { border-color: var(--turquesa); background: rgba(0, 213, 208, 0.12); color: #e6f0ff; }
+.v-tl-seg.on b { color: #fff; }
+.v-filas { display: flex; flex-direction: column; gap: 10px; }
+.v-fila { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto; align-items: baseline; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid #23305e; background: rgba(255, 255, 255, 0.05); }
+.v-fila > span { display: flex; flex-direction: column; font-weight: 500; }
+.v-fila small { color: #98a1bc; font-size: 13px; font-weight: 400; }
+.v-fila b { font-size: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.v-fila i { font-style: normal; color: #98a1bc; }
+.v-fila em { font-style: normal; color: var(--turquesa); font-weight: 700; font-variant-numeric: tabular-nums; }
+.v-fila-ctrl b { color: #c3c9da; }
+.v-fila-ctrl em { color: #c3c9da; }
+.v-ecu { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.v-ecu span { display: flex; flex-direction: column; padding: 14px 18px; border-radius: 12px; border: 1px solid #23305e; background: rgba(255, 255, 255, 0.05); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.v-ecu span small { font-size: 13px; font-weight: 400; color: #98a1bc; }
+.v-ecu i { font-style: normal; font-size: 28px; color: #98a1bc; }
+.v-ecu .v-ecu-res { border-color: var(--turquesa); color: var(--turquesa); }
 .v-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
 .v-resumen > div { padding: 16px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid #23305e; display: flex; flex-direction: column; gap: 2px; }
 .v-resumen b { font-size: 30px; color: var(--turquesa); font-variant-numeric: tabular-nums; }
@@ -678,6 +699,11 @@ button.proc-punto:hover { border-color: var(--turquesa); }
   .leido-cab > b { grid-column: 1 / -1; }
 }
 @media (max-width: 560px) {
+  .v-fila { grid-template-columns: auto auto auto minmax(0, 1fr); row-gap: 4px; }
+  .v-fila > span { grid-column: 1 / -1; }
+  .v-fila b { font-size: 22px; }
+  .v-fila em { justify-self: end; }
+  .v-ecu span, .v-ecu i { font-size: 22px; }
   .ejemplos { grid-template-columns: 1fr; }
   .tabla-sembrados thead { display: none; }
   .tabla-sembrados tr { display: block; border-top: 1px solid var(--borde); padding: 10px 0; }

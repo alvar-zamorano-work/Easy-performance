@@ -24,6 +24,7 @@
     [].forEach.call(raiz.querySelectorAll('[data-cuenta]'), function (el) {
       var fin = +el.getAttribute('data-cuenta'), f = el.getAttribute('data-formato') || 'num', t0 = null, dur = 750;
       if (isNaN(fin)) return;
+      if (reducido()) { el.textContent = formatear(fin, f); return; }
       // Empieza cuando aparece su bloque (el mismo escalonado que la entrada) y acaba siempre en la cifra exacta
       var pe = el.closest('.pe'), d = pe ? parseFloat(getComputedStyle(pe).getPropertyValue('--d')) || 0 : 0, retraso = d * 90 + 150;
       el.textContent = formatear(0, f);
@@ -42,7 +43,8 @@
 
   function reproducir(cfg) {
     if (activo) activo.cerrar('reemplazado');
-    if (reducido() || window.EASY_PERFORMANCE_SIN_ANIMACION) return Promise.resolve('sin-animacion');
+    // cfg.siempre: la ha pedido la persona (explicar algo), así que se enseña aunque se pida reducir movimiento; sin movimiento
+    if (!cfg.siempre && (reducido() || window.EASY_PERFORMANCE_SIN_ANIMACION)) return Promise.resolve('sin-animacion');
     return new Promise(function (resolver) {
       var pasos = cfg.pasos, n = pasos.length, i = -1, cerrado = false, enFinal = false;
       var previoFoco = document.activeElement, previoOverflow = document.body.style.overflow;

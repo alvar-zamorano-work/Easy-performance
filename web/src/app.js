@@ -907,6 +907,82 @@
     if (!ult) return '';
     return '<div class="seg-cifras">' + celda('Ahora en estos equipos', ult.iniciativa) + (ult.control != null ? celda('Ahora en el resto', ult.control, 'seg-ctrl') : '') + '</div>';
   }
+  // ---------- cómo se evalúa una iniciativa, paso a paso y con sus cifras ----------
+  function resultadoEval(x) {
+    var r = (x.ev.resultados || []).filter(function (y) { return y.medida === x.s.medida; })[0] || x.ev.resultados[0];
+    return r && r.disponible && r.ventanas && r.antes != null && r.despues != null ? r : null;
+  }
+  function fmtDif(s, v) {
+    if (v == null) return 's/d';
+    var signo = v > 0.0000001 ? '+' : v < -0.0000001 ? '\u2212' : '', a = Math.abs(v);
+    if (s.formato === 'pct') { var p = Math.round(a * 100); return signo + p + ' ' + plural(p, 'punto', 'puntos'); }
+    return signo + M.formatear(a, s.formato);
+  }
+  function lineaEval(r, foco) {
+    var v = r.ventanas, dia = 864e5, menos1 = function (d) { return new Date(d.getTime() - dia); };
+    var ant = (v.antes.hasta - v.antes.desde) / dia, mar = (v.despues.desde - v.antes.hasta) / dia, des = Math.max((v.despues.hasta - v.despues.desde) / dia, 7);
+    var seg = function (cls, dias, et, sub) { return '<div class="v-tl-seg v-tl-' + cls + (foco === cls ? ' on' : '') + '" style="flex:' + dias + '"><b>' + et + '</b><small>' + sub + '</small></div>'; };
+    return '<div class="v-tl pe" style="--d:1">' + seg('antes', ant, 'Antes', fechaCorta(v.antes.desde) + ' a ' + fechaCorta(menos1(v.antes.hasta))) +
+      seg('margen', mar, 'Margen', 'no cuenta') + seg('despues', des, 'Después', fechaCorta(v.despues.desde) + ' a ' + fechaCorta(menos1(v.despues.hasta))) + '</div>';
+  }
+  function configEval(x) {
+    var s = x.s, ini = x.ini, r = resultadoEval(x), F = function (v) { return fmtSeg(s, v); }, D = function (v) { return fmtDif(s, v); };
+    // Los porcentajes, con un decimal: así las restas de la animación cuadran a la vista
+    if (s.formato === 'pct') {
+      var dec = function (v) { return (Math.round(v * 1000) / 10).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); };
+      F = function (v) { return v == null ? 's/d' : dec(v) + '%'; };
+      D = function (v) { return v == null ? 's/d' : (v > 0.0005 ? '+' : v < -0.0005 ? '\u2212' : '') + dec(Math.abs(v)) + ' puntos'; };
+    }
+    var nom = nombreMedida(s.medida).toLowerCase(), eqs = lista(ini.equipos), m = r.muestra || { antes: 0, despues: 0, controlAntes: 0, controlDespues: 0 };
+    var W = Math.round((r.ventanas.antes.hasta - r.ventanas.antes.desde) / (7 * 864e5));
+    var hayCtrl = !!(r.control && r.control.antes != null && r.control.despues != null);
+    var cambio = r.despues - r.antes, cambioCtrl = hayCtrl ? r.control.despues - r.control.antes : 0;
+    var tareas = function (n) { return miles(n) + ' ' + plural(n, 'tarea terminada', 'tareas terminadas'); };
+    var fila = function (et, a, d, n, cls, k) {
+      return '<div class="v-fila pe' + (cls ? ' ' + cls : '') + '" style="--d:' + k + '"><span>' + et + '<small>' + n + '</small></span><b>' + F(a) + '</b><i aria-hidden="true">→</i><b>' + F(d) + '</b><em>' + D(d - a) + '</em></div>';
+    };
+    var veces = r.ruido ? Math.abs(r.efecto) / r.ruido : null, nMin = Math.min(m.antes, m.despues);
+    var check = function (ok, titulo, sub, k) {
+      return '<div class="v-check pe" style="--d:' + k + '"><span class="v-ico ' + (ok ? 'ok' : 'aviso') + '" aria-hidden="true">' + (ok ? CHECK : '!') + '</span><div><b>' + titulo + '</b><span>' + sub + '</span></div></div>';
+    };
+    var pasos = [
+      { nombre: 'Antes', titulo: 'Medimos antes de empezar', texto: 'Tomamos ' + esc(nom) + ' de ' + esc(eqs) + ' en las ' + W + ' semanas anteriores al inicio, el ' + esc(fechaCorta(s.inicio)) + '.',
+        visual: lineaEval(r, 'antes') + '<div class="v-filas">' + '<div class="v-fila pe" style="--d:2"><span>' + esc(eqs) + '<small>' + tareas(m.antes) + '</small></span><b>' + F(r.antes) + '</b></div></div>',
+        resultado: '<b>' + F(r.antes) + '</b> antes de empezar' },
+      { nombre: 'Margen', titulo: 'Dejamos dos semanas de margen', texto: 'Un cambio tarda en notarse. Las dos semanas después de empezar no cuentan, ni para bien ni para mal.',
+        visual: lineaEval(r, 'margen'), resultado: 'Del ' + esc(fechaCorta(s.inicio)) + ' al ' + esc(fechaCorta(s.desdeDespues)) + ' no cuenta' },
+      { nombre: 'Después', titulo: 'Medimos después', texto: 'La misma medida, en las ' + W + ' semanas siguientes' + (r.ventanas.completa ? '.' : ', que aún no se han completado.'),
+        visual: lineaEval(r, 'despues') + '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, tareas(m.despues) + ' después', '', 2) + '</div>',
+        resultado: 'De <b>' + F(r.antes) + '</b> a <b>' + F(r.despues) + '</b>' },
+      { nombre: 'Resto', titulo: 'Miramos al resto de equipos', texto: 'En las mismas fechas, ¿cambió también el resto? Así se descuenta lo que afecta a todos, como vacaciones o picos de trabajo.',
+        visual: '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, 'equipos de la iniciativa', '', 1) +
+          (hayCtrl ? fila('El resto de equipos', r.control.antes, r.control.despues, tareas(m.controlDespues) + ' después', 'v-fila-ctrl', 3) : '<p class="v-mas pe" style="--d:3">No hay otros equipos con los que comparar.</p>') + '</div>',
+        resultado: hayCtrl ? 'El resto pasó de ' + F(r.control.antes) + ' a ' + F(r.control.despues) : 'Sin otros equipos, cuenta el cambio tal cual' },
+      { nombre: 'Efecto', titulo: 'Calculamos el efecto propio', texto: 'Es el cambio de los equipos de la iniciativa menos el cambio del resto en las mismas fechas.',
+        visual: '<div class="v-ecu pe" style="--d:2"><span>' + D(cambio) + '<small>la iniciativa</small></span><i aria-hidden="true">\u2212</i><span>' + (cambioCtrl < 0 ? '(' + D(cambioCtrl) + ')' : D(cambioCtrl)) + '<small>el resto</small></span><i aria-hidden="true">=</i><span class="v-ecu-res">' + D(r.efecto) + '<small>efecto propio</small></span></div>',
+        resultado: 'Efecto propio de <b>' + D(r.efecto) + '</b>, ' + (r.enDireccionEsperada ? 'en la dirección buscada' : 'en contra de lo buscado') },
+      { nombre: 'Confianza', titulo: '¿Es más que ruido?', texto: 'Comparamos el efecto con lo que ' + esc(nom) + ' suele variar sola en estos equipos, y miramos cuántas tareas hay detrás.',
+        visual: '<div class="v-checks">' +
+          check(veces != null && veces >= 1, veces != null ? 'El efecto es ' + (Math.round(veces * 10) / 10).toLocaleString('es-ES') + ' veces lo que varía sola' : 'No hay historia para saber cuánto varía sola', veces != null ? 'Varía sola unos ' + D(r.ruido).replace(/^\+/, '') + '. Confianza alta desde el doble.' : 'Hacen falta varias ventanas anteriores al inicio.', 2) +
+          check(nMin >= 10, miles(nMin) + ' ' + plural(nMin, 'tarea', 'tareas') + ' en la ventana más pequeña', 'Media desde 10 tareas; alta desde 20.', 3) +
+          check(r.ventanas.completa, r.ventanas.completa ? 'Ventana de después completa' : 'Ventana de después aún incompleta', r.ventanas.completa ? 'Las ' + W + ' semanas ya tienen datos.' : 'Completa el ' + esc(fechaCorta(s.completaEl)) + '.', 4) + '</div>',
+        resultado: 'Confianza <b>' + esc(r.confianza || 'baja') + '</b>' }
+    ];
+    var e = EST_SEG[s.estado] || ['neutro', s.estado];
+    return {
+      kicker: 'Evaluar la iniciativa', titulo: esc(ini.nombre), fuente: App.demo ? 'Datos de ejemplo' : '', siempre: true,
+      pie: 'No es un experimento controlado: dice si merece seguir, no demuestra la causa',
+      pasos: pasos, ultimo: 'Ver el resultado',
+      final: {
+        titulo: e[1], texto: esc(s.texto),
+        visual: '<div class="v-resumen">' + [[F(r.antes), 'antes'], [F(r.despues), 'después'], [hayCtrl ? D(cambioCtrl) : 's/d', 'cambio del resto'], [D(r.efecto), 'efecto propio']].map(function (z, k) {
+          return '<div class="pe" style="--d:' + (k + 2) + '"><b>' + z[0] + '</b><span>' + z[1] + '</span></div>';
+        }).join('') + '</div>',
+        boton: 'Volver al seguimiento'
+      }
+    };
+  }
+
   // En qué consiste la iniciativa: qué se hace, por qué y qué se espera. Si viene de una recomendación, su plan entero.
   function fichaIni(ini, caso) {
     var desdeRec = caso && caso.plan && caso.plan.length && ini.descripcion === caso.plan[0].paso;
@@ -923,6 +999,7 @@
       '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + (caso ? ', desde la recomendación «' + esc(caso.titulo) + '»' : '') + '</p></div>' + chipSeg(s.estado) + '</header>' +
       fichaIni(ini, caso) +
       '<div class="seg-cuerpo"><div class="seg-datos"><h3 class="seg-h3">Cómo va</h3><p class="seg-texto">' + esc(s.texto) + '</p>' +
+      (resultadoEval(x) ? '<p><button class="btn btn-sec btn-peq" data-accion="ver-evaluacion" data-i="' + esc(ini.id) + '">Ver cómo se ha evaluado</button></p>' : '') +
       cifrasSeg(s) +
       '<dl class="seg-dl">' + dato('Medida objetivo', nomMed(s.medida) + ', ' + s.direccion) + dato('Inicio', esc(fechaCorta(s.inicio))) +
       dato('Se mide desde', esc(fechaCorta(s.desdeDespues))) + dato('Evaluación completa', esc(fechaCorta(s.completaEl))) + (s.confianza ? dato('Confianza', s.confianza) : '') + '</dl>' +
@@ -1411,6 +1488,10 @@
       if (d) { d.classList.add('entra'); if (window.innerWidth < 1000) d.scrollIntoView({ block: 'start' }); }
     },
     registrar: function (el) { registrar(el.getAttribute('data-k')); },
+    'ver-evaluacion': function (el) {
+      var id = el.getAttribute('data-i'), x = seguimientos().filter(function (y) { return y.ini.id === id; })[0];
+      if (x && resultadoEval(x)) window.Proceso.reproducir(configEval(x));
+    },
     'ver-recs': function (el) { App.recEquipo = el.getAttribute('data-e') || 'todos'; App.recSel = null; App.vista = 'recomendaciones'; render(); window.scrollTo(0, 0); },
     'demo-fallos': function () { verDemo(null, 'fallos'); },
     'bajar-ejemplo': function () { var d = DEMOS[App.demoId] || DEMOS.b3; descargar(d.fichero, (document.getElementById(d.pre + 'csv') || {}).textContent || '', 'text/csv'); },
