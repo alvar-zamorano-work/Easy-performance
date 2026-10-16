@@ -1065,6 +1065,7 @@
       '<div class="tabla-caja"><table class="tabla-plat"><thead><tr><th scope="col">Plataforma</th><th scope="col">Qué se lee</th><th scope="col">Equipo</th><th scope="col">Tiempo en cada estado</th><th scope="col">Iteración</th><th scope="col">Estimación</th><th scope="col">Hoy</th></tr></thead><tbody>' +
       PLATAFORMAS.map(function (p) { return '<tr><th scope="row">' + p.nombre + '</th><td>' + p.lee + '</td><td>' + p.equipo + '</td><td>' + p.tiempos + '</td><td>' + p.iter + '</td><td>' + p.est + '</td><td>' + (p.ok ? '<span class="chip chip-bien">' + p.hoy + '</span>' : '<span class="apagado">' + p.hoy + '</span>') + '</td></tr>'; }).join('') +
       '</tbody></table></div></section>';
+    html += capaSemantica();
     // Primera ingesta y actualizaciones
     var ticks = ''; for (var k = 1; k <= 13; k++) ticks += '<span class="lt-tick' + (k % 4 === 0 ? ' mes' : '') + (k === 13 ? ' trim' : '') + '"></span>';
     html += '<section class="bloque"><h2>Primera ingesta y actualizaciones</h2><p class="nota">La primera carga trae el histórico para saber qué es lo normal en cada equipo. Después basta con lo que cambia cada semana.</p>' +
@@ -1085,6 +1086,55 @@
     return html;
   }
 
+  // La capa semántica: el diccionario que dice qué es cada columna de cada plataforma, dónde va y qué hay que arreglar
+  function capaSemantica() {
+    var prox = ' <span class="sem-prox">Próxima fase</span>';
+    var pasos = [
+      ['Reconocer la fuente', 'Por las cabeceras: Issue key es Jira, Work Item Type es Azure DevOps, IID es GitLab, number y sys_ es ServiceNow.'],
+      ['Clasificar cada columna', 'Por su nombre, en inglés o castellano, y por cómo son sus valores: fechas, claves, rutas, listas, correos.'],
+      ['Traducir los valores', 'Estados, tipos y prioridades de cada herramienta pasan a los del modelo común. Fechas, listas y HTML se normalizan.'],
+      ['Decir qué arreglar', 'Lo que falta o está mal, a qué medidas afecta y quién lo arregla: el consultor en el mapeo o el cliente reexportando.']
+    ];
+    var ej = [
+      ['Issue key', 'Clave de la tarea', 'Se usa', 'bien'],
+      ['Status', 'Estado: se traduce a uno de los nueve comunes', 'Se usa', 'bien'],
+      ['Sprint (tres columnas)', 'Sprints por los que pasó: se juntan en una lista', 'Se usa', 'bien'],
+      ['Custom field (Story Points)', 'Estimación', 'Se usa', 'bien'],
+      ['Resolved', 'Fecha de terminado', 'Se usa', 'bien'],
+      ['Component/s', 'Equipo, propuesto', 'A confirmar', 'atencion'],
+      ['Assignee, Reporter', 'Persona', 'Se descarta', 'critico'],
+      ['Comment', 'Texto con nombres', 'Se descarta', 'critico'],
+      ['Custom field (Cliente)', 'Sin reconocer', 'Se ignora y se lista', 'sin']
+    ];
+    var niveles = [
+      ['N0', 'Solo foto', 'Estado actual y fechas: entregas, plazo desde que se crea y edad de lo pendiente.'],
+      ['N1', 'Tiempo en cada estado', 'Añade tiempo bloqueado y en espera, y reaperturas aproximadas.'],
+      ['N2', 'Historia de estados', 'Añade plazo desde que se empieza, reaperturas exactas y edad de lo bloqueado.'],
+      ['N3', 'Historia de estados y sprints', 'Añade paso de sprint y cumplimiento del compromiso.']
+    ];
+    var gr = [
+      ['critico', 'Bloquea', 'Sin arreglarlo no se puede medir. Por ejemplo: no se sabe de qué equipo es cada tarea, o hay estados sin traducir.'],
+      ['atencion', 'Resta medidas', 'Se mide, pero con menos. Por ejemplo: el export se cortó en 10.000 filas o no trae historia.'],
+      ['sin', 'Aviso', 'Se mide bien y conviene saberlo. Por ejemplo: filas repetidas o columnas de personas, que se descartan solas.']
+    ];
+    return '<section class="bloque" id="semantica"><h2>Cómo reconoce cada columna</h2>' +
+      '<p>Cada plataforma llama distinto a lo mismo, y cada cliente la configura a su manera. Capgemini mantiene un diccionario propio que dice, para cada plataforma, cómo se llama cada dato, cómo son sus valores y dónde va en el modelo común. Con él, al cargar un export la página sabe qué tipo de dato es cada columna, dónde colocarlo y qué hay que arreglar antes de medir.</p>' +
+      '<div class="sem-dic"><div><b>Conceptos</b><small>Lo que el modelo sabe recibir</small><p>Clave, estado, fechas, sprint, estimación, equipo, enlaces. Y lo que nunca se usa: personas y comentarios.</p></div>' +
+      '<div><b>Firmas por plataforma</b><small>Cómo aparece cada concepto</small><p>Nombres de columna en inglés y castellano, columnas repetidas, formato de los valores y su traducción.</p></div>' +
+      '<div><b>Valores</b><small>Estados, tipos y prioridades</small><p>Por ejemplo, Active, In Progress, En curso y Work in progress son todos el estado común En curso.</p></div></div>' +
+      '<ol class="sem-pasos">' + pasos.map(function (p, k) { return '<li><span class="fl-n">' + (k + 1) + '</span><b>' + p[0] + '</b><p>' + p[1] + '</p></li>'; }).join('') + '</ol>' +
+      '<h3 class="sem-h3">Así se lee un export de Jira</h3>' +
+      '<div class="tabla-caja"><table class="tabla-sem"><thead><tr><th scope="col">Columna del export</th><th scope="col">Qué es</th><th scope="col">Qué se hace</th></tr></thead><tbody>' +
+      ej.map(function (f) { return '<tr><th scope="row"><code>' + f[0] + '</code></th><td>' + f[1] + '</td><td><span class="chip chip-' + f[3] + '">' + f[2] + '</span></td></tr>'; }).join('') +
+      '</tbody></table></div>' +
+      '<p class="nota">Lo que se reconoce con seguridad se coloca solo. Lo dudoso lo confirma el consultor en el arranque. Una columna que puede ser de personas se descarta aunque haya dudas: es la única regla que prefiere perder un dato.</p>' +
+      '<div class="dos sem-dos"><div><h3 class="sem-h3">Qué hay que arreglar</h3><dl class="leyenda">' + gr.map(function (g) { return '<dt><span class="chip chip-' + g[0] + '">' + g[1] + '</span></dt><dd>' + g[2] + '</dd>'; }).join('') + '</dl></div>' +
+      '<div><h3 class="sem-h3">Cuánta historia trae el export</h3><dl class="sem-niveles">' + niveles.map(function (n) { return '<dt><b>' + n[0] + '</b> ' + n[1] + '</dt><dd>' + n[2] + '</dd>'; }).join('') + '</dl>' +
+      '<p class="nota">Con el diccionario completo, la página enseñará solo las medidas que esa historia permite calcular bien.</p></div></div>' +
+      '<div class="sem-estado"><div><span class="kicker">Hoy</span><p>Con Jira: reconoce el campo de equipo y los estados por su nombre, nunca lee personas y comprueba la calidad de los datos (en Fiabilidad de los datos).</p></div>' +
+      '<div><span class="kicker">Siguiente' + prox + '</span><p>El diccionario completo en ficheros para Jira, Azure DevOps, GitLab y ServiceNow: confianza por columna, nivel de historia y aviso cuando el export cambia de una semana a otra. Un consultor lo amplía sin tocar código.</p></div></div>' +
+      '</section>';
+  }
   // Las cifras de una recomendación: el valor de su medida en cada equipo frente a lo normal, con la frase de la evidencia
   function cifrasRec(x) {
     var c = x.caso, eqs = {}; App.r.modelo.equipos.forEach(function (e) { eqs[e.nombre] = e; });

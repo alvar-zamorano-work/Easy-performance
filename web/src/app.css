@@ -597,10 +597,31 @@ button.proc-punto:hover { border-color: var(--turquesa); }
 [hidden] { display: none !important; }
 
 /* ---------- pantallas estrechas ---------- */
+/* ---------- capa semántica ---------- */
+.sem-dic { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 12px 0; }
+.sem-dic > div { padding: 12px 14px; border-radius: 12px; background: var(--superficie-2); display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.sem-dic small { color: var(--enlace); font-weight: 500; }
+.sem-dic p { color: var(--tinta-2); }
+.sem-pasos { list-style: none; margin: 4px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.sem-pasos li { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--borde); display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.sem-pasos p { color: var(--tinta-2); }
+.sem-h3 { font-size: 16px; margin: 8px 0; }
+.tabla-sem { min-width: 620px; font-size: 14px; }
+.tabla-sem td { color: var(--tinta-2); }
+.sem-dos { margin-top: 12px; }
+.sem-niveles { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; font-size: 14px; }
+.sem-niveles dt b { color: var(--enlace); margin-right: 4px; }
+.sem-niveles dd { margin: 0; color: var(--tinta-2); }
+.sem-estado { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.sem-estado > div { padding: 12px 14px; border-radius: 12px; border: 1px dashed var(--borde-fuerte); font-size: 14px; }
+.sem-estado p { color: var(--tinta-2); margin-top: 4px; }
+.sem-prox { display: inline-block; margin-left: 6px; font-weight: 700; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--aten-tinta); background: var(--aten-fondo); border-radius: 999px; padding: 0 8px; }
 @media (max-width: 1000px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .dos, .rec-mas, .pasos, .recs-md, .rec-dos, .con-dos, .seg-cuerpo, .banco, .plat, .cadencias, .auto, .fiab-grid, .rec-resumen { grid-template-columns: 1fr; }
+  .dos, .rec-mas, .pasos, .recs-md, .rec-dos, .con-dos, .seg-cuerpo, .banco, .plat, .cadencias, .auto, .sem-dic, .sem-pasos, .sem-estado, .fiab-grid, .rec-resumen { grid-template-columns: 1fr; }
   .flujo { grid-template-columns: 1fr; grid-template-rows: none; gap: 0; }
+  .sem-niveles { grid-template-columns: 1fr; gap: 2px; }
+  .sem-niveles dd { margin-bottom: 8px; }
   .fl-nodo, .fl-flecha { grid-row: auto; }
   .fl-flecha { transform: rotate(135deg); margin: 6px 0 10px; }
   .fl-vuelta { display: none; }
