@@ -9,7 +9,7 @@
   var App = {
     vista: 'inicio', ver: 'area', editar: null, demo: false, carpeta: null, origen: null,
     lectura: null, det: null, cfg: {}, iniciativas: [], contexto: null, r: null, lamina: 0, real: null, abiertas: {},
-    fuente: null, simulada: null, generadas: false, recSel: null, recEquipo: 'todos', tiempoMs: 0
+    fuente: null, simulada: null, generadas: false, recSel: null, recEquipo: 'todos', tiempoMs: 0, como: 'metodo'
   };
   window.EasyPerformance = App;
 
@@ -255,7 +255,7 @@
         x[2].forEach(function (f) { var d = leer(f.texto, 'contexto/' + f.nombre); if (d && d.documentos) docs = docs.concat(d.documentos); });
         App.contexto = docs.length ? { documentos: docs } : null;
         setTimeout(function () {
-          try { if (procesar(fs, 'carpeta')) { guardarFoto(); App.fuente = null; render(); aviso('Leídos ' + fs.length + ' fichero(s) de la carpeta.'); if (animar) animarCarga(null); } } finally { ocupado(false); }
+          try { if (procesar(fs, 'carpeta')) { guardarFoto(); guardarSeguimiento(); App.fuente = null; render(); aviso('Leídos ' + fs.length + ' fichero(s) de la carpeta.'); if (animar) animarCarga(null); } } finally { ocupado(false); }
         }, 20);
       });
     }).catch(function () { ocupado(false); aviso('No hay permiso para leer la carpeta. Pulsa otra vez "Leer la carpeta".'); });
@@ -315,14 +315,14 @@
     document.body.classList.toggle('en-presentacion', App.vista === 'presentacion');
     if (App.vista === 'presentacion') html = presentacion();
     else if (!App.r || App.vista === 'inicio') html = inicio();
-    else html = cabecera() + (App.demo ? bandaDemo() : '') + '<main class="pagina">' + ({ tablero: tablero, recomendaciones: vistaRecomendaciones, como: comoFunciona }[App.vista] || tablero)() + '</main>';
+    else html = cabecera() + (App.demo ? bandaDemo() : '') + '<main class="pagina">' + ({ tablero: tablero, recomendaciones: vistaRecomendaciones, iniciativas: vistaIniciativas, como: comoFunciona }[App.vista] || tablero)() + '</main>';
     document.getElementById('app').innerHTML = html;
     if (App.vista === 'presentacion') ajustarLienzo();
   }
   function marca() { return '<div class="marca"><span class="logo" aria-hidden="true"></span><b>Easy Performance</b></div>'; }
   function cabecera() {
     var recs = recomendaciones().length;
-    var pest = [['tablero', 'Tablero'], ['recomendaciones', 'Recomendaciones'], ['como', 'Cómo funciona']].map(function (p) {
+    var pest = [['tablero', 'Tablero'], ['recomendaciones', 'Recomendaciones'], ['iniciativas', 'Iniciativas'], ['como', 'Cómo funciona']].map(function (p) {
       return '<button class="pestana" data-accion="vista" data-v="' + p[0] + '"' + (App.vista === p[0] ? ' aria-current="page"' : '') + '>' + p[1] +
         (p[0] === 'recomendaciones' && recs && App.generadas ? ' <span class="cuenta">' + recs + '</span>' : '') + '</button>';
     }).join('');
@@ -395,7 +395,7 @@
     else if ((e === 'atencion' || e === 'critico') && m.estadoTexto) normal = m.estadoTexto.replace(/su rango habitual/g, 'lo normal');
     else if (m && m.ref) normal = 'Lo normal: ' + rango(id, m.ref.lo, m.ref.hi);
     else normal = def.que.split('.')[0] + '.';
-    return '<article class="kpi"><div class="kpi-cab"><span>' + def.nombre + '</span>' + chip(e, true) + '</div>' +
+    return '<article class="kpi"><div class="kpi-cab">' + conTip(def.nombre, def.que) + chip(e, true) + '</div>' +
       '<div class="kpi-v"><b>' + esc(c.g) + '</b><span>' + esc(c.u) + '</span></div><p class="kpi-n">' + esc(normal) + '</p>' + (conSerie ? chispa(m, e, def.nombre) : '') + '</article>';
   }
   function serieUltima(m, k) { var s = (m && m.serie) || []; return s.slice(Math.max(0, s.length - k)); }
@@ -420,12 +420,11 @@
     var html = '<section class="titular"><div><h1>' + esc(titular) + '</h1><p>Cada cifra se compara con lo normal en ese mismo equipo.' +
       (nRec ? ' ' + (App.generadas ? '<button class="btn-txt" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>' :
         '<button class="btn-txt" data-accion="generar">Generar las recomendaciones</button>') : '') + '</p></div>' + selector() + '</section>';
-    var nAvisos = avisosCalidad();
-    if (nAvisos) html += '<div class="aviso-datos"><span class="chip chip-atencion">Datos</span><span>Hay ' + (nAvisos === 1 ? 'un aviso' : nAvisos + ' avisos') + ' sobre la calidad de los datos. Conviene revisarlos antes de sacar conclusiones.</span><button class="btn-txt" data-accion="editar" data-e="calidad">Verlos</button></div>';
+    html += tiraFiabilidad();
     html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), false); }).join('') + '</section>';
     if (eqs.length > 1) {
       html += '<section class="bloque"><h2>Equipos</h2><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Equipo</th>' +
-        columnas().map(function (id) { return '<th scope="col">' + MED[id].nombre + '</th>'; }).join('') + '</tr></thead><tbody>' +
+        columnas().map(function (id) { return '<th scope="col">' + conTip(MED[id].nombre, MED[id].que) + '</th>'; }).join('') + '</tr></thead><tbody>' +
         eqs.map(function (eq) {
           var info = (App.cfg.equiposInfo || {})[eq.nombre] || {}, tipo = info.tipo === 'proveedor' ? (info.proveedor || 'Proveedor') : (info.tipo === 'interno' ? 'Interno' : '');
           return '<tr><th scope="row"><button class="enlace" data-accion="ver" data-e="' + esc(eq.nombre) + '">' + esc(eq.nombre) + '</button>' + (tipo ? '<span class="sub">' + esc(tipo) + '</span>' : '') + '</th>' +
@@ -443,16 +442,16 @@
     var filas = [['plazo_p80', 'Plazo', 'ciclo'], ['retrabajo', 'Retrabajo', 'retrabajo'], ['arrastradas', 'Pasa de sprint', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
     if (!filas.length) return '';
     var cg = N.costeDeGrupos(c, cfgCalculo());
-    var capac = function (titulo, f) {
+    var capac = function (titulo, f, tip) {
       if (!g.some(function (x) { return f(cg[x.id]) != null; })) return '';
-      return '<tr class="fila-coste"><th scope="row">' + titulo + '</th>' + g.map(function (x) { var v = f(cg[x.id]); return '<td>' + (v != null ? esc(v) : '<span class="apagado">falta FTE o coste</span>') + '</td>'; }).join('') + '</tr>';
+      return '<tr class="fila-coste"><th scope="row">' + conTip(titulo, tip) + '</th>' + g.map(function (x) { var v = f(cg[x.id]); return '<td>' + (v != null ? esc(v) : '<span class="apagado">falta FTE o coste</span>') + '</td>'; }).join('') + '</tr>';
     };
-    var filasCoste = capac('Entregas al mes por FTE', function (x) { return x.entregasPorFte != null ? n1(x.entregasPorFte) : null; }) +
-      capac('Coste por entrega', function (x) { return x.costePorEntrega != null ? euros(x.costePorEntrega) : null; });
+    var filasCoste = capac('Entregas al mes por FTE', function (x) { return x.entregasPorFte != null ? n1(x.entregasPorFte) : null; }, 'Tareas terminadas al mes entre las personas equivalentes (FTE) del grupo, en las últimas 12 semanas.') +
+      capac('Coste por entrega', function (x) { return x.costePorEntrega != null ? euros(x.costePorEntrega) : null; }, MED.coste.que);
     return '<section class="bloque"><h2>Internos y proveedores</h2><table class="tabla-grupos"><thead><tr><th scope="col">Medida</th>' + g.map(function (x) { return '<th scope="col">' + esc(x.nombre) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       filas.map(function (f) {
         var seg = c.medidas[f[0]].segmentos[0];
-        return '<tr><th scope="row">' + f[1] + '</th>' + g.map(function (x) {
+        return '<tr><th scope="row">' + conTip(f[1], MED[f[2]].que) + '</th>' + g.map(function (x) {
           var cel = seg.porGrupo[x.id], v = cel && cel.valor != null ? valor(f[2], cel.valor) : null, mal = peor[f[0] + '|' + x.id];
           return '<td' + (mal ? ' class="peor"' : '') + '>' + (v ? esc(v) + (mal ? ' · peor' : '') : '<span class="apagado">pocos datos</span>') + '</td>';
         }).join('') + '</tr>';
@@ -466,12 +465,11 @@
     return { e: N.conEfecto(ev) ? 'bien' : 'neutro', t: t };
   }
   function bloqueIniciativas() {
-    var ev = App.r.iniciativas.slice().sort(function (a, b) { return (N.conEfecto(b.evaluacion) ? 1 : 0) - (N.conEfecto(a.evaluacion) ? 1 : 0); });
-    if (!ev.length) return '<section class="bloque"><h2>Iniciativas</h2><p class="nota">Cuando registréis una iniciativa de mejora (un fichero en la carpeta iniciativas), aquí veréis si funciona.</p></section>';
-    return '<section class="bloque"><h2>Iniciativas</h2>' + ev.map(function (x) {
-      var t = textoIni(x.evaluacion);
-      return '<div class="fila-ini"><div><b>' + esc(x.iniciativa.nombre) + '</b><span>' + esc(t.t) + '</span></div><span class="chip chip-' + (t.e === 'bien' ? 'bien' : 'neutro') + '">' + (t.e === 'bien' ? 'Funciona' : (t.e === 'sin' ? 'Aún sin datos' : 'Sin efecto claro')) + '</span></div>';
-    }).join('') + '<p class="nota">No es un experimento controlado: dice si merece seguir, no demuestra la causa.</p></section>';
+    var v = seguimientos();
+    if (!v.length) return '<section class="bloque"><h2>Iniciativas</h2><p class="nota">Cuando registréis una iniciativa de mejora, desde una recomendación o en la carpeta iniciativas, aquí veréis si funciona.</p></section>';
+    return '<section class="bloque"><h2>Iniciativas</h2>' + v.slice(0, 4).map(function (x) {
+      return '<div class="fila-ini"><div><b>' + esc(x.ini.nombre) + '</b><span>' + esc(x.s.texto) + '</span></div>' + chipSeg(x.s.estado) + '</div>';
+    }).join('') + '<p class="nota">Se siguen solas con cada carga. <button class="btn-txt" data-accion="vista" data-v="iniciativas">Ver el seguimiento</button></p></section>';
   }
   function vistaEquipo(eq) {
     if (!eq) { App.ver = 'area'; return vistaArea(); }
@@ -604,30 +602,6 @@
   function idIniciativa(x) { return 'rec-' + x.id + '-' + slug(x.equipos.join('-')); }
   function registrable(x) { return !!(x.caso.medida && N.MEDIDAS_INICIATIVA[x.caso.medida] && C.medidas[x.caso.medida]); }
   function nombreMedida(id) { return MED[id] ? MED[id].nombre : (C.medidas[id] ? C.medidas[id].nombre : id); }
-  function detalleRec(x, n) {
-    var c = x.caso, def = c.medida ? C.medidas[c.medida] : null;
-    var ev = x.evidencias.map(function (e) { return '<li>' + (e[0] && x.evidencias.length > 1 ? '<b>' + esc(e[0]) + ':</b> ' : '') + esc(e[1]) + '</li>'; }).join('');
-    var plan = c.plan.map(function (s, i) {
-      return '<li' + (i ? '' : ' class="primero"') + '><span class="paso-n">' + (i + 1) + '</span><div><b>' + esc(s.paso) + '</b><span class="meta">' + (i ? '' : '<span class="empieza">Primer paso</span>') +
-        '<span>Lo hace: ' + esc(s.quien.toLowerCase()) + '</span><span>Esfuerzo: ' + esc(s.esfuerzo.toLowerCase()) + '</span></span></div></li>';
-    }).join('');
-    var ini = '';
-    if (def) ini += '<p><b>Medida objetivo:</b> ' + esc(nombreMedida(c.medida).toLowerCase()) + ', ' + (def.dir === 'mas' ? 'subir' : 'bajar') + '.</p>';
-    ini += '<p><b>Cómo saber si funciona:</b> ' + esc(c.comprobar) + '</p>';
-    if (registrable(x)) {
-      var hecha = iniciativas().some(function (i) { return i.id === idIniciativa(x); });
-      ini += hecha ? '<p class="registrada"><span class="chip chip-bien">Registrada</span> Se evalúa en el tablero, en Iniciativas.</p>' :
-        '<p><button class="btn btn-sec btn-peq" data-accion="registrar" data-k="' + esc(claveRec(x)) + '">Registrar como iniciativa</button></p><p class="nota">Se evalúa antes y después, desde dos semanas tras el inicio, frente a los equipos que no la tienen.</p>';
-    } else ini += '<p class="nota">Se sigue en el tablero con su propia medida.</p>';
-    return '<div class="rec-cab"><span class="rec-n">' + n + '</span>' + chip(x.gravedad) + '<span class="rec-para">Para: ' + esc(x.para) + '</span></div>' +
-      '<h2>' + esc(x.titulo) + '</h2>' + (c.senal ? '<p class="rec-senal">' + esc(c.senal) + '</p>' : '') +
-      '<section class="rec-bloque"><h3>De dónde sale</h3><ul class="rec-de">' + ev + '</ul></section>' +
-      '<section class="rec-bloque"><h3>Plan de acción</h3><ol class="rec-plan">' + plan + '</ol></section>' +
-      '<div class="rec-dos"><section class="rec-caja"><h3>Iniciativa propuesta</h3>' + ini + '</section>' +
-      (c.preguntas && c.preguntas.length ? '<section class="rec-caja"><h3>Para la reunión</h3><ul>' + c.preguntas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></section>' : '') + '</div>' +
-      '<details data-k="' + esc(claveRec(x)) + '"' + (App.abiertas[claveRec(x)] ? ' open' : '') + '><summary>Causas habituales y respaldo</summary><div class="rec-mas"><div><b>Causas habituales</b><ul>' +
-      c.causas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div><div><b>Respaldo</b><p>' + esc(c.respaldo || '') + '</p>' + (c.comun ? '<p>' + esc(c.comun) + '</p>' : '') + '</div></div></details>';
-  }
   function hoyTexto() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() < 9 ? '0' : '') + (d.getMonth() + 1) + '-' + (d.getDate() < 10 ? '0' : '') + d.getDate(); }
   function registrar(clave) {
     var x = recomendaciones().filter(function (r) { return claveRec(r) === clave; })[0];
@@ -667,7 +641,7 @@
   }
   function matriz(soloSenales) {
     var eqs = App.r.modelo.equipos.slice(0, 8);
-    var cab = '<span></span>' + COLUMNAS.map(function (id) { return '<span class="h">' + MED[id].nombre + '</span>'; }).join('');
+    var cab = '<span></span>' + COLUMNAS.map(function (id) { return '<span class="h">' + conTip(MED[id].nombre, MED[id].que) + '</span>'; }).join('');
     var filas = eqs.map(function (eq, k) {
       return '<span class="eq pe" style="--d:' + (k + 2) + '">' + esc(eq.nombre) + '</span>' + COLUMNAS.map(function (id) {
         var m = eq.medidas[id], e = estadoDe(m), fuera = e === 'atencion' || e === 'critico';
@@ -766,7 +740,7 @@
       kicker: 'El método', titulo: 'Así hacemos fiables vuestros datos',
       fuente: f ? esc(f.nombre) + ' (simulación)' : (App.origen === 'ejemplo' ? 'Datos de ejemplo' : esc(recortar(inf.ficheros.map(function (x) { return x.nombre; }).join(', '), 48))),
       pie: f ? 'Simulación con los datos de ejemplo de un banco ficticio' : 'Todo se calcula en este navegador: los datos no salen del ordenador',
-      pasos: [p1, p2, p3, p4, p5, p6],
+      pasos: [p1, p2, p3, p4, p5, p6], ultimo: 'Ver el resumen',
       final: {
         titulo: 'Datos listos para usar',
         texto: 'Calculado en este navegador en ' + segundos(App.tiempoMs || 0) + '. Cada cifra del tablero sale de estos pasos, y el documento de definiciones los recoge para firmarlos.',
@@ -816,11 +790,11 @@
         visual: '<div class="v-chips">' + ctx.map(function (x, k) { return '<span class="v-chip pe" style="--d:' + (k + 2) + '"><b>' + esc(x[0]) + '</b>' + (x[1] ? '<small>' + esc(x[1]) + '</small>' : '') + '</span>'; }).join('') + '</div>',
         resultado: cuenta(eqs.length) + ' ' + plural(eqs.length, 'equipo', 'equipos') + ' con su contexto' },
       { nombre: 'Banco de casos', titulo: 'Cruzamos con el banco de casos', texto: 'Cada caso del banco de Capgemini une una señal con sus causas habituales, un plan de acción y cómo comprobar si funcionó. Solo se activan los que encajan con vuestras cifras.',
-        visual: banco, resultado: cuenta(nAct) + ' de ' + ids.length + ' casos se activan con vuestras cifras', dur: 3000 },
+        visual: banco, resultado: cuenta(nAct) + ' de ' + ids.length + ' casos se activan con vuestras cifras' },
       { nombre: 'Priorizar', titulo: 'Ordenamos por lo que más importa', texto: 'Primero lo más grave y lo que afecta a más equipos. Si un mismo problema aparece en varios equipos, va una sola vez.',
         visual: orden4, resultado: cuenta(recs.length) + ' ' + plural(recs.length, 'recomendación', 'recomendaciones') + (crit ? ', ' + crit + ' ' + plural(crit, 'crítica', 'críticas') : '') },
       { nombre: 'IA', titulo: 'La IA adapta el plan', etiqueta: 'Próxima fase', texto: 'La IA del consultor adaptará cada plan a vuestro contexto y lo redactará citando estas cifras. Los números los calcula siempre la herramienta, nunca la IA. Hoy el plan sale tal cual del banco de casos.',
-        visual: borrador, resultado: '', dur: 3200 },
+        visual: borrador, resultado: '' },
       { nombre: 'Revisión', titulo: 'El consultor lo revisa con vosotros', texto: 'Un consultor de Capgemini revisa cada recomendación con los responsables de equipo antes de ponerla en marcha.',
         visual: '<div class="v-checks">' + [['Cada recomendación cita la cifra de la que sale', true], ['Primer paso con quién lo hace y su esfuerzo', true], ['Cómo saber si funcionó, como iniciativa', true], ['Revisión con los responsables de equipo', false]].map(function (c, k) {
           return '<div class="v-check pe" style="--d:' + (k + 2) + '"><span class="v-ico ' + (c[1] ? 'ok' : 'pend') + '" aria-hidden="true">' + (c[1] ? CHECK : '') + '</span><div><b>' + c[0] + '</b>' + (c[1] ? '' : '<span>Con el consultor, antes de empezar</span>') + '</div></div>';
@@ -830,7 +804,7 @@
     return {
       kicker: 'Generar recomendaciones', titulo: 'Del diagnóstico al plan de acción', fuente: App.demo ? 'Datos de ejemplo' : '',
       pie: 'Las recomendaciones salen del banco de casos de Capgemini a partir de vuestras cifras',
-      pasos: pasos,
+      pasos: pasos, ultimo: 'Ver el resumen',
       final: {
         titulo: recs.length ? 'Plan de acción listo' : 'Nada que pida actuar ahora',
         texto: recs.length ? 'Cada recomendación trae de qué cifra sale, el plan, la iniciativa para comprobarlo y las preguntas para la reunión.' : 'Todas las cifras están dentro de lo normal en cada equipo.',
@@ -842,38 +816,312 @@
     };
   }
 
-  // ---------- cómo funciona ----------
+  // ---------- ayudas al pasar el cursor (tooltips) ----------
+  // Un solo globo para toda la página, colocado junto al elemento con data-tip. Se abre también con el teclado (foco).
+  function medTip(id) {
+    if (MED[id]) return MED[id].que;
+    var d = C.medidas[id];
+    return d ? d.como + (d.dir ? ' Mejor cuanto ' + (d.dir === 'menos' ? 'más bajo.' : 'más alto.') : '') : '';
+  }
+  function conTip(texto, tip) { return tip ? '<span class="con-tip" tabindex="0" data-tip="' + esc(tip) + '">' + texto + '</span>' : texto; }
+  function nomMed(id) { return conTip(esc(nombreMedida(id)), medTip(id)); }
+  var globo = null;
+  function mostrarTip(el) {
+    var t = el.getAttribute('data-tip');
+    if (!t) return;
+    if (!globo) { globo = document.createElement('div'); globo.className = 'tip'; globo.setAttribute('role', 'tooltip'); globo.id = 'tip'; document.body.appendChild(globo); }
+    globo.textContent = t; globo.hidden = false; globo.classList.remove('visible');
+    el.setAttribute('aria-describedby', 'tip');
+    var r = el.getBoundingClientRect(), g = globo.getBoundingClientRect();
+    var x = Math.max(8, Math.min(window.innerWidth - g.width - 8, r.left + r.width / 2 - g.width / 2));
+    var arriba = r.top - g.height - 10 >= 8, y = arriba ? r.top - g.height - 10 : r.bottom + 10;
+    globo.style.left = Math.round(x) + 'px'; globo.style.top = Math.round(y) + 'px';
+    globo.classList.toggle('abajo', !arriba);
+    requestAnimationFrame(function () { if (globo) globo.classList.add('visible'); });
+  }
+  function ocultarTip(el) { if (globo) { globo.hidden = true; globo.classList.remove('visible'); } if (el && el.removeAttribute) el.removeAttribute('aria-describedby'); }
+  document.addEventListener('mouseover', function (e) { var el = e.target.closest && e.target.closest('[data-tip]'); if (el) mostrarTip(el); });
+  document.addEventListener('mouseout', function (e) { var el = e.target.closest && e.target.closest('[data-tip]'); if (el && !el.contains(e.relatedTarget)) ocultarTip(el); });
+  document.addEventListener('focusin', function (e) { var el = e.target.closest && e.target.closest('[data-tip]'); if (el) mostrarTip(el); });
+  document.addEventListener('focusout', function (e) { var el = e.target.closest && e.target.closest('[data-tip]'); if (el) ocultarTip(el); });
+  window.addEventListener('scroll', function () { ocultarTip(null); }, true);
+
+  // ---------- seguimiento automático de iniciativas ----------
+  var cacheSeg = { r: null, v: null };
+  function seguimientos() {
+    if (!App.r) return [];
+    if (cacheSeg.r === App.r) return cacheSeg.v;
+    var v = App.r.iniciativas.map(function (x) { return { ini: x.iniciativa, ev: x.evaluacion, s: N.seguimiento(x.iniciativa, x.evaluacion, App.r.preparacion) }; });
+    var orden = { empeora: 0, funciona: 1, sin_efecto: 2, midiendo: 3, planificada: 4, sin_datos: 5 };
+    v.sort(function (a, b) { return orden[a.s.estado] - orden[b.s.estado] || a.ini.nombre.localeCompare(b.ini.nombre, 'es'); });
+    cacheSeg = { r: App.r, v: v };
+    return v;
+  }
+  var EST_SEG = {
+    funciona: ['bien-fuerte', 'Funciona'], sin_efecto: ['neutro', 'Sin efecto claro'], empeora: ['critico', 'Va a peor'],
+    midiendo: ['sin', 'Midiendo'], planificada: ['sin', 'Planificada'], sin_datos: ['sin', 'Sin datos']
+  };
+  function chipSeg(e) { var x = EST_SEG[e] || EST_SEG.sin_datos; return '<span class="chip chip-' + x[0] + '">' + x[1] + '</span>'; }
+  function fmtSeg(s, v) { return v == null ? 's/d' : M.formatear(v, s.formato); }
+  // Gráfico de la medida objetivo: la iniciativa frente al resto, con el inicio y la ventana que se evalúa
+  function graficoSeg(s) {
+    var pts = s.serie.filter(function (p) { return p.iniciativa != null || p.control != null; });
+    if (pts.length < 3) return '<p class="nota">Aún no hay semanas suficientes para dibujar la evolución.</p>';
+    var vals = []; pts.forEach(function (p) { if (p.iniciativa != null) vals.push(p.iniciativa); if (p.control != null) vals.push(p.control); });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals), rg = (mx - mn) || 1;
+    mn -= rg * 0.1; mx += rg * 0.1; rg = mx - mn;
+    var w = 560, h = 190, iz = 58, de = 8, ar = 14, ab = 22;
+    var t0 = pts[0].fecha.getTime(), t1 = pts[pts.length - 1].fecha.getTime(), dt = (t1 - t0) || 1;
+    var X = function (d) { return iz + (w - iz - de) * Math.max(0, Math.min(1, (d.getTime() - t0) / dt)); };
+    var Y = function (v) { return ar + (h - ar - ab) * (1 - (v - mn) / rg); };
+    var linea = function (k) { var a = []; pts.forEach(function (p) { if (p[k] != null) a.push(X(p.fecha).toFixed(1) + ',' + Y(p[k]).toFixed(1)); }); return a.join(' '); };
+    var xi = X(s.inicio), xd = X(s.desdeDespues), xc = X(new Date(Math.min(s.completaEl.getTime(), t1)));
+    var ult = pts.filter(function (p) { return p.iniciativa != null; }).pop();
+    var desc = 'Evolución de ' + nombreMedida(s.medida).toLowerCase() + ': equipos de la iniciativa frente al resto';
+    return '<svg class="seg-graf" viewBox="0 0 ' + w + ' ' + h + '" role="img" aria-label="' + esc(desc) + '">' +
+      (s.inicio.getTime() <= t1 ? '<rect class="seg-margen" x="' + xi.toFixed(1) + '" y="' + ar + '" width="' + Math.max(0, xd - xi).toFixed(1) + '" height="' + (h - ar - ab) + '"/>' +
+        (xc > xd ? '<rect class="seg-ventana" x="' + xd.toFixed(1) + '" y="' + ar + '" width="' + (xc - xd).toFixed(1) + '" height="' + (h - ar - ab) + '"/>' : '') +
+        '<line class="seg-inicio" x1="' + xi.toFixed(1) + '" x2="' + xi.toFixed(1) + '" y1="' + (ar - 6) + '" y2="' + (h - ab) + '"/><text class="seg-et" x="' + (xi + 4).toFixed(1) + '" y="' + (ar + 4) + '">Inicio</text>' : '') +
+      '<polyline class="seg-resto" points="' + linea('control') + '"/><polyline class="seg-ini" points="' + linea('iniciativa') + '"/>' +
+      (ult ? '<circle class="seg-punto" cx="' + X(ult.fecha).toFixed(1) + '" cy="' + Y(ult.iniciativa).toFixed(1) + '" r="5"/>' : '') +
+      '<text class="seg-eje" x="0" y="' + (ar + 4) + '">' + esc(fmtSeg(s, mx)) + '</text><text class="seg-eje" x="0" y="' + (h - ab) + '">' + esc(fmtSeg(s, mn)) + '</text>' +
+      '<text class="seg-eje" x="' + iz + '" y="' + (h - 6) + '">' + esc(fechaCorta(pts[0].fecha)) + '</text><text class="seg-eje" x="' + (w - de) + '" y="' + (h - 6) + '" text-anchor="end">' + esc(fechaCorta(pts[pts.length - 1].fecha)) + '</text>' +
+      '</svg><p class="seg-leyenda"><span class="sl sl-ini"></span>Equipos de la iniciativa <span class="sl sl-resto"></span>Resto de equipos <span class="sl sl-margen"></span>Dos semanas de margen <span class="sl sl-ventana"></span>Ventana que se evalúa</p>';
+  }
+  // Antes y después cuando ya hay evaluación; si no, cómo está ahora la medida en los equipos y en el resto
+  function cifrasSeg(s) {
+    var celda = function (et, v, cls) { return '<div' + (cls ? ' class="' + cls + '"' : '') + '><span>' + et + '</span><b>' + esc(fmtSeg(s, v)) + '</b></div>'; };
+    if (s.antes != null && s.despues != null) {
+      return '<div class="seg-cifras">' + celda('Antes', s.antes) + '<span class="seg-fl" aria-hidden="true">→</span>' + celda('Después', s.despues) +
+        (s.control && s.control.despues != null ? celda('Resto, después', s.control.despues, 'seg-ctrl') : '') + '</div>';
+    }
+    var ult = s.serie.filter(function (p) { return p.iniciativa != null; }).pop();
+    if (!ult) return '';
+    return '<div class="seg-cifras">' + celda('Ahora en estos equipos', ult.iniciativa) + (ult.control != null ? celda('Ahora en el resto', ult.control, 'seg-ctrl') : '') + '</div>';
+  }
+  function tarjetaSeg(x) {
+    var s = x.s, ini = x.ini, caso = C.casos[ini.origen];
+    var dato = function (et, v) { return '<div><dt>' + et + '</dt><dd>' + v + '</dd></div>'; };
+    var progreso = s.estado === 'planificada' ? 0 : s.progreso;
+    return '<article class="seg">' +
+      '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + (caso ? ', desde la recomendación «' + esc(caso.titulo) + '»' : '') + '</p></div>' + chipSeg(s.estado) + '</header>' +
+      '<div class="seg-cuerpo"><div class="seg-datos"><p class="seg-texto">' + esc(s.texto) + '</p>' +
+      cifrasSeg(s) +
+      '<dl class="seg-dl">' + dato('Medida objetivo', nomMed(s.medida) + ', ' + s.direccion) + dato('Inicio', esc(fechaCorta(s.inicio))) +
+      dato('Se mide desde', esc(fechaCorta(s.desdeDespues))) + dato('Evaluación completa', esc(fechaCorta(s.completaEl))) + (s.confianza ? dato('Confianza', s.confianza) : '') + '</dl>' +
+      '<div class="seg-prog" role="progressbar" aria-label="Ventana evaluada" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(progreso * 100) + '"><span style="transform:scaleX(' + progreso.toFixed(3) + ')"></span></div>' +
+      '<p class="nota">' + (s.completa ? 'Ventana de evaluación completa.' : Math.round(progreso * 100) + '% de la ventana de evaluación con datos.') + '</p></div>' +
+      '<div class="seg-grafico">' + graficoSeg(s) + '</div></div></article>';
+  }
+  function vistaIniciativas() {
+    var v = seguimientos();
+    var cuenta = {}; v.forEach(function (x) { cuenta[x.s.estado] = (cuenta[x.s.estado] || 0) + 1; });
+    var html = '<section class="titular"><div><h1>Seguimiento de iniciativas</h1><p>Se recalcula solo cada vez que se actualizan los datos: estado, evolución de la medida y cuándo estará completa la evaluación.</p>' +
+      (v.length ? '<div class="seg-resumen">' + ['funciona', 'sin_efecto', 'empeora', 'midiendo', 'planificada'].filter(function (k) { return cuenta[k]; }).map(function (k) { return '<span>' + chipSeg(k) + ' ' + cuenta[k] + '</span>'; }).join('') + '</div>' : '') + '</div></section>';
+    if (!v.length) {
+      return html + '<section class="bloque estrecho"><h2>Aún no hay iniciativas</h2><p>Una iniciativa es un cambio que se prueba en uno o varios equipos, con una medida objetivo. Se registra desde una recomendación, o la deja el consultor en la carpeta iniciativas.</p>' +
+        '<p><button class="btn" data-accion="vista" data-v="recomendaciones">Ir a las recomendaciones</button></p></section>';
+    }
+    html += v.map(tarjetaSeg).join('');
+    html += '<p class="nota">Cómo se evalúa: la medida en las semanas antes del inicio frente a las mismas semanas después, dejando dos semanas de margen, y el cambio de los equipos de la iniciativa frente al del resto. No es un experimento controlado: dice si merece seguir, no demuestra la causa.</p>';
+    return html;
+  }
+  // Con la carpeta compartida, cada carga deja una foto del seguimiento en historico/
+  function guardarSeguimiento() {
+    if (!App.carpeta || !App.r || !App.r.iniciativas.length) return;
+    var foto = seguimientos().map(function (x) { return { id: x.ini.id, nombre: x.ini.nombre, estado: x.s.estado, texto: x.s.texto, antes: x.s.antes, despues: x.s.despues, confianza: x.s.confianza, progreso: x.s.progreso }; });
+    escribirEnCarpeta('historico', 'iniciativas-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({ fecha: new Date().toISOString(), iniciativas: foto }, null, 1));
+  }
+
+  // ---------- fiabilidad de los datos ----------
+  var cacheFiab = { r: null, v: null };
+  function fiab() {
+    if (cacheFiab.r === App.r) return cacheFiab.v;
+    var v = N.fiabilidad(App.lectura, App.r.det, App.r.preparacion, App.r.modelo, cfgCalculo());
+    cacheFiab = { r: App.r, v: v };
+    return v;
+  }
+  var NIVEL = { alta: ['bien', 'Alta'], media: ['atencion', 'Media'], baja: ['critico', 'Baja'] };
+  function tiraFiabilidad() {
+    var f = fiab(), n = NIVEL[f.nivel], rev = f.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
+    return '<div class="fiab-tira fiab-' + f.nivel + '"><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span><span>' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones de los datos bien' +
+      (rev.length ? '. Revisar: ' + esc(lista(rev.map(function (c) { return c.nombre.toLowerCase(); }))) : '') + '.</span><button class="btn-txt" data-accion="fiabilidad">Ver la fiabilidad</button></div>';
+  }
+  var ICO_EST = { bien: CHECK, revisar: '!', sin: '' };
+  function secFiabilidad() {
+    var f = fiab(), n = NIVEL[f.nivel];
+    var html = '<section class="bloque fiab-cab"><div class="fiab-nivel fiab-' + f.nivel + '"><span>Fiabilidad</span><b>' + n[1] + '</b></div><div><h2>Fiabilidad de los datos</h2>' +
+      '<p>Antes de sacar conclusiones comprobamos que la herramienta refleja bien el trabajo. ' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones están bien' + (f.revisar ? ' y ' + f.revisar + (f.revisar === 1 ? ' hay que revisarla' : ' hay que revisarlas') : '') + '. Las comprobaciones no cambian ninguna cifra: avisan.</p>' +
+      '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p></div></section>';
+    html += '<div class="fiab-grid">' + f.comprobaciones.map(function (c) {
+      return '<article class="fiab-c fiab-' + c.estado + '"><div class="fiab-c-cab"><span class="v-ico ' + (c.estado === 'bien' ? 'ok' : c.estado === 'revisar' ? 'aviso' : 'pend') + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span>' +
+        '<h3>' + conTip(esc(c.nombre), c.que) + '</h3><b class="fiab-valor">' + esc(c.valor) + '</b></div>' +
+        '<p>' + esc(c.detalle) + '</p><p class="nota">Bien desde: ' + esc(c.umbral) + '.' + (c.estado === 'revisar' ? ' <b>Cómo se arregla:</b> ' + esc(c.arreglo) : '') + '</p></article>';
+    }).join('') + '</div>';
+    var COLS = { tiempos: 'Tiempo en cada estado', flujo: 'Pasan por en curso', registro: 'Registro a tiempo', estimacion: 'Historias estimadas', sprints: 'Sprints creíbles', historia: 'Historia' };
+    var queDe = {}; f.comprobaciones.forEach(function (c) { queDe[c.id] = c.que; });
+    html += '<section class="bloque"><h2>Por equipo</h2><div class="tabla-caja"><table class="tabla-fiab"><thead><tr><th scope="col">Equipo</th>' +
+      Object.keys(COLS).map(function (k) { return '<th scope="col">' + conTip(COLS[k], queDe[k]) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      f.porEquipo.map(function (e) {
+        return '<tr><th scope="row">' + esc(e.equipo) + '</th>' + Object.keys(COLS).map(function (k) { var x = e.valores[k]; return '<td><span class="fv fv-' + x.estado + '">' + esc(x.valor) + '</span></td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div><p class="nota">En rojo, lo que conviene revisar con ese equipo. Se miran las últimas 16 semanas.</p></section>';
+    html += '<section class="bloque"><h2>Avisos de los datos</h2>' + calidad() + '</section>';
+    return html;
+  }
+
+  // ---------- cómo funciona: el método, fuentes e ingesta, fiabilidad y vuestros datos ----------
+  var SECCIONES_COMO = [['metodo', 'El método'], ['fuentes', 'Fuentes e ingesta'], ['fiabilidad', 'Fiabilidad de los datos'], ['datos', 'Vuestros datos']];
   function comoFunciona() {
+    var s = App.como || 'metodo';
+    var html = '<section class="titular"><div><h1>Cómo funciona</h1><p>De vuestras herramientas al plan de acción, con las mismas reglas para todos los equipos.</p></div></section>' +
+      '<nav class="subnav" aria-label="Secciones de Cómo funciona">' + SECCIONES_COMO.map(function (x) {
+        return '<button class="subnav-b" data-accion="como-sec" data-s="' + x[0] + '"' + (x[0] === s ? ' aria-current="page"' : '') + '>' + x[1] + '</button>';
+      }).join('') + '</nav>';
+    return html + ({ metodo: secMetodo, fuentes: secFuentes, fiabilidad: secFiabilidad, datos: secDatos }[s] || secMetodo)();
+  }
+  function secMetodo() {
+    var nodos = [
+      ['Fuentes', 'Jira, Azure DevOps, ServiceNow o GitLab. Plantilla y coste de cada equipo.'],
+      ['Adaptador', 'Uno por plataforma: traduce columnas, estados y equipo al modelo común.'],
+      ['Modelo común', 'Tarea, equipo, estado común, capacidad y coste. Nunca personas.'],
+      ['Medidas', 'Cinco por equipo y semana, cada una frente a la historia del propio equipo.'],
+      ['Banco de casos', Object.keys(C.casos).length + ' casos de Capgemini: señal, causas, plan y cómo comprobarlo.'],
+      ['Plan de acción', 'Recomendaciones e iniciativas, revisadas por el consultor con vosotros.']
+    ];
+    var flujo = '<div class="flujo" role="list">' + nodos.map(function (n, k) {
+      return (k ? '<span class="fl-flecha" aria-hidden="true"></span>' : '') + '<div class="fl-nodo' + (k === 4 ? ' fl-banco' : '') + '" role="listitem"><span class="fl-n">' + (k + 1) + '</span><b>' + n[0] + '</b><small>' + n[1] + '</small>' +
+        (k === 5 ? '<span class="fl-ia">IA del consultor: adapta y redacta el plan citando las cifras <em>Próxima fase</em></span>' : '') + '</div>';
+    }).join('') + '<div class="fl-vuelta" aria-hidden="true"></div><p class="fl-vuelta-txt">Cada iniciativa se sigue sola y lo que funciona vuelve al banco de casos</p></div>';
+    var html = '<section class="bloque"><h2>Del dato al plan de acción</h2><p class="nota">Seis pasos, siempre los mismos. Los números los calcula la herramienta; las recomendaciones salen del banco de casos a partir de esos números.</p>' + flujo + '</section>';
+    // El banco de casos: grupos por objetivo y un caso completo de ejemplo
+    var objs = {}; C.objetivos.forEach(function (o) { objs[o.id] = o; });
+    var grupos = {}, orden = [];
+    Object.keys(C.casos).forEach(function (id) {
+      var c = C.casos[id], g = (c.objetivos && c.objetivos[0] && objs[c.objetivos[0]]) ? objs[c.objetivos[0]].titulo : (/^grupo_/.test(id) ? 'Comparar grupos' : 'Otros');
+      if (!grupos[g]) { grupos[g] = []; orden.push(g); }
+      grupos[g].push(c.titulo);
+    });
+    var ej = C.casos.retrabajo || C.casos[Object.keys(C.casos)[0]];
+    var parte = function (et, cont) { return '<div class="caso-parte"><span class="caso-et">' + et + '</span>' + cont + '</div>'; };
+    html += '<section class="bloque"><h2>El banco de casos</h2><div class="banco">' +
+      '<div><p>Cada caso une una señal en las cifras con lo que suele haber detrás y con qué hacer. Lo escribe y lo mantiene Capgemini a partir de proyectos y de prácticas conocidas, y crece con lo que funciona en cada cliente.</p>' +
+      '<div class="banco-grupos">' + orden.map(function (g) { return '<div><b>' + esc(g) + '</b><ul>' + grupos[g].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>'; }).join('') + '</div></div>' +
+      '<article class="caso-ej" aria-label="Un caso completo de ejemplo"><p class="caso-tit"><span class="chip chip-neutro">Ejemplo</span> ' + esc(ej.titulo) + '</p>' +
+      parte('Señal', '<p>' + esc(ej.senal) + '</p>') + parte('Medida', '<p>' + nomMed(ej.medida) + '</p>') +
+      parte('Causas habituales', '<ul>' + ej.causas.slice(0, 3).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>') +
+      parte('Plan de acción', '<ol>' + ej.plan.map(function (s) { return '<li>' + esc(s.paso) + ' <span class="apagado">(' + esc(s.quien.toLowerCase()) + ')</span></li>'; }).join('') + '</ol>') +
+      parte('Cómo comprobarlo', '<p>' + esc(ej.comprobar) + '</p>') + parte('Respaldo', '<p>' + esc(ej.respaldo) + '</p>') + '</article></div></section>';
+    html += '<div class="dos"><section class="bloque"><h2>Las medidas</h2><dl class="defs">' + COLUMNAS.concat(['coste']).map(function (id) { return '<dt>' + MED[id].nombre + '</dt><dd>' + esc(MED[id].que) + '</dd>'; }).join('') + '</dl></section>';
+    html += '<section class="bloque"><h2>Cómo se lee el estado</h2><p class="nota">Lo normal es el rango en el que está la medida 7 de cada 10 semanas en ese equipo, mirando las 12 semanas anteriores.</p><dl class="leyenda">' +
+      '<dt>' + chip('bien', true) + '</dt><dd>Dentro de lo normal o mejor.</dd><dt>' + chip('atencion') + '</dt><dd>Peor que lo normal.</dd><dt>' + chip('critico') + '</dt><dd>Bastante peor que lo normal, o por encima de un límite fijo (por ejemplo, retrabajo del 30%).</dd></dl></section></div>';
+    return html;
+  }
+  var PLATAFORMAS = [
+    { k: 'jira', nombre: 'Jira', lee: 'Incidencias', equipo: 'Campo Equipo o componente', tiempos: 'Campo Tiempo en estado del export, o historial de cambios por la API', iter: 'Sprints', est: 'Puntos de historia', hoy: 'Funciona con el export CSV', ok: true },
+    { k: 'ado', nombre: 'Azure DevOps', lee: 'Elementos de trabajo', equipo: 'Area Path', tiempos: 'Historial de revisiones de cada elemento', iter: 'Iteraciones', est: 'Story Points o Effort', hoy: 'Adaptador por construir' },
+    { k: 'servicenow', nombre: 'ServiceNow', lee: 'Historias, tareas y defectos', equipo: 'Grupo de asignación', tiempos: 'Historial de auditoría', iter: 'Sprints', est: 'Puntos', hoy: 'Adaptador por construir' },
+    { k: 'gitlab', nombre: 'GitLab', lee: 'Issues', equipo: 'Grupo o etiqueta de equipo', tiempos: 'Eventos de estado y de etiquetas', iter: 'Iteraciones', est: 'Peso', hoy: 'Adaptador por construir' }
+  ];
+  function secFuentes() {
+    var E = C.estados.estados, comunes = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
+    var plat = '<div class="plat"><div class="plat-fuentes">' + PLATAFORMAS.map(function (p) {
+      var f = FUENTES[p.k];
+      return '<div class="plat-c"><b>' + p.nombre + '</b><span>Equipo: ' + esc(p.equipo) + '</span><span class="plat-est">' + f.estados.map(function (x) { return '<code>' + esc(x[0]) + '</code>'; }).join('') + '</span></div>';
+    }).join('') + '<div class="plat-c plat-coste"><b>Plantilla y coste</b><span>FTE y coste de un FTE por equipo y mes, de la herramienta de plantilla, los contratos o finanzas</span></div></div>' +
+      '<div class="plat-medio" aria-hidden="true"><span class="plat-fl"></span><small>Un adaptador por plataforma</small></div>' +
+      '<div class="plat-modelo"><b>Modelo común</b><ul><li>Tarea y su tipo común</li><li>Equipo, con un identificador igual en todas las fuentes</li><li>Fechas y tiempo en cada estado</li><li>Iteración y estimación</li><li>Capacidad y coste del equipo</li></ul>' +
+      '<span class="plat-comunes">' + comunes.map(function (k) { return '<span class="v-comun e-' + E[k].etapa + '">' + esc(E[k].nombre) + '</span>'; }).join('') + '</span>' +
+      '<p class="nota">Nunca se leen personas: ni asignados, ni informadores, ni comentarios.</p></div></div>';
+    var html = '<section class="bloque"><h2>Cómo se tratan los datos de cada plataforma</h2><p class="nota">Cada herramienta llama distinto a las mismas cosas. El adaptador de cada una las traduce al mismo modelo, y a partir de ahí todo se calcula igual: medidas, comparaciones y recomendaciones.</p>' + plat +
+      '<div class="tabla-caja"><table class="tabla-plat"><thead><tr><th scope="col">Plataforma</th><th scope="col">Qué se lee</th><th scope="col">Equipo</th><th scope="col">Tiempo en cada estado</th><th scope="col">Iteración</th><th scope="col">Estimación</th><th scope="col">Hoy</th></tr></thead><tbody>' +
+      PLATAFORMAS.map(function (p) { return '<tr><th scope="row">' + p.nombre + '</th><td>' + p.lee + '</td><td>' + p.equipo + '</td><td>' + p.tiempos + '</td><td>' + p.iter + '</td><td>' + p.est + '</td><td>' + (p.ok ? '<span class="chip chip-bien">' + p.hoy + '</span>' : '<span class="apagado">' + p.hoy + '</span>') + '</td></tr>'; }).join('') +
+      '</tbody></table></div></section>';
+    // Primera ingesta y actualizaciones
+    var ticks = ''; for (var k = 1; k <= 13; k++) ticks += '<span class="lt-tick' + (k % 4 === 0 ? ' mes' : '') + (k === 13 ? ' trim' : '') + '"></span>';
+    html += '<section class="bloque"><h2>Primera ingesta y actualizaciones</h2><p class="nota">La primera carga trae el histórico para saber qué es lo normal en cada equipo. Después basta con lo que cambia cada semana.</p>' +
+      '<div class="linea-t" role="img" aria-label="Histórico de 12 meses, primera ingesta y después una actualización cada semana, comité cada mes y revisión cada trimestre">' +
+      '<div class="lt-hist"><b>Histórico</b><small>12 meses hacia atrás</small></div><div class="lt-hito"><span>Primera ingesta</span></div>' +
+      '<div class="lt-semanas"><div class="lt-ticks">' + ticks + '</div><div class="lt-etq"><span>Cada lunes, una actualización</span><span>Comité mensual</span><span>Revisión trimestral</span></div></div></div>' +
+      '<div class="cadencias">' +
+      '<div><b>Primera ingesta</b><small>Semana 1</small><p>Al menos 12 meses de histórico (16 semanas como mínimo). Si el export tiene un límite de filas, se exporta por tramos de fechas y la herramienta los une. Se firman el mapeo de estados y las definiciones.</p></div>' +
+      '<div><b>Cada semana</b><small>El lunes</small><p>Se cargan las tareas creadas o cambiadas desde la última vez. Se unen por su clave y se queda la versión más reciente. Las medidas cierran la semana anterior y se guarda una foto de lo abierto.</p></div>' +
+      '<div><b>Cada mes</b><small>Comité de productividad</small><p>Se revisan las recomendaciones y las iniciativas, que ya se han evaluado solas con cada carga.</p></div>' +
+      '<div><b>Cada trimestre</b><small>Revisión del modelo</small><p>Se revisan equipos, mapeo de estados y definiciones. Si una regla cambia, se cambia antes en el documento de definiciones.</p></div></div>' +
+      '<p class="nota">Por qué semanal: las medidas son semanales y lo normal se calcula por semanas. Cargar cada día no cambia las cifras, solo el trabajo en curso.</p></section>';
+    // Automatizar
+    html += '<section class="bloque"><h2>Cómo automatizar la ingesta</h2><div class="auto">' +
+      '<div><span class="kicker">Hoy</span><b>Carpeta y script</b><p>Los exports se dejan en la carpeta exports y se pulsa Actualizar. El script actualizar.ps1 los une para abrir la página sin pedir permisos.</p></div>' +
+      '<div><span class="kicker">Programada</span><b>Tarea semanal</b><p>Una tarea programada ejecuta cada lunes un script que pide los datos a la API de solo lectura de la herramienta y deja el fichero en exports. La clave de acceso vive en el almacén de credenciales del equipo, nunca en el script.</p></div>' +
+      '<div><span class="kicker">A escala</span><b>Conector</b><p>Con muchos equipos, un conector carga los datos en la plataforma de datos del cliente con el mismo modelo de medida. Lo configura Capgemini con el equipo de sistemas.</p></div></div></section>';
+    return html;
+  }
+
+  // Las cifras de una recomendación: el valor de su medida en cada equipo frente a lo normal, con la frase de la evidencia
+  function cifrasRec(x) {
+    var c = x.caso, eqs = {}; App.r.modelo.equipos.forEach(function (e) { eqs[e.nombre] = e; });
+    var def = c.medida ? C.medidas[c.medida] : null;
+    return x.evidencias.map(function (ev) {
+      var eq = ev[0] ? eqs[ev[0]] : (x.equipos.length === 1 ? eqs[x.equipos[0]] : null);
+      var m = !x.grupo && eq && c.medida ? eq.medidas[c.medida] : null;
+      if (!m || !m.disponible || m.valor == null || !def) return '<div class="cifra"><p class="cf-txt">' + (ev[0] && x.evidencias.length > 1 ? '<b>' + esc(ev[0]) + ':</b> ' : '') + esc(ev[1]) + '</p></div>';
+      var F = function (v) { return M.formatear(v, def.formato); }, e = estadoDe(m);
+      return '<div class="cifra"><div class="cf-fila"><span class="cf-eq">' + esc(eq.nombre) + '</span><span class="cf-med">' + nomMed(c.medida) + '</span><b class="cf-val">' + esc(F(m.valor)) + '</b>' +
+        '<span class="cf-normal">' + (m.ref ? 'Lo normal: ' + esc(F(m.ref.lo)) + ' a ' + esc(F(m.ref.hi)) : '') + '</span>' + chip(e === 'neutro' ? 'sin' : e, true) + '</div><p class="cf-txt">' + esc(ev[1]) + '</p></div>';
+    }).join('');
+  }
+  function detalleRec(x, n) {
+    var c = x.caso, def = c.medida ? C.medidas[c.medida] : null, p0 = c.plan[0];
+    var plan = c.plan.map(function (s, i) {
+      return '<li' + (i ? '' : ' class="primero"') + '><span class="paso-n">' + (i + 1) + '</span><div><b>' + esc(s.paso) + '</b><span class="meta">' +
+        '<span>Lo hace: ' + esc(s.quien.toLowerCase()) + '</span><span>Esfuerzo: ' + esc(s.esfuerzo.toLowerCase()) + '</span></span></div></li>';
+    }).join('');
+    // Seguimiento: si ya está registrada, su estado automático; si no, el botón
+    var seg = '';
+    if (def) seg += '<p><b>Medida objetivo:</b> ' + nomMed(c.medida) + ', ' + (def.dir === 'mas' ? 'subir' : 'bajar') + '.</p>';
+    seg += '<p><b>Cómo saber si funciona:</b> ' + esc(c.comprobar) + '</p>';
+    if (registrable(x)) {
+      var id = idIniciativa(x), sx = seguimientos().filter(function (y) { return y.ini.id === id; })[0];
+      seg += sx ? '<div class="rec-seg-estado">' + chipSeg(sx.s.estado) + '<span>' + esc(sx.s.texto) + '</span><button class="btn-txt" data-accion="vista" data-v="iniciativas">Ver el seguimiento</button></div>' :
+        '<p><button class="btn btn-sec btn-peq" data-accion="registrar" data-k="' + esc(claveRec(x)) + '">Registrar como iniciativa</button></p><p class="nota">Desde ese momento se sigue sola: cada carga de datos recalcula su efecto frente a los equipos que no la tienen.</p>';
+    } else seg += '<p class="nota">Se sigue en el tablero con su propia medida.</p>';
+    return '<div class="rec-cab"><span class="rec-n">' + n + '</span>' + chip(x.gravedad) + '<span class="rec-para">Para: ' + esc(x.para) + '</span></div>' +
+      '<h2>' + esc(x.titulo) + '</h2>' +
+      '<div class="rec-resumen"><div><span class="rr-et">Qué pasa</span><p>' + esc(c.senal || x.evidencias[0][1]) + '</p></div>' +
+      '<div><span class="rr-et">Qué hacer primero</span><p><b>' + esc(p0.paso) + '.</b> Lo hace: ' + esc(p0.quien.toLowerCase()) + '. Esfuerzo: ' + esc(p0.esfuerzo.toLowerCase()) + '.</p></div></div>' +
+      '<section class="rec-bloque"><h3>Las cifras</h3>' + cifrasRec(x) + '</section>' +
+      '<section class="rec-bloque"><h3>Plan de acción</h3><ol class="rec-plan">' + plan + '</ol></section>' +
+      '<section class="rec-bloque rec-seg"><h3>Cómo se sigue</h3>' + seg + '</section>' +
+      '<details data-k="' + esc(claveRec(x)) + '"' + (App.abiertas[claveRec(x)] ? ' open' : '') + '><summary>Para la reunión, causas habituales y respaldo</summary><div class="rec-mas">' +
+      (c.preguntas && c.preguntas.length ? '<div><b>Para la reunión</b><ul>' + c.preguntas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '') +
+      '<div><b>Causas habituales</b><ul>' + c.causas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
+      '<div><b>Respaldo</b><p>' + esc(c.respaldo || '') + '</p>' + (c.comun ? '<p>' + esc(c.comun) + '</p>' : '') + '</div></div></details>';
+  }
+
+  // ---------- cómo funciona: vuestros datos ----------
+  function secDatos() {
     var r = App.r, inf = App.lectura.informe, det = App.det, eqs = r.modelo.equipos.map(function (e) { return e.nombre; });
     var info = App.cfg.equiposInfo || {}, mp = mapeo(), E = C.estados.estados, op = opcion(campo());
     var provs = eqs.filter(function (e) { return (info[e] || {}).tipo === 'proveedor'; });
     var campoNombre = op ? (op.id === 'todos' ? 'ninguno: todo el trabajo como un solo equipo' : 'el campo ' + op.nombre.replace(/^campo\s+/i, '')) : '';
     var desde = det.fechaMin, hasta = new Date(Math.min(det.fechaRef, det.fechaMax));
-    var html = '<section class="titular estrecho"><div><h1>Cómo funciona</h1><p>Lee lo que ya exportáis de Jira, mide cada equipo contra su propia historia y propone qué hacer. No hay nada que configurar: todo se calcula al cargar los datos.</p></div></section>';
-    html += '<ol class="pasos estrecho">' +
-      '<li><span>1</span><b>Exportáis de Jira</b><p>Un CSV con todos los campos, como hoy. Se deja en la carpeta exports y se pulsa Actualizar.</p></li>' +
-      '<li><span>2</span><b>Medimos cada equipo</b><p>Cinco medidas, siempre las mismas, comparadas con lo normal en ese equipo. Con la plantilla y su coste, también el coste por entrega.</p></li>' +
-      '<li><span>3</span><b>Proponemos qué hacer</b><p>Recomendaciones con su evidencia. Un consultor de Capgemini las revisa con vosotros cada mes.</p></li></ol>';
-    html += '<section class="bloque estrecho"><h2>Las medidas</h2><dl class="defs">' + COLUMNAS.concat(['coste']).map(function (id) { return '<dt>' + MED[id].nombre + '</dt><dd>' + esc(MED[id].que) + '</dd>'; }).join('') + '</dl></section>';
-    html += '<section class="bloque estrecho"><h2>Cómo se lee el estado</h2><p class="nota">Lo normal es el rango en el que está la medida 7 de cada 10 semanas en ese equipo, mirando las 12 semanas anteriores.</p><dl class="leyenda">' +
-      '<dt>' + chip('bien', true) + '</dt><dd>Dentro de lo normal o mejor.</dd><dt>' + chip('atencion') + '</dt><dd>Peor que lo normal.</dd><dt>' + chip('critico') + '</dt><dd>Bastante peor que lo normal, o por encima de un límite fijo (por ejemplo, retrabajo del 30%).</dd></dl></section>';
+    var html = '';
     // Así hemos leído los datos, con lo que se puede cambiar
     var ed = App.editar;
     var fila = function (k, titulo, texto, panel) {
       return '<div class="leido"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel !== undefined ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Listo' : 'Cambiar') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
     };
-    html += '<section class="bloque estrecho" id="leido"><div class="bloque-cab"><h2>Así hemos leído vuestros datos</h2></div>' +
+    html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Así hemos leído vuestros datos</h2></div>' +
       fila('fichero', 'Ficheros', esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + inf.tareas.toLocaleString('es-ES') + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) + '. Sin épicas ni subtareas.') +
       fila('campo', 'Equipos', 'Según ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
       fila('equipos', 'Proveedores, áreas, FTE y coste', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.') + ' ' + textoCapacidad(eqs), panelEquipos) +
       fila('estados', 'Estados', esc(det.estados.map(function (e) { return e.nombre + ' es ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }) ? ' <span class="chip chip-atencion">Revisar</span>' : ''), panelEstados) +
       calidad() + '</section>';
     html += modeloDeMedida();
-    html += '<section class="bloque estrecho"><h2>Documentos para el consultor</h2><p class="nota">El documento de definiciones recoge todo lo anterior para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas para la IA del consultor.</p>' +
+    html += '<section class="bloque"><h2>Documentos para el consultor</h2><p class="nota">El documento de definiciones recoge todo lo anterior para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas para la IA del consultor.</p>' +
       '<label class="campo-linea">Nombre del cliente <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
       '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button><button class="btn btn-sec" data-accion="modelo">Descargar el modelo de medida</button></p>' +
       (App.demo ? '' : '<p class="nota">Para enseñarlo: <button class="btn-txt" data-accion="presentacion">ver la presentación</button> o <button class="btn-txt" data-accion="demo">ver con datos de ejemplo</button>. La demo no toca vuestros datos.</p>') + '</section>';
-    html += '<section class="bloque bloque-oscuro estrecho"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea. El coste es el del equipo, nunca el salario de nadie.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
+    html += '<section class="bloque bloque-oscuro"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea. El coste es el del equipo, nunca el salario de nadie.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
     return html;
   }
   // Resumen de FTE y coste para "Así hemos leído vuestros datos"
@@ -888,7 +1136,7 @@
     var col = function (titulo, items, oscuro) {
       return '<div class="modelo-col' + (oscuro ? ' modelo-centro' : '') + '"><b>' + titulo + '</b><ul>' + items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
     };
-    return '<section class="bloque estrecho" id="modelo"><h2>El modelo de medida</h2>' +
+    return '<section class="bloque" id="modelo"><h2>El modelo de medida</h2>' +
       '<p>Lo que da valor no es el número de campos conectados, sino que todos midan con las mismas definiciones y que el trabajo, la plantilla y el coste se unan por el mismo equipo. Eso es el modelo de medida (lo que en una plataforma de datos se llama capa semántica). Esta página es una forma de usarlo.</p>' +
       '<div class="modelo" role="group" aria-label="De las fuentes a las salidas">' +
       col('Fuentes', ['<b>Gestión del trabajo:</b> Jira hoy, Azure DevOps u otra con su adaptador', '<b>Plantilla:</b> FTE de cada equipo por mes', '<b>Finanzas y contratos:</b> coste de un FTE']) +
@@ -990,7 +1238,7 @@
     enSegundoPlano(function () { recalcular(); render(); window.scrollTo(0, y); });
   }
   var ACC = {
-    vista: function (el) { App.vista = el.getAttribute('data-v'); App.editar = null; render(); window.scrollTo(0, 0); },
+    vista: function (el) { App.vista = el.getAttribute('data-v'); App.editar = null; ocultarTip(null); render(); window.scrollTo(0, 0); },
     ver: function (el) { App.ver = el.getAttribute('data-e'); App.vista = 'tablero'; render(); window.scrollTo(0, 0); },
     ficheros: function () { document.getElementById('entrada-ficheros').click(); },
     carpeta: elegirCarpeta,
@@ -1018,9 +1266,12 @@
       if (App.origen === 'datosjs') return location.reload();
       document.getElementById('entrada-ficheros').click();
     },
+    'como-sec': function (el) { App.como = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
+    fiabilidad: function () { App.vista = 'como'; App.como = 'fiabilidad'; App.editar = null; render(); window.scrollTo(0, 0); },
     editar: function (el) {
       var k = el.getAttribute('data-e');
-      if (App.vista !== 'como') { App.vista = 'como'; App.editar = k; render(); var s = document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
+      if (k === 'calidad') { ACC.fiabilidad(); return; }
+      if (App.vista !== 'como' || App.como !== 'datos') { App.vista = 'como'; App.como = 'datos'; App.editar = k; render(); var s = document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
       var y = window.scrollY; App.editar = App.editar === k ? null : k; render(); window.scrollTo(0, y);
     },
     definiciones: function (el) { definiciones(el.getAttribute('data-f')); },

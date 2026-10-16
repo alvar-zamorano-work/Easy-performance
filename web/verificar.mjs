@@ -43,6 +43,16 @@ const medir = (p) => A(p, () => ({ alto: document.documentElement.scrollHeight, 
 const clic = async (p, sel) => { await p.click(sel); await p.waitForTimeout(250); };
 const listo = (p) => p.waitForFunction(() => window.EasyPerformance.r && document.getElementById('ocupado').hidden, null, { timeout: 90000 });
 const texto = (p, sel) => p.$eval(sel, (e) => e.textContent.trim());
+/** Avanza la animación con el botón Siguiente hasta que aparece el selector (o el final). */
+async function avanzarHasta(p, sel) {
+  for (let k = 0; k < 10; k++) {
+    if (await p.$(sel)) return true;
+    const b = await p.$('.proc [data-proc="siguiente"]');
+    if (!b) break;
+    await b.click(); await p.waitForTimeout(250);
+  }
+  return !!(await p.$(sel));
+}
 
 /** Recorre tablero (área y cada equipo), recomendaciones y cómo funciona. Devuelve fallos de ancho y altos. */
 async function recorrer(p, etiqueta, capturas) {
@@ -60,7 +70,10 @@ async function recorrer(p, etiqueta, capturas) {
   for (const [i, e] of eqs.entries()) { await p.selectOption('select[data-cambio="ver"]', e); await p.waitForTimeout(200); await mirar('equipo-' + (i + 1)); }
   await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(150);
   await clic(p, '[data-accion="vista"][data-v="recomendaciones"]'); await mirar('recomendaciones');
-  await clic(p, '[data-accion="vista"][data-v="como"]'); await mirar('como');
+  await clic(p, '[data-accion="vista"][data-v="iniciativas"]'); await mirar('iniciativas');
+  await clic(p, '[data-accion="vista"][data-v="como"]');
+  for (const s of ['metodo', 'fuentes', 'fiabilidad', 'datos']) { await clic(p, `[data-accion="como-sec"][data-s="${s}"]`); await mirar('como-' + s); }
+  await clic(p, '[data-accion="como-sec"][data-s="metodo"]');
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
   return { fallos, altos };
 }
@@ -120,22 +133,36 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   ok('recomendaciones: "Ver qué hacer" filtra por el equipo', filtro.f === 'App móvil' && filtro.items === filtro.todas, JSON.stringify(filtro));
   await p.selectOption('select[data-cambio="rec-equipo"]', 'todos'); await p.waitForTimeout(200);
   const lista = await p.$$eval('.rec-item', (t) => t.map((x) => ({ t: x.querySelector('b').textContent, crit: !!x.querySelector('.chip-critico') })));
-  const det = await A(p, () => { const d = document.querySelector('.rec-detalle'); return { h: d.querySelector('h2').textContent, paso: /Primer paso/.test(d.textContent), de: !!d.querySelector('.rec-de li'), plan: d.querySelectorAll('.rec-plan li').length, ini: /Iniciativa propuesta/.test(d.textContent) }; });
+  const det = await A(p, () => { const d = document.querySelector('.rec-detalle'); return { h: d.querySelector('h2').textContent, paso: /Qué hacer primero/i.test(d.querySelector('.rec-resumen').textContent) && /Qué pasa/i.test(d.textContent), de: !!d.querySelector('.cifra'), plan: d.querySelectorAll('.rec-plan li').length, ini: /Cómo se sigue/i.test(d.textContent) }; });
   const funciona = await p.$$eval('.funciona', (t) => t.length);
-  ok('recomendaciones: lista ordenada y detalle con evidencia, plan e iniciativa', lista.length >= 3 && lista[0].crit && det.h === lista[0].t && det.paso && det.de && det.plan >= 2 && det.ini && funciona === 1, lista.map((x) => (x.crit ? 'crítico: ' : '') + x.t).join(' / '));
+  ok('recomendaciones: lista ordenada y detalle con qué pasa, qué hacer primero, cifras, plan y seguimiento', lista.length >= 3 && lista[0].crit && det.h === lista[0].t && det.paso && det.de && det.plan >= 2 && det.ini && funciona === 1, lista.map((x) => (x.crit ? 'crítico: ' : '') + x.t).join(' / '));
   await clic(p, '.rec-item:nth-child(2)');
-  const det2 = await A(p, () => ({ h: document.querySelector('.rec-detalle h2').textContent, sel: document.querySelector('.rec-item[aria-current="true"] b').textContent }));
-  ok('recomendaciones: al elegir otra se ve su detalle', det2.h === lista[1].t && det2.sel === lista[1].t, det2.h);
+  const det2 = await A(p, () => ({ h: document.querySelector('.rec-detalle h2').textContent, sel: document.querySelector('.rec-item[aria-current="true"] b').textContent, filas: [...document.querySelectorAll('.rec-detalle .cf-fila')].map((x) => x.textContent) }));
+  ok('recomendaciones: al elegir otra se ve su detalle, con la cifra de cada equipo frente a lo normal', det2.h === lista[1].t && det2.sel === lista[1].t && det2.filas.length >= 2 && det2.filas.every((t) => /Lo normal/.test(t)), det2.h + ' · ' + det2.filas.length + ' filas');
   await p.click('.rec-detalle details summary'); await p.waitForTimeout(100);
   const abierta = await p.$eval('.rec-detalle details', (d) => d.open && /Causas habituales/.test(d.textContent));
   ok('recomendaciones: causas y respaldo al desplegar', abierta);
   const reg = await p.$('.rec-detalle [data-accion="registrar"]');
   if (reg) { await reg.click(); await listo(p); await p.waitForTimeout(300); }
-  const tras = await A(p, () => ({ registrada: !!document.querySelector('.rec-detalle .registrada'), inis: window.EasyPerformance.r.iniciativas.map((x) => x.iniciativa.id) }));
+  const tras = await A(p, () => ({ registrada: !!document.querySelector('.rec-detalle .rec-seg-estado'), inis: window.EasyPerformance.r.iniciativas.map((x) => x.iniciativa.id) }));
   await clic(p, '[data-accion="vista"][data-v="tablero"]');
   await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(200);
   const filasIni = await p.$$eval('.fila-ini', (t) => t.length);
   ok('recomendaciones: registrar una iniciativa la lleva al tablero', !!reg && tras.registrada && tras.inis.length === 3 && filasIni === 3, tras.inis.join(', '));
+  // Seguimiento automático: estado de cada una, gráfico y fechas
+  await clic(p, '[data-accion="vista"][data-v="iniciativas"]');
+  const seg = await A(p, () => [...document.querySelectorAll('.seg')].map((x) => ({ chip: x.querySelector('.seg-cab .chip').textContent, graf: !!x.querySelector('.seg-graf polyline.seg-ini'), fechas: x.querySelectorAll('.seg-dl dd').length })));
+  ok('iniciativas: seguimiento automático con estado, gráfico y fechas', seg.length === 3 && seg.some((x) => x.chip === 'Funciona') && seg.some((x) => x.chip === 'Va a peor') && seg.some((x) => x.chip === 'Planificada') && seg.filter((x) => x.graf).length >= 2 && seg.every((x) => x.fechas >= 4), seg.map((x) => x.chip).join(', '));
+  // Ayuda al pasar el cursor por una medida
+  await clic(p, '[data-accion="vista"][data-v="tablero"]');
+  await p.hover('.kpi .con-tip'); await p.waitForTimeout(250);
+  const tip = await A(p, () => { const t = document.getElementById('tip'); return t && !t.hidden ? t.textContent : ''; });
+  ok('tooltips: al pasar por una medida se explica qué es', /8 de cada 10 tareas/.test(tip), tip);
+  // Fiabilidad: tira en el tablero y apartado propio
+  const tira = await texto(p, '.fiab-tira');
+  await clic(p, '.fiab-tira [data-accion="fiabilidad"]');
+  const fia = await A(p, () => ({ como: window.EasyPerformance.como, cartas: document.querySelectorAll('.fiab-c').length, filas: document.querySelectorAll('.tabla-fiab tbody tr').length }));
+  ok('fiabilidad: tira en el tablero y apartado con diez comprobaciones y tabla por equipo', /Fiabilidad alta/.test(tira) && fia.como === 'fiabilidad' && fia.cartas === 10 && fia.filas === 4, tira.slice(0, 60));
   ok('demo de contenido sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
@@ -150,9 +177,19 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await p.click('[data-accion="conectar"]');
   await p.waitForSelector('.proc', { timeout: 10000 });
   const est = await p.$$eval('.proc-est', (t) => t.map((x) => x.textContent.trim()));
-  await p.waitForSelector('.proc-escena .v-matriz', { timeout: 30000 });
+  // No avanza solo: tras 3,5 s sigue en el paso 1; avanza con el botón, la flecha derecha y vuelve con Anterior
+  await p.waitForTimeout(3500);
+  const quieto = await texto(p, '.proc-paso');
+  await p.click('.proc [data-proc="siguiente"]'); await p.waitForTimeout(250);
+  const conBoton = await texto(p, '.proc-paso');
+  await p.keyboard.press('ArrowRight'); await p.waitForTimeout(250);
+  const conFlecha = await texto(p, '.proc-paso');
+  await p.click('.proc [data-proc="anterior"]'); await p.waitForTimeout(250);
+  const atras = await texto(p, '.proc-paso');
+  ok('animación: avanza solo con el botón o la flecha, y vuelve con Anterior', /^Paso 1 de 6/.test(quieto) && /^Paso 2 de 6/.test(conBoton) && /^Paso 3 de 6/.test(conFlecha) && /^Paso 2 de 6/.test(atras), [quieto, conBoton, conFlecha, atras].join(' > '));
+  await avanzarHasta(p, '.proc-escena .v-matriz'); await p.waitForTimeout(1200);
   await p.screenshot({ path: join(SALIDA, 'metodo-medir.png') });
-  await p.waitForSelector('.proc [data-proc="fin"]', { timeout: 30000 });
+  await avanzarHasta(p, '.proc [data-proc="fin"]');
   await p.waitForTimeout(1200);
   const fin = await A(p, () => ({ alto: document.querySelector('.proc').scrollHeight, cifras: [...document.querySelectorAll('.proc .v-resumen b')].map((x) => x.textContent), fuente: document.querySelector('.proc-fuente').textContent }));
   await p.screenshot({ path: join(SALIDA, 'metodo-final.png') });
@@ -163,10 +200,11 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await clic(p, '[data-accion="vista"][data-v="recomendaciones"]');
   const previa = await A(p, () => ({ generar: !!document.querySelector('.generar [data-accion="generar"]'), pasos: document.querySelectorAll('.generar-pasos li').length }));
   await p.click('.generar [data-accion="generar"]');
-  await p.waitForSelector('.proc-etiqueta', { timeout: 30000 });
+  await p.waitForSelector('.proc', { timeout: 10000 });
+  await avanzarHasta(p, '.proc-etiqueta'); await p.waitForTimeout(2600);
   const etiqueta = await texto(p, '.proc-etiqueta');
   await p.screenshot({ path: join(SALIDA, 'generar-ia.png') });
-  await p.waitForSelector('.proc [data-proc="fin"]', { timeout: 30000 });
+  await avanzarHasta(p, '.proc [data-proc="fin"]');
   await p.waitForTimeout(800);
   await p.click('.proc [data-proc="fin"]'); await p.waitForTimeout(400);
   const res = await A(p, () => ({ items: document.querySelectorAll('.rec-item').length, n: window.EasyPerformance.recomendaciones().length, cuenta: (document.querySelector('.pestana .cuenta') || {}).textContent }));
@@ -215,8 +253,13 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   ok('Jira.csv: de la carga al tablero sin puesta en marcha', inicio.vista === 'tablero' && inicio.eqs === 'Infrastructure, Mobile, Web', `${inicio.eqs} · ${inicio.recs} recomendaciones · ${seg} s`);
   const r = await recorrer(p, 'jira', true);
   ok('Jira.csv: todas las pantallas sin scroll horizontal', !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
-  // Estados: In Progress pasa a En revisión
+  // Fiabilidad del export de prueba: avisa de lo que hay que revisar y cómo arreglarlo
   await clic(p, '[data-accion="vista"][data-v="como"]');
+  await clic(p, '[data-accion="como-sec"][data-s="fiabilidad"]');
+  const fj = await A(p, () => ({ nivel: document.querySelector('.fiab-nivel b').textContent, revisar: document.querySelectorAll('.fiab-c.fiab-revisar').length, arreglo: [...document.querySelectorAll('.fiab-c.fiab-revisar')].every((x) => /Cómo se arregla/.test(x.textContent)) }));
+  ok('Jira.csv: la fiabilidad avisa de lo que hay que revisar y cómo arreglarlo', fj.revisar >= 3 && fj.arreglo && fj.nivel !== 'Alta', JSON.stringify(fj));
+  // Estados: In Progress pasa a En revisión
+  await clic(p, '[data-accion="como-sec"][data-s="datos"]');
   await clic(p, '[data-accion="editar"][data-e="estados"]');
   const antes = await A(p, () => window.EasyPerformance.r.preparacion.mapeo['In Progress']);
   await p.selectOption('select[data-cambio="estado"][data-e="In Progress"]', 'en_revision');

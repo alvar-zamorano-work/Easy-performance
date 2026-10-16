@@ -1,7 +1,8 @@
 // Easy Performance: animación de un proceso por pasos (el método de carga y la generación de recomendaciones).
+// Avanza con el botón Siguiente (o la flecha derecha), no solo: quien presenta marca el ritmo.
 // Se usa con window.Proceso.reproducir({ kicker, titulo, fuente, pasos, final }) y devuelve una promesa
 // que se resuelve al cerrar ('fin', 'saltado' o 'sin-animacion').
-// Cada paso: { nombre, titulo, texto, visual (HTML), resultado (HTML), etiqueta?, dur? }.
+// Cada paso: { nombre, titulo, texto, visual (HTML), resultado (HTML), etiqueta? }.
 // En el HTML de un paso, <b data-cuenta="1232" data-formato="num|eur|dec">0</b> cuenta hasta la cifra
 // y los elementos con class="pe" entran escalonados (style="--d:3" es su orden).
 // Con "reducir movimiento" activado en el sistema no se muestra: se pasa directamente al resultado.
@@ -43,7 +44,7 @@
     if (activo) activo.cerrar('reemplazado');
     if (reducido() || window.EASY_PERFORMANCE_SIN_ANIMACION) return Promise.resolve('sin-animacion');
     return new Promise(function (resolver) {
-      var pasos = cfg.pasos, n = pasos.length, i = -1, temporizador = null, cerrado = false;
+      var pasos = cfg.pasos, n = pasos.length, i = -1, cerrado = false, enFinal = false;
       var previoFoco = document.activeElement, previoOverflow = document.body.style.overflow;
       var raiz = document.createElement('div');
       raiz.className = 'proc';
@@ -56,10 +57,10 @@
         (cfg.fuente ? '<span class="proc-fuente">' + cfg.fuente + '</span>' : '') + '</header>' +
         '<div class="proc-ruta" style="--n:' + n + '"><div class="proc-via"><span class="proc-avance"></span><span class="proc-viaje"></span></div><ol>' +
         pasos.map(function (p, k) {
-          return '<li class="proc-est" data-k="' + k + '"><span class="proc-punto"><span class="proc-num">' + (k + 1) + '</span><span class="proc-ok">' + CHECK + '</span></span><span class="proc-nombre">' + p.nombre + '</span></li>';
+          return '<li class="proc-est" data-k="' + k + '"><button type="button" class="proc-punto" data-proc="ir" data-k="' + k + '" aria-label="Paso ' + (k + 1) + ': ' + p.nombre + '"><span class="proc-num">' + (k + 1) + '</span><span class="proc-ok">' + CHECK + '</span></button><span class="proc-nombre">' + p.nombre + '</span></li>';
         }).join('') + '</ol></div>' +
         '<section class="proc-escena" aria-live="polite"></section>' +
-        '<footer class="proc-pie"><span class="proc-cuenta">' + (cfg.pie || '') + '</span><span class="proc-acc"><button type="button" class="proc-saltar" data-proc="saltar">Saltar</button></span></footer>' +
+        '<footer class="proc-pie"><span class="proc-cuenta">' + (cfg.pie || '') + '</span><span class="proc-acc"></span></footer>' +
         '</div>';
       document.body.appendChild(raiz);
       document.body.style.overflow = 'hidden';
@@ -87,9 +88,17 @@
         var f = todo ? 1 : (n > 1 ? actual / (n - 1) : 1);
         avance.style.transform = 'scaleX(' + f + ')';
       }
-      function mostrar(k) {
+      var BOTONES = '<button type="button" class="proc-saltar" data-proc="saltar">Saltar</button>' +
+        '<button type="button" class="btn btn-proc-sec" data-proc="anterior">Anterior</button><button type="button" class="btn btn-claro" data-proc="siguiente">Siguiente</button>';
+      function botonesPaso(k) {
+        if (!acc.querySelector('[data-proc="siguiente"]')) acc.innerHTML = BOTONES;
+        acc.querySelector('[data-proc="anterior"]').disabled = k === 0;
+        acc.querySelector('[data-proc="siguiente"]').textContent = k === n - 1 ? (cfg.ultimo || 'Ver el resultado') : 'Siguiente';
+      }
+      function mostrar(k, previo) {
         var p = pasos[k];
-        if (k > 0) viajar(k - 1, k);
+        enFinal = false;
+        if (previo != null && previo >= 0 && previo !== k) viajar(Math.min(previo, n - 1), k);
         pintarEstaciones(k, false);
         escena.innerHTML = '<div class="proc-texto pe" style="--d:0"><p class="proc-paso">Paso ' + (k + 1) + ' de ' + n +
           (p.etiqueta ? ' <span class="proc-etiqueta">' + p.etiqueta + '</span>' : '') + '</p><h3>' + p.titulo + '</h3><p>' + p.texto + '</p>' +
@@ -97,28 +106,30 @@
           '<div class="proc-visual pe" style="--d:1">' + (p.visual || '') + '</div>';
         escena.classList.remove('entra'); void escena.offsetWidth; escena.classList.add('entra');
         contar(escena);
-        temporizador = setTimeout(siguiente, p.dur || cfg.dur || 2600);
+        botonesPaso(k);
       }
       function final() {
-        clearTimeout(temporizador);
+        enFinal = true;
         pintarEstaciones(n - 1, true);
         var f = cfg.final || {};
         escena.innerHTML = '<div class="proc-texto pe" style="--d:0"><p class="proc-paso">Listo</p><h3>' + (f.titulo || 'Listo') + '</h3><p>' + (f.texto || '') + '</p></div>' +
           '<div class="proc-visual pe" style="--d:1">' + (f.visual || '') + '</div>';
         escena.classList.remove('entra'); void escena.offsetWidth; escena.classList.add('entra');
         contar(escena);
-        acc.innerHTML = '<button type="button" class="proc-saltar" data-proc="repetir">Repetir</button><button type="button" class="btn btn-claro" data-proc="fin">' + (f.boton || 'Continuar') + '</button>';
+        acc.innerHTML = '<button type="button" class="proc-saltar" data-proc="repetir">Repetir</button><button type="button" class="btn btn-proc-sec" data-proc="anterior">Anterior</button><button type="button" class="btn btn-claro" data-proc="fin">' + (f.boton || 'Continuar') + '</button>';
         var b = acc.querySelector('[data-proc="fin"]'); if (b) b.focus();
       }
-      function siguiente() {
+      function ir(k) {
         if (cerrado) return;
-        i++;
-        if (i < n) mostrar(i); else final();
+        var previo = enFinal ? n - 1 : i;
+        i = Math.max(0, Math.min(k, n));
+        if (i < n) mostrar(i, previo); else final();
       }
+      function siguiente() { if (!enFinal) ir(i + 1); }
+      function anterior() { if (enFinal) ir(n - 1); else if (i > 0) ir(i - 1); }
       function cerrar(motivo) {
         if (cerrado) return;
         cerrado = true;
-        clearTimeout(temporizador);
         document.removeEventListener('keydown', teclas, true);
         raiz.classList.remove('abierto');
         raiz.classList.add('cerrando');
@@ -130,6 +141,8 @@
       }
       function teclas(e) {
         if (e.key === 'Escape') { e.preventDefault(); cerrar('saltado'); }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); siguiente(); }
+        else if (e.key === 'ArrowLeft') { e.preventDefault(); anterior(); }
       }
       raiz.addEventListener('click', function (e) {
         var b = e.target.closest('[data-proc]');
@@ -137,17 +150,18 @@
         var a = b.getAttribute('data-proc');
         if (a === 'saltar') cerrar('saltado');
         else if (a === 'fin') cerrar('fin');
-        else if (a === 'repetir') {
-          i = -1;
-          acc.innerHTML = '<button type="button" class="proc-saltar" data-proc="saltar">Saltar</button>';
-          siguiente();
-        }
+        else if (a === 'siguiente') siguiente();
+        else if (a === 'anterior') anterior();
+        else if (a === 'ir') ir(+b.getAttribute('data-k'));
+        else if (a === 'repetir') { acc.innerHTML = ''; i = -1; enFinal = false; ir(0); }
+        // El foco se queda en el botón principal: Intro o espacio siguen avanzando
+        if (!cerrado && a !== 'saltar' && a !== 'fin') { var pr = acc.querySelector('[data-proc="siguiente"], [data-proc="fin"]'); if (pr) pr.focus(); }
       });
       document.addEventListener('keydown', teclas, true);
       var control = { cerrar: cerrar };
       activo = control;
-      var s = raiz.querySelector('[data-proc="saltar"]'); if (s) s.focus();
-      setTimeout(siguiente, 280);
+      ir(0);
+      var s = acc.querySelector('[data-proc="siguiente"]'); if (s) s.focus();
     });
   }
 
