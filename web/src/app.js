@@ -683,9 +683,9 @@
     // 1. Leer
     var p1 = {
       nombre: 'Leer', titulo: f ? 'Leemos los ' + f.unidad + ' de ' + f.nombre : 'Leemos los exports',
-      texto: 'Unimos todo lo que llega y nos quedamos con la versión más reciente de cada tarea. Las épicas y las subtareas no cuentan como entregas.',
+      texto: 'Unimos todo lo que llega y nos quedamos con la versión más reciente de cada tarea. Cada trabajo cuenta una sola vez.',
       visual: '<div class="v-lista">' + vfila(f ? 'Registros leídos de ' + f.nombre : 'Filas leídas de ' + inf.ficheros.length + ' ' + plural(inf.ficheros.length, 'fichero', 'ficheros'), inf.filasLeidas, '', 1) +
-        vfila('Repetidas: cuentan una vez', inf.duplicadas, 'fuera', 2) + vfila('Épicas y subtareas: fuera del cálculo', inf.epicas + inf.subtareas, 'fuera', 3) +
+        vfila('Repetidas: cuentan una vez', inf.duplicadas, 'fuera', 2) + (inf.epicas + inf.subtareas ? vfila('Otros tipos de incidencia', inf.epicas + inf.subtareas, 'fuera', 3) : '') +
         (inf.sinClave ? vfila('Sin clave: no se pueden seguir', inf.sinClave, 'fuera', 3) : '') +
         vfila('Tareas para medir', inf.tareas, 'total', 4) + '</div>',
       resultado: cuenta(inf.tareas) + ' tareas del ' + esc(fechaCorta(det.fechaMin)) + ' al ' + esc(fechaCorta(hasta))
@@ -1245,7 +1245,6 @@
     var solo = [], consultor = [], cliente = [];
     if (fuera.length) solo.push('Descarta ' + fuera.length + ' ' + plural(fuera.length, 'columna', 'columnas') + ' con personas o comentarios: ' + nombresCol(fuera) + '. No se leen.');
     if (inf.duplicadas) solo.push(miles(inf.duplicadas) + ' ' + plural(inf.duplicadas, 'tarea venía repetida', 'tareas venían repetidas') + ': cuenta la versión más reciente.');
-    if (inf.epicas + inf.subtareas) solo.push('Deja fuera ' + miles(inf.epicas + inf.subtareas) + ' épicas y subtareas: no son entregas.');
     if (ign.length) solo.push('Ignora ' + ign.length + ' ' + plural(ign.length, 'columna que no reconoce', 'columnas que no reconoce') + (ign.length <= 4 ? ': ' + nombresCol(ign) : '') + '. No hacen falta para medir.');
     if (!App.cfg.campoEquipo) consultor.push('Confirmar que el equipo de cada tarea sale ' + (CAMPO_TXT[campo()] || 'de la columna propuesta') + '.');
     det.estados.filter(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }).forEach(function (e) {
@@ -1365,7 +1364,7 @@
       return '<div class="leido"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel !== undefined ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Listo' : 'Cambiar') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
     };
     html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Así hemos leído vuestros datos</h2></div>' +
-      fila('fichero', 'Ficheros', esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + inf.tareas.toLocaleString('es-ES') + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) + '. Sin épicas ni subtareas.') +
+      fila('fichero', 'Ficheros', esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + inf.tareas.toLocaleString('es-ES') + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) + '.') +
       fila('campo', 'Equipos', 'Según ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
       fila('equipos', 'Proveedores, áreas, FTE y coste', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.') + ' ' + textoCapacidad(eqs), panelEquipos) +
       fila('estados', 'Estados', esc(det.estados.map(function (e) { return e.nombre + ' es ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }) ? ' <span class="chip chip-atencion">Revisar</span>' : ''), panelEstados) +

@@ -63,7 +63,7 @@ const PARECE_PERSONA = /\b(user|usuario|email|correo|account id|id de cuenta)\b/
 /** Qué es cada campo, en palabras llanas. */
 const QUE_ES: Record<string, string> = {
   clave: 'Clave de la tarea', resumen: 'Título: solo en memoria, no sale en el paquete', descripcion: 'Descripción: solo para ver si el ticket está bien definido',
-  tipo: 'Tipo: historia, error, tarea o épica', estado: 'Estado: se traduce a uno de los nueve comunes', categoria: 'Categoría del estado: ayuda si el nombre no basta',
+  tipo: 'Tipo: historia, tarea, error u otro', estado: 'Estado: se traduce a uno de los nueve comunes', categoria: 'Categoría del estado: ayuda si el nombre no basta',
   cambioCategoria: 'Fecha del último cambio de estado', creada: 'Fecha de creación', actualizada: 'Fecha de la última actualización', resuelta: 'Fecha de terminado',
   resolucion: 'Resolución: separa lo descartado de lo terminado', prioridad: 'Prioridad', componentes: 'Componente', etiquetas: 'Etiquetas',
   sprint: 'Sprints por los que pasó: se juntan en una lista', puntos: 'Estimación', equipo: 'Campo Equipo', tis: 'Tiempo en cada estado',
@@ -91,8 +91,13 @@ export function describirColumnas(texto: string): ColumnaLeida[] {
   // Basta con la cabecera y unas filas para los ejemplos
   const filas = leerCSV(texto.slice(0, 200000));
   if (!filas.length) return [];
-  const cab = filas[0], muestra = filas.slice(1, 400);
+  const cab = filas[0];
   const mapa = mapearColumnas(cab);
+  // Los ejemplos salen de tareas de trabajo, no de épicas ni subtareas
+  const iTipo = typeof mapa.tipo === 'number' ? mapa.tipo : -1;
+  const todas = filas.slice(1, 400);
+  const trabajo = iTipo < 0 ? todas : todas.filter((f) => !/epic|epica|sub/.test(norm(f[iTipo])));
+  const muestra = trabajo.length ? trabajo : todas;
   const campoDe: Record<number, string> = {};
   Object.keys(mapa).forEach((campo) => { const v = mapa[campo]; (Array.isArray(v) ? v : [v]).forEach((i) => { campoDe[i] = campo; }); });
   const out: ColumnaLeida[] = [], vistas: Record<string, ColumnaLeida> = {};
