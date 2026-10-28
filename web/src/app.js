@@ -1,6 +1,6 @@
 // Easy Performance: the four steps as navigation (Measure, Analyze, Improve, Learn), plus Settings.
 // Loading the export detects everything (team field, states) and shows the baseline. What cannot be detected
-// (vendors, areas, FTE, cost) and anything to correct lives in Measure > Context.
+// (vendors, areas, FTE, cost) and anything to correct lives in Setup > Context.
 // Connectors other than Jira are demo connectors: they load the sample data and are labelled as such.
 // The AI assistant (Settings) only ever receives the diagnostic package: aggregated figures, no tickets, no people.
 // Uses the core bundled in the page: window.Motor, window.Nucleo and window.CATALOGO.
@@ -9,7 +9,7 @@
   var C = window.CATALOGO, N = window.Nucleo, M = window.Motor;
   var CLAVE = 'easyperformance.config.v2', CLAVE_V1 = 'easyperformance.configuracion.v1', CLAVE_TUT = 'easyperformance.tutorial', CLAVE_IA = 'easyperformance.ai';
   var App = {
-    vista: 'inicio', medir: 'baseline', ver: 'area', editar: null, demo: false, carpeta: null, origen: null, fuente: null, simulada: null,
+    vista: 'inicio', setup: 'data', ver: 'area', editar: null, demo: false, carpeta: null, origen: null, fuente: null, simulada: null,
     lectura: null, det: null, cfg: {}, iniciativas: [], contexto: null, r: null, real: null, abiertas: {},
     recSel: null, recEquipo: 'todos', tiempoMs: 0, datos: 'fiabilidad', nuevaIni: false,
     ia: { modelo: '', clave: '', recordar: false }, iaRecs: null, iaRecsDe: null, iaImpacto: null, iaMapeo: null, iaEstado: 'idle', iaError: null
@@ -37,17 +37,17 @@
   var COLUMNAS = ['ciclo', 'entregas', 'retrabajo', 'arrastradas', 'agent_readiness'];
   function hayCoste() { var c = App.cfg.coste; return !!(c && Object.keys(c).some(function (k) { return c[k] > 0; })); }
   function columnas() { return hayCoste() ? COLUMNAS.concat(['coste']) : COLUMNAS; }
-  function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Set the FTE and cost of each team in Measure > Context.' } : eq.medidas[id]; }
+  function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Set FTE and cost in Setup > Context.' } : eq.medidas[id]; }
   var KPI_AREA = ['ciclo', 'entregas', 'retrabajo', 'agent_readiness'];
   var KPI_EQUIPO = ['ciclo', 'entregas', 'retrabajo', 'arrastradas'];
   var ESTADO = { bien: 'Good', atencion: 'Attention', critico: 'Critical', sin: 'No data' };
   var CONF = { baja: 'low', media: 'medium', alta: 'high', low: 'low', medium: 'medium', high: 'high' };
   var NOMBRE_INI = { ciclo: 'lead time', total: 'total time', entregas: 'deliveries per week', espera: 'waiting time', retrabajo: 'rework', errores: 'bugs', reabiertas: 'reopened', bloqueo: 'blocked time', agent_readiness: 'agent-ready tickets' };
   var PASOS = [
-    ['measure', '1', 'Measure', 'Baseline per team'],
-    ['analyze', '2', 'Analyze', 'Signals and drivers'],
-    ['improve', '3', 'Improve', 'Initiatives and standards'],
-    ['learn', '4', 'Learn', 'Did it work?']
+    ['measure', '1', 'Measure'],
+    ['analyze', '2', 'Analyze'],
+    ['improve', '3', 'Improve'],
+    ['learn', '4', 'Learn']
   ];
 
   function valor(id, v) {
@@ -176,7 +176,7 @@
     recalcular();
     App.tiempoMs = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
     App.recSel = null; App.recEquipo = 'todos'; App.nuevaIni = false;
-    App.vista = 'measure'; App.medir = 'baseline'; App.ver = 'area';
+    App.vista = 'measure'; App.ver = 'area';
     return true;
   }
   function cargarFicheros(files) {
@@ -292,7 +292,7 @@
     App.contexto = r.contexto || null; App.r = r.r || null; App.origen = r.origen || null; App.ver = r.ver || 'area'; App.ficheros = r.ficheros || null;
     App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0;
     App.iaRecs = r.iaRecs || null; App.iaImpacto = r.iaImpacto || null; App.iaRecsDe = r.iaRecsDe || null;
-    App.vista = App.r ? 'measure' : 'inicio'; App.medir = 'baseline'; App.real = null; App.editar = null; App.nuevaIni = false;
+    App.vista = App.r ? 'measure' : 'inicio'; App.real = null; App.editar = null; App.nuevaIni = false;
     if (pintar !== false) { render(); window.scrollTo(0, 0); }
   }
 
@@ -321,43 +321,35 @@
     var f = App.fuente && FUENTES[App.fuente], demo = hayDemo();
     return '<div class="inicio"><div class="inicio-in">' +
       '<div class="inicio-txt">' + marca() + '<h1>Team performance from your delivery tools</h1>' +
-      '<p class="inicio-sub">Measure every team with the same rules, see what stands out and why, act on it, and learn whether it worked. Teams only, never people.</p>' +
-      '<ol class="metodo-mini" aria-label="The four steps">' + PASOS.map(function (p) { return '<li><span>' + p[1] + '</span>' + p[2] + '</li>'; }).join('') + '</ol>' +
-      (demo ? '<div class="inicio-tut"><button class="btn btn-claro" data-accion="tutorial">Take the tutorial with sample data</button><span>Five minutes. Does not touch your data.</span></div>' : '') +
-      '<p class="nota">Your data never leaves this computer: everything is calculated in the browser.</p></div>' +
+      '<p class="inicio-sub">Measure, analyze, improve, learn. Same rules for every team. Teams only, never people.</p>' +
+      (demo ? '<div class="inicio-tut"><button class="btn btn-claro" data-accion="tutorial">Tutorial with sample data</button></div>' : '') + '</div>' +
       '<section class="fuentes" aria-label="Where the data comes from">' + (f ? panelFuente(App.fuente, f) : panelFuentes()) + '</section></div></div>';
   }
   function panelFuentes() {
     var carpetaOk = !!window.showDirectoryPicker;
     var tiles = Object.keys(FUENTES).map(function (k) {
-      var f = FUENTES[k], estado = f.vivo ? 'Live: CSV export or folder' : (f.otra ? 'With an adapter' : 'Demo connector');
+      var f = FUENTES[k], estado = f.vivo ? 'Live' : (f.otra ? 'Adapter' : 'Demo connector');
       return '<button class="conector' + (f.otra ? ' otra' : '') + '" data-accion="fuente" data-f="' + k + '"><span class="con-cab"><span class="con-ico" aria-hidden="true">' + f.ico + '</span><b>' + esc(f.nombre) + '</b></span>' +
-        '<small>' + esc(f.sub) + '</small><span class="con-estado' + (f.vivo ? ' si' : '') + '">' + estado + '</span></button>';
+        '<span class="con-estado' + (f.vivo ? ' si' : '') + '">' + estado + '</span></button>';
     }).join('');
-    return '<h2>Connect your delivery tool</h2><div class="conectores">' + tiles + '</div>' +
-      '<p class="separador">or drop the exports here</p>' +
-      '<div class="zona" id="zona"><b>Drop the Jira CSV here</b><span>Exported with all fields, from Jira Cloud or Data Center. You can drop several files: they are merged and duplicates removed.</span>' +
+    return '<h2>Connect your tool</h2><div class="conectores">' + tiles + '</div>' +
+      '<div class="zona" id="zona"><b>Or drop the Jira CSV export here</b>' +
       '<div class="botones"><button class="btn" data-accion="ficheros">Choose files</button>' + (carpetaOk ? '<button class="btn btn-sec" data-accion="carpeta">Choose a folder</button>' : '') +
-      (App.carpeta ? '<button class="btn btn-sec" data-accion="leer-carpeta">Read the folder "' + esc(App.carpeta.name) + '"</button>' : '') + '</div></div>';
+      (App.carpeta ? '<button class="btn btn-sec" data-accion="leer-carpeta">Read "' + esc(App.carpeta.name) + '"</button>' : '') + '</div></div>';
   }
   function panelFuente(k, f) {
-    var volver = '<button class="btn-txt volver" data-accion="fuentes">Back to the sources</button>';
-    var li = function (t) { return '<li>' + esc(t) + '</li>'; };
+    var volver = '<button class="btn-txt volver" data-accion="fuentes">Back</button>';
     if (f.otra) {
-      return volver + '<h2>Another tool</h2><p class="con-texto">Any tool with an export or an API works. An adapter translates its tasks, states and teams into the common model. Nothing else changes: measures, comparisons and recommendations are the same.</p>' +
-        '<dl class="con-datos"><dt>Live today</dt><dd>Jira CSV export and shared folder</dd><dt>Next adapters</dt><dd>Azure DevOps, ServiceNow, GitLab, GitHub</dd><dt>Headcount and cost</dt><dd>From the staffing tool, the contracts or finance</dd></dl>' +
+      return volver + '<h2>Another tool</h2><p class="con-texto">Any tool with an export or an API. An adapter maps its tasks, states and teams to the common model. Live today: Jira. Next: Azure DevOps, ServiceNow, GitLab, GitHub.</p>' +
         '<div class="botones"><button class="btn btn-claro" data-accion="demo">See it with sample data</button></div>';
     }
-    return volver + '<h2>Connect ' + esc(f.nombre) + (f.vivo ? '' : ' <span class="chip chip-atencion">Demo connector</span>') + '</h2>' +
-      '<dl class="con-datos"><dt>Instance</dt><dd class="mono">' + esc(f.instancia) + '</dd><dt>Project</dt><dd>' + esc(f.proyecto) + '</dd><dt>Team</dt><dd>' + esc(f.equipo) + '</dd>' +
-      '<dt>Period</dt><dd>Last 12 months</dd><dt>Access</dt><dd>Read only, granted by your administrator</dd></dl>' +
-      '<div class="con-dos"><div><b>What we read</b><ul>' + f.lee.map(li).join('') + '</ul></div><div><b>What we never read</b><ul>' + ['Assignees or reporters', 'Comments or attachments'].map(li).join('') + '</ul></div></div>' +
-      '<div class="botones"><button class="btn btn-claro" data-accion="conectar" data-f="' + k + '">' + (f.vivo ? 'Connect and load (demo)' : 'Connect and load') + '</button>' + (f.csv ? '<button class="btn btn-sec" data-accion="ficheros">Load a CSV export</button>' + (window.showDirectoryPicker ? '<button class="btn btn-sec" data-accion="carpeta">Choose a folder</button>' : '') : '') + '</div>' +
-      '<p class="nota">' + (f.vivo ? 'The CSV export and the shared folder use your real data today. The direct API connection is set up during the pilot with your IT team; here it loads the sample data.' : 'Demo connector: it loads the sample data of a fictional bank. The ' + esc(f.nombre) + ' adapter is on the roadmap and follows the same common model.') + '</p>';
+    return volver + '<h2>' + esc(f.nombre) + (f.vivo ? '' : ' <span class="chip chip-atencion">Demo connector</span>') + '</h2>' +
+      '<dl class="con-datos"><dt>Instance</dt><dd class="mono">' + esc(f.instancia) + '</dd><dt>Project</dt><dd>' + esc(f.proyecto) + '</dd><dt>Team</dt><dd>' + esc(f.equipo) + '</dd><dt>Reads</dt><dd>Work items, states, sprints. Never people or comments.</dd></dl>' +
+      '<div class="botones"><button class="btn btn-claro" data-accion="conectar" data-f="' + k + '">' + (f.vivo ? 'Connect (demo)' : 'Connect and load') + '</button>' + (f.csv ? '<button class="btn btn-sec" data-accion="ficheros">Load a CSV export</button>' + (window.showDirectoryPicker ? '<button class="btn btn-sec" data-accion="carpeta">Choose a folder</button>' : '') : '') + '</div>' +
+      '<p class="nota">' + (f.vivo ? 'CSV and folder use your real data. The direct connection is set up in the pilot; here it loads sample data.' : 'Loads the sample data of a fictional bank.') + '</p>';
   }
-
   // ---------- header with the four steps ----------
-  var VISTAS = { measure: vistaMeasure, analyze: vistaAnalyze, improve: vistaImprove, learn: vistaLearn, settings: vistaSettings };
+  var VISTAS = { measure: vistaMeasure, analyze: vistaAnalyze, improve: vistaImprove, learn: vistaLearn, setup: vistaSetup, settings: vistaSetup };
   function render() {
     var html;
     if (!App.r || App.vista === 'inicio') html = inicio();
@@ -366,12 +358,12 @@
   }
   function marca() { return '<div class="marca"><span class="logo" aria-hidden="true"></span><b>Easy Performance</b></div>'; }
   function estadoPasos() {
-    var recs = recomendaciones().length + (App.iaRecs ? App.iaRecs.length : 0), segs = seguimientos();
-    var evaluadas = segs.filter(function (x) { return x.s.estado === 'funciona' || x.s.estado === 'sin_efecto' || x.s.estado === 'empeora'; }).length;
+    var recs = recomendaciones().length + (App.iaRecs && App.iaRecsDe === App.lectura ? App.iaRecs.length : 0), segs = seguimientos();
+    var evaluadas = segs.filter(evaluada).length;
     return {
       measure: App.r.modelo.equipos.length + ' ' + plural(App.r.modelo.equipos.length, 'team', 'teams'),
-      analyze: recs ? recs + ' ' + plural(recs, 'recommendation', 'recommendations') : 'All within normal',
-      improve: segs.length ? segs.length + ' ' + plural(segs.length, 'initiative', 'initiatives') : 'No initiatives yet',
+      analyze: recs ? recs + ' to do' : 'All normal',
+      improve: segs.length ? segs.length + ' ' + plural(segs.length, 'initiative', 'initiatives') : 'None yet',
       learn: evaluadas ? evaluadas + ' evaluated' : 'Measuring'
     };
   }
@@ -383,11 +375,10 @@
     var hasta = new Date(App.r.modelo.semanaFin.getTime() - 864e5);
     return '<header class="cab"><div class="cab-in">' + marca() + '<nav class="pasos-nav" aria-label="The four steps">' + pasos + '</nav><span class="hueco"></span>' +
       '<span class="fecha">Data up to ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="tutorial">Tutorial</button><button class="btn btn-cab btn-actualizar" data-accion="actualizar">Update</button>' +
-      '<button class="btn btn-cab btn-ajustes" data-accion="vista" data-v="settings"' + (App.vista === 'settings' ? ' aria-current="page"' : '') + '>Settings</button></div></header>';
+      '<button class="btn btn-cab btn-ajustes" data-accion="vista" data-v="setup"' + (App.vista === 'setup' ? ' aria-current="page"' : '') + '>Setup</button></div></header>';
   }
   function bandaDemo() {
-    var txt = App.simulada ? '<b>Demo connector for ' + esc(FUENTES[App.simulada].nombre) + ':</b> sample data of a fictional bank, with invented costs. Nothing you change here is saved.' :
-      '<b>Sample data:</b> a fictional bank with two in-house teams and two vendor teams, a year of history and invented costs. Nothing you change here is saved.';
+    var txt = App.simulada ? '<b>Demo connector for ' + esc(FUENTES[App.simulada].nombre) + ':</b> sample data, nothing is saved.' : '<b>Sample data:</b> a fictional bank, nothing is saved.';
     return '<div class="banda-demo"><span>' + txt + '</span><span class="banda-acc"><button class="btn btn-peq" data-accion="salir-demo">' + (App.real && App.real.r ? 'Back to my data' : 'Load my data') + '</button></span></div>';
   }
   function subnav(items, actual, accion) {
@@ -396,16 +387,23 @@
     }).join('') + '</nav>';
   }
   function titularPaso(n, titulo, texto, acciones) {
-    return '<section class="titular"><div><p class="kicker">Step ' + n + ' of 4</p><h1>' + titulo + '</h1><p>' + texto + '</p></div>' + (acciones ? '<div class="cab-acc">' + acciones + '</div>' : '') + '</section>';
+    return '<section class="titular"><div><p class="kicker">Step ' + n + ' of 4</p><h1>' + titulo + '</h1>' + (texto ? '<p>' + texto + '</p>' : '') + '</div>' + (acciones ? '<div class="cab-acc">' + acciones + '</div>' : '') + '</section>';
   }
-
   // ---------- step 1: Measure ----------
-  var SECCIONES_MEASURE = [['baseline', 'Baseline'], ['data', 'Data'], ['context', 'Context']];
+  var SECCIONES_SETUP = [['data', 'Data'], ['context', 'Context'], ['settings', 'Settings']];
   function vistaMeasure() {
-    var s = SECCIONES_MEASURE.some(function (x) { return x[0] === App.medir; }) ? App.medir : 'baseline';
-    var html = titularPaso(1, 'Measure', 'Each team against its own history, with the same definitions for everyone. Data and context make the baseline trustworthy.',
-      subnav(SECCIONES_MEASURE, s, 'medir-sec'));
-    return html + (s === 'data' ? vistaDatos() : s === 'context' ? vistaContexto() : tablero());
+    var f = fiab(), n = NIVEL[f.nivel];
+    var eqs = App.r.modelo.equipos, info = App.cfg.equiposInfo || {};
+    var de = function (t) { return eqs.filter(function (e) { return (info[e.nombre] || {}).tipo === t; }).length; };
+    var nProv = de('proveedor'), nInt = de('interno');
+    var sub = (App.cfg.nombre ? esc(App.cfg.nombre) + ': ' : '') + eqs.length + ' ' + plural(eqs.length, 'team', 'teams') + (nProv ? ', ' + nInt + ' in-house and ' + nProv + ' from vendors' : '') + '. Each against its own history.';
+    return titularPaso(1, 'Measure', sub,
+      selector() + '<span class="chip chip-' + n[0] + ' chip-grande" data-accion="fiabilidad" role="button" tabindex="0">Data reliability ' + n[1].toLowerCase() + '</span>') + tablero();
+  }
+  function vistaSetup() {
+    var sec = SECCIONES_SETUP.some(function (x) { return x[0] === App.setup; }) ? App.setup : 'data';
+    var html = '<section class="titular"><div><h1>Setup</h1></div><div class="cab-acc">' + subnav(SECCIONES_SETUP, sec, 'setup-sec') + '</div></section>';
+    return html + (sec === 'context' ? vistaContexto() : sec === 'settings' ? vistaSettings() : vistaDatos());
   }
   function selector() {
     var eqs = App.r.modelo.equipos;
@@ -421,17 +419,16 @@
   function tarjetaKpi(id, m, conSerie) {
     var e = estadoDe(m), c = cifra(id, m && m.disponible ? m.valor : null), def = MED[id];
     var normal;
-    if (m && !m.disponible) normal = m.motivo || 'Not enough data.';
-    else if ((e === 'atencion' || e === 'critico') && m.estadoTexto) normal = m.estadoTexto.replace(/its usual range/g, 'what is normal here');
-    else if (m && m.ref) normal = 'Normal here: ' + rango(id, m.ref.lo, m.ref.hi);
-    else normal = def.que.split('.')[0] + '.';
+    if (m && !m.disponible) normal = 'No data';
+    else if (m && m.ref) normal = 'Normal: ' + rango(id, m.ref.lo, m.ref.hi);
+    else normal = '';
     var tip = def.que;
     if (id === 'ciclo' && m && m.disponible && m.valor != null) {
       var quien = App.ver && App.ver !== 'area' ? 'this team' : 'the area';
       tip = 'What ' + quien + ' starts today will almost surely be done in ' + c.g + ' ' + c.u + ' or less. If it rises, ' + quien + ' takes longer to finish what it starts.';
     }
     return '<article class="kpi kpi-' + e + '"><div class="kpi-cab">' + conTip(def.nombre, tip) + chip(e) + '</div>' +
-      '<div class="kpi-v"><b>' + esc(c.g) + '</b><span>' + esc(c.u) + '</span></div><p class="kpi-n">' + esc(normal) + '</p>' + (conSerie ? chispa(m, e, def.nombre) : '') + '</article>';
+      '<div class="kpi-v"><b>' + esc(c.g) + '</b><span>' + esc(c.u) + '</span></div>' + (normal ? '<p class="kpi-n">' + esc(normal) + '</p>' : '') + (conSerie ? chispa(m, e, def.nombre) : '') + '</article>';
   }
   function serieUltima(m, k) { var s = (m && m.serie) || []; return s.slice(Math.max(0, s.length - k)); }
   function chispa(m, e, nombre) {
@@ -448,16 +445,11 @@
     eqs.sort(function (x, y) { return peso(y) - peso(x) || x.nombre.localeCompare(y.nombre, 'en'); });
     var fuera = eqs.filter(function (e) { var p = problemas(e); return p.critico.length || p.atencion.length; });
     var nRec = recomendaciones().length, info = App.cfg.equiposInfo || {};
-    var de = function (t) { return eqs.filter(function (e) { return (info[e.nombre] || {}).tipo === t; }).length; };
-    var nProv = de('proveedor'), nInt = de('interno');
-    var sub = eqs.length + ' ' + plural(eqs.length, 'team', 'teams') + (nProv ? ': ' + nInt + ' in-house and ' + nProv + ' from ' + plural(nProv, 'a vendor', 'vendors') : '');
-    var accion = !nRec ? '' : '<button class="btn" data-accion="vista" data-v="analyze">See ' + (nRec === 1 ? 'the recommendation' : 'the ' + nRec + ' recommendations') + '</button>';
-    var html = '<section class="titular cab-area"><div><h2 class="h-area">' + esc(App.cfg.nombre || 'Whole area') + '</h2><p>' + esc(sub) + '</p></div><div class="cab-acc">' + selector() + accion + '</div></section>';
-    html += estadoArea(fuera);
+    var html = estadoArea(fuera);
     html += '<section class="kpis" aria-label="Area indicators">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), true); }).join('') + '</section>';
     if (eqs.length > 1) {
       var marca_ = function (st) { return st === 'atencion' || st === 'critico' ? '<span class="sr"> (' + ESTADO[st].toLowerCase() + ')</span>' : ''; };
-      html += '<section class="bloque"><h2>Teams</h2><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Team</th>' +
+      html += '<section class="bloque"><div class="bloque-cab"><h2>Teams</h2>' + (nRec ? '<button class="btn btn-peq" data-accion="vista" data-v="analyze">' + nRec + ' things to do</button>' : '') + '</div><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Team</th>' +
         columnas().map(function (id) { return '<th scope="col">' + conTip(MED[id].nombre, MED[id].que) + '</th>'; }).join('') + '</tr></thead><tbody>' +
         eqs.map(function (eq) {
           var inf = info[eq.nombre] || {}, tipo = inf.tipo === 'proveedor' ? (inf.proveedor || 'Vendor') : (inf.tipo === 'interno' ? 'In-house' : '');
@@ -468,27 +460,25 @@
               return '<td>' + (v ? '<span class="v v-' + st + '">' + esc(v) + marca_(st) + '</span>' : '<span class="apagado">n/a</span>') + '</td>';
             }).join('') + '</tr>';
         }).join('') + '</tbody></table></div>' +
-        '<p class="leyenda-mat"><span class="v v-atencion">Attention</span><span class="v v-critico">Critical</span><span>No colour: within what is normal. Each figure is compared with what is normal in that same team; click a team for its detail.</span></p></section>';
+        '<p class="leyenda-mat"><span class="v v-atencion">Attention</span><span class="v v-critico">Critical</span><span>Each team against its own normal. Not a ranking.</span></p></section>';
     }
     return html;
   }
   function vistaEquipo(eq) {
     if (!eq) { App.ver = 'area'; return vistaArea(); }
-    var p = problemas(eq, KPI_EQUIPO), fuera = p.critico.concat(p.atencion).map(function (id) { return MED[id].nombre.toLowerCase(); });
     var info = (App.cfg.equiposInfo || {})[eq.nombre] || {};
-    var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Vendor') + '. ' : info.tipo === 'interno' ? 'In-house. ' : '') + 'Compared with its own previous 12 weeks.';
+    var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Vendor') + '. ' : info.tipo === 'interno' ? 'In-house. ' : '') + 'Against its own previous 12 weeks.';
     var recs = recomendaciones().filter(function (x) { return x.equipos.indexOf(eq.nombre) >= 0; });
-    var html = '<section class="titular cab-area"><div><button class="btn-txt" data-accion="ver" data-e="area">Back to the area</button><h2 class="h-area">' + esc(eq.nombre) + '</h2><p>' + esc(sub) + '</p></div><div class="cab-acc">' + selector() + '</div></section>';
+    var html = '<section class="titular cab-area"><div><button class="btn-txt" data-accion="ver" data-e="area">Back to the area</button><h2 class="h-area">' + esc(eq.nombre) + '</h2><p>' + esc(sub) + '</p></div></section>';
     html += '<section class="kpis" aria-label="Team indicators">' + KPI_EQUIPO.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
-    html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>Lead time, week by week</h2><p class="nota">How long the team takes to finish what it starts, week by week. The band is what is normal in this team.</p>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
-      bloqueRecEquipo(eq, recs, fuera) + '</div>';
+    html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>Lead time, week by week</h2>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
+      bloqueRecEquipo(eq, recs) + '</div>';
     return html;
   }
-  function bloqueRecEquipo(eq, recs, fuera) {
-    if (!recs.length) return '<section class="bloque bloque-oscuro"><h2>No recommendations for ' + esc(eq.nombre) + '</h2><p>Nothing outside what is normal calls for action.</p></section>';
-    return '<section class="bloque bloque-oscuro"><h2>' + (recs.length === 1 ? 'One recommendation' : (NUMEROS[recs.length] || recs.length) + ' recommendations') + ' for ' + esc(eq.nombre) + '</h2>' +
-      (fuera.length ? '<p>' + mayus(lista(fuera)) + (fuera.length === 1 ? ' is' : ' are') + ' outside what is normal.</p>' : '') +
-      '<ol>' + recs.map(function (x) { return '<li>' + esc(x.titulo) + '</li>'; }).join('') + '</ol><button class="btn btn-claro" data-accion="ver-recs" data-e="' + esc(eq.nombre) + '">See what to do</button></section>';
+  function bloqueRecEquipo(eq, recs) {
+    if (!recs.length) return '<section class="bloque bloque-oscuro"><h2>Nothing to do</h2><p>All figures within normal.</p></section>';
+    return '<section class="bloque bloque-oscuro"><h2>' + (recs.length === 1 ? 'One thing to do' : recs.length + ' things to do') + '</h2>' +
+      '<ol>' + recs.map(function (x) { return '<li>' + esc(x.titulo) + '</li>'; }).join('') + '</ol><button class="btn btn-claro" data-accion="ver-recs" data-e="' + esc(eq.nombre) + '">See them</button></section>';
   }
   function graficoPlazo(m) {
     if (!m || !m.disponible) return '<p class="nota">' + esc((m && m.motivo) || 'No lead time data.') + '</p>';
@@ -507,18 +497,12 @@
   }
   var NIVEL = { alta: ['bien', 'High'], media: ['atencion', 'Medium'], baja: ['critico', 'Low'] };
   function estadoArea(fuera) {
-    var f = fiab(), n = NIVEL[f.nivel], rev = f.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
-    var txt = !rev.length ? f.bien + ' of ' + f.comprobaciones.length + ' data checks pass.' :
-      rev.length <= 3 ? 'To review: ' + lista(rev.map(function (c) { return c.nombre.toLowerCase(); })) + '.' : rev.length + ' of ' + f.comprobaciones.length + ' data checks to review.';
-    var izq = '<div class="fiab-tira fiab-' + f.nivel + '"><span class="chip chip-' + n[0] + '">Reliability ' + n[1].toLowerCase() + '</span><span>' + esc(txt) + '</span><button class="btn-txt" data-accion="fiabilidad">See the data checks</button></div>';
     var criticos = fuera.filter(function (e) { return problemas(e).critico.length; }), foco = criticos.length ? criticos : fuera, resto = fuera.length - foco.length;
-    var der = '<div class="fuera"><span class="fuera-tit">' + (foco.length ? 'Need attention' : 'All teams within normal') + '</span>' + foco.map(function (e) {
+    return '<section class="estado-area estado-area-1" aria-label="Area status"><div class="fuera"><span class="fuera-tit">' + (foco.length ? 'Need attention' : 'All teams within normal') + '</span>' + foco.map(function (e) {
       var g = problemas(e).critico.length ? 'critico' : 'atencion';
       return '<button class="pill-eq" data-accion="ver" data-e="' + esc(e.nombre) + '"><span class="punto punto-' + g + '" aria-hidden="true"></span>' + esc(e.nombre) + '<span class="sr"> (' + ESTADO[g].toLowerCase() + ')</span></button>';
-    }).join('') + (resto ? '<span class="fuera-mas">and ' + resto + ' ' + plural(resto, 'team', 'teams') + ' with a notice</span>' : '') + '</div>';
-    return '<section class="estado-area" aria-label="Area status">' + izq + der + '</section>';
+    }).join('') + (resto ? '<span class="fuera-mas">and ' + resto + ' more</span>' : '') + '</div></section>';
   }
-
   // ---------- Measure > Data: reliability and how the export was read ----------
   var cacheFiab = { r: null, v: null };
   function fiab() {
@@ -533,17 +517,15 @@
   var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   var ICO_EST = { bien: CHECK, revisar: '!', sin: '' };
   var COLS_FIAB = { tiempos: 'Time in each state', flujo: 'Go through in progress', registro: 'Logged on time', estimacion: 'Stories estimated', sprints: 'Credible sprints', historia: 'History' };
-  var SECCIONES_DATOS = [['fiabilidad', 'Data reliability'], ['lectura', 'How the export was read']];
+  var SECCIONES_DATOS = [['fiabilidad', 'Reliability'], ['lectura', 'How the export was read']];
   function vistaDatos() {
     var s = SECCIONES_DATOS.some(function (x) { return x[0] === App.datos; }) ? App.datos : 'fiabilidad';
-    var html = '<section class="titular cab-area"><div><h2 class="h-area">Data</h2><p>If the tool does not reflect the work, the figures will not either. Here is what to review and what was read from the export.</p></div><div class="cab-acc">' + subnav(SECCIONES_DATOS, s, 'datos-sec') + '</div></section>';
-    return html + (s === 'lectura' ? secLectura() : secFiabilidad());
+    return subnav(SECCIONES_DATOS, s, 'datos-sec') + (s === 'lectura' ? secLectura() : secFiabilidad());
   }
   function secFiabilidad() {
     var f = fiab(), n = NIVEL[f.nivel];
     var html = '<section class="bloque fiab-cab"><div class="fiab-nivel fiab-' + f.nivel + '"><span>Reliability</span><b>' + n[1] + '</b></div><div><h2>Data reliability</h2>' +
-      '<p>' + f.bien + ' of ' + f.comprobaciones.length + ' checks pass' + (f.revisar ? ' and ' + f.revisar + (f.revisar === 1 ? ' needs review' : ' need review') : '') + '. Checks never change a figure: they warn.</p>' +
-      '<p class="nota">High: at most one check to review. Medium: two or three, or no time in each state. Low: four or more, or less than half of the tasks have a team.</p></div></section>';
+      '<p>' + f.bien + ' of ' + f.comprobaciones.length + ' checks pass' + (f.revisar ? ', ' + f.revisar + ' to review' : '') + '. Checks warn; they never change a figure.</p></div></section>';
     html += '<div class="fiab-grid">' + f.comprobaciones.map(function (c) {
       return '<article class="fiab-c fiab-' + c.estado + '"><div class="fiab-c-cab"><span class="v-ico ' + (c.estado === 'bien' ? 'ok' : c.estado === 'revisar' ? 'aviso' : 'pend') + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span>' +
         '<h3>' + conTip(esc(c.nombre), c.que) + '</h3><b class="fiab-valor">' + esc(c.valor) + '</b></div>' +
@@ -579,10 +561,10 @@
     if (fuera.length) solo.push('Discards ' + fuera.length + ' ' + plural(fuera.length, 'column', 'columns') + ' with people or comments: ' + nombresCol(fuera) + '. They are never read.');
     if (inf.duplicadas) solo.push(miles(inf.duplicadas) + ' ' + plural(inf.duplicadas, 'task was duplicated', 'tasks were duplicated') + ': the latest version counts.');
     if (ign.length) solo.push('Ignores ' + ign.length + ' ' + plural(ign.length, 'column it does not recognise', 'columns it does not recognise') + (ign.length <= 4 ? ': ' + nombresCol(ign) : '') + '. Not needed to measure.');
-    if (!App.cfg.campoEquipo) consultor.push('Confirm in Context that the team of each task comes from ' + (CAMPO_TXT[campo()] || 'the proposed column') + '.');
+    if (!App.cfg.campoEquipo) consultor.push('Confirm in Setup that the team of each task comes from ' + (CAMPO_TXT[campo()] || 'the proposed column') + '.');
     det.estados.filter(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }).forEach(function (e) {
       var com = E[mp[e.nombre] || e.estado];
-      consultor.push('Confirm in Context the state "' + e.nombre + '": not recognised by name, now counted as ' + (com ? com.nombre.toLowerCase() : 'unmapped') + '.');
+      consultor.push('Confirm in Setup the state "' + e.nombre + '": not recognised by name, now counted as ' + (com ? com.nombre.toLowerCase() : 'unmapped') + '.');
     });
     if (!det.hayTiempos) cliente.push('No time in each state. Without it there is no lead time from start, no rework and no blocked time. Export with that field.');
     if (!det.haySprints) cliente.push('No sprints: carried-over work cannot be seen. If teams work in sprints, export with the Sprint field.');
@@ -594,7 +576,7 @@
     };
     return '<h3 class="sem-h3">What was found in this export</h3><div class="hallazgos">' +
       grupo('solo', 'Solved by the page itself', solo, 'Nothing to solve.') +
-      grupo('consultor', 'To confirm in Context', consultor, 'Nothing pending.') +
+      grupo('consultor', 'To confirm in Setup', consultor, 'Nothing pending.') +
       grupo('cliente', 'Fixed when exporting', cliente, 'Nothing: the export has what is needed.') + '</div>' +
       '<p class="nota">This is about the export. What teams log badly in the tool shows in <button class="btn-txt" data-accion="datos-sec" data-s="fiabilidad">Data reliability</button>.</p>';
   }
@@ -623,7 +605,7 @@
     cols.forEach(function (c) { cuenta[c.accion] += c.veces; });
     var fila = function (c) {
       var que = c.que, a = ACCION_COL[c.accion];
-      if (c.campo && c.campo === eqCampo) que = 'Team of each task: ' + (confirmado ? 'confirmed in Context' : 'proposed; confirm it in Context');
+      if (c.campo && c.campo === eqCampo) que = 'Team of each task: ' + (confirmado ? 'confirmed in Setup' : 'proposed; confirm it in Setup');
       var ej = c.accion === 'descarta' ? '<span class="apagado">Not read</span>' : c.ejemplo ? '<code>' + esc(c.ejemplo) + '</code>' : '';
       return '<tr' + (c.accion === 'descarta' ? ' class="col-fuera"' : '') + '><th scope="row"><code>' + esc(c.columna) + '</code>' + (c.veces > 1 ? ' <small>(' + c.veces + ' columns)</small>' : '') + '</th>' +
         '<td>' + esc(que) + '</td><td>' + ej + '</td><td><span class="chip chip-' + a[0] + '">' + a[1] + '</span></td></tr>';
@@ -654,7 +636,7 @@
     return '<div class="leido"><div class="leido-cab"><b>Data quality</b><div class="leido-texto">' + texto + '</div></div></div>';
   }
 
-  // ---------- Measure > Context: what cannot be detected and what to confirm ----------
+  // ---------- Setup > Context: what cannot be detected and what to confirm ----------
   function vistaContexto() {
     var r = App.r, det = App.det, eqs = r.modelo.equipos.map(function (e) { return e.nombre; });
     var info = App.cfg.equiposInfo || {}, mp = mapeo(), E = C.estados.estados, op = opcion(campo());
@@ -665,15 +647,13 @@
       return '<div class="leido" id="ajuste-' + k + '"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Done' : 'Change') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
     };
     var revisar = det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; });
-    var html = '<section class="titular cab-area"><div><h2 class="h-area">Context</h2><p>What the page detects by itself can be corrected. What it cannot know (vendors, areas, headcount, cost) is set once and saved' + (App.carpeta ? ' in the browser and in configuracion/cliente.json' : ' in the browser') + '.</p></div></section>';
-    html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Teams and states</h2></div>' +
+    var html = '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Teams and states</h2></div>' +
       fila('campo', 'Team field', 'From ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
       fila('equipos', 'Vendors, areas, FTE and cost', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'vendor') + ')'; }))) + ' belong to vendors. The rest are in-house.' : 'All teams are treated as in-house. Mark which ones belong to a vendor to compare them.') + ' ' + textoCapacidad(eqs), panelEquipos) +
       fila('estados', 'States', esc(det.estados.map(function (e) { return e.nombre + ' is ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (revisar ? ' <span class="chip chip-atencion">Review</span>' : '') + (App.iaMapeo ? ' <span class="chip chip-bien">AI proposal applied</span>' : ''), panelEstados) +
       '</section>';
     html += '<section class="bloque" id="ajuste-contexto"><h2>Context documents</h2>' + bloqueContextoDocs() + '</section>';
-    html += '<section class="bloque" id="ajuste-definiciones"><h2>KPI catalogue</h2><p class="nota">The definitions document records the team field, the teams, the states and the measures, to sign off with the client. It is the standard every team is measured against.</p>' +
-      '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Download the KPI catalogue (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">Markdown</button></p></section>';
+    html += '<section class="bloque" id="ajuste-definiciones"><div class="bloque-cab"><h2>KPI catalogue</h2><p class="botones"><button class="btn btn-peq" data-accion="definiciones" data-f="docx">Word</button><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="md">Markdown</button></p></div></section>';
     return html;
   }
   var CATEGORIA_CTX = { metodo: 'Way of working', organizacion: 'Organisation', stack: 'Technology stack', contratos: 'Vendor contracts', otro: 'Other' };
@@ -681,7 +661,7 @@
     var docs = (App.contexto && App.contexto.documentos) || [];
     var por = {}; docs.forEach(function (d) { (por[d.categoria] = por[d.categoria] || []).push(d); });
     var cats = Object.keys(CATEGORIA_CTX);
-    return '<p class="nota">Short summaries the consultant writes or approves: way of working, organisation, technology, contracts. They live in the contexto folder and they are the only context the AI assistant can use. An empty category means the AI gives no opinion on it.</p>' +
+    return '<p class="nota">The only context the AI assistant can use. Empty category: no AI opinion on it.</p>' +
       '<div class="ctx-grid">' + cats.map(function (c) {
         var ds = por[c] || [];
         return '<div class="ctx-cat' + (ds.length ? ' con' : '') + '"><b>' + CATEGORIA_CTX[c] + '</b>' + (ds.length ? '<ul>' + ds.map(function (d) { return '<li><b>' + esc(d.titulo) + '</b> ' + esc(d.resumen || '') + '</li>'; }).join('') + '</ul>' : '<p>Empty</p>') + '</div>';
@@ -715,8 +695,8 @@
   var ORDEN_COMUN = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
   function panelEstados() {
     var E = C.estados.estados, mp = mapeo(), cambiados = App.cfg.mapeoEstados || {};
-    var ia = hayIa() ? '<p class="botones"><button class="btn btn-sec btn-peq" data-accion="ia-mapeo"' + (App.iaEstado === 'working' ? ' disabled' : '') + '>Ask the AI assistant to check the mapping</button><span class="nota">It only sees state names and counts. Its proposal is applied here and marked; you can still change it.</span></p>' :
-      '<p class="nota">With an API key in Settings, the AI assistant can check this mapping from the state names.</p>';
+    var ia = hayIa() ? '<p class="botones"><button class="btn btn-sec btn-peq" data-accion="ia-mapeo"' + (App.iaEstado === 'working' ? ' disabled' : '') + '>Check with AI</button></p>' :
+      '<p class="nota">With an API key in Settings, the AI assistant can check this mapping.</p>';
     return '<div class="tabla-caja"><table class="tabla-editar"><thead><tr><th scope="col">State in the tool</th><th scope="col">Tasks now</th><th scope="col">Common state</th></tr></thead><tbody>' +
       App.det.estados.map(function (e) {
         var sel = mp[e.nombre] || e.estado, rev = e.propuestaPor !== 'nombre' && !cambiados[e.nombre];
@@ -808,23 +788,21 @@
   }
   function vistaAnalyze() {
     var catalogo = recomendaciones(), ia = recsIa(), todas = catalogo.concat(ia), s = senales();
-    var funcionan = App.r.iniciativas.filter(function (x) { return N.conEfecto(x.evaluacion); });
     var filtro = App.recEquipo && App.recEquipo !== 'todos' ? App.recEquipo : null;
     var recs = filtro ? todas.filter(function (x) { return x.equipos.indexOf(filtro) >= 0; }) : todas;
     var sel = recs.filter(function (x) { return claveRec(x) === App.recSel; })[0] || recs[0];
-    var afectados = {}; todas.forEach(function (x) { x.equipos.forEach(function (e) { afectados[e] = 1; }); });
-    var nEq = Object.keys(afectados).length, crit = catalogo.filter(function (x) { return x.gravedad === 'critico'; }).length;
+    var crit = catalogo.filter(function (x) { return x.gravedad === 'critico'; }).length;
     var opciones = '<option value="todos">All teams</option>' + App.r.modelo.equipos.map(function (e) { return '<option value="' + esc(e.nombre) + '"' + (filtro === e.nombre ? ' selected' : '') + '>' + esc(e.nombre) + '</option>'; }).join('');
-    var html = titularPaso(2, 'Analyze', 'What stands out, the probable drivers behind it, and what to do first. Every recommendation cites the figure it comes from.',
+    var html = titularPaso(2, 'Analyze', 'What stands out, why, and what to do first.',
       '<label class="selector">View <select data-cambio="rec-equipo" aria-label="Team">' + opciones + '</select></label>');
+    var nIa = App.iaRecs && App.iaRecsDe === App.lectura ? App.iaRecs.length : 0;
     html += '<section class="senales" aria-label="Signals"><div class="senal"><b>' + s.n + '</b><span>' + plural(s.n, 'figure', 'figures') + ' outside normal</span></div>' +
-      '<div class="senal"><b>' + s.difs + '</b><span>' + plural(s.difs, 'difference', 'differences') + ' between groups</span></div>' +
-      '<div class="senal"><b>' + catalogo.length + '</b><span>' + plural(catalogo.length, 'recommendation', 'recommendations') + ' from the case bank' + (crit ? ', ' + crit + ' critical' : '') + '</span></div>' +
-      '<div class="senal senal-ia"><b>' + (App.iaRecs && App.iaRecsDe === App.lectura ? App.iaRecs.length : 0) + '</b><span>from the AI assistant' + (ia.length !== (App.iaRecs && App.iaRecsDe === App.lectura ? App.iaRecs.length : 0) ? ', ' + ia.length + ' new' : '') + '</span></div></section>';
-    html += funcionan.map(function (x) { return '<div class="funciona"><span class="chip chip-bien-fuerte">Works</span><p><b>' + esc(x.iniciativa.nombre) + '.</b> ' + esc(textoIni(x.evaluacion).t) + ' Worth continuing.</p></div>'; }).join('');
+      '<div class="senal"><b>' + s.difs + '</b><span>vendor vs in-house ' + plural(s.difs, 'gap', 'gaps') + '</span></div>' +
+      '<div class="senal"><b>' + todas.length + '</b><span>things to do' + (crit ? ', ' + crit + ' critical' : '') + '</span></div>' +
+      '<div class="senal senal-ia"><b>' + nIa + '</b><span>from the AI assistant</span></div></section>';
     html += panelIa();
     if (!recs.length) {
-      html += '<section class="bloque"><h2>' + (filtro ? 'No recommendations for ' + esc(filtro) : 'Nothing calls for action now') + '</h2><p class="nota">' + (filtro ? 'Its figures are within what is normal.' : 'Every figure is within what is normal in each team.') + '</p></section>';
+      html += '<section class="bloque"><h2>' + (filtro ? 'Nothing to do for ' + esc(filtro) : 'Nothing to do now') + '</h2><p class="nota">All figures within normal.</p></section>';
     } else {
       var items = recs.map(function (x) {
         var n = todas.indexOf(x) + 1, k = claveRec(x);
@@ -833,42 +811,43 @@
       }).join('');
       html += '<div class="recs-md"><nav class="recs-lista" aria-label="Recommendations">' + items + '</nav>' +
         '<article class="rec rec-detalle" id="rec-detalle" aria-live="polite">' + (sel.fuente === 'ia' ? detalleRecIa(sel, todas.indexOf(sel) + 1) : detalleRec(sel, todas.indexOf(sel) + 1)) + '</article></div>';
-      html += '<p class="nota">Recommendations come from the case bank and, with an API key, from the AI assistant, always from your figures. Review them with the team leads before starting.</p>';
     }
     html += bloqueGrupos();
     return html;
   }
   function panelIa() {
-    if (!hayIa()) return '<section class="bloque bloque-ia"><div><h2>AI assistant</h2><p class="nota">With an API key the assistant reads the diagnostic package (aggregated figures only, no tickets, no people) and adds recommendations with cited evidence. <button class="btn-txt" data-accion="vista" data-v="settings">Add a key in Settings</button>.</p></div></section>';
-    var ia = recsIa(), estado = App.iaEstado;
-    var txt = estado === 'working' ? 'Asking the assistant… it reads the package and answers in JSON, then every cited figure is checked against the package.' :
-      estado === 'error' ? 'The assistant could not answer: ' + esc(App.iaError || 'unknown error') :
-      ia.length ? ia.length + ' ' + plural(ia.length, 'recommendation', 'recommendations') + ' validated' + (App.iaDescartadas ? ', ' + App.iaDescartadas + ' discarded for citing figures that are not in the package' : '') + '. Marked AI in the list.' :
-      App.iaRecsDe === App.lectura ? 'The assistant returned nothing that passed validation.' : 'The assistant receives the diagnostic package (aggregated figures, no tickets, no people) and the case bank, and answers with recommendations that cite the figures. Anything that does not match the package is discarded.';
-    return '<section class="bloque bloque-ia"><div><h2>AI assistant <span class="nota">' + esc(App.ia.modelo) + '</span></h2><p class="nota">' + txt + '</p></div>' +
-      '<div class="cab-acc"><button class="btn" data-accion="ia-recs"' + (estado === 'working' ? ' disabled' : '') + '>' + (ia.length ? 'Ask again' : 'Generate AI recommendations') + '</button><button class="btn-txt" data-accion="paquete">See what it receives</button></div></section>';
+    if (!hayIa()) return '<section class="bloque bloque-ia linea"><div><h2>AI assistant</h2><p class="nota">Add an API key in <button class="btn-txt" data-accion="setup-sec" data-s="settings">Setup</button> to get AI recommendations on the same figures.</p></div></section>';
+    var ia = recsIa(), estado = App.iaEstado, n = App.iaRecs && App.iaRecsDe === App.lectura ? App.iaRecs.length : 0;
+    var txt = estado === 'working' ? 'Working…' : estado === 'error' ? 'Could not answer: ' + esc(App.iaError || 'unknown error') :
+      n ? n + ' ' + plural(n, 'recommendation', 'recommendations') + ', every figure checked against the package' + (App.iaDescartadas ? ', ' + App.iaDescartadas + ' discarded' : '') + '.' :
+      App.iaRecsDe === App.lectura ? 'Nothing passed validation.' : 'Reads the diagnostic package (aggregated figures only) and adds recommendations with cited evidence.';
+    return '<section class="bloque bloque-ia linea"><div><h2>AI assistant</h2><p class="nota">' + txt + '</p></div>' +
+      '<div class="cab-acc"><button class="btn" data-accion="ia-recs"' + (estado === 'working' ? ' disabled' : '') + '>' + (n ? 'Ask again' : 'Generate') + '</button></div></section>';
   }
   function bloqueGrupos() {
     var c = App.r.comparaciones.filter(function (x) { return x.dimension === 'tipo'; })[0];
-    if (!c) return '<section class="bloque"><h2>In-house and vendors</h2><p class="nota">To compare, mark which teams belong to a vendor in <button class="btn-txt" data-accion="editar" data-e="equipos">Measure &gt; Context</button>.</p></section>';
+    if (!c) return '<section class="bloque linea"><div><h2>In-house vs vendors</h2><p class="nota">Mark vendor teams in <button class="btn-txt" data-accion="editar" data-e="equipos">Setup &gt; Context</button> to compare.</p></div></section>';
     var g = c.grupos, peor = {}; c.diferencias.forEach(function (d) { peor[d.medida + '|' + d.peor] = 1; });
     var filas = [['plazo_p85', 'Lead time', 'ciclo'], ['retrabajo', 'Rework', 'retrabajo'], ['arrastradas', 'Carried over', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
     if (!filas.length) return '';
     var cg = N.costeDeGrupos(c, cfgCalculo());
     var capac = function (titulo, f, tip) {
       if (!g.some(function (x) { return f(cg[x.id]) != null; })) return '';
-      return '<tr class="fila-coste"><th scope="row">' + conTip(titulo, tip) + '</th>' + g.map(function (x) { var v = f(cg[x.id]); return '<td>' + (v != null ? esc(v) : '<span class="apagado">FTE or cost missing</span>') + '</td>'; }).join('') + '</tr>';
+      return '<tr class="fila-coste"><th scope="row">' + conTip(titulo, tip) + '</th>' + g.map(function (x) { var v = f(cg[x.id]); return '<td>' + (v != null ? esc(v) : '<span class="apagado">n/a</span>') + '</td>'; }).join('') + '</tr>';
     };
-    var filasCoste = capac('Deliveries a month per FTE', function (x) { return x.entregasPorFte != null ? n1(x.entregasPorFte) : null; }, 'Tasks finished a month divided by the full-time people (FTE) of the group, over the last 12 weeks.') +
+    var filasCoste = capac('Deliveries a month per FTE', function (x) { return x.entregasPorFte != null ? n1(x.entregasPorFte) : null; }, 'Tasks finished a month divided by the FTE of the group, last 12 weeks.') +
       capac('Cost per delivery', function (x) { return x.costePorEntrega != null ? euros(x.costePorEntrega) : null; }, MED.coste.que);
-    return '<section class="bloque" id="grupos"><h2>In-house and vendors, same type and size of task</h2><table class="tabla-grupos"><thead><tr><th scope="col">Measure</th>' + g.map(function (x) { return '<th scope="col">' + esc(x.nombre) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    var peores = filas.filter(function (f) { return g.some(function (x) { return peor[f[0] + '|' + x.id]; }); }).map(function (f) { return f[1].toLowerCase(); });
+    var k = 'grupos';
+    return '<section class="bloque" id="grupos"><details data-k="' + k + '"' + (App.abiertas[k] ? ' open' : '') + '><summary class="linea-sum"><span><b>In-house vs vendors.</b> ' + (peores.length ? 'Vendors worse on ' + lista(peores) + ', same type and size of task.' : 'No clear gap with the same type and size of task.') + '</span><span class="btn-txt">Table</span></summary>' +
+      '<table class="tabla-grupos"><thead><tr><th scope="col">Measure</th>' + g.map(function (x) { return '<th scope="col">' + esc(x.nombre) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       filas.map(function (f) {
         var seg = c.medidas[f[0]].segmentos[0];
         return '<tr><th scope="row">' + conTip(f[1], MED[f[2]].que) + '</th>' + g.map(function (x) {
           var cel = seg.porGrupo[x.id], v = cel && cel.valor != null ? valor(f[2], cel.valor) : null, mal = peor[f[0] + '|' + x.id];
           return '<td' + (mal ? ' class="peor"' : '') + '>' + (v ? esc(v) + (mal ? ' · worse' : '') : '<span class="apagado">few data</span>') + '</td>';
         }).join('') + '</tr>';
-      }).join('') + filasCoste + '</tbody></table><p class="nota">Lead time, rework and carried-over work with the same type and size of task. ' + (filasCoste ? 'Deliveries and cost with everything finished in 12 weeks: they depend on task size. ' : 'With the FTE and cost of each team (in <button class="btn-txt" data-accion="editar" data-e="equipos">Context</button>) deliveries per FTE and cost per delivery appear too. ') + 'It is a question for the meeting, not a ranking.</p></section>';
+      }).join('') + filasCoste + '</tbody></table><p class="nota">A question for the meeting, not a ranking.</p></details></section>';
   }
   function idIniciativa(x) { return 'rec-' + x.id + '-' + slug(x.equipos.join('-')); }
   function registrable(x) { return x.fuente === 'ia' ? !!(x.medida && N.MEDIDAS_INICIATIVA[x.medida] && C.medidas[x.medida]) : !!(x.caso.medida && N.MEDIDAS_INICIATIVA[x.caso.medida] && C.medidas[x.caso.medida]); }
@@ -907,52 +886,45 @@
     }).join('');
   }
   function bloqueSeguimientoRec(x, def, medida, comprobar) {
-    var seg = '';
-    if (def) seg += '<p><b>Target measure:</b> ' + nomMed(medida) + ', ' + (def.dir === 'mas' ? 'up' : 'down') + '.</p>';
-    if (comprobar) seg += '<p><b>How to know it works:</b> ' + esc(comprobar) + '</p>';
-    if (registrable(x)) {
-      var id = idIniciativa(x), sx = seguimientos().filter(function (y) { return y.ini.id === id; })[0];
-      seg += sx ? '<div class="rec-seg-estado">' + chipSeg(sx.s.estado) + '<span>' + esc(sx.s.texto) + '</span><button class="btn-txt" data-accion="vista" data-v="learn">See the follow-up</button></div>' :
-        '<p><button class="btn btn-sec btn-peq" data-accion="registrar" data-k="' + esc(claveRec(x)) + '">Register as an initiative</button></p><p class="nota">From then on it follows itself: each data load recalculates its effect against the teams that do not have it.</p>';
-    } else seg += '<p class="nota">Followed in the baseline with its own measure.</p>';
-    return seg;
+    if (!registrable(x)) return '<p class="nota">Followed in Measure with its own figure.</p>';
+    var id = idIniciativa(x), sx = seguimientos().filter(function (y) { return y.ini.id === id; })[0];
+    if (sx) return '<div class="rec-seg-estado">' + chipSeg(sx.s.estado) + '<span>' + esc(sx.s.texto) + '</span><button class="btn-txt" data-accion="vista" data-v="learn">See it in Learn</button></div>';
+    return '<p class="botones"><button class="btn btn-peq" data-accion="registrar" data-k="' + esc(claveRec(x)) + '">Start as an initiative</button><span class="nota">Target: ' + nombreMedida(medida).toLowerCase() + ' ' + (def.dir === 'mas' ? 'up' : 'down') + '. Measured on its own from then on.</span></p>';
   }
   function detalleRec(x, n) {
     var c = x.caso, def = c.medida ? C.medidas[c.medida] : null, p0 = c.plan[0];
     var plan = c.plan.map(function (s, i) {
-      return '<li' + (i ? '' : ' class="primero"') + '><span class="paso-n">' + (i + 1) + '</span><div><b>' + esc(s.paso) + '</b><span class="meta">' +
-        '<span>Who: ' + esc(s.quien.toLowerCase()) + '</span><span>Effort: ' + esc(s.esfuerzo.toLowerCase()) + '</span></span></div></li>';
+      return '<li' + (i ? '' : ' class="primero"') + '><span class="paso-n">' + (i + 1) + '</span><div><b>' + esc(s.paso) + '</b><span class="meta"><span>' + esc(s.quien) + '</span><span>Effort: ' + esc(s.esfuerzo.toLowerCase()) + '</span></span></div></li>';
     }).join('');
-    return '<div class="rec-cab"><span class="rec-n">' + n + '</span>' + chip(x.gravedad) + '<span class="rec-para">For: ' + esc(x.para) + '</span></div>' +
+    var k = claveRec(x);
+    return '<div class="rec-cab"><span class="rec-n">' + n + '</span>' + chip(x.gravedad) + '<span class="rec-para">' + esc(x.para) + '</span></div>' +
       '<h2>' + esc(x.titulo) + '</h2>' +
       '<div class="rec-resumen"><div><span class="rr-et">What is happening</span><p>' + esc(c.senal || x.evidencias[0][1]) + '</p></div>' +
-      '<div><span class="rr-et">What to do first</span><p><b>' + esc(p0.paso) + '.</b> Who: ' + esc(p0.quien.toLowerCase()) + '. Effort: ' + esc(p0.esfuerzo.toLowerCase()) + '.</p></div></div>' +
-      '<section class="rec-bloque"><h3>The figures</h3>' + cifrasRec(x) + '</section>' +
-      '<section class="rec-bloque"><h3>Action plan</h3><ol class="rec-plan">' + plan + '</ol></section>' +
-      (x.ia ? '<section class="rec-bloque rec-ia-extra"><h3><span class="chip chip-ia">AI assistant</span> agrees, confidence ' + esc(x.ia.confianza) + '</h3><p><b>' + esc(x.ia.primer_paso) + '</b> ' + esc(x.ia.accion) + '</p>' + (x.ia.pregunta ? '<p class="nota">For the meeting: ' + esc(x.ia.pregunta) + '</p>' : '') + '</section>' : '') +
-      '<section class="rec-bloque rec-seg"><h3>How it is followed</h3>' + bloqueSeguimientoRec(x, def, c.medida, c.comprobar) + '</section>' +
-      '<details data-k="' + esc(claveRec(x)) + '"' + (App.abiertas[claveRec(x)] ? ' open' : '') + '><summary>For the meeting, usual causes and evidence base</summary><div class="rec-mas">' +
-      (c.preguntas && c.preguntas.length ? '<div><b>For the meeting</b><ul>' + c.preguntas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '') +
+      '<div><span class="rr-et">First step</span><p><b>' + esc(p0.paso) + '.</b> ' + esc(p0.quien) + '.</p></div></div>' +
+      (x.ia ? '<div class="rec-ia-extra"><span class="chip chip-ia">AI</span> ' + esc(x.ia.primer_paso) + '</div>' : '') +
+      '<section class="rec-bloque rec-seg">' + bloqueSeguimientoRec(x, def, c.medida, c.comprobar) + '</section>' +
+      '<details data-k="' + esc(k) + '|cifras"' + (App.abiertas[k + '|cifras'] ? ' open' : '') + '><summary>The figures</summary>' + cifrasRec(x) + '</details>' +
+      '<details data-k="' + esc(k) + '|plan"' + (App.abiertas[k + '|plan'] ? ' open' : '') + '><summary>Full plan and how to check it</summary><ol class="rec-plan">' + plan + '</ol><p class="nota">Check: ' + esc(c.comprobar) + '</p></details>' +
+      '<details data-k="' + esc(k) + '"' + (App.abiertas[k] ? ' open' : '') + '><summary>For the meeting</summary><div class="rec-mas">' +
+      (c.preguntas && c.preguntas.length ? '<div><b>Questions</b><ul>' + c.preguntas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' : '') +
       '<div><b>Usual causes</b><ul>' + c.causas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
-      '<div><b>Evidence base</b><p>' + esc(c.respaldo || '') + '</p>' + (c.comun ? '<p>' + esc(c.comun) + '</p>' : '') + '</div></div></details>';
+      '<div><b>Evidence base</b><p>' + esc(c.respaldo || '') + '</p></div></div></details>';
   }
   function detalleRecIa(x, n) {
-    var def = x.medida ? C.medidas[x.medida] : null;
+    var def = x.medida ? C.medidas[x.medida] : null, k = claveRec(x);
     var evid = x.evidencia.map(function (e) {
       var F = function (v) { var d = C.medidas[e.medida]; return d ? M.formatear(v, d.formato) : String(v); };
-      return '<div class="cifra"><div class="cf-fila"><span class="cf-eq">' + esc(e.equipo || 'Whole area') + '</span><span class="cf-med">' + nomMed(e.medida) + '</span><b class="cf-val">' + esc(F(e.valor)) + '</b><span class="chip chip-bien">In the package</span></div>' + (e.texto ? '<p class="cf-txt">' + esc(e.texto) + '</p>' : '') + '</div>';
+      return '<div class="cifra"><div class="cf-fila"><span class="cf-eq">' + esc(e.equipo || 'Whole area') + '</span><span class="cf-med">' + nomMed(e.medida) + '</span><b class="cf-val">' + esc(F(e.valor)) + '</b><span class="chip chip-bien">Checked</span></div></div>';
     }).join('');
     var caso = x.causa.caso ? C.casos[x.causa.caso] : null;
-    return '<div class="rec-cab"><span class="rec-n">' + n + '</span><span class="chip chip-ia">AI assistant</span><span class="chip chip-sin">Confidence ' + esc(x.confianza) + '</span><span class="rec-para">For: ' + esc(x.para) + '</span></div>' +
+    return '<div class="rec-cab"><span class="rec-n">' + n + '</span><span class="chip chip-ia">AI</span><span class="chip chip-sin">Confidence ' + esc(x.confianza) + '</span><span class="rec-para">' + esc(x.para) + '</span></div>' +
       '<h2>' + esc(x.titulo) + '</h2>' +
-      '<div class="rec-resumen"><div><span class="rr-et">Probable driver</span><p>' + esc(x.causa.texto || (caso ? caso.senal : '')) + (caso ? ' <span class="nota">(case bank: ' + esc(caso.titulo) + ')</span>' : ' <span class="nota">(new cause, not in the case bank)</span>') + '</p></div>' +
-      '<div><span class="rr-et">What to do first</span><p><b>' + esc(x.primer_paso) + '</b></p></div></div>' +
-      '<section class="rec-bloque"><h3>The figures it cites</h3>' + evid + '<p class="nota">Every figure was checked against the diagnostic package before showing this recommendation.</p></section>' +
-      '<section class="rec-bloque"><h3>Action</h3><p>' + esc(x.accion) + '</p>' + (x.contexto_necesario ? '<p class="nota"><b>Needs context:</b> ' + esc(CATEGORIA_CTX[x.contexto_necesario] || x.contexto_necesario) + ' is empty in Measure &gt; Context, so the assistant kept to what the data supports.</p>' : '') + '</section>' +
-      '<section class="rec-bloque rec-seg"><h3>How it is followed</h3>' + bloqueSeguimientoRec(x, def, x.medida, x.comprobar) + '</section>' +
-      (x.pregunta ? '<section class="rec-bloque"><h3>For the meeting</h3><p>' + esc(x.pregunta) + '</p></section>' : '');
+      '<div class="rec-resumen"><div><span class="rr-et">Probable driver</span><p>' + esc(x.causa.texto || (caso ? caso.senal : '')) + '</p></div>' +
+      '<div><span class="rr-et">First step</span><p><b>' + esc(x.primer_paso) + '</b></p></div></div>' +
+      '<section class="rec-bloque rec-seg">' + bloqueSeguimientoRec(x, def, x.medida, x.comprobar) + '</section>' +
+      '<details data-k="' + esc(k) + '|cifras"' + (App.abiertas[k + '|cifras'] ? ' open' : '') + '><summary>The figures it cites</summary>' + evid + '</details>' +
+      '<details data-k="' + esc(k) + '"' + (App.abiertas[k] ? ' open' : '') + '><summary>Action and question for the meeting</summary><p>' + esc(x.accion) + '</p>' + (x.comprobar ? '<p class="nota">Check: ' + esc(x.comprobar) + '</p>' : '') + (x.pregunta ? '<p>' + esc(x.pregunta) + '</p>' : '') + (x.contexto_necesario ? '<p class="nota">Needs context: ' + esc(CATEGORIA_CTX[x.contexto_necesario] || x.contexto_necesario) + '.</p>' : '') + '</details>';
   }
-  // Calls to the AI assistant. Only the package (or the state names) leaves the browser; the key is sent as a header and never stored anywhere else.
   function proveedor() { return N.IA.proveedorAnthropic({ clave: App.ia.clave, modelo: App.ia.modelo || N.IA.MODELO_POR_DEFECTO }); }
   function pedirRecsIa() {
     if (!hayIa() || !App.r || App.iaEstado === 'working') return;
@@ -1141,20 +1113,15 @@
   }
   function tarjetaSeg(x) {
     var s = x.s, ini = x.ini, caso = C.casos[ini.origen];
-    var progreso = s.estado === 'planificada' ? 0 : s.progreso;
     var k = 'ev|' + ini.id, lecturaIa = App.iaImpacto ? App.iaImpacto.lecturas.filter(function (l) { return l.id === ini.id; })[0] : null;
     return '<article class="seg" data-ini="' + esc(ini.id) + '">' +
-      '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + origenIni(ini, caso) + '</p></div><div class="seg-cab-acc">' + chipSeg(s.estado) + '</div></header>' +
-      '<div class="seg-cuerpo"><div class="seg-datos"><h3 class="seg-h3">How it is going</h3><p class="seg-texto">' + esc(s.texto) + '</p>' +
-      cifrasSeg(s) +
-      (lecturaIa ? '<div class="ia-lectura"><span class="chip chip-ia">AI reading</span><p>' + esc(lecturaIa.lectura) + '</p></div>' : '') +
-      '<dl class="seg-dl">' + '<div><dt>Target measure</dt><dd>' + nomMed(s.medida) + ', ' + (s.direccion === 'subir' ? 'up' : s.direccion === 'bajar' ? 'down' : esc(s.direccion)) + '</dd></div><div><dt>Start</dt><dd>' + esc(fechaCorta(s.inicio)) + '</dd></div>' +
-      '<div><dt>Measured from</dt><dd>' + esc(fechaCorta(s.desdeDespues)) + '</dd></div><div><dt>Evaluation complete</dt><dd>' + esc(fechaCorta(s.completaEl)) + '</dd></div>' + (s.confianza ? '<div><dt>Confidence</dt><dd>' + esc(CONF[s.confianza] || s.confianza) + '</dd></div>' : '') + '</dl>' +
-      '<div class="seg-prog" role="progressbar" aria-label="Window evaluated" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(progreso * 100) + '"><span style="transform:scaleX(' + progreso.toFixed(3) + ')"></span></div>' +
-      '<p class="nota">' + (s.completa ? 'Evaluation window complete.' : Math.round(progreso * 100) + '% of the evaluation window has data.') + '</p></div>' +
+      '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + ' · ' + nomMed(s.medida) + ' ' + (s.direccion === 'subir' ? '↑' : '↓') + ' · from ' + esc(fechaCorta(s.inicio)) + '</p></div><div class="seg-cab-acc">' + chipSeg(s.estado) + '</div></header>' +
+      '<div class="seg-cuerpo"><div class="seg-datos">' + cifrasSeg(s) + '<p class="seg-texto">' + esc(s.texto) + '</p>' +
+      (lecturaIa ? '<div class="ia-lectura"><span class="chip chip-ia">AI</span><p>' + esc(lecturaIa.lectura) + '</p></div>' : '') + '</div>' +
       '<div class="seg-grafico">' + graficoSeg(s) + '</div></div>' +
-      (resultadoEval(x) ? '<details class="seg-eval" data-k="' + esc(k) + '"' + (App.abiertas[k] ? ' open' : '') + '><summary>How it was evaluated</summary>' + detalleEval(x) + '</details>' : '') +
-      '</article>';
+      '<details class="seg-eval" data-k="' + esc(k) + '"' + (App.abiertas[k] ? ' open' : '') + '><summary>' + (resultadoEval(x) ? 'How it was evaluated' : 'What it is') + '</summary>' + fichaIni(ini, caso) +
+      '<dl class="seg-dl seg-dl-4"><div><dt>Measured from</dt><dd>' + esc(fechaCorta(s.desdeDespues)) + '</dd></div><div><dt>Evaluation complete</dt><dd>' + esc(fechaCorta(s.completaEl)) + '</dd></div>' + (s.confianza ? '<div><dt>Confidence</dt><dd>' + esc(CONF[s.confianza] || s.confianza) + '</dd></div>' : '') + '<div><dt>Window with data</dt><dd>' + Math.round((s.estado === 'planificada' ? 0 : s.progreso) * 100) + '%</dd></div></dl>' +
+      (resultadoEval(x) ? detalleEval(x) : '') + '</details></article>';
   }
   function formularioIni() {
     var eqs = App.r.modelo.equipos.map(function (e) { return e.nombre; });
@@ -1208,89 +1175,74 @@
 
   // ---------- step 3: Improve and standardize ----------
   function vistaImprove() {
-    var v = seguimientos(), recs = todasRecs().filter(registrable);
-    var noReg = recs.filter(function (x) { return !v.some(function (y) { return y.ini.id === idIniciativa(x); }); });
-    var html = titularPaso(3, 'Improve and standardize', 'Turn a recommendation into an initiative with a target measure, and keep the same definitions and states for every team.',
+    var v = seguimientos();
+    var html = titularPaso(3, 'Improve and standardize', 'Try a change, measure it. Same rules for every team.',
       App.nuevaIni ? '' : '<button class="btn" data-accion="nueva-ini">New initiative</button>');
     if (App.nuevaIni) html += formularioIni();
-    html += '<section class="bloque" id="plan"><div class="bloque-cab"><h2>Action plan: ' + (v.length ? v.length + ' ' + plural(v.length, 'initiative', 'initiatives') : 'no initiatives yet') + '</h2></div>' +
-      (v.length ? '' : '<p class="nota">An initiative is a change tried in one or more teams, with a target measure. Register one from a recommendation, with New initiative, or by dropping a file in the iniciativas folder.</p>') +
-      (noReg.length ? '<div class="pendientes"><b>Ready to register from the recommendations:</b> ' + noReg.slice(0, 4).map(function (x) { return '<button class="btn btn-sec btn-peq" data-accion="registrar" data-k="' + esc(claveRec(x)) + '">' + esc(x.titulo) + ' (' + esc(x.para) + ')</button>'; }).join('') + '</div>' : '') +
-      '</section>';
-    html += v.map(tarjetaPlan).join('');
+    html += '<section class="bloque" id="plan"><h2>Initiatives</h2>' + (v.length ? tablaIniciativas(v) :
+      '<p class="nota">None yet. Start one from a recommendation in <button class="btn-txt" data-accion="vista" data-v="analyze">Analyze</button> or with New initiative.</p>') + '</section>';
     html += bloqueEstandar();
     return html;
   }
-  function bloqueEstandar() {
-    var det = App.det, mp = mapeo(), E = C.estados.estados, n = det.estados.length;
-    var comunes = {}; det.estados.forEach(function (e) { comunes[mp[e.nombre] || e.estado] = 1; });
-    var fijados = Object.keys(App.cfg.mapeoEstados || {}).length;
-    return '<section class="bloque" id="estandar"><h2>The same rules for every team</h2><div class="estandar-grid">' +
-      '<div><b>Five measures, one definition each</b><p>' + COLUMNAS.map(function (id) { return MED[id].nombre; }).join(', ') + '. Each one compared with the same team\'s own history.</p></div>' +
-      '<div><b>' + n + ' tool ' + plural(n, 'state', 'states') + ' mapped to ' + Object.keys(comunes).length + ' common states</b><p>' + Object.keys(comunes).map(function (k) { return E[k].nombre; }).join(', ') + '. ' + (fijados ? fijados + ' confirmed by hand.' : 'All proposed from the state names.') + ' <button class="btn-txt" data-accion="editar" data-e="estados">Review</button></p></div>' +
-      '<div><b>One KPI catalogue to sign off</b><p>Team field, teams, states and measures, in a document the client signs. <button class="btn-txt" data-accion="definiciones" data-f="docx">Download (Word)</button></p></div>' +
-      '<div><b>One measurement model for any tool</b><p>The definitions as JSON, so another platform or data team measures the same. <button class="btn-txt" data-accion="modelo">Download the model</button></p></div>' +
-      '</div></section>';
+  function tablaIniciativas(v) {
+    return '<div class="tabla-caja"><table class="tabla-ini"><thead><tr><th scope="col">Initiative</th><th scope="col">Teams</th><th scope="col">Target</th><th scope="col">Start</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody>' +
+      v.map(function (x) {
+        var s = x.s, ini = x.ini;
+        return '<tr class="seg-plan" data-ini="' + esc(ini.id) + '"><th scope="row">' + esc(ini.nombre) + '</th><td>' + esc(lista(ini.equipos)) + '</td><td>' + nomMed(s.medida) + ' ' + (s.direccion === 'subir' ? '↑' : '↓') + '</td><td>' + esc(fechaCorta(s.inicio)) + '</td><td>' + chipSeg(s.estado) + '</td>' +
+          '<td>' + (propiaIni(ini.id) ? '<button class="btn-txt" data-accion="quitar-ini" data-i="' + esc(ini.id) + '">Remove</button>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
   }
-
+  function bloqueEstandar() {
+    var det = App.det, mp = mapeo(), n = det.estados.length;
+    var comunes = {}; det.estados.forEach(function (e) { comunes[mp[e.nombre] || e.estado] = 1; });
+    return '<section class="bloque linea" id="estandar"><div><h2>Same rules for every team</h2><p class="nota">5 measures, 1 definition each. ' + n + ' tool states mapped to ' + Object.keys(comunes).length + ' common states.</p></div>' +
+      '<div class="cab-acc"><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="docx">KPI catalogue (Word)</button><button class="btn btn-sec btn-peq" data-accion="modelo">Measurement model</button></div></section>';
+  }
   // ---------- step 4: Learn and evolve ----------
   function vistaLearn() {
     var v = seguimientos(), con = v.filter(function (x) { return x.s.estado !== 'planificada' && x.s.estado !== 'sin_datos'; });
     var cuenta = {}; v.forEach(function (x) { cuenta[x.s.estado] = (cuenta[x.s.estado] || 0) + 1; });
     var hasta = new Date(App.r.modelo.semanaFin.getTime() - 864e5);
-    var html = titularPaso(4, 'Learn and evolve', 'Each initiative is measured on its own with every data load: before, after and against the teams that do not have it. What works stays; what does not is dropped; the baseline moves on.',
+    var html = titularPaso(4, 'Learn and evolve', 'Did it work? Before, after, and against the teams without it.',
       (v.length ? '<div class="seg-resumen">' + ['funciona', 'sin_efecto', 'empeora', 'midiendo', 'planificada'].filter(function (k) { return cuenta[k]; }).map(function (k) { return '<span>' + chipSeg(k) + ' ' + cuenta[k] + '</span>'; }).join('') + '</div>' : ''));
     if (!con.length) {
-      html += '<section class="bloque estrecho"><h2>' + (v.length ? 'Nothing measured yet' : 'No initiatives yet') + '</h2><p>' + (v.length ? 'The initiatives are planned but their first reading has not arrived. It comes two weeks after the start, with the next data load.' : 'Register an initiative in Improve and come back after the next data loads.') + '</p>' +
-        '<p class="botones"><button class="btn btn-sec" data-accion="vista" data-v="improve">Go to Improve</button></p></section>';
+      html += '<section class="bloque estrecho"><h2>' + (v.length ? 'Nothing measured yet' : 'No initiatives yet') + '</h2><p class="nota">' + (v.length ? 'First reading two weeks after the start.' : 'Start one in Improve.') + '</p></section>';
     } else {
       html += panelImpactoIa(con);
       html += con.map(tarjetaSeg).join('');
-      html += '<p class="nota">How it is evaluated: the measure in the weeks before the start against the same weeks after, leaving two weeks of margin, and the change in the initiative teams against the change in the rest. Each card details it with its figures in "How it was evaluated".</p>';
     }
-    html += '<section class="bloque" id="ciclo"><h2>Next cycle</h2><div class="ciclo-grid">' +
-      '<div><b>Data up to ' + esc(fechaCorta(hasta)) + '</b><p>' + (App.carpeta ? 'Drop the new export in the exports folder and press Update.' : 'Load the new export, or choose a folder once and press Update every week.') + '</p><button class="btn btn-peq" data-accion="actualizar">Update</button></div>' +
-      '<div><b>Weekly</b><p>Team leads review their baseline and the open recommendations.</p></div>' +
-      '<div><b>Monthly</b><p>Cross-team review: initiatives that work, new recommendations, standards to extend.</p></div>' +
-      '<div><b>Quarterly</b><p>Re-baseline: the improved teams set the new normal, and the roadmap is refreshed.</p></div></div></section>';
+    html += '<section class="bloque linea" id="ciclo"><div><h2>Next cycle</h2><p class="nota">Data up to ' + esc(fechaCorta(hasta)) + '. Weekly: team leads. Monthly: cross-team review. Quarterly: new baseline.</p></div><div class="cab-acc"><button class="btn" data-accion="actualizar">Update</button></div></section>';
     return html;
   }
   function panelImpactoIa(con) {
     if (!hayIa()) return '';
     var estado = App.iaEstado, hay = App.iaImpacto && App.iaImpacto.lecturas.length;
-    var txt = estado === 'working' ? 'Asking the assistant to read the evaluations…' : hay ? App.iaImpacto.lecturas.length + ' ' + plural(App.iaImpacto.lecturas.length, 'reading', 'readings') + ' validated: every number in them is in the evaluation.' + (App.iaImpacto.descartadas ? ' ' + App.iaImpacto.descartadas + ' discarded.' : '') : 'The assistant reads the evaluation figures and writes a short reading per initiative. Numbers that are not in the evaluation are rejected.';
-    return '<section class="bloque bloque-ia"><div><h2>AI reading of the results</h2><p class="nota">' + txt + '</p></div><div class="cab-acc"><button class="btn" data-accion="ia-impacto"' + (estado === 'working' ? ' disabled' : '') + '>' + (hay ? 'Ask again' : 'Read the results with AI') + '</button></div></section>';
+    var txt = estado === 'working' ? 'Working…' : hay ? App.iaImpacto.lecturas.length + ' ' + plural(App.iaImpacto.lecturas.length, 'reading', 'readings') + ', every number checked.' + (App.iaImpacto.descartadas ? ' ' + App.iaImpacto.descartadas + ' discarded.' : '') : 'A short reading per initiative.';
+    return '<section class="bloque bloque-ia linea"><div><h2>AI reading</h2><p class="nota">' + txt + '</p></div><div class="cab-acc"><button class="btn" data-accion="ia-impacto"' + (estado === 'working' ? ' disabled' : '') + '>' + (hay ? 'Ask again' : 'Read with AI') + '</button></div></section>';
   }
-
   // ---------- settings ----------
   function vistaSettings() {
     var ia = App.ia, probada = App.iaProbada;
-    var html = '<section class="titular"><div><h1>Settings</h1><p>Client name, the AI assistant and what is live in this copy.</p></div></section>';
-    html += '<section class="bloque" id="ajuste-cliente"><h2>Client</h2>' +
-      '<label class="campo-linea">Client name <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="For example, Sample Bank"></label>' +
-      '<p class="nota">Teams, vendors, FTE, cost and states are set in <button class="btn-txt" data-accion="medir-sec" data-s="context">Measure &gt; Context</button>.</p></section>';
+    var html = '<section class="bloque" id="ajuste-cliente"><label class="campo-linea">Client name <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="For example, Sample Bank"></label></section>';
     html += '<section class="bloque" id="ajuste-ia"><h2>AI assistant</h2>' +
-      '<p class="nota">The assistant only receives the diagnostic package (aggregated figures per team, cases, comparisons, initiatives, context summaries), never tickets, titles or people. The key is sent as a header on each call and stays in this browser: for this session, or on this device if you ask. It is never written to cliente.json or any file.</p>' +
+      '<p class="nota">Receives only the diagnostic package: aggregated figures, no tickets, no people. The key stays in this browser and is never written to any file.</p>' +
       '<div class="form-grid ia-grid">' +
       '<label class="campo-linea">Provider <select data-cambio="ia-proveedor"><option value="anthropic" selected>Claude (Anthropic API)</option></select></label>' +
       '<label class="campo-linea">Model <input type="text" data-cambio="ia-modelo" value="' + esc(ia.modelo || N.IA.MODELO_POR_DEFECTO) + '" placeholder="' + esc(N.IA.MODELO_POR_DEFECTO) + '"></label>' +
       '<label class="campo-linea form-ancho">API key <input type="password" data-cambio="ia-clave" value="' + esc(ia.clave || '') + '" autocomplete="off" placeholder="sk-ant-…"></label>' +
-      '<label class="campo-check form-ancho"><input type="checkbox" data-cambio="ia-recordar"' + (ia.recordar ? ' checked' : '') + '> Remember the key on this device (otherwise it is forgotten when the tab closes)</label>' +
-      '</div><p class="botones"><button class="btn btn-sec" data-accion="ia-probar"' + (App.iaEstado === 'working' ? ' disabled' : '') + '>Test the connection</button>' + (hayIa() ? '<button class="btn btn-sec" data-accion="ia-olvidar">Forget the key</button>' : '') +
-      (probada === 'ok' ? '<span class="chip chip-bien">Connected</span>' : probada === 'error' ? '<span class="chip chip-critico">Failed</span>' : '') + '</p>' +
-      '<p class="nota">Where it is used: Measure &gt; Context (check the state mapping), Analyze (recommendations with cited evidence) and Learn (reading of the results). Without a key everything else works the same, with the case bank.</p></section>';
+      '<label class="campo-check form-ancho"><input type="checkbox" data-cambio="ia-recordar"' + (ia.recordar ? ' checked' : '') + '> Remember on this device</label>' +
+      '</div><p class="botones"><button class="btn btn-sec" data-accion="ia-probar"' + (App.iaEstado === 'working' ? ' disabled' : '') + '>Test</button>' + (hayIa() ? '<button class="btn btn-sec" data-accion="ia-olvidar">Forget the key</button>' : '') +
+      (probada === 'ok' ? '<span class="chip chip-bien">Connected</span>' : probada === 'error' ? '<span class="chip chip-critico">Failed</span>' : '') + '</p></section>';
     html += '<section class="bloque" id="ajuste-vivo"><h2>What is live in this copy</h2><ul class="vivo">' +
-      '<li><span class="chip chip-bien">Live</span> Jira CSV export and shared folder, with your real data.</li>' +
-      '<li><span class="chip chip-bien">Live</span> Measures, data checks, recommendations from the case bank, initiatives and their evaluation, documents.</li>' +
-      '<li><span class="chip ' + (hayIa() ? 'chip-bien">Live' : 'chip-sin">Needs a key') + '</span> AI assistant on the diagnostic package.</li>' +
-      '<li><span class="chip chip-atencion">Demo</span> Connectors for Azure DevOps, ServiceNow, GitLab and GitHub: they load the sample data. Their adapters are on the roadmap.</li>' +
-      '<li><span class="chip chip-atencion">Roadmap</span> Direct API connection to Jira and change history (reopenings, sprint commitments).</li></ul></section>';
-    html += '<section class="bloque" id="ajuste-exportar"><h2>Exports</h2><p class="nota">The diagnostic package carries only aggregated figures, no titles, no ticket keys, no people. It is what the AI assistant receives and what the consultant takes to the office.</p>' +
-      '<p class="botones"><button class="btn btn-sec" data-accion="paquete">Export the diagnostic package</button><button class="btn btn-sec" data-accion="definiciones" data-f="docx">KPI catalogue (Word)</button><button class="btn btn-sec" data-accion="modelo">Measurement model (JSON)</button></p></section>';
-    html += '<section class="bloque" id="ajuste-datos"><h2>Sample data</h2><p class="nota">' + (App.demo ? 'You are viewing the sample data. Nothing you change here is saved.' : 'To see the page with a fictional bank without touching your data: <button class="btn-txt" data-accion="demo">load the sample data</button>. To go over how it works: <button class="btn-txt" data-accion="tutorial">take the tutorial</button>.') + '</p></section>';
+      '<li><span class="chip chip-bien">Live</span> Jira CSV and folder, with your data.</li>' +
+      '<li><span class="chip chip-bien">Live</span> Measures, checks, recommendations, initiatives, documents.</li>' +
+      '<li><span class="chip ' + (hayIa() ? 'chip-bien">Live' : 'chip-sin">Needs a key') + '</span> AI assistant.</li>' +
+      '<li><span class="chip chip-atencion">Demo</span> Azure DevOps, ServiceNow, GitLab and GitHub connectors: sample data.</li>' +
+      '<li><span class="chip chip-atencion">Roadmap</span> Direct API connection and change history.</li></ul></section>';
+    html += '<section class="bloque linea" id="ajuste-exportar"><div><h2>Exports</h2></div><div class="cab-acc"><button class="btn btn-sec btn-peq" data-accion="paquete">Diagnostic package</button><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="docx">KPI catalogue (Word)</button><button class="btn btn-sec btn-peq" data-accion="modelo">Measurement model</button></div></section>';
+    html += '<section class="bloque linea" id="ajuste-datos"><div><h2>Sample data</h2></div><div class="cab-acc">' + (App.demo ? '<span class="nota">Loaded. Nothing is saved.</span>' : '<button class="btn btn-sec btn-peq" data-accion="demo">Load</button><button class="btn btn-sec btn-peq" data-accion="tutorial">Tutorial</button>') + '</div></section>';
     return html;
   }
-
   // ---------- documents ----------
   function slug(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
   function definiciones(formato) {
@@ -1343,7 +1295,7 @@
     var campoTxt = f ? f.equipo.toLowerCase() : (op ? (op.id === 'todos' ? '' : op.nombre.replace(/^campo\s+/i, 'the field ')) : '');
     var p1 = {
       nombre: 'Ingest', titulo: f ? 'We read the ' + f.unidad + ' from ' + f.nombre : 'We read the exports',
-      texto: 'Everything that arrives is merged and the latest version of each task is kept. Each piece of work counts once. Columns with people or comments are never read.',
+      texto: 'Every task counts once. People and comments are never read.',
       visual: '<div class="v-lista">' + vfila(f ? 'Records read from ' + f.nombre : 'Rows read from ' + inf.ficheros.length + ' ' + plural(inf.ficheros.length, 'file', 'files'), inf.filasLeidas, '', 1) +
         vfila('Duplicates: counted once', inf.duplicadas, 'fuera', 2) + (inf.epicas + inf.subtareas ? vfila('Epics and subtasks', inf.epicas + inf.subtareas, 'fuera', 3) : '') +
         (inf.sinClave ? vfila('Without a key: cannot be followed', inf.sinClave, 'fuera', 3) : '') +
@@ -1352,7 +1304,7 @@
     };
     var p2 = {
       nombre: 'Teams', titulo: 'We recognise the teams',
-      texto: 'The field that says which team each task belongs to is detected' + (campoTxt ? ' (here, ' + esc(campoTxt) + ')' : '') + '. What cannot be detected, such as which team belongs to a vendor, is set once in Context and saved.',
+      texto: 'Detected from ' + (campoTxt ? esc(campoTxt) : 'the export') + '. Vendors and headcount are set once in Setup.',
       visual: '<div class="v-chips">' + eqs.map(function (e, k) {
         var i = info[e.nombre] || {}, prov = i.tipo === 'proveedor', n = tareasDe(e.nombre);
         return '<span class="v-chip pe' + (prov ? ' prov' : '') + '" style="--d:' + (k + 2) + '"><b>' + esc(e.nombre) + '</b><small>' + (n != null ? miles(n) + ' tasks' : '') + (prov ? (n != null ? ', ' : '') + esc(i.proveedor || 'vendor') : (i.tipo === 'interno' ? (n != null ? ', ' : '') + 'in-house' : '')) + '</small></span>';
@@ -1362,7 +1314,7 @@
     var pares = f ? f.estados : det.estados.map(function (e) { return [e.nombre, mp[e.nombre] || e.estado]; });
     var p3 = {
       nombre: 'States', titulo: 'We translate the states',
-      texto: 'Each state in ' + esc(origen) + ' becomes one of nine common states. So every team is measured with the same rules, even if each one works with its own states.',
+      texto: 'Each ' + esc(origen) + ' state becomes one of nine common states. Same rules for every team.',
       visual: '<div class="v-mapeo">' + pares.slice(0, 7).map(function (x, k) {
         var d = E[x[1]] || E.pendiente;
         return '<span class="v-org pe" style="--d:' + (k + 2) + '">' + esc(x[0]) + '</span><span class="v-flecha pe" aria-hidden="true" style="--d:' + (k + 2) + '">→</span><span class="v-comun pe e-' + d.etapa + '" style="--d:' + (k + 2) + '">' + esc(d.nombre) + '</span>';
@@ -1372,7 +1324,7 @@
     var fz = fiab(), revs = fz.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
     var p4 = {
       nombre: 'Quality', titulo: 'We check that the data is reliable',
-      texto: 'Ten checks look for signs that the tool does not reflect the real work. If there are any, they are flagged before drawing conclusions, never hidden.',
+      texto: 'Ten checks. Problems are flagged, never hidden.',
       visual: '<div class="v-checks v-checks-2">' + fz.comprobaciones.map(function (c, k) {
         var ico = c.estado === 'revisar' ? 'aviso' : c.estado === 'bien' ? 'ok' : 'pend';
         return '<div class="v-check pe" style="--d:' + (Math.floor(k / 2) + 2) + '"><span class="v-ico ' + ico + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span><div><b>' + esc(c.nombre) + '</b><span>' + esc(c.valor) + (c.estado === 'revisar' ? ', review' : '') + '</span></div></div>';
@@ -1382,30 +1334,30 @@
     var cfgC = cfgCalculo(), nombres = eqs.map(function (e) { return e.nombre; }), cap = N.capacidadArea(cfgC, nombres), fte = cfgC.fte || {}, coste = cfgC.coste || {};
     var p5 = {
       nombre: 'Capacity', titulo: 'We add headcount and cost',
-      texto: 'Each team is joined with its full-time people (FTE) and what each one costs. ' + esc(origen) + ' does not bring them: they come from the staffing tool, the contracts or finance. Always per team, never salaries.',
+      texto: 'FTE and cost per team, from staffing, contracts or finance. Never salaries.',
       visual: '<div class="v-tabla pe" style="--d:2"><table><thead><tr><th scope="col">Team</th><th scope="col">FTE</th><th scope="col">One FTE a month</th><th scope="col">Team a month</th></tr></thead><tbody>' +
         nombres.slice(0, 8).map(function (e) {
           var a = fte[e], b = coste[e];
           return '<tr><th scope="row">' + esc(e) + '</th><td>' + (a ? n1(a) : '<span class="v-falta">Not set</span>') + '</td><td>' + (b ? euros(b) : '<span class="v-falta">Not set</span>') + '</td><td>' + (a && b ? euros(a * b) : '') + '</td></tr>';
         }).join('') + '</tbody></table></div>',
-      resultado: cap.costeMes != null ? cuenta(Math.round(cap.costeMes), 'eur') + ' a month for ' + n1(cap.fteTotal) + ' FTE' : '<b>Pending</b>: FTE and cost are set in Measure &gt; Context'
+      resultado: cap.costeMes != null ? cuenta(Math.round(cap.costeMes), 'eur') + ' a month for ' + n1(cap.fteTotal) + ' FTE' : '<b>Pending</b>: set in Setup'
     };
     var total = eqs.length * COLUMNAS.length, s = senales();
     var p6 = {
       nombre: 'Baseline', titulo: 'We measure each team against itself',
-      texto: 'Five measures per team and week. Each figure is compared with the previous 12 weeks of that same team. Between groups, only with the same type and size of task.',
+      texto: 'Five measures per team, each against its own previous 12 weeks.',
       visual: matriz(),
       resultado: cuenta(s.n) + ' of ' + total + ' figures outside what is normal'
     };
     var semanas = r.modelo.semanas.length;
     return {
-      kicker: 'Step 1 · Measure', titulo: 'This is how your data becomes a trusted baseline',
+      kicker: 'Step 1 · Measure', titulo: 'From export to baseline',
       fuente: f ? esc(f.nombre) + ' (demo connector)' : (App.origen === 'ejemplo' ? 'Sample data' : esc(recortar(inf.ficheros.map(function (x) { return x.nombre; }).join(', '), 48))),
       pie: f ? 'Demo connector with the sample data of a fictional bank' : 'Everything is calculated in this browser: the data does not leave the computer',
       pasos: [p1, p2, p3, p4, p5, p6], ultimo: 'See the summary',
       final: {
         titulo: 'Data ready to use',
-        texto: 'Calculated in this browser in ' + segundos(App.tiempoMs || 0) + '. Every figure in the baseline comes from these stages, and the KPI catalogue records them to sign off.',
+        texto: 'Calculated in this browser in ' + segundos(App.tiempoMs || 0) + '.',
         visual: '<div class="v-resumen">' + [[inf.tareas, 'tasks'], [eqs.length, plural(eqs.length, 'team', 'teams')], [semanas, 'weeks'], [s.n, plural(s.n, 'figure outside normal', 'figures outside normal')]].map(function (x, k) {
           return '<div class="pe" style="--d:' + (k + 2) + '">' + cuenta(x[0]) + '<span>' + x[1] + '</span></div>';
         }).join('') + '</div>',
@@ -1422,33 +1374,24 @@
   function pasosTutorial() {
     var eqs = App.r.modelo.equipos, conProblema = eqs.filter(function (e) { var p = problemas(e); return p.critico.length || p.atencion.length; })[0] || eqs[0];
     var conRec = recomendaciones().filter(function (x) { return x.equipos.indexOf(conProblema.nombre) >= 0; })[0];
-    var hayEval = seguimientos().some(function (x) { return x.s.estado !== 'planificada' && x.s.estado !== 'sin_datos'; });
-    var ir = function (v, sec) { return function () { App.vista = v; App.ver = 'area'; App.editar = null; App.nuevaIni = false; if (sec) App.medir = sec; render(); }; };
-    var pasos = [
-      { sel: '.pasos-nav', kicker: 'The four steps', titulo: 'Measure, Analyze, Improve, Learn', antes: ir('measure', 'baseline'),
-        texto: 'The page is organised as the four steps of the method. Each one is a real screen with real figures: the baseline, the signals and recommendations, the initiatives and the results. Settings and the AI assistant are on the right.' },
-      { sel: '.kpis', kicker: 'Step 1 · Measure', titulo: 'The baseline of the area',
-        texto: 'Lead time, deliveries, rework and agent-ready tickets, with their trend. Each figure is compared with what was normal in the previous 12 weeks. Only what stands out is marked: no label means it is fine.' },
-      { sel: '.estado-area', kicker: 'Step 1 · Measure', titulo: 'Data reliability and teams that need attention',
-        texto: 'On the left, whether the data reflects the work (ten checks, in Measure > Data). On the right, the teams with a figure outside normal. Click one for its detail.' },
+    var hayEval = seguimientos().some(evaluada);
+    var ir = function (v) { return function () { App.vista = v; App.ver = 'area'; App.editar = null; App.nuevaIni = false; render(); }; };
+    return [
+      { sel: '.pasos-nav', kicker: 'The four steps', titulo: 'Measure, Analyze, Improve, Learn', antes: ir('measure'),
+        texto: 'Four steps, four screens. Setup holds the data checks and the context.' },
+      { sel: '.kpis', kicker: 'Step 1 · Measure', titulo: 'The baseline',
+        texto: 'Four figures for the area, each against its own previous 12 weeks. Only what stands out is marked.' },
       { sel: '.tabla-equipos', kicker: 'Step 1 · Measure', titulo: 'One team per row',
-        texto: 'The five measures of each team. The colour is the status against its own history. It is not a ranking: each team is compared with itself. Who is in-house and who is a vendor is set in Measure > Context.' },
-      { sel: '.grafico-plazo', kicker: 'Step 1 · Measure', titulo: 'The detail of a team', antes: function () { App.vista = 'measure'; App.medir = 'baseline'; App.ver = conProblema.nombre; App.editar = null; render(); },
-        texto: 'Lead time week by week, with the band of what is normal in that team. Beside it, its recommendations.' },
-      { sel: '.senales', kicker: 'Step 2 · Analyze', titulo: 'The signals', antes: function () { App.vista = 'analyze'; App.recEquipo = 'todos'; App.recSel = conRec ? claveRec(conRec) : null; App.editar = null; render(); },
-        texto: 'How many figures are outside normal, how many clear differences between groups with the same type of task, and how many recommendations come out of the case bank and the AI assistant.' },
-      { sel: '.recs-lista', kicker: 'Step 2 · Analyze', titulo: 'What to do, in order',
-        texto: 'Each recommendation says which figure it comes from, the probable driver, the first step and the plan. First the most serious and what affects more teams. With an API key, the AI assistant adds its own, with every cited figure checked against the package.' },
-      { sel: '.rec-seg', kicker: 'Step 3 · Improve', titulo: 'Register as an initiative',
-        texto: 'If you decide to try the plan, register it as an initiative. From then on it is measured on its own: before, after and against the teams that do not have it.' },
-      { sel: '#estandar', kicker: 'Step 3 · Standardize', titulo: 'The same rules for every team', antes: ir('improve'),
-        texto: 'Five measures with one definition each, the tool states mapped to nine common states, a KPI catalogue to sign off and a measurement model any platform can use.' },
+        texto: 'Colour means outside normal for that team. Not a ranking. Click a team for its detail.' },
+      { sel: '.recs-lista', kicker: 'Step 2 · Analyze', titulo: 'What to do, in order', antes: function () { App.vista = 'analyze'; App.recEquipo = 'todos'; App.recSel = conRec ? claveRec(conRec) : null; App.editar = null; render(); },
+        texto: 'Each item says what is happening and the first step. The AI assistant adds its own with checked figures.' },
+      { sel: '.rec-seg', kicker: 'Step 3 · Improve', titulo: 'Start an initiative',
+        texto: 'One click. From then on it is measured on its own: before, after, and against the other teams.' },
       { sel: hayEval ? '.seg' : '#ciclo', kicker: 'Step 4 · Learn', titulo: hayEval ? 'Did it work?' : 'The next cycle', antes: ir('learn'),
-        texto: hayEval ? 'Each initiative with its status (works, no clear effect, getting worse, measuring) and the evolution of its measure against the rest. "How it was evaluated" shows the figures step by step.' : 'Once initiatives have two weeks of data, their evaluation appears here with before, after and the other teams as control.' },
-      { sel: '.btn-actualizar', kicker: 'Step 4 · Evolve', titulo: 'Every week, Update', antes: ir('measure', 'baseline'), ultimo: 'Finish',
-        texto: 'With a folder (exports, configuracion, iniciativas), every week it is enough to drop the new export and press Update. The baseline moves on and the cycle starts again.' }
+        texto: hayEval ? 'Works, no clear effect or getting worse, with the figures behind it.' : 'Results appear two weeks after an initiative starts.' },
+      { sel: '.btn-actualizar', kicker: 'Every week', titulo: 'Update', antes: ir('measure'), ultimo: 'Finish',
+        texto: 'Drop the new export and press Update. The cycle starts again.' }
     ];
-    return pasos;
   }
   function tutorial() {
     if (!window.Tutorial) return;
@@ -1470,9 +1413,9 @@
     enSegundoPlano(function () { recalcular(); render(); window.scrollTo(0, y); });
   }
   var ACC = {
-    vista: function (el) { App.vista = el.getAttribute('data-v'); App.editar = null; App.nuevaIni = false; ocultarTip(null); render(); window.scrollTo(0, 0); },
-    ver: function (el) { App.ver = el.getAttribute('data-e'); App.vista = 'measure'; App.medir = 'baseline'; render(); window.scrollTo(0, 0); },
-    'medir-sec': function (el) { App.vista = 'measure'; App.medir = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
+    vista: function (el) { App.vista = el.getAttribute('data-v'); if (App.vista === 'settings') { App.vista = 'setup'; App.setup = 'settings'; } App.editar = null; App.nuevaIni = false; ocultarTip(null); render(); window.scrollTo(0, 0); },
+    ver: function (el) { App.ver = el.getAttribute('data-e'); App.vista = 'measure'; render(); window.scrollTo(0, 0); },
+    'setup-sec': function (el) { App.vista = 'setup'; App.setup = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
     ficheros: function () { document.getElementById('entrada-ficheros').click(); },
     carpeta: elegirCarpeta,
     'leer-carpeta': function () { if (App.carpeta) leerCarpeta(App.carpeta); },
@@ -1498,12 +1441,12 @@
       if (App.origen === 'datosjs') return location.reload();
       document.getElementById('entrada-ficheros').click();
     },
-    'datos-sec': function (el) { App.vista = 'measure'; App.medir = 'data'; App.datos = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
-    fiabilidad: function () { App.vista = 'measure'; App.medir = 'data'; App.datos = 'fiabilidad'; App.editar = null; render(); window.scrollTo(0, 0); },
+    'datos-sec': function (el) { App.vista = 'setup'; App.setup = 'data'; App.datos = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
+    fiabilidad: function () { App.vista = 'setup'; App.setup = 'data'; App.datos = 'fiabilidad'; App.editar = null; render(); window.scrollTo(0, 0); },
     editar: function (el) {
       var k = el.getAttribute('data-e');
       if (k === 'calidad') { ACC.fiabilidad(); return; }
-      if (App.vista !== 'measure' || App.medir !== 'context') { App.vista = 'measure'; App.medir = 'context'; App.editar = k; render(); var s = document.getElementById('ajuste-' + k) || document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
+      if (App.vista !== 'setup' || App.setup !== 'context') { App.vista = 'setup'; App.setup = 'context'; App.editar = k; render(); var s = document.getElementById('ajuste-' + k) || document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
       var y = window.scrollY; App.editar = App.editar === k ? null : k; render(); window.scrollTo(0, y);
     },
     definiciones: function (el) { definiciones(el.getAttribute('data-f')); },
@@ -1521,6 +1464,7 @@
     var f = ACC[el.getAttribute('data-accion')];
     if (f) { e.preventDefault(); f(el); }
   });
+  document.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[role="button"][data-accion]')) { e.preventDefault(); e.target.click(); } });
   document.addEventListener('submit', function (e) {
     var f = e.target;
     if (f && f.getAttribute && f.getAttribute('data-accion-form') === 'guardar-ini') { e.preventDefault(); guardarIni(f); }
