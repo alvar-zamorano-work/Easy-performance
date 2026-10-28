@@ -1,4 +1,4 @@
-// Easy Performance: tutorial guiado sobre la propia interfaz.
+// Easy Performance: guided tutorial on the real interface (each step points at an element and explains it).
 // Recorre una lista de pasos; cada paso señala un elemento real de la página (por selector) y lo explica.
 // Se usa con window.Tutorial.iniciar(pasos, opciones) y devuelve una promesa que se resuelve al cerrar.
 // Cada paso: { sel, titulo, texto, antes? }. "antes" es una función que deja la página en el estado
@@ -77,10 +77,10 @@
           if (cerrado) return;
           var el = elemento();
           if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reducido() ? 'auto' : 'smooth' });
-          tarjeta.innerHTML = '<p class="tut-cuenta">Paso ' + (k + 1) + ' de ' + pasos.length + '</p><h3>' + esc(p.titulo) + '</h3><p class="tut-texto">' + p.texto + '</p>' +
-            '<div class="tut-acc"><button type="button" class="btn-txt" data-tut="salir">Salir</button><span class="hueco"></span>' +
-            '<button type="button" class="btn btn-sec" data-tut="anterior"' + (k ? '' : ' disabled') + '>Anterior</button>' +
-            '<button type="button" class="btn" data-tut="siguiente">' + (k === pasos.length - 1 ? (p.ultimo || 'Terminar') : 'Siguiente') + '</button></div>';
+          tarjeta.innerHTML = '<p class="tut-cuenta">' + (p.kicker ? esc(p.kicker) + ' · ' : '') + 'Step ' + (k + 1) + ' of ' + pasos.length + '</p><h3>' + esc(p.titulo) + '</h3><p class="tut-texto">' + p.texto + '</p>' +
+            '<div class="tut-acc"><button type="button" class="btn-txt" data-tut="salir">Exit</button><span class="hueco"></span>' +
+            '<button type="button" class="btn btn-sec" data-tut="anterior"' + (k ? '' : ' disabled') + '>Back</button>' +
+            '<button type="button" class="btn" data-tut="siguiente">' + (k === pasos.length - 1 ? (p.ultimo || 'Finish') : 'Next') + '</button></div>';
           setTimeout(colocar, reducido() ? 0 : 260);
           colocar();
           var b = tarjeta.querySelector('[data-tut="siguiente"]'); if (b) b.focus({ preventScroll: true });

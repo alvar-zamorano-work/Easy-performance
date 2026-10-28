@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Easy Performance</title>
-<meta name="description" content="Easy Performance: rendimiento de equipos de desarrollo desde Jira. Cómo va cada equipo, qué hacer y si las iniciativas de mejora funcionan.">
+<meta name="description" content="Easy Performance: team performance from your delivery tools. Measure, analyze, improve and learn, with the same rules for every team.">
 <style>
 /*ESTILOS*/
 </style>
@@ -12,12 +12,12 @@
 <body>
 <div id="app"></div>
 <div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
-<div id="ocupado" class="ocupado" hidden><div>Leyendo datos…</div></div>
+<div id="ocupado" class="ocupado" hidden><div>Reading data…</div></div>
 <input type="file" id="entrada-ficheros" accept=".csv,text/csv" multiple hidden>
 <script type="text/plain" id="demo-csv">/*DEMO*/</script>
 <script type="application/json" id="demo-cliente">/*DEMO_CLIENTE*/</script>
 <script>window.EASY_PERFORMANCE_EXPORTS = null; window.EASY_PERFORMANCE_CONFIG = null; window.EASY_PERFORMANCE_INICIATIVAS = null; window.EASY_PERFORMANCE_CONTEXTO = null;</script>
-<!-- El script "actualizar" deja aquí los exports de la carpeta. Si no existe, no pasa nada. -->
+<!-- The "actualizar" script leaves the folder exports here. If it does not exist, nothing happens. -->
 <script src="exports/datos.js" onerror="window.EASY_PERFORMANCE_SIN_DATOSJS = true"></script>
 <script>
 /*NUCLEO*/
