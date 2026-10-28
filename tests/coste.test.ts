@@ -19,7 +19,7 @@ const cliente: ClienteV2 = JSON.parse(leer('cliente', 'cliente.json'));
 const iniciativas = readdirSync(join(DIR, 'cliente', 'iniciativas')).sort().map((f) => JSON.parse(leer('cliente', 'iniciativas', f)));
 const lectura = leerJira([{ nombre: 'jira-b3.csv', texto: leer('jira-b3.csv') }]);
 const base = configDesdeCliente(cliente);
-const COSTE: Record<string, number> = { Pagos: 6500, Riesgos: 6500, 'App móvil': 8000, 'Portal clientes': 7600 };
+const COSTE: Record<string, number> = { Payments: 6500, Risk: 6500, 'Mobile App': 8000, 'Customer Portal': 7600 };
 const cfg = { ...base, coste: COSTE };
 const r = diagnosticar(lectura, cliente, iniciativas, null, { config: cfg, generado: new Date(2026, 9, 15) });
 const cerca = (a: number, b: number, msg: string) => assert.ok(Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b)), msg + ': ' + a + ' frente a ' + b);
@@ -64,11 +64,11 @@ test('sin coste indicado, los resultados no cambian y no aparece la medida', () 
 });
 
 test('falta un coste: ese equipo dice qué falta y el área no se calcula', () => {
-  const parcial = { ...base, coste: { Pagos: 6500 } };
+  const parcial = { ...base, coste: { Payments: 6500 } };
   const x = diagnosticar(lectura, cliente, iniciativas, null, { config: parcial });
-  const riesgos = x.modelo.equipos.find((e) => e.nombre === 'Riesgos')!;
+  const riesgos = x.modelo.equipos.find((e) => e.nombre === 'Risk')!;
   assert.equal(riesgos.kpis.coste.disponible, false);
-  assert.match(riesgos.kpis.coste.motivo!, /coste/);
+  assert.match(riesgos.kpis.coste.motivo!, /cost/);
   assert.equal(x.area.equipos[0].kpis.coste.disponible, false);
   assert.equal(x.capacidad.costeMes, null);
 });
@@ -91,8 +91,8 @@ test('documento de definiciones: con coste lleva la tabla de capacidad y coste; 
   const { aMarkdown } = await import('../nucleo/documento.ts');
   const det = detectar(lectura);
   const con = aMarkdown(definiciones(lectura, cliente, { config: cfg, det, modelo: r.modelo, generado: new Date(2026, 9, 15) }));
-  assert.match(con, /Capacidad y coste/);
-  assert.match(con, /\| Pagos \| 5 \| 6\.500 € \| 32\.500 € \|/);
+  assert.match(con, /Capacity and cost/);
+  assert.match(con, /\| Payments \| 5 \| €6,500 \| €32,500 \|/);
   const sin = aMarkdown(definiciones(lectura, cliente, { config: base, det, generado: new Date(2026, 9, 15) }));
-  assert.doesNotMatch(sin, /Capacidad y coste/);
+  assert.doesNotMatch(sin, /Capacity and cost/);
 });

@@ -43,7 +43,7 @@ test('fiabilidad: sin confirmar los estados de un export real, los que no se rec
   const est = f.comprobaciones.find((k) => k.id === 'estados')!;
   const sinNombre = x.det.estados.filter((e) => e.propuestaPor !== 'nombre').length;
   assert.equal(est.estado, sinNombre ? 'revisar' : 'bien');
-  assert.equal(est.valor, (x.det.estados.length - sinNombre) + ' de ' + x.det.estados.length);
+  assert.equal(est.valor, (x.det.estados.length - sinNombre) + ' of ' + x.det.estados.length);
 });
 
 test('seguimiento: la iniciativa sembrada que funciona sale como funciona, con serie y evaluación completa', () => {
@@ -54,7 +54,7 @@ test('seguimiento: la iniciativa sembrada que funciona sale como funciona, con s
     if (conEfecto(x.evaluacion)) assert.equal(s.estado, 'funciona', x.iniciativa.id);
     else assert.ok(['sin_efecto', 'empeora'].includes(s.estado), x.iniciativa.id + ': ' + s.estado);
     assert.ok(s.completa && s.progreso === 1, 'ventana completa');
-    assert.match(s.texto, /Evaluación completa/);
+    assert.match(s.texto, /Evaluation complete/);
   }
   assert.equal(r.iniciativas.filter((x) => seguimiento(x.iniciativa, x.evaluacion, r.preparacion).estado === 'funciona').length, 1);
 });
@@ -62,7 +62,7 @@ test('seguimiento: la iniciativa sembrada que funciona sale como funciona, con s
 test('seguimiento: una iniciativa recién empezada está midiendo y una futura, planificada', () => {
   const fin = r.preparacion.ctx.semanaFin;
   const dia = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  const base = { ...iniciativas[0], id: 'prueba', equipos: ['Pagos'], medidas_objetivo: [{ medida: 'retrabajo', direccion: 'bajar' }] };
+  const base = { ...iniciativas[0], id: 'prueba', equipos: ['Payments'], medidas_objetivo: [{ medida: 'retrabajo', direccion: 'bajar' }] };
   const reciente = { ...base, fecha_inicio: dia(new Date(fin.getTime() - 5 * 864e5)) };
   const s1 = seguimiento(reciente, evaluarIniciativa(reciente, r.preparacion), r.preparacion);
   assert.equal(s1.estado, 'midiendo');

@@ -67,6 +67,6 @@ test('con tantos fallos la fiabilidad es baja; con el export limpio de B3 es alt
 });
 
 test('el corte del export se avisa y las medidas no llegan a las semanas vacías', () => {
-  assert.ok(r.det.avisos.some((a) => /casi no tienen actividad/.test(a.texto)));
+  assert.ok(r.det.avisos.some((a) => /almost no activity/.test(a.texto)));
   assert.ok(r.det.fechaRef < new Date(escenarios.fecha_export));
 });

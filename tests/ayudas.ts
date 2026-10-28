@@ -27,6 +27,18 @@ export interface MotorV0 {
 }
 export const motorV0: MotorV0 = createRequire(import.meta.url)('./referencia-v0/motor.js');
 
+/** Nombres fijos de la v0 (en castellano) y su equivalente en el núcleo nuevo (en inglés desde oct 2026). */
+const NOMBRES_V0: Record<string, string> = {
+  'Sin equipo': 'No team', 'Todo el trabajo': 'All work', 'Sin épica': 'No epic', 'Otras': 'Other',
+  'En ninguno: todo es un solo equipo': 'None: all work is one team', 'Campo Equipo': 'Team field', 'Componente': 'Component', 'Proyecto': 'Project', 'Etiqueta': 'Label',
+};
+export const nombreNuevo = (s: string) => NOMBRES_V0[s] ?? s.replace(/^Estado (\d+)$/, 'Status $1');
+/** Fragmentos de aviso que guardan los .esperado.json anteriores a oct 2026, con su texto en inglés. */
+const AVISOS_V0: Record<string, string> = {
+  'justo 10.000 filas': 'exactly 10,000 rows', 'justo 1.000 filas': 'exactly 1,000 rows', 'casi no tienen actividad': 'almost no activity', 'parecen fechas y horas': 'look like dates and times',
+};
+export const avisoNuevo = (s: string) => AVISOS_V0[s] ?? s;
+
 /** Convierte a JSON y vuelve: fechas a texto, sin undefined. Así se comparan v0 y núcleo nuevo. */
 export function json<T>(x: T): unknown {
   return JSON.parse(JSON.stringify(x));

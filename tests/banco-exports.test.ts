@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { PRUEBA, SINTETICOS, json, recorrido } from './ayudas.ts';
+import { PRUEBA, SINTETICOS, avisoNuevo, json, nombreNuevo, recorrido } from './ayudas.ts';
 import { aTabla, cambiarColumna, enCastellano, fechaNumerica, fichero, quitarColumna, COLUMNAS_FECHA, type Tabla } from './banco/variantes.ts';
 import { validar } from '../esquemas/validar.ts';
 import type { Modelo } from '../nucleo/tipos.ts';
@@ -69,7 +69,7 @@ test('sin Tiempo en estado: esas medidas quedan sin datos con su motivo y el res
   for (const e of r.modelo.equipos) {
     for (const id of ['ciclo', 'espera', 'retrabajo']) {
       assert.equal(e.medidas[id].disponible, false, `${e.nombre} ${id}`);
-      assert.match(String(e.medidas[id].motivo), /Tiempo en estado/);
+      assert.match(String(e.medidas[id].motivo), /Time in Status/);
     }
     assert.ok(!e.casos.some((c) => ['mucha_espera', 'retrabajo'].includes(c.id)), e.nombre);
   }
@@ -93,7 +93,7 @@ test('sprints con nombre de fecha: no se usan como sprints y se avisa', () => {
   });
   const r = recorrido([fichero('sprints-fecha.csv', t)]);
   assert.equal(r.det.sprintsComoFecha, true);
-  assert.ok(avisos(r).some((a) => /parecen fechas/.test(a)));
+  assert.ok(avisos(r).some((a) => /look like dates/.test(a)));
   for (const e of r.modelo.equipos) {
     assert.equal(e.medidas.arrastradas.disponible, false);
     assert.ok(!e.casos.some((c) => ['sprint_no_cumple', 'todo_al_final'].includes(c.id)), e.nombre);
@@ -102,7 +102,7 @@ test('sprints con nombre de fecha: no se usan como sprints y se avisa', () => {
 
 test('export cortado en 1.000 filas: se avisa del límite de exportación', () => {
   const r = recorrido([fichero('cortado.csv', { cab: base.cab, filas: base.filas.slice(0, 1000) })]);
-  assert.ok(avisos(r).some((a) => /justo 1\.?000 filas/.test(a)));
+  assert.ok(avisos(r).some((a) => /exactly 1,?000 rows/.test(a)));
 });
 
 test('estados propios del cliente: se proponen bien y el resultado no cambia', () => {
@@ -114,9 +114,9 @@ test('estados propios del cliente: se proponen bien y el resultado no cambia', (
 
 test('ficheros que no son un export de Jira: error claro y ninguna tarea', () => {
   const casos: [FicheroEntrada, RegExp][] = [
-    [{ nombre: 'otra-cosa.csv', texto: 'a,b\n1,2\n' }, /no tiene columna de clave/],
-    [{ nombre: 'vacio.csv', texto: '' }, /vacío o no es un CSV/],
-    [{ nombre: 'cabecera.csv', texto: base.cab.join(',') + '\n' }, /solo tiene la fila de títulos/],
+    [{ nombre: 'otra-cosa.csv', texto: 'a,b\n1,2\n' }, /has no key column/],
+    [{ nombre: 'vacio.csv', texto: '' }, /is empty or is not a CSV/],
+    [{ nombre: 'cabecera.csv', texto: base.cab.join(',') + '\n' }, /only has the header row/],
   ];
   for (const [f, re] of casos) {
     const r = recorrido([f]);
@@ -137,8 +137,10 @@ for (const nombre of reales) {
     assert.equal(r.det.equipoRecomendado, e.equipoRecomendado, 'campo de equipo');
     assert.equal(r.det.sprintsComoFecha, e.sprintsComoFecha, 'sprints como fecha');
     assert.deepEqual(r.det.mapeoEstados, e.mapeoEstados, 'mapeo de estados');
-    for (const a of e.avisosContienen) assert.ok(avisos(r).some((x) => x.includes(a)), 'aviso: ' + a);
-    assert.deepEqual(casosPorEquipo(r.modelo), e.casos, 'casos por equipo');
+    for (const a of e.avisosContienen) assert.ok(avisos(r).some((x) => x.includes(avisoNuevo(a))), 'aviso: ' + a);
+    // Los .esperado.json anteriores a oct 2026 usan los nombres fijos de la v0 ("Sin equipo"): se traducen al comparar
+    const casosEsperados = Object.fromEntries(Object.entries(e.casos as Record<string, string[]>).map(([k, v]) => [nombreNuevo(k), v]));
+    assert.deepEqual(casosPorEquipo(r.modelo), casosEsperados, 'casos por equipo');
   });
 }
 
