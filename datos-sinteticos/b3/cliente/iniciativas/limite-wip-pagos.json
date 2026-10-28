@@ -1,11 +1,11 @@
 {
   "id": "limite-wip-pagos",
-  "nombre": "Límite de trabajo en curso en Pagos",
-  "descripcion": "Pagos no empieza una tarea nueva mientras tenga más tareas en curso que personas en el equipo (cinco). Lo nuevo espera en pendiente y, en la reunión diaria, se mira primero qué se puede terminar.",
+  "nombre": "Work in progress limit in Payments",
+  "descripcion": "Payments does not start a new task while it has more tasks in progress than people in the team (five). New work waits in the backlog and, in the daily meeting, the team looks first at what can be finished.",
   "fecha_inicio": "2026-06-01",
   "fecha_fin": null,
   "equipos": [
-    "Pagos"
+    "Payments"
   ],
   "medidas_objetivo": [
     {
@@ -13,7 +13,7 @@
       "direccion": "bajar"
     }
   ],
-  "efecto_esperado": "Plazo un 30% más bajo en dos meses.",
+  "efecto_esperado": "Lead time 30% lower in two months.",
   "estado": "en_curso",
   "origen": "demasiado_a_la_vez",
   "evaluacion": null,

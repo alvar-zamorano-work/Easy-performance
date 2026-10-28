@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "nombre": "Cliente sintético con fallos",
-  "sector": "banca",
+  "nombre": "Synthetic client with faults",
+  "sector": "banking",
   "plataforma": "jira",
   "mapeoEstados": {
     "To Do": "pendiente",
@@ -15,10 +15,10 @@
     "lista": [
       {
         "id": "pag",
-        "nombre": "Pagos",
+        "nombre": "Payments",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Canales digitales",
+        "area": "Digital Channels",
         "usa_sprints": true,
         "fte": [
           {
@@ -31,10 +31,10 @@
       },
       {
         "id": "rie",
-        "nombre": "Riesgos",
+        "nombre": "Risk",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Plataforma",
+        "area": "Platform",
         "usa_sprints": true,
         "fte": [
           {
@@ -47,10 +47,10 @@
       },
       {
         "id": "app",
-        "nombre": "App móvil",
+        "nombre": "Mobile App",
         "tipo": "proveedor",
-        "proveedor": "Proveedor Norte",
-        "area": "Canales digitales",
+        "proveedor": "Vendor North",
+        "area": "Digital Channels",
         "usa_sprints": true,
         "fte": [
           {
@@ -63,10 +63,10 @@
       },
       {
         "id": "por",
-        "nombre": "Portal clientes",
+        "nombre": "Customer Portal",
         "tipo": "proveedor",
-        "proveedor": "Proveedor Sur",
-        "area": "Plataforma",
+        "proveedor": "Vendor South",
+        "area": "Platform",
         "usa_sprints": true,
         "fte": [
           {
@@ -79,10 +79,10 @@
       },
       {
         "id": "dat",
-        "nombre": "Datos",
+        "nombre": "Data",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Plataforma",
+        "area": "Platform",
         "usa_sprints": true,
         "fte": [
           {

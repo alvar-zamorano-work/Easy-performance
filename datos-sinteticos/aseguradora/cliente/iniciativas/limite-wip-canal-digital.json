@@ -1,11 +1,11 @@
 {
   "id": "limite-wip-canal-digital",
-  "nombre": "Límite de trabajo en curso en Canal digital",
-  "descripcion": "Canal digital no empieza nada nuevo mientras tenga más tareas en curso que personas (siete). Se ha pactado con el proveedor como parte del servicio y se revisa cada dos semanas.",
+  "nombre": "Work in progress limit in Digital Channel",
+  "descripcion": "Digital Channel does not start anything new while it has more tasks in progress than people (seven). It has been agreed with the vendor as part of the service and is reviewed every two weeks.",
   "fecha_inicio": "2026-10-05",
   "fecha_fin": null,
   "equipos": [
-    "Canal digital"
+    "Digital Channel"
   ],
   "medidas_objetivo": [
     {
@@ -13,7 +13,7 @@
       "direccion": "bajar"
     }
   ],
-  "efecto_esperado": "Plazo un 25% más bajo en dos meses.",
+  "efecto_esperado": "Lead time 25% lower in two months.",
   "estado": "en_curso",
   "origen": "demasiado_a_la_vez",
   "evaluacion": null,

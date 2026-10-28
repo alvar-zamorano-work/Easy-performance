@@ -22,16 +22,16 @@ const VENTANA = new Date(FIN.getTime() - 18 * SEMANA);
 export const ESTADO_PROPIO = { nombre: 'Visto bueno de negocio', id: '10012' };
 
 export const EQUIPOS_ASEGURADORA: EquipoSintetico[] = [
-  { nombre: 'Siniestros', prefijo: 'SIN', tipo: 'interno', proveedor: null, area: 'Negocio', fte: 6, lentitud: 1, pRetrabajo: 0.22, pReabrir: 0.04, pCriterio: 0.8, llegadas: [6, 8] },
-  { nombre: 'Pólizas', prefijo: 'POL', tipo: 'interno', proveedor: null, area: 'Negocio', fte: 5, lentitud: 1.1, pRetrabajo: 0.1, pReabrir: 0.03, pCriterio: 0.85 },
-  { nombre: 'Canal digital', prefijo: 'CAN', tipo: 'proveedor', proveedor: 'Proveedor Este', area: 'Canales', fte: 7, lentitud: 1.4, pRetrabajo: 0.2, pReabrir: 0.08, pCriterio: 0.45, llegadas: [7, 9] },
-  { nombre: 'Integraciones', prefijo: 'INT', tipo: 'proveedor', proveedor: 'Proveedor Oeste', area: 'Plataforma', fte: 4, lentitud: 1.2, pRetrabajo: 0.12, pReabrir: 0.05, pCriterio: 0.6, sinSprints: true, llegadas: [4, 6] },
-  { nombre: 'Datos y BI', prefijo: 'DAT', tipo: 'interno', proveedor: null, area: 'Plataforma', fte: 4, lentitud: 0.9, pRetrabajo: 0.08, pReabrir: 0.02, pCriterio: 0.7, llegadas: [4, 6] },
+  { nombre: 'Claims', prefijo: 'SIN', tipo: 'interno', proveedor: null, area: 'Business', fte: 6, lentitud: 1, pRetrabajo: 0.22, pReabrir: 0.04, pCriterio: 0.8, llegadas: [6, 8] },
+  { nombre: 'Policies', prefijo: 'POL', tipo: 'interno', proveedor: null, area: 'Business', fte: 5, lentitud: 1.1, pRetrabajo: 0.1, pReabrir: 0.03, pCriterio: 0.85 },
+  { nombre: 'Digital Channel', prefijo: 'CAN', tipo: 'proveedor', proveedor: 'Vendor East', area: 'Channels', fte: 7, lentitud: 1.4, pRetrabajo: 0.2, pReabrir: 0.08, pCriterio: 0.45, llegadas: [7, 9] },
+  { nombre: 'Integrations', prefijo: 'INT', tipo: 'proveedor', proveedor: 'Vendor West', area: 'Platform', fte: 4, lentitud: 1.2, pRetrabajo: 0.12, pReabrir: 0.05, pCriterio: 0.6, sinSprints: true, llegadas: [4, 6] },
+  { nombre: 'Data and BI', prefijo: 'DAT', tipo: 'interno', proveedor: null, area: 'Platform', fte: 4, lentitud: 0.9, pRetrabajo: 0.08, pReabrir: 0.02, pCriterio: 0.7, llegadas: [4, 6] },
 ];
 
 export const INICIATIVAS_ASEGURADORA: IniciativaSintetica[] = [
-  { id: 'definicion-listo-siniestros', nombre: 'Definición de listo en Siniestros', equipo: 'Siniestros', inicio: '2026-05-04', medida: 'retrabajo', direccion: 'bajar', efectoCiclo: 1, efectoRetrabajo: 0.35, conEfecto: true },
-  { id: 'limite-wip-canal-digital', nombre: 'Límite de trabajo en curso en Canal digital', equipo: 'Canal digital', inicio: '2026-10-05', medida: 'ciclo', direccion: 'bajar', efectoCiclo: 0.7, efectoRetrabajo: 1, conEfecto: true },
+  { id: 'definicion-listo-siniestros', nombre: 'Definition of ready in Claims', equipo: 'Claims', inicio: '2026-05-04', medida: 'retrabajo', direccion: 'bajar', efectoCiclo: 1, efectoRetrabajo: 0.35, conEfecto: true },
+  { id: 'limite-wip-canal-digital', nombre: 'Work in progress limit in Digital Channel', equipo: 'Digital Channel', inicio: '2026-10-05', medida: 'ciclo', direccion: 'bajar', efectoCiclo: 0.7, efectoRetrabajo: 1, conEfecto: true },
 ];
 
 const TEMAS = ['la apertura de siniestros', 'el cálculo de la prima', 'la renovación de pólizas', 'el parte amistoso digital', 'la consulta de coberturas',
@@ -45,7 +45,7 @@ const CABECERAS_EXTRA: Record<string, string> = { 'Creator': 'Creador', 'Comment
 export interface SinFallo { id: string; equipo: string; que: string }
 
 export function generarAseguradora() {
-  const { cab: cab0, filas: filas0 } = generar({ semilla: SEMILLA, equipos: EQUIPOS_ASEGURADORA, iniciativas: INICIATIVAS_ASEGURADORA, inicio: INICIO, fin: FIN, semanas: 52, proyecto: 'Seguros Digital', temas: TEMAS });
+  const { cab: cab0, filas: filas0 } = generar({ semilla: SEMILLA, equipos: EQUIPOS_ASEGURADORA, iniciativas: INICIATIVAS_ASEGURADORA, inicio: INICIO, fin: FIN, semanas: 52, proyecto: 'Digital Insurance', temas: TEMAS });
   const az = azar(SEMILLA + 1);
   const I = (n: string) => { const i = cab0.indexOf(n); if (i < 0) throw new Error('Falta la columna ' + n); return i; };
   const c = { tipo: I('Issue Type'), estado: I('Status'), resuelta: I('Resolved'), creada: I('Created'), equipo: I('Custom field (Team)'), puntos: I('Custom field (Story Points)'), tis: I('Custom field ([CHART] Time in Status)'), informador: I('Reporter') };
@@ -57,46 +57,46 @@ export function generarAseguradora() {
   const sembrados: Sembrado[] = [];
 
   // Dos tareas bloqueadas al exportar, para que el nombre del estado Bloqueado salga del propio export
-  filas.filter((f) => de('Siniestros')(f) && f[c.estado] === 'In Progress').slice(0, 2).forEach((f) => {
+  filas.filter((f) => de('Claims')(f) && f[c.estado] === 'In Progress').slice(0, 2).forEach((f) => {
     f[c.tis] = escribirTis(leerTis(f[c.tis]).map((x) => (x.id === '3' ? { ...x, v: Math.max(x.v, 2 * DIA) } : x)).concat([{ id: '10004', n: 1, v: 0 }]));
     f[c.estado] = 'Blocked';
   });
 
   // 1. Estado propio que no se reconoce por el nombre (Pólizas): una espera que se contaría como en curso
   let conEstado = 0;
-  filas.filter((f) => de('Pólizas')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
+  filas.filter((f) => de('Policies')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
     if (az.r() < 0.4) { f[c.tis] = escribirTis(leerTis(f[c.tis]).concat([{ id: ESTADO_PROPIO.id, n: 1, v: az.entre(1, 3) * DIA }])); conEstado++; }
   });
-  const enEstado = filas.filter((f) => de('Pólizas')(f) && f[c.estado] === 'In Progress').slice(0, 3);
-  if (!enEstado.length) throw new Error('No hay tareas de Pólizas en curso para el estado propio.');
+  const enEstado = filas.filter((f) => de('Policies')(f) && f[c.estado] === 'In Progress').slice(0, 3);
+  if (!enEstado.length) throw new Error('No Policies tasks in progress for the custom status.');
   enEstado.forEach((f) => {
     f[c.tis] = escribirTis(leerTis(f[c.tis]).map((x) => (x.id === '3' ? { ...x, v: az.entre(1, 4) * DIA } : x)).concat([{ id: ESTADO_PROPIO.id, n: 1, v: 0 }]));
     f[c.estado] = ESTADO_PROPIO.nombre;
   });
-  sembrados.push({ id: 'estados', ambito: 'area', equipo: 'Pólizas', tareas: conEstado + enEstado.length,
-    que: 'Pólizas añadió un estado propio, «' + ESTADO_PROPIO.nombre + '», después de firmar el mapeo. Es una espera, pero no se reconoce por el nombre y se contaría como en curso.' });
+  sembrados.push({ id: 'estados', ambito: 'area', equipo: 'Policies', tareas: conEstado + enEstado.length,
+    que: 'Policies added a custom status, "' + ESTADO_PROPIO.nombre + '", after the mapping was signed. It is a wait, but it is not recognised by name and would count as in progress.' });
 
   // 2. Saltos de pendiente a hecho (Datos y BI): mueven las tareas al final, cuando ya está hecho
   let saltos = 0;
-  filas.filter((f) => de('Datos y BI')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
+  filas.filter((f) => de('Data and BI')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
     if (az.r() < 0.3) {
       const lead = fecha(f, c.resuelta)!.getTime() - fecha(f, c.creada)!.getTime();
       f[c.tis] = escribirTis([{ id: '10000', n: 1, v: lead }, { id: '10002', n: 1, v: 0 }]);
       saltos++;
     }
   });
-  sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Datos y BI', tareas: saltos,
-    que: 'En Datos y BI, casi una de cada tres tareas pasa de pendiente a hecho de golpe: se mueve en la herramienta cuando ya está terminada.' });
+  sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Data and BI', tareas: saltos,
+    que: 'In Data and BI, almost one in three tasks goes from backlog to done in one go: it is moved in the tool once it is already finished.' });
 
   // 3. Historias sin estimar (Canal digital)
   let sinPuntos = 0;
-  filas.filter((f) => de('Canal digital')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.55) { f[c.puntos] = ''; sinPuntos++; } });
-  sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Canal digital', tareas: sinPuntos,
-    que: 'Canal digital deja sin estimar algo más de la mitad de sus historias.' });
+  filas.filter((f) => de('Digital Channel')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.55) { f[c.puntos] = ''; sinPuntos++; } });
+  sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Digital Channel', tareas: sinPuntos,
+    que: 'Digital Channel leaves slightly more than half of its stories without an estimate.' });
 
   // Lo que no es un fallo: Integraciones trabaja sin sprints
-  const sinFallo: SinFallo[] = [{ id: 'sprints', equipo: 'Integraciones',
-    que: 'Integraciones trabaja en Kanban, sin sprints. No es un fallo: la comprobación de sprints no se le aplica.' }];
+  const sinFallo: SinFallo[] = [{ id: 'sprints', equipo: 'Integrations',
+    que: 'Integrations works in Kanban, with no sprints. It is not a fault: the sprint check does not apply to it.' }];
 
   // Columnas de un export real que no se usan: creador, comentarios con nombres y un campo propio (ramo)
   const cab = cab0.concat(['Creator', 'Comment', 'Custom field (Ramo)']);
@@ -113,9 +113,9 @@ export function generarAseguradora() {
 export function ficherosAseguradora(): Record<string, string> {
   const { cab, filas, sembrados, sinFallo } = generarAseguradora();
   const escenarios = {
-    descripcion: 'Fallos sembrados en jira-aseguradora.csv: solo tres, el resto de comprobaciones debe salir bien. Lo generan herramientas/generar-sinteticos-aseguradora.ts.',
+    descripcion: 'Faults seeded in jira-aseguradora.csv: only three, the other checks must come out fine. Generated by herramientas/generar-sinteticos-aseguradora.ts.',
     fecha_export: '2026-10-14T09:00:00',
-    formato: 'Jira en castellano, equipo en Componentes, con columnas de personas (Persona asignada, Informador, Creador, Comentario) y un campo propio sin reconocer (Ramo).',
+    formato: 'Jira in Spanish, team in Components, with people columns (Persona asignada, Informador, Creador, Comentario) and an unrecognised custom field (Ramo).',
     sembrados,
     sin_fallo: sinFallo,
   };
@@ -123,7 +123,7 @@ export function ficherosAseguradora(): Record<string, string> {
     fte: [{ periodo: '2026-09', valor: e.fte, origen: e.tipo === 'proveedor' ? 'contrato' : 'declarado' }], limites: {} }));
   // El mapeo firmado en el arranque recoge los estados de entonces: el estado propio llegó después
   const cliente = {
-    version: 2, nombre: 'Cliente sintético aseguradora', sector: 'seguros', plataforma: 'jira',
+    version: 2, nombre: 'Synthetic insurer', sector: 'insurance', plataforma: 'jira',
     mapeoEstados: { 'Tareas por hacer': 'pendiente', 'En curso': 'en_curso', 'En revisión': 'en_revision', 'Bloqueado': 'bloqueado', 'Listo': 'terminado' },
     equipos: { campo: 'componentes', lista: equipos },
     objetivos: ['tardamos', 'arreglos', 'comparar', 'agentes', 'datos'],
@@ -134,13 +134,13 @@ export function ficherosAseguradora(): Record<string, string> {
     'escenarios.json': JSON.stringify(escenarios, null, 1) + '\n',
     'cliente/cliente.json': JSON.stringify(cliente, null, 2) + '\n',
     'cliente/contexto/contexto.json': JSON.stringify({ documentos: [
-      { categoria: 'metodo', titulo: 'Cómo trabajan los equipos', resumen: 'Scrum con sprints de dos semanas en Siniestros, Pólizas, Canal digital y Datos y BI. Integraciones trabaja en Kanban.', fuente: 'Entrevista con los responsables de equipo', fecha: '2026-10-07' },
-      { categoria: 'contratos', titulo: 'Contratos con proveedores', resumen: 'Proveedor Este (Canal digital) y Proveedor Oeste (Integraciones) trabajan por capacidad, con FTE fijos al mes.', fuente: 'Dirección de tecnología', fecha: '2026-10-07' },
+      { categoria: 'metodo', titulo: 'How the teams work', resumen: 'Scrum with two-week sprints in Claims, Policies, Digital Channel and Data and BI. Integrations works in Kanban.', fuente: 'Interview with the team leads', fecha: '2026-10-07' },
+      { categoria: 'contratos', titulo: 'Vendor contracts', resumen: 'Vendor East (Digital Channel) and Vendor West (Integrations) work on a capacity basis, with fixed FTE per month.', fuente: 'Technology management', fecha: '2026-10-07' },
     ] }, null, 2) + '\n',
   };
   const textos: Record<string, [string, string, string]> = {
-    'definicion-listo-siniestros': ['Ninguna historia entra en el sprint de Siniestros sin criterios de aceptación revisados con negocio. El responsable de producto los revisa en el refinamiento y, si faltan, la historia espera al siguiente sprint.', 'Retrabajo por debajo del 12% en dos meses.', 'retrabajo'],
-    'limite-wip-canal-digital': ['Canal digital no empieza nada nuevo mientras tenga más tareas en curso que personas (siete). Se ha pactado con el proveedor como parte del servicio y se revisa cada dos semanas.', 'Plazo un 25% más bajo en dos meses.', 'demasiado_a_la_vez'],
+    'definicion-listo-siniestros': ['No story enters the Claims sprint without acceptance criteria reviewed with the business. The product owner reviews them in refinement and, if they are missing, the story waits for the next sprint.', 'Rework below 12% in two months.', 'retrabajo'],
+    'limite-wip-canal-digital': ['Digital Channel does not start anything new while it has more tasks in progress than people (seven). It has been agreed with the vendor as part of the service and is reviewed every two weeks.', 'Lead time 25% lower in two months.', 'demasiado_a_la_vez'],
   };
   for (const i of INICIATIVAS_ASEGURADORA) {
     const [descripcion, efecto, origen] = textos[i.id];
