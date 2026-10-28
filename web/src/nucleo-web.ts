@@ -20,6 +20,7 @@ import { capacidadArea, costeDeGrupos } from '../../nucleo/coste.ts';
 import { modeloDeMedida } from '../../nucleo/modelo-medida.ts';
 import { fiabilidad } from '../../nucleo/fiabilidad.ts';
 import { seguimiento } from '../../nucleo/seguimiento.ts';
+import * as IA from '../../nucleo/ia.ts';
 import type { FicheroEntrada, Lectura, Tarea } from '../../nucleo/modelo.ts';
 
 const lecturas = new WeakMap<Tarea[], Lectura>();
@@ -47,7 +48,7 @@ const Nucleo = {
   lecturaDe: (tareas: Tarea[]) => lecturas.get(tareas) || null,
   diagnosticar, comprobarPaquete, conEfecto, NOMBRE_AREA,
   MEDIDAS_INICIATIVA, RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA,
-  etapasV0AMapeo, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida, fiabilidad, seguimiento, describirColumnas,
+  etapasV0AMapeo, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida, fiabilidad, seguimiento, describirColumnas, IA,
 };
 
 const w = globalThis as unknown as Record<string, unknown>;

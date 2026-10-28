@@ -17,7 +17,8 @@
     "datos-fallos": "TZ=Europe/Madrid node herramientas/generar-sinteticos-fallos.ts",
     "datos-aseguradora": "TZ=Europe/Madrid node herramientas/generar-sinteticos-aseguradora.ts",
     "web": "TZ=Europe/Madrid node web/construir.ts",
-    "verificar-web": "npm run web && node web/verificar.mjs"
+    "verificar-web": "npm run web && node web/verificar.mjs",
+    "evaluar-ia": "TZ=Europe/Madrid node herramientas/evaluar-ia.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
