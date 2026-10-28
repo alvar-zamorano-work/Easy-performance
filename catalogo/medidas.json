@@ -21,176 +21,176 @@
   ],
   "medidas": {
     "entregas": {
-      "nombre": "Entregas",
-      "pregunta": "¿Cuánto terminamos?",
-      "unidad": "tareas por semana",
+      "nombre": "Deliveries",
+      "pregunta": "How much do we finish?",
+      "unidad": "tasks per week",
       "dir": "mas",
       "formato": "num",
-      "como": "Tareas terminadas cada semana. No cuenta las descartadas (duplicadas, no se hará)."
+      "como": "Tasks done each week. Discarded tasks (duplicates, will not do) do not count."
     },
     "regularidad": {
-      "nombre": "Regularidad de entregas",
-      "pregunta": "¿Somos previsibles?",
-      "unidad": "de variación",
+      "nombre": "Delivery regularity",
+      "pregunta": "Are we predictable?",
+      "unidad": "of variation",
       "dir": "menos",
       "formato": "pct",
-      "como": "Cuánto cambian las entregas de una semana a otra frente a su media, en las últimas 8 semanas. Cuanto más bajo, más previsible."
+      "como": "How much deliveries change from one week to the next against their average, over the last 8 weeks. The lower, the more predictable."
     },
     "ciclo": {
-      "nombre": "Tiempo de ciclo",
-      "pregunta": "¿Cuánto tarda una tarea desde que se empieza?",
-      "unidad": "días",
+      "nombre": "Lead time",
+      "pregunta": "How long does a task take once started?",
+      "unidad": "days",
       "dir": "menos",
       "formato": "dias",
       "requiere": "tiempos",
-      "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que se termina casi todo lo empezado: el 85% de las tareas de las últimas 4 semanas."
+      "como": "Days from when a task enters in progress until it is done. Shown as the lead time in which almost everything started is done: 85% of the tasks in the last 4 weeks."
     },
     "total": {
-      "nombre": "Tiempo total",
-      "pregunta": "¿Cuánto espera quien lo pidió?",
-      "unidad": "días",
+      "nombre": "Total time",
+      "pregunta": "How long does the requester wait?",
+      "unidad": "days",
       "dir": "menos",
       "formato": "dias",
-      "como": "Días desde que se crea una tarea hasta que se termina. Plazo en el que se termina casi todo: el 85% de las tareas de las últimas 4 semanas."
+      "como": "Days from when a task is created until it is done. The time in which almost everything is done: 85% of the tasks in the last 4 weeks."
     },
     "espera": {
-      "nombre": "Tiempo en espera",
-      "pregunta": "¿Cuánto tiempo está parada una tarea?",
-      "unidad": "del tiempo de ciclo",
+      "nombre": "Waiting time",
+      "pregunta": "How long is a task stopped?",
+      "unidad": "of lead time",
       "dir": "menos",
       "formato": "pct",
       "requiere": "tiempos",
-      "como": "Parte del tiempo de ciclo que las tareas pasan en estados de espera de Jira (revisión, pruebas o el estado Bloqueado). Últimas 4 semanas.",
+      "como": "Share of lead time that tasks spend in waiting statuses in Jira (review, testing or the Blocked status). Last 4 weeks.",
       "limites": {
         "atencion": 0.5,
         "critico": 0.65
       }
     },
     "edad": {
-      "nombre": "Trabajo bloqueado",
-      "pregunta": "¿Qué está bloqueado hoy?",
-      "unidad": "tareas",
+      "nombre": "Blocked work",
+      "pregunta": "What is blocked today?",
+      "unidad": "tasks",
       "dir": "menos",
       "formato": "num",
       "requiere": "inicio",
-      "como": "Tareas en curso que ya llevan más tiempo que el plazo en el que el equipo termina casi todo lo que empieza (el 85% de las tareas).",
+      "como": "Tasks in progress that have already taken longer than the lead time in which the team finishes almost everything it starts (85% of tasks).",
       "limites": {
         "atencion": 2,
         "critico": 4
       }
     },
     "wip": {
-      "nombre": "Trabajo en curso",
-      "pregunta": "¿Cuántas cosas llevamos a la vez?",
-      "unidad": "tareas",
+      "nombre": "Work in progress",
+      "pregunta": "How many things do we carry at once?",
+      "unidad": "tasks",
       "dir": "menos",
       "formato": "num",
       "requiere": "inicio",
-      "como": "Tareas empezadas y sin terminar al final de cada semana. Con el export es una aproximación; con la API o las fotos semanales es exacto."
+      "como": "Tasks started and not done at the end of each week. With the export it is an approximation; with the API or weekly snapshots it is exact."
     },
     "fiabilidad": {
-      "nombre": "Fiabilidad del sprint",
-      "pregunta": "¿Cumplimos lo comprometido?",
+      "nombre": "Sprint reliability",
+      "pregunta": "Do we deliver what we commit to?",
       "unidad": "",
       "dir": "mas",
       "formato": "pct",
       "requiere": "api",
-      "como": "Lo terminado frente a lo que había en el sprint al empezar."
+      "como": "What was done against what was in the sprint at the start."
     },
     "arrastradas": {
-      "nombre": "Tareas arrastradas",
-      "pregunta": "¿Cuánto pasa al sprint siguiente?",
-      "unidad": "de lo terminado",
+      "nombre": "Carried over tasks",
+      "pregunta": "How much moves to the next sprint?",
+      "unidad": "of done work",
       "dir": "menos",
       "formato": "pct",
       "requiere": "sprints",
-      "como": "Parte de las tareas terminadas en las últimas 8 semanas que pasaron por más de un sprint.",
+      "como": "Share of tasks done in the last 8 weeks that went through more than one sprint.",
       "limites": {
         "atencion": 0.35,
         "critico": 0.5
       }
     },
     "errores": {
-      "nombre": "Proporción de errores",
-      "pregunta": "¿Cuánto es arreglar?",
-      "unidad": "de lo terminado",
+      "nombre": "Share of bugs",
+      "pregunta": "How much is fixing?",
+      "unidad": "of done work",
       "dir": "menos",
       "formato": "pct",
       "requiere": "errores",
-      "como": "Parte de lo terminado en las últimas 8 semanas que son errores.",
+      "como": "Share of work done in the last 8 weeks that is bugs.",
       "limites": {
         "atencion": 0.3,
         "critico": 0.4
       }
     },
     "retrabajo": {
-      "nombre": "Retrabajo",
-      "pregunta": "¿Cuánto vuelve atrás?",
-      "unidad": "de lo terminado",
+      "nombre": "Rework",
+      "pregunta": "How much goes back?",
+      "unidad": "of done work",
       "dir": "menos",
       "formato": "pct",
       "requiere": "tiempos",
-      "como": "Parte de las tareas terminadas en las últimas 8 semanas que volvieron a un estado por el que ya habían pasado. No cuenta las vueltas tras un bloqueo.",
+      "como": "Share of tasks done in the last 8 weeks that went back to a status they had already been through. Returns after a block do not count.",
       "limites": {
         "atencion": 0.2,
         "critico": 0.3
       }
     },
     "reparto": {
-      "nombre": "Reparto del trabajo",
-      "pregunta": "¿En qué se va el esfuerzo?",
-      "unidad": "en historias",
+      "nombre": "Mix of work",
+      "pregunta": "Where does the effort go?",
+      "unidad": "in stories",
       "dir": null,
       "formato": "pct",
-      "como": "Parte de lo terminado en las últimas 8 semanas por tipo: historias, errores, tareas y otros."
+      "como": "Share of work done in the last 8 weeks by type: stories, bugs, tasks and other."
     },
     "pendiente": {
-      "nombre": "Pendiente",
-      "pregunta": "¿Entra más de lo que sale?",
-      "unidad": "tareas sin empezar",
+      "nombre": "Backlog",
+      "pregunta": "Does more come in than goes out?",
+      "unidad": "tasks not started",
       "dir": "menos",
       "formato": "num",
-      "como": "Tareas sin empezar al final de cada semana, y tareas que entran frente a las que salen."
+      "como": "Tasks not started at the end of each week, and tasks coming in against tasks going out."
     },
     "estimacion": {
-      "nombre": "Precisión de la estimación",
-      "pregunta": "¿Los puntos predicen la duración?",
-      "unidad": "de 0 a 1",
+      "nombre": "Estimate accuracy",
+      "pregunta": "Do points predict duration?",
+      "unidad": "from 0 to 1",
       "dir": "mas",
       "formato": "dec",
       "requiere": "puntos",
-      "como": "Relación entre los puntos estimados y el tiempo de ciclo real en las últimas 12 semanas. 1 es una relación perfecta; por debajo de 0,2 los puntos no predicen.",
+      "como": "Relation between estimated points and real lead time over the last 12 weeks. 1 is a perfect relation; below 0.2 points do not predict.",
       "limites": {
         "atencion": 0.2,
         "critico": 0.05
       }
     },
     "velocidad": {
-      "nombre": "Velocidad",
-      "pregunta": "¿Cuántos puntos terminamos?",
-      "unidad": "puntos por semana",
+      "nombre": "Velocity",
+      "pregunta": "How many points do we finish?",
+      "unidad": "points per week",
       "dir": "mas",
       "formato": "num",
       "requiere": "puntos",
-      "como": "Puntos de las tareas terminadas cada semana. Sirve para comparar al equipo consigo mismo, nunca con otros equipos."
+      "como": "Points of the tasks done each week. Useful to compare the team with itself, never with other teams."
     },
     "primera": {
-      "nombre": "Primera respuesta",
-      "pregunta": "¿Cuánto tarda en atenderse algo nuevo?",
-      "unidad": "horas",
+      "nombre": "First response",
+      "pregunta": "How long until something new gets attention?",
+      "unidad": "hours",
       "dir": "menos",
       "formato": "horas",
       "requiere": "primera",
-      "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atiende casi todo: el 85% de las tareas creadas en las últimas 4 semanas."
+      "como": "Hours from when a task is created until its first response. The time in which almost everything gets attention: 85% of the tasks created in the last 4 weeks."
     },
     "agent_readiness": {
-      "nombre": "Listo para agentes",
-      "pregunta": "¿Está el trabajo descrito para que lo haga un agente?",
-      "unidad": "de los tickets nuevos",
+      "nombre": "Ready for AI agents",
+      "pregunta": "Is the work described so that an agent could do it?",
+      "unidad": "of new tickets",
       "dir": "mas",
       "formato": "pct",
       "requiere": "descripcion",
-      "como": "Parte de los tickets creados en las últimas 12 semanas que cumplen al menos 4 de los 5 criterios de la rúbrica: descripción con contenido, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas."
+      "como": "Share of tickets created in the last 12 weeks that meet at least 4 of the 5 criteria of the rubric: description with content, acceptance criteria, bounded scope, references and no open dependencies."
     }
   }
 }

@@ -3,73 +3,73 @@
   "perfiles": [
     {
       "id": "responsable",
-      "nombre": "Responsable de equipo",
-      "vista": "Mi equipo",
-      "descripcion": "Cada semana: qué está bloqueado, cómo va su equipo y qué hacer.",
+      "nombre": "Team lead",
+      "vista": "My team",
+      "descripcion": "Every week: what is blocked, how the team is doing and what to do.",
       "fijo": true
     },
     {
       "id": "direccion",
-      "nombre": "Dirección",
-      "vista": "El área",
-      "descripcion": "Cada mes: cómo va el área en conjunto, qué se repite entre equipos y cada equipo frente a sí mismo."
+      "nombre": "Management",
+      "vista": "Whole area",
+      "descripcion": "Every month: how the area is doing as a whole, what repeats across teams and each team against itself."
     },
     {
       "id": "pmo",
-      "nombre": "PMO o delivery lead",
-      "vista": "Compromisos y riesgos",
-      "descripcion": "Cada dos semanas: previsibilidad, salud del dato y casos abiertos."
+      "nombre": "PMO or delivery lead",
+      "vista": "Commitments and risks",
+      "descripcion": "Every two weeks: predictability, data health and open cases."
     },
     {
       "id": "negocio",
-      "nombre": "Producto o negocio",
-      "vista": "Cuándo y en qué",
-      "descripcion": "Cuando lo necesita: cuánto tardará algo y en qué se va la capacidad."
+      "nombre": "Product or business",
+      "vista": "When and on what",
+      "descripcion": "When needed: how long something will take and where the capacity goes."
     }
   ],
   "graficos": {
     "ciclo": {
-      "pregunta": "¿Cuánto tardamos?",
+      "pregunta": "How long do we take?",
       "opciones": [
         {
           "id": "puntos",
-          "nombre": "Un punto por tarea",
-          "ayuda": "Cada tarea terminada es un punto; dos líneas marcan la mitad y el plazo en el que se termina casi todo."
+          "nombre": "One dot per task",
+          "ayuda": "Each done task is a dot; two lines mark the median and the lead time in which almost everything is done."
         },
         {
           "id": "tramos",
-          "nombre": "Barras por tramos de días",
-          "ayuda": "Cuántas tareas terminan en 1, 2, 3... días."
+          "nombre": "Bars by day ranges",
+          "ayuda": "How many tasks are done in 1, 2, 3... days."
         }
       ]
     },
     "evolucion": {
-      "pregunta": "¿Cómo evoluciona cada medida?",
+      "pregunta": "How does each measure evolve?",
       "opciones": [
         {
           "id": "banda",
-          "nombre": "Línea con su rango habitual",
-          "ayuda": "La banda es lo normal para el equipo; lo que sale de la banda llama la atención."
+          "nombre": "Line with its usual range",
+          "ayuda": "The band is what is normal for the team; what falls outside the band draws attention."
         },
         {
           "id": "columnas",
-          "nombre": "Columnas por semana",
-          "ayuda": "Un valor por semana, sin banda."
+          "nombre": "Columns per week",
+          "ayuda": "One value per week, with no band."
         }
       ]
     },
     "pendiente": {
-      "pregunta": "¿Crece el pendiente?",
+      "pregunta": "Is the backlog growing?",
       "opciones": [
         {
           "id": "entradas",
-          "nombre": "Entradas y salidas",
-          "ayuda": "Dos líneas: lo que entra y lo que sale cada semana."
+          "nombre": "In and out",
+          "ayuda": "Two lines: what comes in and what goes out each week."
         },
         {
           "id": "tamano",
-          "nombre": "Tamaño del pendiente",
-          "ayuda": "Una línea con las tareas sin empezar."
+          "nombre": "Backlog size",
+          "ayuda": "One line with the tasks not started."
         }
       ]
     }
@@ -77,31 +77,31 @@
   "kpis": [
     {
       "id": "throughput",
-      "unidad": "tareas al mes por persona (FTE)",
+      "unidad": "tasks per month per person (FTE)",
       "formato": "num",
       "dir": "mas"
     },
     {
       "id": "entrega",
-      "unidad": "para terminar casi todo lo empezado",
+      "unidad": "to finish almost everything started",
       "formato": "dias",
       "dir": "menos"
     },
     {
       "id": "valor",
-      "unidad": "de lo terminado son funcionalidades nuevas",
+      "unidad": "of done work is new features",
       "formato": "pct",
       "dir": "mas"
     },
     {
       "id": "calidad",
-      "unidad": "de lo terminado se reabrió",
+      "unidad": "of done work was reopened",
       "formato": "pct",
       "dir": "menos"
     },
     {
       "id": "carga",
-      "unidad": "de antigüedad típica de lo pendiente",
+      "unidad": "typical age of the backlog",
       "formato": "dias",
       "dir": "menos"
     }
