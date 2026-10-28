@@ -41,6 +41,7 @@
   var KPI_AREA = ['ciclo', 'entregas', 'retrabajo', 'agent_readiness'];
   var KPI_EQUIPO = ['ciclo', 'entregas', 'retrabajo', 'arrastradas'];
   var ESTADO = { bien: 'Good', atencion: 'Attention', critico: 'Critical', sin: 'No data' };
+  var CONF = { baja: 'low', media: 'medium', alta: 'high', low: 'low', medium: 'medium', high: 'high' };
   var NOMBRE_INI = { ciclo: 'lead time', total: 'total time', entregas: 'deliveries per week', espera: 'waiting time', retrabajo: 'rework', errores: 'bugs', reabiertas: 'reopened', bloqueo: 'blocked time', agent_readiness: 'agent-ready tickets' };
   var PASOS = [
     ['measure', '1', 'Measure', 'Baseline per team'],
@@ -1009,7 +1010,7 @@
     var x = ev.resultados[0];
     if (!x || !x.disponible) return { e: 'sin', t: 'Not enough weeks after the start yet.' };
     var fmt = (N.MEDIDAS_INICIATIVA[x.medida] || {}).formato || 'num', F = function (v) { return M.formatear(v, fmt); };
-    var t = mayus(NOMBRE_INI[x.medida] || x.medida) + ' from ' + F(x.antes) + ' to ' + F(x.despues) + '. Confidence ' + x.confianza + '.';
+    var t = mayus(NOMBRE_INI[x.medida] || x.medida) + ' from ' + F(x.antes) + ' to ' + F(x.despues) + '. Confidence ' + (CONF[x.confianza] || x.confianza) + '.';
     return { e: N.conEfecto(ev) ? 'bien' : 'neutro', t: t };
   }
   var cacheSeg = { r: null, v: null };
@@ -1111,7 +1112,7 @@
         (hayCtrl ? fila('The other teams', r.control.antes, r.control.despues, tareas(m.controlDespues) + ' after', 'v-fila-ctrl') : '<p class="v-mas">There are no other teams to compare with.</p>') + '</div>') +
       paso(5, 'Own effect', 'The change in the initiative teams minus the change in the others over the same weeks. ' + (r.enDireccionEsperada ? 'It goes in the expected direction.' : 'It goes against the expected direction.'),
         '<div class="v-ecu"><span>' + D(cambio) + '<small>the initiative</small></span><i aria-hidden="true">−</i><span>' + (cambioCtrl < 0 ? '(' + D(cambioCtrl) + ')' : D(cambioCtrl)) + '<small>the others</small></span><i aria-hidden="true">=</i><span class="v-ecu-res">' + D(r.efecto) + '<small>own effect</small></span></div>') +
-      paso(6, 'Confidence ' + esc(r.confianza || 'low'), 'The effect is compared with how much ' + esc(nom) + ' varies on its own in these teams, and with how many tasks are behind it.',
+      paso(6, 'Confidence ' + esc(CONF[r.confianza] || r.confianza || 'low'), 'The effect is compared with how much ' + esc(nom) + ' varies on its own in these teams, and with how many tasks are behind it.',
         '<div class="v-checks">' +
         check(veces != null && veces >= 1, veces != null ? 'The effect is ' + (Math.round(veces * 10) / 10).toLocaleString('en-GB') + ' times the natural variation' : 'No history to know the natural variation', veces != null ? 'It varies about ' + D(r.ruido).replace(/^\+/, '') + ' on its own. High confidence from twice that.' : 'Several windows before the start are needed.') +
         check(nMin >= 10, miles(nMin) + ' ' + plural(nMin, 'task', 'tasks') + ' in the smallest window', 'Medium from 10 tasks; high from 20.') +
@@ -1148,7 +1149,7 @@
       cifrasSeg(s) +
       (lecturaIa ? '<div class="ia-lectura"><span class="chip chip-ia">AI reading</span><p>' + esc(lecturaIa.lectura) + '</p></div>' : '') +
       '<dl class="seg-dl">' + '<div><dt>Target measure</dt><dd>' + nomMed(s.medida) + ', ' + (s.direccion === 'subir' ? 'up' : s.direccion === 'bajar' ? 'down' : esc(s.direccion)) + '</dd></div><div><dt>Start</dt><dd>' + esc(fechaCorta(s.inicio)) + '</dd></div>' +
-      '<div><dt>Measured from</dt><dd>' + esc(fechaCorta(s.desdeDespues)) + '</dd></div><div><dt>Evaluation complete</dt><dd>' + esc(fechaCorta(s.completaEl)) + '</dd></div>' + (s.confianza ? '<div><dt>Confidence</dt><dd>' + esc(s.confianza) + '</dd></div>' : '') + '</dl>' +
+      '<div><dt>Measured from</dt><dd>' + esc(fechaCorta(s.desdeDespues)) + '</dd></div><div><dt>Evaluation complete</dt><dd>' + esc(fechaCorta(s.completaEl)) + '</dd></div>' + (s.confianza ? '<div><dt>Confidence</dt><dd>' + esc(CONF[s.confianza] || s.confianza) + '</dd></div>' : '') + '</dl>' +
       '<div class="seg-prog" role="progressbar" aria-label="Window evaluated" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(progreso * 100) + '"><span style="transform:scaleX(' + progreso.toFixed(3) + ')"></span></div>' +
       '<p class="nota">' + (s.completa ? 'Evaluation window complete.' : Math.round(progreso * 100) + '% of the evaluation window has data.') + '</p></div>' +
       '<div class="seg-grafico">' + graficoSeg(s) + '</div></div>' +

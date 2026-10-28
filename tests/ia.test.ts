@@ -68,7 +68,7 @@ test('se descarta lo que cita un equipo o una cifra que no están en el paquete'
 test('no se admite una opinión sobre una categoría de contexto vacía, salvo que la pida como contexto necesario', () => {
   const sinStack = { ...paquete, contexto: { ...paquete.contexto, stack: { vacia: true, documentos: [] } } };
   const buena = referencia[0];
-  const opina = { ...buena, accion: 'Migrate the service to a new framework and reduce technical debt.' };
+  const opina = { ...buena, accion: 'Migrate the service to a new framework and adopt microservices.' };
   const pide = { ...opina, contexto_necesario: 'stack' };
   const v = validarRecomendaciones(JSON.stringify([opina, pide]), sinStack as typeof paquete);
   assert.equal(v.recomendaciones.length, 1);

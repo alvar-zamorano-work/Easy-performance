@@ -6,6 +6,7 @@
 // El proveedor es una función (petición -> texto): así se prueba con uno falso y se cambia de modelo sin tocar nada más.
 
 import { CATALOGO, type Catalogo } from './catalogo.ts';
+import { formatear } from './formato.ts';
 import type { Paquete } from './paquete.ts';
 import type { EstadoNormalizado } from './modelo.ts';
 
@@ -51,9 +52,9 @@ export function extraerJson(texto: string): unknown {
 }
 
 const NOMBRES_CONTEXTO: Record<CategoriaContexto, string> = { metodo: 'way of working', organizacion: 'organisation', stack: 'technology stack', contratos: 'vendor contracts', otro: 'other' };
-/** Palabras que delatan una opinión sobre una categoría de contexto; si está vacía, la recomendación se descarta. */
+/** Palabras que delatan una prescripción sobre una categoría de contexto (cambiar de stack, renegociar un contrato...); si la categoría está vacía, la recomendación se descarta. Nombrar la deuda técnica como causa no es prescribir sobre el stack. */
 const PISTAS: Record<CategoriaContexto, RegExp> = {
-  stack: /\b(stack|framework|programming language|architecture|microservice|cloud|infrastructure|library|refactor|technical debt|tooling|CI\/CD|pipeline)\b/i,
+  stack: /\b(migrat\w* (to|the)|rewrite|new framework|change (the|of) (framework|language|architecture|platform)|programming language|microservices?|cloud provider|replace the (tool|stack|platform)|adopt\w* (a |the )?\w*(framework|platform|language))\b/i,
   contratos: /\b(contract|SLA|penalt|rate card|tariff|renegotiat|procurement|supplier agreement)\b/i,
   organizacion: /\b(org chart|reorgani[sz]|headcount|hiring|hire|staffing|reporting line)\b/i,
   metodo: /\b(scrum|kanban|SAFe|ceremon|sprint length|definition of done|retrospective)\b/i,
@@ -297,7 +298,7 @@ export function recomendacionesDeReferencia(paquete: Paquete, catalogo: Catalogo
     const x = porCaso.get(c.caso) || { equipos: [], evidencia: [], gravedad: 'atencion' };
     const m = def.medida ? (paquete.medidas.equipos as any)[c.equipo]?.[def.medida] : null;
     if (!x.equipos.includes(c.equipo)) x.equipos.push(c.equipo);
-    if (m && m.disponible) x.evidencia.push({ equipo: c.equipo, medida: def.medida!, valor: m.valor, texto: `${c.equipo}: ${def.medida} is ${m.valor}` });
+    if (m && m.disponible) { const md = catalogo.medidas[def.medida!]; x.evidencia.push({ equipo: c.equipo, medida: def.medida!, valor: m.valor, texto: `${c.equipo}: ${md ? md.nombre.toLowerCase() : def.medida} is ${formatear(m.valor, md ? md.formato : 'num')}${m.rango ? ` (normal ${formatear(m.rango.lo, md ? md.formato : 'num')} to ${formatear(m.rango.hi, md ? md.formato : 'num')})` : ''}` }); }
     if (c.gravedad === 'critico') x.gravedad = 'critico';
     porCaso.set(c.caso, x);
   }
