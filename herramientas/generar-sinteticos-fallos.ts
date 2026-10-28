@@ -108,7 +108,7 @@ export function generarFallos() {
   sembrados.push({ id: 'actividad', ambito: 'area', equipo: null, tareas: cortadas,
     que: 'The export was cut off on ' + CORTE.getDate() + ' September: only a few new tasks remain from the last three weeks.' });
 
-  // 3. Estado propio que no se reconoce por su nombre (App móvil)
+  // 3. Estado propio que no se reconoce por su nombre (Mobile App)
   let conEstado = 0;
   filas.filter((f) => de('Mobile App')(f) && hecha(f) && resueltaEntre(VENTANA, CORTE)(f)).forEach((f) => {
     if (az.r() < 0.35) { f[c.tis] = escribirTis(leerTis(f[c.tis]).concat([{ id: ESTADO_PROPIO.id, n: 1, v: az.entre(1, 3) * DIA }])); conEstado++; }
@@ -122,7 +122,7 @@ export function generarFallos() {
   sembrados.push({ id: 'estados', ambito: 'area', equipo: 'Mobile App', tareas: conEstado + enEstado.length,
     que: 'Mobile App uses a custom status, "' + ESTADO_PROPIO.nombre + '". It is a wait, but it is not recognised by name and by its category it would count as in progress.' });
 
-  // 4. Tareas que saltan de pendiente a hecho sin pasar por en curso (Pagos)
+  // 4. Tareas que saltan de pendiente a hecho sin pasar por en curso (Payments)
   let saltos = 0;
   filas.filter((f) => de('Payments')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
     if (az.r() < 0.35) {
@@ -134,7 +134,7 @@ export function generarFallos() {
   sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Payments', tareas: saltos,
     que: 'In Payments, one in three tasks moves from backlog to done in one go, without going through in progress.' });
 
-  // 5. Dos cierres en bloque de App móvil, al acabar dos sprints
+  // 5. Dos cierres en bloque de Mobile App, al acabar dos sprints
   const bloques: [Date, number][] = [[new Date(2026, 7, 28, 18, 0), 14], [new Date(2026, 8, 18, 18, 0), 12]];
   let enBloque = 0;
   const usadas = new Set<string>();
@@ -147,7 +147,7 @@ export function generarFallos() {
   sembrados.push({ id: 'bloque', ambito: 'area', equipo: 'Mobile App', tareas: enBloque,
     que: 'Mobile App closed 14 and 12 tasks at once in the same minute, at the end of two sprints, to clean up the board.' });
 
-  // 6. Registro a posteriori: Portal clientes crea las tareas cuando ya las ha hecho
+  // 6. Registro a posteriori: Customer Portal crea las tareas cuando ya las ha hecho
   let tarde = 0;
   filas.filter((f) => de('Customer Portal')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
     const creada = new Date(fecha(f, c.resuelta)!.getTime() - az.entre(2, 6) * 36e5);
@@ -157,7 +157,7 @@ export function generarFallos() {
   sembrados.push({ id: 'registro', ambito: 'ambos', equipo: 'Customer Portal', tareas: tarde,
     que: 'Customer Portal logs tasks in the tool once they are already finished, a few hours before closing them.' });
 
-  // 7. Portal clientes deja de usar sprints en la herramienta
+  // 7. Customer Portal deja de usar sprints en la herramienta
   let sinSprint = 0;
   const desdeSprints = new Date(CORTE.getTime() - 14 * SEMANA);
   filas.filter((f) => de('Customer Portal')(f) && (fecha(f, c.creada)! >= desdeSprints || (fecha(f, c.resuelta) && fecha(f, c.resuelta)! >= desdeSprints))).forEach((f) => {
@@ -166,13 +166,13 @@ export function generarFallos() {
   sembrados.push({ id: 'sprints', ambito: 'ambos', equipo: 'Customer Portal', tareas: sinSprint,
     que: 'Customer Portal says it works in sprints, but for three months it has not recorded them in the tool.' });
 
-  // 8. Historias sin estimar en Riesgos
+  // 8. Historias sin estimar en Risk
   let sinPuntos = 0;
   filas.filter((f) => de('Risk')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.6) { f[c.puntos] = ''; sinPuntos++; } });
   sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Risk', tareas: sinPuntos,
     que: 'Risk leaves six out of ten stories without an estimate.' });
 
-  // 9. Sin tiempo en cada estado: Riesgos cambió de flujo y su export ya no lo trae
+  // 9. Sin tiempo en cada estado: Risk cambió de flujo y su export ya no lo trae
   let sinTiempos = 0;
   filas.filter((f) => de('Risk')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 4 * SEMANA), CORTE)(f)).forEach((f) => { f[c.tis] = ''; sinTiempos++; });
   sembrados.push({ id: 'tiempos', ambito: 'ambos', equipo: 'Risk', tareas: sinTiempos,

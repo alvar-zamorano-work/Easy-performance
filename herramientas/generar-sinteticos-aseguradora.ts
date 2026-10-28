@@ -1,7 +1,7 @@
 // Tercer ejemplo: una aseguradora ficticia con cinco equipos distintos de los del banco. El export viene de un
 // Jira en castellano, con el equipo en Componentes, columnas de personas y una columna que no se reconoce.
 // Solo tiene tres fallos sembrados (fiabilidad media); el resto de comprobaciones tiene que salir bien.
-// Integraciones trabaja sin sprints: no es un fallo y la comprobación de sprints no debe marcarlo.
+// Integrations trabaja sin sprints: no es un fallo y la comprobación de sprints no debe marcarlo.
 // Determinista: la misma semilla da siempre el mismo fichero.
 //   TZ=Europe/Madrid node herramientas/generar-sinteticos-aseguradora.ts [carpeta]   (por defecto datos-sinteticos/aseguradora)
 
@@ -62,7 +62,7 @@ export function generarAseguradora() {
     f[c.estado] = 'Blocked';
   });
 
-  // 1. Estado propio que no se reconoce por el nombre (Pólizas): una espera que se contaría como en curso
+  // 1. Estado propio que no se reconoce por el nombre (Policies): una espera que se contaría como en curso
   let conEstado = 0;
   filas.filter((f) => de('Policies')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
     if (az.r() < 0.4) { f[c.tis] = escribirTis(leerTis(f[c.tis]).concat([{ id: ESTADO_PROPIO.id, n: 1, v: az.entre(1, 3) * DIA }])); conEstado++; }
@@ -76,7 +76,7 @@ export function generarAseguradora() {
   sembrados.push({ id: 'estados', ambito: 'area', equipo: 'Policies', tareas: conEstado + enEstado.length,
     que: 'Policies added a custom status, "' + ESTADO_PROPIO.nombre + '", after the mapping was signed. It is a wait, but it is not recognised by name and would count as in progress.' });
 
-  // 2. Saltos de pendiente a hecho (Datos y BI): mueven las tareas al final, cuando ya está hecho
+  // 2. Saltos de pendiente a hecho (Data and BI): mueven las tareas al final, cuando ya está hecho
   let saltos = 0;
   filas.filter((f) => de('Data and BI')(f) && hecha(f) && desde(VENTANA)(f)).forEach((f) => {
     if (az.r() < 0.3) {
@@ -88,13 +88,13 @@ export function generarAseguradora() {
   sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Data and BI', tareas: saltos,
     que: 'In Data and BI, almost one in three tasks goes from backlog to done in one go: it is moved in the tool once it is already finished.' });
 
-  // 3. Historias sin estimar (Canal digital)
+  // 3. Historias sin estimar (Digital Channel)
   let sinPuntos = 0;
   filas.filter((f) => de('Digital Channel')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.55) { f[c.puntos] = ''; sinPuntos++; } });
   sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Digital Channel', tareas: sinPuntos,
     que: 'Digital Channel leaves slightly more than half of its stories without an estimate.' });
 
-  // Lo que no es un fallo: Integraciones trabaja sin sprints
+  // Lo que no es un fallo: Integrations trabaja sin sprints
   const sinFallo: SinFallo[] = [{ id: 'sprints', equipo: 'Integrations',
     que: 'Integrations works in Kanban, with no sprints. It is not a fault: the sprint check does not apply to it.' }];
 
