@@ -16,7 +16,7 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 | datos-prueba/ | Exports de prueba que no son de cliente, cada uno con su .esperado.json. |
 | tests/ | Tests con node:test. tests/referencia-v0 guarda el motor de la v0 sin cambios; tests/banco genera variantes de exports. |
 | herramientas/ | Generadores de datos sintéticos (el de la v0 en Python, y los de B3, el export con fallos y la aseguradora en TypeScript) y resumen del núcleo por consola. |
-| web/, skill/ | La página (un solo HTML, con su tutorial) y la skill de IA (B6). |
+| web/ | La página (un solo HTML, con su tutorial y el método animado). El módulo de IA vive en nucleo/ia.ts. |
 
 ## Cómo fluyen los datos
 
@@ -34,24 +34,24 @@ La v0 (carpetas easy-performance y easy-performance-v2) no se toca. La carcasa w
 
 ## La página (web/)
 
-Un solo HTML que se abre con doble clic, sin servidor ni instalación. Es el producto (28 oct 2026): fuera la presentación, los conectores simulados, el método animado, la animación de generar recomendaciones y el apartado "Cómo funciona"; queda lo que hace falta para medir, más un tutorial. No hay puesta en marcha: se carga el export de Jira y se ve el tablero.
+Un solo HTML que se abre con doble clic, sin servidor ni instalación. Desde el 28 oct 2026 (plan v2, claude/plan-v2-pasos.md) la página está en inglés y se organiza como los cuatro pasos del método de Capgemini, con funcionalidad real en cada uno; Settings aparte. Los pasos son la navegación, no una explicación.
 
-- Entrada: soltar el CSV de Jira (uno o varios), elegir ficheros o una carpeta (Chrome y Edge). El botón "Ver el tutorial con datos de ejemplo" carga el banco ficticio y arranca el tutorial. Sin claim ni conectores: Azure DevOps, GitLab y ServiceNow se nombran como fuentes que entran con su adaptador; hoy funciona Jira.
-- Cinco pestañas: Tablero, Recomendaciones, Iniciativas, Datos y Ajustes. En la cabecera, Tutorial y Actualizar.
-- Tablero: el área (nombre, botón directo a las recomendaciones, fiabilidad y equipos que necesitan atención, cuatro indicadores con tendencia, la tabla de equipos donde el color es el estado, internos y proveedores, iniciativas) o un equipo (cuatro indicadores, el plazo semana a semana y sus recomendaciones). Cada cifra frente a lo normal en ese equipo.
-- Recomendaciones: siempre listas, sin botón de generar. Lista ordenada y detalle con qué pasa, qué hacer primero, las cifras, el plan, cómo se sigue (registrar como iniciativa) y, plegado, preguntas, causas y respaldo.
-- Iniciativas: cada una con en qué consiste, por qué y qué se espera; estado automático (planificada, midiendo, funciona, sin efecto claro, va a peor), cifras antes y después frente al resto, gráfico y fechas. "Cómo se ha evaluado" despliega los seis pasos con las cifras reales (sin animación). "Nueva iniciativa" la registra desde la página (nombre, fechas, equipos, medida objetivo, descripción, qué se espera); se guarda en la configuración y, con la carpeta, en iniciativas/. Las registradas aquí se pueden quitar; las de la carpeta, no.
-- Datos: Fiabilidad (diez comprobaciones con cómo se arregla cada una, tabla por equipo y avisos) y Cómo se ha leído el export (ficheros, lo que resuelve la página sola, lo que hay que confirmar en Ajustes, lo que se arregla al exportar, cuánta historia trae y la tabla columna a columna).
-- Ajustes: campo de equipo, proveedores, áreas, FTE y coste, estados (mapeo editable a los nueve estados comunes), nombre del cliente y descargas (definiciones en Word y markdown, paquete de diagnóstico, modelo de medida), y un enlace a los datos de ejemplo y al tutorial. Se guarda en el navegador y en configuracion/cliente.json con la carpeta. Una configuración de la versión anterior se aprovecha.
-- Tutorial: diez pasos sobre la interfaz real (medidas del área, fiabilidad y equipos, tabla de equipos, detalle de un equipo, recomendaciones, registrar como iniciativa, iniciativas, fiabilidad, ajustes, actualizar). Señala el elemento con un foco y explica al lado; avanza con Siguiente o la flecha derecha, vuelve con Anterior, Esc cierra. Sin datos cargados usa los de ejemplo; con datos del cliente, los suyos.
-- Datos de ejemplo: un banco ficticio (B3) con dos equipos internos, dos de proveedores, un año, dos iniciativas y costes inventados. Nunca tocan los datos reales ni la configuración.
+- Entrada: seis conectores (Jira en vivo, con CSV o carpeta; Azure DevOps, ServiceNow, GitLab y GitHub como conectores de demo etiquetados, que cargan los datos de ejemplo; otra herramienta con su adaptador), zona para soltar los exports y el tutorial. Al cargar datos se ve el método animado de seis etapas (Ingest, Teams, States, Quality, Capacity, Baseline) con las cifras reales del export; Esc lo salta y con "reducir movimiento" no se muestra.
+- 1 Measure: Baseline (el área o un equipo: fiabilidad y equipos que necesitan atención, indicadores con tendencia, tabla de equipos, plazo semana a semana), Data (las diez comprobaciones de fiabilidad y cómo se ha leído el export) y Context (campo de equipo; proveedores, áreas, FTE y coste; mapeo de estados a los nueve comunes; documentos de contexto por categoría; el catálogo de KPIs en Word y markdown).
+- 2 Analyze: señales (cifras fuera de lo normal, diferencias entre grupos, recomendaciones), el panel del asistente de IA, la lista ordenada de recomendaciones con su detalle (qué pasa, qué hacer primero, cifras, plan, cómo se sigue, preguntas y causas) y la comparación entre internos y proveedores con el mismo tipo y tamaño de tarea.
+- 3 Improve and standardize: el plan de iniciativas (desde una recomendación o con "New initiative"; las registradas aquí se pueden quitar) y el bloque "The same rules for every team": cinco medidas, estados comunes, catálogo de KPIs y modelo de medida.
+- 4 Learn and evolve: las iniciativas evaluadas con estado, cifras antes y después frente al resto, gráfico y "How it was evaluated" (seis pasos con las cifras reales), la lectura de la IA si se pide, y el bloque del siguiente ciclo (Update, cadencia semanal, mensual y trimestral).
+- Settings: nombre del cliente, el asistente de IA (proveedor, modelo, clave y si se recuerda en el dispositivo; probar la conexión; olvidar la clave), qué está en vivo en esta copia (conectores marcados como demo, API como hoja de ruta), exportaciones (paquete de diagnóstico, catálogo, modelo) y datos de ejemplo.
+- Asistente de IA (nucleo/ia.ts): recibe solo el paquete de diagnóstico (cifras agregadas, sin títulos, claves ni personas) y el catálogo. Tres usos: comprobar el mapeo de estados (solo nombres y recuentos), recomendaciones con evidencia citada (cada cifra se comprueba contra el paquete; lo que no cuadra se descarta; las que repiten un caso del banco se unen a él) y lectura del impacto de las iniciativas (cada número tiene que estar en la evaluación). La clave se manda como cabecera en cada llamada desde el navegador y vive en sessionStorage (o localStorage si se pide); nunca en cliente.json ni en ficheros. Sin clave, todo funciona igual con el banco de casos. Proveedor: Claude por defecto; la interfaz de proveedor admite otros. Evals: tests/ia.test.ts con proveedor falso; `npm run evaluar-ia` con la clave en ANTHROPIC_API_KEY (nunca en el código) sobre los tres paquetes sintéticos.
+- Tutorial: once pasos por los cuatro bloques sobre la interfaz real. Avanza con Next o la flecha derecha, Back vuelve, Esc cierra. Sin datos cargados usa los de ejemplo.
+- Datos de ejemplo: un banco ficticio (B3, en inglés: Payments, Risk, Mobile App de Vendor North y Customer Portal de Vendor South) con un año, dos iniciativas y costes inventados. Nunca tocan los datos reales ni la configuración.
 - Carpeta compartida: exports/, configuracion/, iniciativas/ (un JSON por iniciativa), contexto/, historico/ y diagnostico/. actualizar.ps1 la vuelca a exports/datos.js para abrirla sin permisos de carpeta.
 
-Código: web/src/app.js (interfaz), tutorial.js, app.css, plantilla.html y nucleo-web.ts (el núcleo para la página). `npm run web` genera dist/EasyPerformance (1,3 MB). `npm run verificar-web` la recorre con Chromium: entrada, tutorial completo, datos de ejemplo en 1280x720 y 1920x1080, contenido del tablero, recomendaciones y registro, alta y baja de una iniciativa, detalle de la evaluación, datos y ajustes, los dos exports con fallos sembrados cargados desde la entrada (cada fallo detectado y sin falsas alarmas), modo oscuro, móvil, portátil al 150 %, Jira.csv de principio a fin con cambios en Ajustes, definiciones, paquete y modelo, carpeta con iniciativas y configuración anterior. 55 comprobaciones; deja capturas en dist/verificacion.
+Código: web/src/app.js (interfaz), tutorial.js, proceso.js (método animado), app.css, plantilla.html y nucleo-web.ts (el núcleo para la página, con el módulo de IA). `npm run web` genera dist/EasyPerformance (1,4 MB). `npm run verificar-web` la recorre con Chromium: entrada y conectores, método animado, tutorial completo, datos de ejemplo en 1280x720 y 1920x1080 en todas las pantallas de los cuatro pasos, contenido de cada paso, IA con la API simulada en el navegador (clave, recomendaciones validadas y descartadas, mapeo, impacto, fallo de la API), los dos exports con fallos sembrados, modo oscuro, móvil, portátil al 150 %, Jira.csv de principio a fin con cambios en Context, catálogo, paquete y modelo, carpeta con iniciativas y configuración anterior. 73 comprobaciones; deja capturas en dist/verificacion.
 
-Los exports sintéticos con fallos (datos-sinteticos/fallos y aseguradora) ya no van dentro del HTML: se cargan como cualquier export y la verificación los usa.
+Los textos del núcleo, los adaptadores y el catálogo están en inglés (formato en-GB en cifras y fechas). La versión en castellano queda en la rama feat/producto. Los exports sintéticos de la v0 (jira-ejemplo-completo) conservan sus nombres en castellano porque son fixtures de regresión.
 
-Pendiente de probar: actualizar.ps1 en Windows.
+Pendiente de probar: actualizar.ps1 en Windows; la llamada a la API de Claude desde el navegador en la red corporativa de Capgemini.
 
 ## Requisitos
 
@@ -71,6 +71,7 @@ npm run datos-fallos # regenera el export con fallos (debe salir idéntico)
 npm run datos-aseguradora # regenera el ejemplo de la aseguradora (debe salir idéntico)
 npm run web          # genera la carcasa web en dist/EasyPerformance
 npm run verificar-web  # recorre la carcasa con Chromium y guarda capturas
+npm run evaluar-ia   # eval de la IA con el proveedor real (ANTHROPIC_API_KEY en el entorno)
 ```
 
 ## Banco de exports
@@ -85,7 +86,7 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 - Una rama por bloque; merge a main al cerrar el bloque con su evidencia.
 - No se afirma que algo funciona sin haberlo ejecutado y visto la salida.
 - Solo equipos, nunca personas: el modelo neutro no tiene campos de personas y un test lo comprueba.
-- Textos en castellano llano y sin rayas.
+- Textos llanos y sin rayas: la página y el catálogo en inglés; comentarios, tests y documentación en castellano.
 
 ## Estado
 
@@ -96,4 +97,5 @@ Para añadir un export real: anonimizarlo, dejarlo en datos-prueba/ y escribir a
 - B4 (equipos, mapeo editable, calidad y documento de definiciones): hecho. La puesta en marcha en pasos se quitó después: lo editable vive ahora en Ajustes.
 - Interfaz simplificada (tablero, recomendaciones y cómo funciona): hecha.
 - Producto completo (28 oct 2026): fuera todo lo explainer; cinco pestañas, tutorial, alta de iniciativas desde la página. En la rama feat/producto.
-- Siguiente: B6, skill de IA del consultor con sus evals; adaptador de Azure DevOps (B8).
+- v2, los cuatro pasos (28 oct 2026): página en inglés organizada como Measure, Analyze, Improve, Learn; conectores de demo y método animado; IA con clave API dentro del producto (nucleo/ia.ts, con evals). En la rama feat/pasos.
+- Siguiente: adaptador de Azure DevOps (B8); eval de la IA con el proveedor real; probar la API desde la red corporativa.
