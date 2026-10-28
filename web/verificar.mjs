@@ -52,6 +52,16 @@ const listo = (p) => p.waitForFunction(() => window.EasyPerformance.r && documen
 const texto = (p, sel) => p.$eval(sel, (e) => e.textContent.trim());
 const paso = (p, v) => clic(p, `.paso[data-v="${v}"]`);
 const setup = async (p, s) => { await clic(p, '[data-accion="vista"][data-v="setup"]'); await clic(p, `[data-accion="setup-sec"][data-s="${s}"]`); };
+/** Pasa el arranque: Context (si aparece) y Data check, hasta Measure. */
+const arrancar = async (p) => {
+  await listo(p);
+  if (await p.$('#form-contexto')) { await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300); }
+  if (await p.$('.proc')) { await p.keyboard.press('Escape'); await p.waitForTimeout(400); }
+  if (await p.$('[data-accion="datacheck-continuar"]')) { await clic(p, '[data-accion="datacheck-continuar"]'); }
+};
+/** Marca o desmarca una opción del contexto (los inputs van ocultos tras la etiqueta). */
+const marcar = (p, sel, on) => A(p, ([sel, on]) => { const i = document.querySelector(sel); i.checked = on; i.dispatchEvent(new Event('change', { bubbles: true })); }, [sel, on]);
+const demo = async (p) => { await A(p, () => window.EasyPerformance.verDemo()); await listo(p); await A(p, () => window.EasyPerformance.render()); await p.waitForTimeout(200); await arrancar(p); };
 /** La API de Claude, simulada en el navegador: contesta con lo que se le dé (o devuelve un error). */
 async function apiSimulada(p, respuesta, estado = 200) {
   await p.route('https://api.anthropic.com/v1/messages', async (ruta) => {
@@ -100,9 +110,19 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   if (w === 1280) await p.screenshot({ path: join(SALIDA, 'entrada.png') });
   ok(`entrada en ${w}x${h}: seis conectores (Jira en vivo, cuatro de demo etiquetados, otra herramienta), zona de carga y tutorial, con menos de 90 palabras`,
     entrada.vista === 'inicio' && entrada.zona && entrada.tutorial && entrada.h1 === 'Team performance from your delivery tools' && entrada.conectores.length === 6 && entrada.conectores[0] === 'Jira:Live' && entrada.conectores.filter((c) => /:Demo connector$/.test(c)).length === 4 && !entrada.presentacion && entrada.palabras < 90 && m0.ancho <= 1 && m0.alto <= h + 1, entrada.conectores.join(' | ') + ` · ${entrada.palabras} palabras · alto ${m0.alto}`);
-  await A(p, () => window.EasyPerformance.verDemo()); await listo(p);
-  const enDemo = await A(p, () => ({ demo: window.EasyPerformance.demo, vista: window.EasyPerformance.vista, pasos: [...document.querySelectorAll('.paso')].map((x) => x.querySelector('b').textContent).join(', '), estados: [...document.querySelectorAll('.paso small')].map((x) => x.textContent), banda: /Sample data/.test(document.querySelector('.banda-demo').textContent), ajustes: document.querySelector('.btn-ajustes').textContent, subnav: !!document.querySelector('.subnav') }));
-  ok(`datos de ejemplo en ${w}x${h}: Measure con los cuatro pasos y su estado en la cabecera, Setup aparte y sin subsecciones`, enDemo.demo && enDemo.vista === 'measure' && enDemo.pasos === 'Measure, Analyze, Improve, Learn' && /4 teams/.test(enDemo.estados[0]) && /to do/.test(enDemo.estados[1]) && /initiatives/.test(enDemo.estados[2]) && /evaluated/.test(enDemo.estados[3]) && enDemo.banda && enDemo.ajustes === 'Setup' && !enDemo.subnav, enDemo.estados.join(' | '));
+  await A(p, () => window.EasyPerformance.verDemo()); await listo(p); await A(p, () => window.EasyPerformance.render()); await p.waitForTimeout(200);
+  const ctx0 = await A(p, () => ({ vista: window.EasyPerformance.vista, preguntas: document.querySelectorAll('.pregunta h2').length, on: [...document.querySelectorAll('.opcion.on b')].map((x) => x.textContent), pre: (document.querySelector('.paso-pre') || {}).textContent, actual: !!document.querySelector('.paso[aria-current="page"]'), boton: document.querySelector('button[form="form-contexto"]').textContent }));
+  if (w === 1280) await p.screenshot({ path: join(SALIDA, 'contexto.png') });
+  const mc = await medir(p);
+  ok(`arranque en ${w}x${h}: la pantalla de Context aparece antes del paso 1, con tres preguntas y valores por defecto, y cabe sin scroll`, ctx0.vista === 'contexto' && ctx0.preguntas === 3 && ctx0.on.join() === 'Speed,Quality,Predictability,Sprints,Some teams are vendors,We have headcount and cost' && ctx0.pre === 'Context' && !ctx0.actual && ctx0.boton === 'Continue' && mc.alto <= h + 1, JSON.stringify(ctx0) + ` · alto ${mc.alto}`);
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
+  const dc0 = await A(p, () => ({ vista: window.EasyPerformance.vista, pre: (document.querySelector('.paso-pre') || {}).textContent, veredicto: document.querySelector('.titular .chip').textContent, kpis: [...document.querySelectorAll('.lista-kpis li')].map((x) => x.className + ':' + x.querySelector('b').textContent), boton: document.querySelector('[data-accion="datacheck-continuar"]').textContent, proc: !!document.querySelector('.proc'), guardado: JSON.stringify(window.EasyPerformance.cfg.contexto) }));
+  if (w === 1280) await p.screenshot({ path: join(SALIDA, 'datacheck.png') });
+  const md = await medir(p);
+  ok(`arranque en ${w}x${h}: tras Context viene el Data check con el veredicto, los KPIs elegidos y el botón a Measure; cabe sin scroll`, dc0.vista === 'datacheck' && dc0.pre === 'Data check' && dc0.veredicto === 'Ready' && dc0.kpis.join() === 'si:Lead time,si:Deliveries,si:Rework,si:Carried over' && dc0.boton === 'Go to Measure' && !dc0.proc && /"hecho":true/.test(dc0.guardado) && md.alto <= h + 1, JSON.stringify(dc0) + ` · alto ${md.alto}`);
+  await clic(p, '[data-accion="datacheck-continuar"]');
+  const enDemo = await A(p, () => ({ demo: window.EasyPerformance.demo, vista: window.EasyPerformance.vista, pasos: [...document.querySelectorAll('.paso')].map((x) => x.querySelector('b').textContent).join(', '), estados: [...document.querySelectorAll('.paso small')].map((x) => x.textContent), banda: /Sample data/.test(document.querySelector('.banda-demo').textContent), ajustes: document.querySelector('.btn-ajustes').textContent, subnav: !!document.querySelector('.subnav'), kpis: document.querySelectorAll('.kpi').length, chip: document.querySelector('[data-accion="datacheck"]').textContent }));
+  ok(`datos de ejemplo en ${w}x${h}: Measure con los cuatro pasos y su estado en la cabecera, los cuatro KPIs del contexto, el chip del data check, Setup aparte`, enDemo.demo && enDemo.vista === 'measure' && enDemo.pasos === 'Measure, Analyze, Improve, Learn' && /4 teams/.test(enDemo.estados[0]) && /to do/.test(enDemo.estados[1]) && /initiatives/.test(enDemo.estados[2]) && /evaluated/.test(enDemo.estados[3]) && enDemo.banda && enDemo.ajustes === 'Setup' && !enDemo.subnav && enDemo.kpis === 4 && enDemo.chip === 'Data: ready', enDemo.estados.join(' | ') + ' · ' + enDemo.chip);
   const r = await recorrer(p, `ejemplo-${w}`, true);
   ok(`ejemplo: todas las pantallas de los cuatro pasos sin scroll horizontal en ${w}x${h}`, !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
   ok(`ejemplo sin errores de consola en ${w}x${h}`, !p.errores.length, p.errores.join(' | '));
@@ -119,7 +139,10 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await clic(p, '[data-accion="fuentes"]'); await clic(p, '.conector[data-f="jira"]');
   const jira = await A(p, () => ({ demo: !!document.querySelector('.fuentes h2 .chip'), csv: !!document.querySelector('.fuentes [data-accion="ficheros"]'), boton: document.querySelector('[data-accion="conectar"]').textContent }));
   ok('conector de Jira: carga real por CSV o carpeta, y la conexión directa marcada como demo', !jira.demo && jira.csv && jira.boton === 'Connect (demo)', JSON.stringify(jira));
-  await clic(p, '[data-accion="fuentes"]'); await clic(p, '.conector[data-f="ado"]'); await clic(p, '[data-accion="conectar"]'); await listo(p);
+  await clic(p, '[data-accion="fuentes"]'); await clic(p, '.conector[data-f="ado"]'); await clic(p, '[data-accion="conectar"]'); await listo(p); await p.waitForTimeout(300);
+  const ctxDemo = await A(p, () => ({ vista: window.EasyPerformance.vista, banda: /Azure DevOps/.test(document.querySelector('.banda-demo').textContent) }));
+  ok('conector de demo: antes del método se pide el contexto', ctxDemo.vista === 'contexto' && ctxDemo.banda, JSON.stringify(ctxDemo));
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]');
   await p.waitForSelector('.proc.abierto', { timeout: 5000 }); await p.waitForTimeout(700);
   const etapas = await A(p, () => ({ nombres: [...document.querySelectorAll('.proc-nombre')].map((x) => x.textContent).join(','), kicker: document.querySelector('.proc-kicker').textContent, fuente: document.querySelector('.proc-fuente').textContent, titulo: document.querySelector('.proc-texto h3').textContent, res: document.querySelector('.proc-res').textContent, simulada: window.EasyPerformance.simulada }));
   await p.screenshot({ path: join(SALIDA, 'metodo-1.png') });
@@ -136,20 +159,22 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await p.screenshot({ path: join(SALIDA, 'metodo-final.png') });
   await p.click('[data-proc="fin"]'); await p.waitForTimeout(400);
   const tras = await A(p, () => ({ proc: !!document.querySelector('.proc'), vista: window.EasyPerformance.vista, banda: document.querySelector('.banda-demo').textContent }));
-  ok('método animado: cada etapa tiene visual y resultado, el final resume y lleva al baseline; la banda dice que es un conector de demo',
-    vistos.every((v, i) => v.paso === `Step ${i + 1} of 6` && v.visual >= 1 && v.res) && /Azure DevOps/.test(vistos[2].titulo) === false && /translate the states/.test(vistos[2].titulo) && /Reliability/.test(vistos[3].res) && fin.titulo === 'Data ready to use' && fin.hechos === 6 && fin.boton === 'See the baseline' && fin.resumen === 4 && !tras.proc && tras.vista === 'measure' && /Demo connector for Azure DevOps/.test(tras.banda),
+  ok('método animado: cada etapa tiene visual y resultado, el final resume y lleva al data check; la banda dice que es un conector de demo',
+    vistos.every((v, i) => v.paso === `Step ${i + 1} of 6` && v.visual >= 1 && v.res) && /Azure DevOps/.test(vistos[2].titulo) === false && /translate the states/.test(vistos[2].titulo) && /Reliability/.test(vistos[3].res) && fin.titulo === 'Data ready to use' && fin.hechos === 6 && fin.boton === 'See the data check' && fin.resumen === 4 && !tras.proc && tras.vista === 'datacheck' && /Demo connector for Azure DevOps/.test(tras.banda),
     vistos.map((v) => v.activo + ': ' + v.titulo).join(' > '));
   // Esc cierra; con "reducir movimiento" no se muestra
-  await clic(p, '[data-accion="salir-demo"]'); await clic(p, '.conector[data-f="servicenow"]'); await clic(p, '[data-accion="conectar"]'); await listo(p);
+  await clic(p, '[data-accion="salir-demo"]'); await clic(p, '.conector[data-f="servicenow"]'); await clic(p, '[data-accion="conectar"]'); await listo(p); await p.waitForTimeout(300);
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]');
   await p.waitForSelector('.proc.abierto', { timeout: 5000 }); await p.keyboard.press('Escape'); await p.waitForTimeout(400);
   const esc = await A(p, () => ({ proc: !!document.querySelector('.proc'), vista: window.EasyPerformance.vista, simulada: window.EasyPerformance.simulada }));
-  ok('método animado: Esc lo salta y deja el baseline del conector elegido', !esc.proc && esc.vista === 'measure' && esc.simulada === 'servicenow', JSON.stringify(esc));
+  ok('método animado: Esc lo salta y deja el data check del conector elegido', !esc.proc && esc.vista === 'datacheck' && esc.simulada === 'servicenow', JSON.stringify(esc));
   ok('conectores y método sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
   const q = await pagina(1280, 720);
-  await clic(q, '.conector[data-f="gitlab"]'); await clic(q, '[data-accion="conectar"]'); await listo(q); await q.waitForTimeout(400);
+  await clic(q, '.conector[data-f="gitlab"]'); await clic(q, '[data-accion="conectar"]'); await listo(q); await q.waitForTimeout(300);
+  await q.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await q.waitForTimeout(400);
   const sin = await A(q, () => ({ proc: !!document.querySelector('.proc'), vista: window.EasyPerformance.vista }));
-  ok('con "reducir movimiento" el conector carga sin animación', !sin.proc && sin.vista === 'measure', JSON.stringify(sin));
+  ok('con "reducir movimiento" el conector carga sin animación', !sin.proc && sin.vista === 'datacheck', JSON.stringify(sin));
   await q.context().close();
 }
 
@@ -194,13 +219,13 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
 // 4. Contenido con los datos de ejemplo en los cuatro pasos
 {
   const p = await pagina(1440, 900);
-  await A(p, () => window.EasyPerformance.verDemo()); await listo(p);
-  const cab = await A(p, () => ({ h: document.querySelector('.titular h1').textContent, sub: document.querySelector('.titular p:not(.kicker)').textContent, foco: [...document.querySelectorAll('.estado-area .pill-eq')].map((x) => x.textContent), boton: (document.querySelector('.bloque-cab [data-accion="vista"][data-v="analyze"]') || {}).textContent || '', kicker: document.querySelector('.titular .kicker').textContent, tira: document.querySelector('[data-accion="fiabilidad"]').textContent, bloques: document.querySelectorAll('.pagina > section').length }));
+  await demo(p);
+  const cab = await A(p, () => ({ h: document.querySelector('.titular h1').textContent, sub: document.querySelector('.titular p:not(.kicker)').textContent, foco: [...document.querySelectorAll('.estado-area .pill-eq')].map((x) => x.textContent), boton: (document.querySelector('.bloque-cab [data-accion="vista"][data-v="analyze"]') || {}).textContent || '', kicker: document.querySelector('.titular .kicker').textContent, tira: document.querySelector('[data-accion="datacheck"]').textContent, bloques: document.querySelectorAll('.pagina > section').length }));
   const filas = await p.$$eval('.tabla-equipos tbody tr', (t) => t.map((x) => x.querySelector('th').textContent));
-  ok('measure: una pantalla (titular con el cliente, equipos que necesitan atención, cuatro cifras, tabla), el botón a Analyze y la fiabilidad', cab.kicker === 'Step 1 of 4' && cab.h === 'Measure' && /^Sample bank: 4 teams, 2 in-house and 2 from vendors/.test(cab.sub) && /^\d things to do$/.test(cab.boton) && cab.foco.length === 2 && cab.foco.some((x) => /Mobile App/.test(x)) && cab.foco.some((x) => /Customer Portal/.test(x)) && /Data reliability high/.test(cab.tira) && cab.bloques === 4 && filas.length === 4 && filas.some((x) => /Vendor North/.test(x)), JSON.stringify(cab));
+  ok('measure: una pantalla (titular con el cliente, equipos que necesitan atención, cuatro cifras, tabla), el botón a Analyze y la fiabilidad', cab.kicker === 'Step 1 of 4' && cab.h === 'Measure' && /^Sample bank: 4 teams, 2 in-house and 2 from vendors/.test(cab.sub) && /^\d things to do$/.test(cab.boton) && cab.foco.length === 2 && cab.foco.some((x) => /Mobile App/.test(x)) && cab.foco.some((x) => /Customer Portal/.test(x)) && cab.tira === 'Data: ready' && cab.bloques === 4 && filas.length === 4 && filas.some((x) => /Vendor North/.test(x)), JSON.stringify(cab));
   await p.selectOption('select[data-cambio="ver"]', 'Mobile App'); await p.waitForTimeout(200);
   const eq = await A(p, () => ({ t: document.querySelector('.cab-area .h-area').textContent, fuera: [...document.querySelectorAll('.kpi.kpi-critico .kpi-cab, .kpi.kpi-atencion .kpi-cab')].map((x) => x.textContent).join(', '), kpis: document.querySelectorAll('.kpi').length, graf: !!document.querySelector('.grafico polyline'), recs: document.querySelectorAll('.bloque-oscuro li').length, normal: document.querySelector('.kpi .kpi-n').textContent }));
-  ok('measure: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 5 && eq.graf && eq.recs >= 2 && eq.t === 'Mobile App' && /Rework/.test(eq.fuera) && /^Normal: /.test(eq.normal), `${eq.t} · ${eq.fuera} · ${eq.recs} recs · ${eq.normal}`);
+  ok('measure: vista de un equipo con indicadores, gráfico del plazo y sus recomendaciones', eq.kpis === 4 && eq.graf && eq.recs >= 2 && eq.t === 'Mobile App' && /Rework/.test(eq.fuera) && /^Normal: /.test(eq.normal), `${eq.t} · ${eq.fuera} · ${eq.recs} recs · ${eq.normal}`);
   await p.hover('.kpi .con-tip'); await p.waitForTimeout(250);
   const tip = await A(p, () => { const t = document.getElementById('tip'); return t && !t.hidden ? t.textContent : ''; });
   ok('tooltips: al pasar por el plazo se explica qué significa, con su cifra', /^What this team starts today will almost surely be done in [\d.]+ days or less\./.test(tip), tip);
@@ -229,7 +254,7 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await paso(p, 'improve');
   const plan = await A(p, () => ({ kicker: document.querySelector('.titular .kicker').textContent, n: document.querySelectorAll('.tabla-ini tbody tr').length, chips: [...document.querySelectorAll('.tabla-ini .chip')].map((x) => x.textContent), quitar: document.querySelectorAll('[data-accion="quitar-ini"]').length, cols: [...document.querySelectorAll('.tabla-ini thead th')].map((x) => x.textContent).join(','), estandar: document.querySelector('#estandar').textContent.replace(/\s+/g, ' '), botones: document.querySelectorAll('#estandar .btn').length, m: Math.round(document.documentElement.scrollHeight) }));
   await p.screenshot({ path: join(SALIDA, 'improve.png'), fullPage: true });
-  ok('improve: una tabla con las tres iniciativas (una planificada que se puede quitar) y el estándar en una línea con dos descargas', plan.kicker === 'Step 3 of 4' && plan.n === 3 && plan.chips.includes('Planned') && plan.quitar === 1 && plan.cols === 'Initiative,Teams,Target,Start,Status,' && /5 measures, 1 definition each\. 5 tool states mapped to 5 common states/.test(plan.estandar) && plan.botones === 2 && plan.m <= 900, plan.estandar + ' · alto ' + plan.m);
+  ok('improve: una tabla con las tres iniciativas (una planificada que se puede quitar) y el estándar en una línea con dos descargas', plan.kicker === 'Step 3 of 4' && plan.n === 3 && plan.chips.includes('Planned') && plan.quitar === 1 && plan.cols === 'Initiative,Teams,Target,Start,Status,' && /4 measures, 1 definition each\. 5 tool states mapped to 5 common states/.test(plan.estandar) && plan.botones === 2 && plan.m <= 900, plan.estandar + ' · alto ' + plan.m);
   await clic(p, '[data-accion="nueva-ini"]');
   const form = await A(p, () => ({ f: !!document.getElementById('form-ini'), eqs: document.querySelectorAll('#form-ini input[name="equipos"]').length, medidas: document.querySelectorAll('#form-ini select[name="medida"] option').length }));
   await p.fill('#form-ini input[name="nombre"]', 'Peer review in Risk');
@@ -252,14 +277,28 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await p.screenshot({ path: join(SALIDA, 'learn-evaluacion.png'), fullPage: true });
   ok('learn: "How it was evaluated" detalla los seis pasos con sus cifras en inglés', ev.open && ev.pasos.length === 6 && /^Before the start/.test(ev.pasos[0]) && /^Confidence high/.test(ev.pasos[5]) && /6\.2 days/.test(ev.antes) && /own effect/.test(ev.efecto) && ev.checks === 3, ev.pasos.join(' > ') + ' · ' + ev.antes + ' · ' + ev.efecto);
   // Measure > Data y Context
-  await clic(p, '.paso[data-v="measure"]'); await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(200); await clic(p, '[data-accion="fiabilidad"]');
+  await clic(p, '.paso[data-v="measure"]'); await p.selectOption('select[data-cambio="ver"]', 'area'); await p.waitForTimeout(200); await clic(p, '[data-accion="datacheck"]'); await clic(p, '[data-accion="fiabilidad"]');
   const fia = await A(p, () => ({ vista: window.EasyPerformance.vista, setup: window.EasyPerformance.setup, sec: window.EasyPerformance.datos, cartas: document.querySelectorAll('.fiab-c').length, filas: document.querySelectorAll('.tabla-fiab tbody tr').length, h: document.querySelector('.fiab-cab h2').textContent }));
-  ok('setup > data: el chip de fiabilidad de Measure abre las diez comprobaciones y la tabla por equipo', fia.vista === 'setup' && fia.setup === 'data' && fia.sec === 'fiabilidad' && fia.cartas === 10 && fia.filas === 4 && fia.h === 'Data reliability', JSON.stringify(fia));
+  ok('setup > data: el chip de Measure abre el data check y de ahí las diez comprobaciones y la tabla por equipo', fia.vista === 'setup' && fia.setup === 'data' && fia.sec === 'fiabilidad' && fia.cartas === 10 && fia.filas === 4 && fia.h === 'Data reliability', JSON.stringify(fia));
   await clic(p, '[data-accion="datos-sec"][data-s="lectura"]');
   const lec = await A(p, () => ({ ficheros: /sample-data\.csv: 1,232 tasks/.test(document.querySelector('.pagina .bloque').textContent), hall: [...document.querySelectorAll('.hall h4')].map((x) => x.textContent), descarta: /Discards 2 columns with people/.test(document.querySelector('.hall-solo').textContent), confirmar: /Confirm in Setup/.test(document.querySelector('.hall-consultor').textContent), historia: (document.querySelector('.escalera li.actual b') || {}).textContent, cols: document.querySelectorAll('.tabla-cols tbody tr').length, fuera: document.querySelectorAll('.tabla-cols tr.col-fuera').length }));
   await p.screenshot({ path: join(SALIDA, 'measure-data-lectura.png'), fullPage: true });
   ok('setup > data: lectura del export con ficheros, hallazgos, nivel de historia y tabla de columnas, en inglés y con miles en formato en-GB', lec.ficheros && lec.hall.join('|') === 'Solved by the page itself|To confirm in Setup|Fixed when exporting' && lec.descarta && lec.confirmar && lec.historia === 'Time in each state' && lec.cols >= 20 && lec.fuera === 2, JSON.stringify(lec));
   await clic(p, '[data-accion="setup-sec"][data-s="context"]');
+  const fila0 = await A(p, () => ({ t: document.querySelector('#contexto-setup .leido-cab p').textContent }));
+  await clic(p, '[data-accion="editar"][data-e="objetivos"]');
+  await marcar(p, '#form-contexto input[name="objetivo"][value="speed"]', false); await marcar(p, '#form-contexto input[name="objetivo"][value="predictability"]', false); await marcar(p, '#form-contexto input[name="objetivo"][value="ai"]', true);
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
+  const ctxCambio = await A(p, () => ({ t: document.querySelector('#contexto-setup .leido-cab p').textContent, cfg: window.EasyPerformance.cfg.contexto.objetivos.join(), cols: document.querySelectorAll('.tabla-equipos thead th').length }));
+  await paso(p, 'measure');
+  const medidaCambio = await A(p, () => ({ kpis: [...document.querySelectorAll('.kpi .kpi-cab')].map((x) => x.textContent.replace(/Attention|Critical/, '')).join(','), cols: [...document.querySelectorAll('.tabla-equipos thead th')].map((x) => x.textContent).join(','), recs: window.EasyPerformance.recomendaciones().map((x) => x.id).join(',') }));
+  ok('context: cambiar los objetivos cambia los KPIs del baseline y las recomendaciones activas', /Speed, Quality and Predictability\. Sprints\. Vendors\. Cost\. Shows 4 KPIs/.test(fila0.t) && ctxCambio.cfg === 'quality,ai' && /Quality and AI readiness/.test(ctxCambio.t) && medidaCambio.kpis === 'Rework,Agent-ready' && medidaCambio.cols === 'Team,Rework,Agent-ready' && /backlog_no_listo/.test(medidaCambio.recs) && !/sprint_no_cumple|grupo_plazo/.test(medidaCambio.recs), JSON.stringify(medidaCambio));
+  await setup(p, 'context'); await clic(p, '[data-accion="editar"][data-e="objetivos"]');
+  await marcar(p, '#form-contexto input[name="objetivo"][value="speed"]', true); await marcar(p, '#form-contexto input[name="objetivo"][value="predictability"]', true); await marcar(p, '#form-contexto input[name="objetivo"][value="ai"]', false); await marcar(p, '#form-contexto input[name="trabajo"][value="flujo"]', true);
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
+  const flujo = await A(p, () => ({ cols: [...document.querySelectorAll('.tabla-equipos thead th')].length, recs: window.EasyPerformance.recomendaciones().map((x) => x.id).join(',') }));
+  ok('context: con flujo continuo desaparecen "carried over" y los casos de sprint', flujo.recs.length > 0 && !/sprint_no_cumple|todo_al_final/.test(flujo.recs), JSON.stringify(flujo));
+  await clic(p, '[data-accion="editar"][data-e="objetivos"]'); await marcar(p, '#form-contexto input[name="trabajo"][value="sprints"]', true); await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
   const ctx = await A(p, () => ({ filas: [...document.querySelectorAll('#leido .leido-cab b')].map((x) => x.textContent), docs: document.querySelectorAll('.ctx-cat.con').length, vacias: document.querySelectorAll('.ctx-cat:not(.con)').length, catalogo: !!document.querySelector('#ajuste-definiciones [data-accion="definiciones"]'), ia: !!document.querySelector('[data-accion="ia-mapeo"]') }));
   await clic(p, '[data-accion="editar"][data-e="estados"]');
   const est = await A(p, () => ({ filas: document.querySelectorAll('select[data-cambio="estado"]').length, iaBoton: !!document.querySelector('[data-accion="ia-mapeo"]'), nota: /With an API key in Settings/.test(document.querySelector('.leido-panel').textContent) }));
@@ -277,7 +316,7 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
 // 5. IA: clave solo en el navegador, recomendaciones validadas, unión con el banco de casos, mapeo de estados, lectura del impacto, y un fallo de la API
 {
   const p = await pagina(1440, 900);
-  await A(p, () => window.EasyPerformance.verDemo()); await listo(p);
+  await demo(p);
   await setup(p, 'settings');
   await p.fill('input[data-cambio="ia-clave"]', 'sk-ant-prueba-123'); await p.locator('input[data-cambio="ia-clave"]').dispatchEvent('change'); await p.waitForTimeout(200);
   const guardado = await A(p, () => ({ ses: JSON.parse(sessionStorage.getItem('easyperformance.ai') || '{}').clave, loc: localStorage.getItem('easyperformance.ai'), cfg: JSON.stringify(localStorage.getItem('easyperformance.config.v2') || '').includes('sk-ant'), vivo: [...document.querySelectorAll('.vivo .chip')].map((x) => x.textContent)[2], olvidar: !!document.querySelector('[data-accion="ia-olvidar"]') }));
@@ -344,7 +383,7 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
   await apiSimulada(p, null, 401);
   await paso(p, 'analyze'); await clic(p, '[data-accion="ia-recs"]'); await p.waitForTimeout(600);
   const fallo = await A(p, () => ({ estado: window.EasyPerformance.iaEstado, panel: document.querySelector('.bloque-ia p.nota').textContent, items: document.querySelectorAll('.rec-item').length, boton: !document.querySelector('[data-accion="ia-recs"]').disabled }));
-  ok('ia: si la API falla se dice en el panel, las recomendaciones anteriores siguen y se puede volver a pedir', fallo.estado === 'error' && /401/.test(fallo.panel) && /simulated failure/.test(fallo.panel) && fallo.items >= 7 && fallo.boton, fallo.panel);
+  ok('ia: si la API falla se dice en el panel, las recomendaciones anteriores siguen y se puede volver a pedir', fallo.estado === 'error' && /401/.test(fallo.panel) && /simulated failure/.test(fallo.panel) && fallo.items >= 5 && fallo.boton, fallo.panel);
   // Olvidar la clave
   await setup(p, 'settings'); await clic(p, '[data-accion="ia-olvidar"]');
   const sinClave = await A(p, () => ({ ses: sessionStorage.getItem('easyperformance.ai'), loc: localStorage.getItem('easyperformance.ai'), vivo: [...document.querySelectorAll('.vivo .chip')].map((x) => x.textContent)[2] }));
@@ -356,16 +395,21 @@ for (const [w, h] of [[1280, 720], [1920, 1080]]) {
 
 // 6. Los dos exports con fallos sembrados, cargados desde la entrada: cada fallo lo detecta su comprobación, sin falsas alarmas
 const CON_FALLOS = [
-  { nombre: 'export con fallos', csv: ['fallos', 'jira-con-fallos.csv'], escenarios: ['fallos', 'escenarios.json'], nivel: 'Low' },
-  { nombre: 'aseguradora', csv: ['aseguradora', 'jira-aseguradora.csv'], escenarios: ['aseguradora', 'escenarios.json'], nivel: 'Medium' },
+  { nombre: 'export con fallos', csv: ['fallos', 'jira-con-fallos.csv'], escenarios: ['fallos', 'escenarios.json'], nivel: 'Low', veredicto: 'Ready with limits' },
+  { nombre: 'aseguradora', csv: ['aseguradora', 'jira-aseguradora.csv'], escenarios: ['aseguradora', 'escenarios.json'], nivel: 'Medium', veredicto: 'Ready with limits' },
 ];
 const COLS_FIAB = ['tiempos', 'flujo', 'registro', 'estimacion', 'sprints', 'historia'];
 for (const e of CON_FALLOS) {
   const p = await pagina(1280, 720);
   const esc = JSON.parse(readFileSync(join(RAIZ, 'datos-sinteticos', ...e.escenarios), 'utf8'));
   await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-sinteticos', ...e.csv)); await listo(p); await p.waitForTimeout(300);
-  const tira = await texto(p, '[data-accion="fiabilidad"]');
-  await clic(p, '[data-accion="fiabilidad"]');
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
+  const gate = await A(p, () => ({ vista: window.EasyPerformance.vista, veredicto: document.querySelector('.titular .chip').textContent, avisos: document.querySelectorAll('.lista-kpis li.no').length, fiab: document.querySelector('.dos .bloque:last-child h2').textContent }));
+  await p.screenshot({ path: join(SALIDA, e.nombre.replace(/ /g, '-') + '-datacheck.png') });
+  ok(e.nombre + ': el data check avisa (' + e.veredicto + ') y lista lo que hay que revisar antes de medir', gate.vista === 'datacheck' && gate.veredicto === e.veredicto && gate.avisos >= 2 && new RegExp('reliability ' + e.nivel.toLowerCase()).test(gate.fiab), JSON.stringify(gate));
+  await clic(p, '[data-accion="datacheck-continuar"]');
+  const tira = await texto(p, '[data-accion="datacheck"]');
+  await clic(p, '[data-accion="datacheck"]'); await clic(p, '[data-accion="fiabilidad"]');
   const f = await A(p, () => {
     const z = window.EasyPerformance.fiab();
     return { nivel: document.querySelector('.fiab-nivel b').textContent, area: z.comprobaciones.filter((c) => c.estado === 'revisar').map((c) => c.id), revisar: [...document.querySelectorAll('.fiab-c.fiab-revisar h3')].map((x) => x.textContent),
@@ -378,7 +422,7 @@ for (const e of CON_FALLOS) {
   });
   const falsas = f.area.filter((id) => !esc.sembrados.some((s) => s.id === id));
   await p.screenshot({ path: join(SALIDA, e.nombre.replace(/ /g, '-') + '-fiabilidad.png'), fullPage: true });
-  ok(e.nombre + ': fiabilidad ' + e.nivel.toLowerCase() + ' y los ' + esc.sembrados.length + ' fallos sembrados detectados, sin falsas alarmas', new RegExp('reliability ' + e.nivel.toLowerCase()).test(tira) && f.nivel === e.nivel && detectado.every((x) => x.ok) && !falsas.length, detectado.filter((x) => !x.ok).map((x) => x.id).join(', ') + ' sin detectar · falsas: ' + falsas.join(', ') + ' · por revisar: ' + f.revisar.join(', '));
+  ok(e.nombre + ': fiabilidad ' + e.nivel.toLowerCase() + ' y los ' + esc.sembrados.length + ' fallos sembrados detectados, sin falsas alarmas', /Data: ready with limits/.test(tira) && f.nivel === e.nivel && detectado.every((x) => x.ok) && !falsas.length, detectado.filter((x) => !x.ok).map((x) => x.id).join(', ') + ' sin detectar · falsas: ' + falsas.join(', ') + ' · por revisar: ' + f.revisar.join(', '));
   if (esc.sin_fallo) {
     const bien = esc.sin_fallo.every((s) => !(f.porEquipo[s.equipo] || []).includes(s.id));
     ok(e.nombre + ': un equipo sin sprints no se marca', bien, JSON.stringify(esc.sin_fallo));
@@ -396,7 +440,7 @@ for (const e of CON_FALLOS) {
 // 7. Modo oscuro, móvil y portátil al 150 %
 {
   const p = await pagina(1280, 720, { oscuro: true });
-  await A(p, () => window.EasyPerformance.verDemo()); await listo(p);
+  await demo(p);
   const r = await recorrer(p, 'oscuro', false);
   await p.screenshot({ path: join(SALIDA, 'oscuro-area.png'), fullPage: true });
   const fondo = await A(p, () => getComputedStyle(document.body).backgroundColor);
@@ -404,7 +448,7 @@ for (const e of CON_FALLOS) {
   await p.context().close();
   const q = await pagina(390, 844);
   const entradaMovil = await medir(q);
-  await A(q, () => window.EasyPerformance.verDemo()); await listo(q);
+  await demo(q);
   const rq = await recorrer(q, 'movil', false);
   await q.screenshot({ path: join(SALIDA, 'movil-area.png'), fullPage: true });
   await paso(q, 'improve'); await clic(q, '[data-accion="nueva-ini"]');
@@ -416,7 +460,7 @@ for (const e of CON_FALLOS) {
   const w = await pagina(1280, 600);
   const raiz = () => A(w, () => getComputedStyle(document.documentElement).fontSize);
   const entrada = await medir(w), raizW = await raiz();
-  await A(w, () => window.EasyPerformance.verDemo()); await listo(w);
+  await demo(w);
   const matriz = await A(w, () => Math.round(document.querySelector('.tabla-caja').getBoundingClientRect().top));
   const cabecera = await A(w, () => Math.round(document.querySelector('.cab').getBoundingClientRect().height));
   const rw = await recorrer(w, 'portatil-150', false);
@@ -425,7 +469,7 @@ for (const e of CON_FALLOS) {
   await w.context().close();
   const g = await pagina(1512, 860);
   const raizG = await A(g, () => getComputedStyle(document.documentElement).fontSize);
-  await A(g, () => window.EasyPerformance.verDemo()); await listo(g);
+  await demo(g);
   const cabG = await A(g, () => Math.round(document.querySelector('.cab').getBoundingClientRect().height));
   ok('pantalla grande (1512 x 860): tamaño completo y la cabecera en una línea', raizG === '16px' && cabG <= 80, 'raíz ' + raizG + ', cabecera ' + cabG + 'px');
   await g.context().close();
@@ -438,9 +482,14 @@ for (const e of CON_FALLOS) {
   await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv'));
   await listo(p);
   const seg = Math.round((Date.now() - t0) / 1000);
+  const ctxJira = await A(p, () => ({ vista: window.EasyPerformance.vista, trabajo: document.querySelector('#form-contexto input[name="trabajo"]:checked').value }));
+  await p.click('button[form="form-contexto"], #form-contexto button[type="submit"]'); await p.waitForTimeout(300);
+  const gateJira = await A(p, () => ({ vista: window.EasyPerformance.vista, veredicto: document.querySelector('.titular .chip').textContent, guardado: !!(JSON.parse(localStorage.getItem('easyperformance.config.v2') || '{}').contexto || {}).hecho }));
+  ok('Jira.csv: primero el contexto (sprints detectados), después el data check, y el contexto queda guardado', ctxJira.vista === 'contexto' && ctxJira.trabajo === 'sprints' && gateJira.vista === 'datacheck' && /Ready/.test(gateJira.veredicto) && gateJira.guardado, JSON.stringify(gateJira));
+  await clic(p, '[data-accion="datacheck-continuar"]');
   const inicio = await A(p, () => ({ vista: window.EasyPerformance.vista, eqs: window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', '), recs: window.EasyPerformance.recomendaciones().length, proc: !!document.querySelector('.proc') }));
   await p.screenshot({ path: join(SALIDA, 'jira-area.png'), fullPage: true });
-  ok('Jira.csv: de la carga al baseline (con "reducir movimiento" no hay método animado)', inicio.vista === 'measure' && inicio.eqs === 'Infrastructure, Mobile, Web' && !inicio.proc, `${inicio.eqs} · ${inicio.recs} recomendaciones · ${seg} s`);
+  ok('Jira.csv: del data check al baseline (con "reducir movimiento" no hay método animado)', inicio.vista === 'measure' && inicio.eqs === 'Infrastructure, Mobile, Web' && !inicio.proc, `${inicio.eqs} · ${inicio.recs} recomendaciones · ${seg} s`);
   const r = await recorrer(p, 'jira', true);
   ok('Jira.csv: todas las pantallas sin scroll horizontal', !r.fallos.length, r.fallos.join('; ') + ' · altos: ' + r.altos.join(', '));
   await setup(p, 'data'); await clic(p, '[data-accion="datos-sec"][data-s="fiabilidad"]');
@@ -498,8 +547,8 @@ for (const e of CON_FALLOS) {
   ok('datos de ejemplo sin pisar la configuración ni los datos reales', cfgAntes === vuelta.cfg && enDemo !== vuelta.eqs && vuelta.eqs === 'Infrastructure, Mobile, Web', `ejemplo: ${enDemo} · vuelta: ${vuelta.eqs}`);
   await p.reload(); await p.waitForTimeout(400);
   await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv')); await listo(p);
-  const otraVez = await A(p, () => ({ m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], n: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length, ini: window.EasyPerformance.r.iniciativas.length }));
-  ok('los cambios y la iniciativa se conservan al volver a abrir la página', otraVez.m === 'en_revision' && otraVez.n === 1 && otraVez.ini === 1, JSON.stringify(otraVez));
+  const otraVez = await A(p, () => ({ vista: window.EasyPerformance.vista, m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], n: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length, ini: window.EasyPerformance.r.iniciativas.length }));
+  ok('los cambios, el contexto y la iniciativa se conservan al volver a abrir la página: va directo al data check', otraVez.vista === 'datacheck' && otraVez.m === 'en_revision' && otraVez.n === 1 && otraVez.ini === 1, JSON.stringify(otraVez));
   ok('recorrido con Jira.csv sin errores de consola', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
@@ -526,7 +575,7 @@ for (const e of CON_FALLOS) {
     window.EasyPerformance.carpeta = raiz;
     await window.EasyPerformance.leerCarpeta(raiz);
   }, { csv, inis, ctx });
-  await listo(p); await p.waitForTimeout(300);
+  await arrancar(p); await p.waitForTimeout(200);
   const r = await A(p, () => ({ ini: window.EasyPerformance.r.iniciativas.map((x) => x.iniciativa.id), ctx: window.EasyPerformance.contexto ? window.EasyPerformance.contexto.documentos.length : 0, cab: document.querySelector('.paso[data-v="improve"] small').textContent }));
   await paso(p, 'improve');
   const quitar = await p.$$eval('[data-accion="quitar-ini"]', (t) => t.length);
@@ -546,7 +595,7 @@ for (const e of CON_FALLOS) {
     equiposInfo: { Web: { tipo: 'proveedor', proveedor: 'Vendor Web' } }, objetivos: ['tardamos'], medidas: ['ciclo'], perfiles: ['responsable'],
   })));
   await p.reload(); await p.waitForTimeout(400);
-  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv')); await listo(p);
+  await p.setInputFiles('#entrada-ficheros', join(RAIZ, 'datos-prueba', 'Jira.csv')); await arrancar(p);
   const r = await A(p, () => ({ eqs: window.EasyPerformance.r.modelo.equipos.map((e) => e.nombre).join(', '), m: window.EasyPerformance.r.preparacion.mapeo['In Progress'], cmp: window.EasyPerformance.r.comparaciones.filter((c) => c.dimension === 'tipo').length }));
   ok('configuración de la versión anterior: equipos, estados y proveedores', r.eqs === 'Infrastructure, Mobile, Web' && r.m === 'en_curso' && r.cmp === 1 && !p.errores.length, JSON.stringify(r) + ' ' + p.errores.join(' | '));
   await p.context().close();

@@ -35,11 +35,49 @@
     coste: { nombre: 'Cost per delivery', formato: 'eur', unidad: 'per task', que: 'Monthly team cost (FTE times the cost of one FTE) divided by the tasks finished per month. Lower is better. Only when FTE and cost are set.' }
   };
   var COLUMNAS = ['ciclo', 'entregas', 'retrabajo', 'arrastradas', 'agent_readiness'];
+  // The context (3 questions at the start) decides which KPIs are shown and which cases are active
+  var OBJETIVOS = [
+    { id: 'speed', nombre: 'Speed', que: 'lead time, deliveries', kpis: ['ciclo', 'entregas'], catalogo: ['tardamos', 'avez', 'tiempo'] },
+    { id: 'quality', nombre: 'Quality', que: 'rework', kpis: ['retrabajo'], catalogo: ['arreglos'] },
+    { id: 'predictability', nombre: 'Predictability', que: 'carried over, sprint commitment', kpis: ['arrastradas'], catalogo: ['cumplir', 'pendiente'] },
+    { id: 'cost', nombre: 'Cost', que: 'cost per delivery', kpis: ['coste'], catalogo: [] },
+    { id: 'ai', nombre: 'AI readiness', que: 'agent-ready backlog', kpis: ['agent_readiness'], catalogo: ['agentes'] }
+  ];
+  var TRABAJO = [['sprints', 'Sprints'], ['flujo', 'Continuous flow'], ['mixto', 'Mixed']];
   function hayCoste() { var c = App.cfg.coste; return !!(c && Object.keys(c).some(function (k) { return c[k] > 0; })); }
-  function columnas() { return hayCoste() ? COLUMNAS.concat(['coste']) : COLUMNAS; }
+  function hayProveedores() { var i = App.cfg.equiposInfo || {}; return Object.keys(i).some(function (k) { return i[k] && i[k].tipo === 'proveedor'; }); }
+  function contexto() {
+    var c = App.cfg.contexto;
+    if (c && c.hecho) return c;
+    return { objetivos: ['speed', 'quality', 'predictability'], trabajo: App.det && App.det.haySprints ? 'sprints' : 'flujo', proveedores: hayProveedores(), coste: hayCoste(), hecho: false };
+  }
+  function columnas() {
+    var c = contexto(), out = [];
+    OBJETIVOS.forEach(function (o) {
+      if (c.objetivos.indexOf(o.id) < 0) return;
+      o.kpis.forEach(function (k) {
+        if (k === 'arrastradas' && c.trabajo === 'flujo') return;
+        if (k === 'coste' && !hayCoste()) return;
+        if (out.indexOf(k) < 0) out.push(k);
+      });
+    });
+    return out.length ? out : ['ciclo', 'entregas'];
+  }
+  function objetivosCatalogo() {
+    var c = contexto(), out = ['datos'];
+    OBJETIVOS.forEach(function (o) { if (c.objetivos.indexOf(o.id) >= 0) out = out.concat(o.catalogo); });
+    if (c.proveedores) out.push('comparar');
+    return out;
+  }
+  function casoActivo(id) {
+    var def = C.casos[id];
+    if (!def) return false;
+    var act = objetivosCatalogo();
+    if (def.requiere === 'sprints' && contexto().trabajo === 'flujo') return false;
+    if (def.medida && MED[def.medida] && columnas().indexOf(def.medida) < 0) return false;
+    return (def.objetivos || []).some(function (o) { return act.indexOf(o) >= 0; });
+  }
   function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Set FTE and cost in Setup > Context.' } : eq.medidas[id]; }
-  var KPI_AREA = ['ciclo', 'entregas', 'retrabajo', 'agent_readiness'];
-  var KPI_EQUIPO = ['ciclo', 'entregas', 'retrabajo', 'arrastradas'];
   var ESTADO = { bien: 'Good', atencion: 'Attention', critico: 'Critical', sin: 'No data' };
   var CONF = { baja: 'low', media: 'medium', alta: 'high', low: 'low', medium: 'medium', high: 'high' };
   var NOMBRE_INI = { ciclo: 'lead time', total: 'total time', entregas: 'deliveries per week', espera: 'waiting time', retrabajo: 'rework', errores: 'bugs', reabiertas: 'reopened', bloqueo: 'blocked time', agent_readiness: 'agent-ready tickets' };
@@ -147,7 +185,7 @@
         usa_sprints: true, fte: fte[n] ? [{ periodo: periodo, valor: fte[n], origen: orig[n] || 'declarado' }] : [], limites: {} };
     });
     return { version: 2, nombre: c.nombre || '', sector: c.sector || '', plataforma: 'jira', mapeoEstados: mapeo(), equipos: { campo: campo(), lista: l },
-      objetivos: [], medidas: COLUMNAS.slice() };
+      objetivos: [], medidas: columnas().slice() };
   }
   function iniciativaValida(i) { return !!(i && i.id && i.nombre && i.fecha_inicio && i.equipos && i.equipos.length && i.medidas_objetivo && i.medidas_objetivo.length); }
   function iniciativas() {
@@ -176,7 +214,8 @@
     recalcular();
     App.tiempoMs = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
     App.recSel = null; App.recEquipo = 'todos'; App.nuevaIni = false;
-    App.vista = 'measure'; App.ver = 'area';
+    App.ver = 'area';
+    App.vista = contexto().hecho ? 'datacheck' : 'contexto';
     return true;
   }
   function cargarFicheros(files) {
@@ -185,7 +224,7 @@
     salirDemo(false);
     ocupado(true, 'Reading data…');
     Promise.all(csv.map(function (f) { return f.arrayBuffer().then(descodificar).then(function (t) { return { nombre: f.name, texto: t }; }); }))
-      .then(function (fs) { setTimeout(function () { try { if (procesar(fs, 'ficheros')) { render(); window.scrollTo(0, 0); animarCarga(null); } } finally { ocupado(false); } }, 20); })
+      .then(function (fs) { setTimeout(function () { try { if (procesar(fs, 'ficheros')) arrancar(null); } finally { ocupado(false); } }, 20); })
       .catch(function () { ocupado(false); aviso('The files could not be read.'); });
   }
 
@@ -240,7 +279,7 @@
         x[2].forEach(function (f) { var d = leer(f.texto, 'contexto/' + f.nombre); if (d && d.documentos) docs = docs.concat(d.documentos); });
         App.contexto = docs.length ? { documentos: docs } : null;
         setTimeout(function () {
-          try { if (procesar(fs, 'carpeta')) { guardarFoto(); guardarSeguimiento(); render(); aviso('Read ' + fs.length + ' file(s) from the folder.'); animarCarga(null); } } finally { ocupado(false); }
+          try { if (procesar(fs, 'carpeta')) { guardarFoto(); guardarSeguimiento(); aviso('Read ' + fs.length + ' file(s) from the folder.'); if (dataCheck().veredicto !== 'not_ready' && App.cfg.contexto && App.cfg.contexto.hecho && App.actualizando) App.vista = 'measure'; App.actualizando = false; arrancar(null); } } finally { ocupado(false); }
         }, 20);
       });
     }).catch(function () { ocupado(false); aviso('No permission to read the folder. Press "Read the folder" again.'); });
@@ -280,7 +319,6 @@
     App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null; App.nuevaIni = false;
     App.simulada = simulada && FUENTES[simulada] && !FUENTES[simulada].otra ? simulada : null; App.fuente = null;
     procesar([{ nombre: DEMO.fichero, texto: t }], 'ejemplo');
-    render(); window.scrollTo(0, 0);
     return true;
   }
   function salirDemo(pintar) {
@@ -349,7 +387,7 @@
       '<p class="nota">' + (f.vivo ? 'CSV and folder use your real data. The direct connection is set up in the pilot; here it loads sample data.' : 'Loads the sample data of a fictional bank.') + '</p>';
   }
   // ---------- header with the four steps ----------
-  var VISTAS = { measure: vistaMeasure, analyze: vistaAnalyze, improve: vistaImprove, learn: vistaLearn, setup: vistaSetup, settings: vistaSetup };
+  var VISTAS = { measure: vistaMeasure, analyze: vistaAnalyze, improve: vistaImprove, learn: vistaLearn, setup: vistaSetup, settings: vistaSetup, contexto: vistaContextoInicial, datacheck: vistaDataCheck };
   function render() {
     var html;
     if (!App.r || App.vista === 'inicio') html = inicio();
@@ -373,7 +411,8 @@
       return '<button class="paso" data-accion="vista" data-v="' + p[0] + '"' + (App.vista === p[0] ? ' aria-current="page"' : '') + '><span class="paso-num">' + p[1] + '</span><span class="paso-txt"><b>' + p[2] + '</b><small>' + esc(st[p[0]]) + '</small></span></button>';
     }).join('<span class="paso-sep" aria-hidden="true"></span>');
     var hasta = new Date(App.r.modelo.semanaFin.getTime() - 864e5);
-    return '<header class="cab"><div class="cab-in">' + marca() + '<nav class="pasos-nav" aria-label="The four steps">' + pasos + '</nav><span class="hueco"></span>' +
+    var inicioFlujo = App.vista === 'contexto' || App.vista === 'datacheck';
+    return '<header class="cab' + (inicioFlujo ? ' cab-inicio' : '') + '"><div class="cab-in">' + marca() + (inicioFlujo ? '<span class="paso-pre">' + (App.vista === 'contexto' ? 'Context' : 'Data check') + '</span>' : '') + '<nav class="pasos-nav" aria-label="The four steps">' + pasos + '</nav><span class="hueco"></span>' +
       '<span class="fecha">Data up to ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="tutorial">Tutorial</button><button class="btn btn-cab btn-actualizar" data-accion="actualizar">Update</button>' +
       '<button class="btn btn-cab btn-ajustes" data-accion="vista" data-v="setup"' + (App.vista === 'setup' ? ' aria-current="page"' : '') + '>Setup</button></div></header>';
   }
@@ -392,13 +431,80 @@
   // ---------- step 1: Measure ----------
   var SECCIONES_SETUP = [['data', 'Data'], ['context', 'Context'], ['settings', 'Settings']];
   function vistaMeasure() {
-    var f = fiab(), n = NIVEL[f.nivel];
+    var d = dataCheck(), v = VEREDICTO[d.veredicto];
     var eqs = App.r.modelo.equipos, info = App.cfg.equiposInfo || {};
     var de = function (t) { return eqs.filter(function (e) { return (info[e.nombre] || {}).tipo === t; }).length; };
     var nProv = de('proveedor'), nInt = de('interno');
     var sub = (App.cfg.nombre ? esc(App.cfg.nombre) + ': ' : '') + eqs.length + ' ' + plural(eqs.length, 'team', 'teams') + (nProv ? ', ' + nInt + ' in-house and ' + nProv + ' from vendors' : '') + '. Each against its own history.';
     return titularPaso(1, 'Measure', sub,
-      selector() + '<span class="chip chip-' + n[0] + ' chip-grande" data-accion="fiabilidad" role="button" tabindex="0">Data reliability ' + n[1].toLowerCase() + '</span>') + tablero();
+      selector() + '<span class="chip chip-' + v[0] + ' chip-grande" data-accion="datacheck" role="button" tabindex="0">Data: ' + v[1].toLowerCase() + '</span>') + tablero();
+  }
+  function formularioContexto(enSetup) {
+    var c = contexto();
+    var chips = OBJETIVOS.map(function (o) {
+      var on = c.objetivos.indexOf(o.id) >= 0;
+      return '<label class="opcion' + (on ? ' on' : '') + '"><input type="checkbox" name="objetivo" value="' + o.id + '"' + (on ? ' checked' : '') + '><b>' + o.nombre + '</b><small>' + o.que + '</small></label>';
+    }).join('');
+    var trabajo = TRABAJO.map(function (t) { return '<label class="opcion' + (c.trabajo === t[0] ? ' on' : '') + '"><input type="radio" name="trabajo" value="' + t[0] + '"' + (c.trabajo === t[0] ? ' checked' : '') + '><b>' + t[1] + '</b></label>'; }).join('');
+    return '<form class="contexto" id="form-contexto" data-accion-form="contexto">' +
+      '<div class="pregunta"><h2>1. What do you want to improve?</h2><div class="opciones">' + chips + '</div></div>' +
+      '<div class="pregunta"><h2>2. How do the teams work?</h2><div class="opciones">' + trabajo + '</div></div>' +
+      '<div class="pregunta"><h2>3. Vendors and cost</h2><div class="opciones">' +
+      '<label class="opcion' + (c.proveedores ? ' on' : '') + '"><input type="checkbox" name="proveedores"' + (c.proveedores ? ' checked' : '') + '><b>Some teams are vendors</b><small>compare in-house and vendors</small></label>' +
+      '<label class="opcion' + (c.coste ? ' on' : '') + '"><input type="checkbox" name="coste"' + (c.coste ? ' checked' : '') + '><b>We have headcount and cost</b><small>cost per delivery</small></label></div></div>' +
+      (enSetup ? '<p class="botones"><button type="submit" class="btn">Save</button></p>' : '') + '</form>';
+  }
+  function vistaContextoInicial() {
+    return '<section class="titular"><div><p class="kicker">Before step 1</p><h1>Context</h1><p>Three questions. They decide which KPIs you see and which recommendations apply.</p></div><div class="cab-acc"><button type="submit" form="form-contexto" class="btn btn-grande">Continue</button></div></section>' + formularioContexto(false);
+  }
+  function guardarContexto(form) {
+    var objetivos = [].map.call(form.querySelectorAll('input[name="objetivo"]:checked'), function (c) { return c.value; });
+    if (!objetivos.length) { aviso('Choose at least one goal.'); return; }
+    var t = form.querySelector('input[name="trabajo"]:checked');
+    var enInicio = App.vista === 'contexto';
+    App.cfg.contexto = { objetivos: objetivos, trabajo: t ? t.value : 'sprints', proveedores: form.elements.proveedores.checked, coste: form.elements.coste.checked, hecho: true };
+    guardarCfg();
+    cacheRecs = { r: null, v: null };
+    if (enInicio) { App.vista = 'datacheck'; render(); window.scrollTo(0, 0); animarCarga(App.simulada).then(function () { render(); window.scrollTo(0, 0); }); }
+    else { var y = window.scrollY; App.editar = null; render(); window.scrollTo(0, y); aviso('Context saved.'); }
+  }
+  // ---------- Data check: can this export support the analysis? ----------
+  function dataCheck() {
+    var f = fiab(), a = App.r.area.equipos[0], c = contexto(), cols = columnas();
+    var porId = {}; f.comprobaciones.forEach(function (x) { porId[x.id] = x; });
+    var num = function (x) { var m = x && /([\d.]+)%/.exec(x.valor); return m ? parseFloat(m[1]) / 100 : null; };
+    var bloqueos = [], limites = [], avisos = [];
+    var cobertura = num(porId.equipo), tareas = App.lectura.informe.tareas, semanas = App.r.modelo.semanas.length;
+    if (tareas < 50) bloqueos.push('Only ' + miles(tareas) + ' tasks. At least 50 are needed.');
+    if (cobertura != null && cobertura < 0.5) bloqueos.push('Only ' + Math.round(cobertura * 100) + '% of tasks have a team. Fix the team field in Setup.');
+    if (semanas < 4) bloqueos.push('Only ' + semanas + ' weeks of data. At least 4 are needed to measure, 12 to know what is normal.');
+    cols.forEach(function (id) {
+      var eqs = App.r.modelo.equipos, conDato = eqs.filter(function (e) { var m = med(e, id); return m && m.disponible; });
+      if (conDato.length) { if (conDato.length < eqs.length) limites.push({ kpi: id, motivo: 'Only for ' + lista(conDato.map(function (e) { return e.nombre; })) + '.', parcial: true }); return; }
+      var m = med(eqs[0] || a, id);
+      limites.push({ kpi: id, motivo: (m && m.motivo) || 'Not available with this export.' });
+    });
+    if (c.proveedores && !hayProveedores()) limites.push({ kpi: null, motivo: 'Vendor comparison: mark the vendor teams in Setup > Context.' });
+    if (c.coste && !hayCoste()) limites.push({ kpi: null, motivo: 'Cost per delivery: set FTE and cost per team in Setup > Context.' });
+    f.comprobaciones.filter(function (x) { return x.estado === 'revisar'; }).forEach(function (x) { avisos.push(x); });
+    var veredicto = bloqueos.length ? 'not_ready' : (limites.some(function (l) { return !l.parcial; }) || f.nivel !== 'alta') ? 'limits' : 'ready';
+    return { veredicto: veredicto, bloqueos: bloqueos, limites: limites, avisos: avisos, fiabilidad: f, kpis: cols };
+  }
+  var VEREDICTO = { ready: ['bien', 'Ready'], limits: ['atencion', 'Ready with limits'], not_ready: ['critico', 'Not ready'] };
+  function vistaDataCheck() {
+    var d = dataCheck(), v = VEREDICTO[d.veredicto], n = NIVEL[d.fiabilidad.nivel];
+    var kpis = d.kpis.map(function (id) {
+      var lim = d.limites.filter(function (l) { return l.kpi === id; })[0];
+      return '<li class="' + (lim ? 'no' : 'si') + '"><span class="v-ico ' + (lim ? 'aviso' : 'ok') + '" aria-hidden="true">' + (lim ? '!' : CHECK) + '</span><div><b>' + esc(MED[id].nombre) + '</b>' + (lim ? '<span>' + esc(lim.motivo) + '</span>' : '') + '</div></li>';
+    }).join('') + d.limites.filter(function (l) { return !l.kpi; }).map(function (l) { return '<li class="no"><span class="v-ico aviso" aria-hidden="true">!</span><div><b>' + esc(l.motivo.split(':')[0]) + '</b><span>' + esc(l.motivo.split(':').slice(1).join(':').trim()) + '</span></div></li>'; }).join('');
+    var html = '<section class="titular"><div><p class="kicker">Before step 1</p><h1>Data check</h1><p>' + miles(App.lectura.informe.tareas) + ' tasks, ' + App.r.modelo.equipos.length + ' teams, ' + App.r.modelo.semanas.length + ' weeks.</p></div>' +
+      '<div class="cab-acc"><span class="chip chip-' + v[0] + ' chip-grande">' + v[1] + '</span></div></section>';
+    if (d.bloqueos.length) html += '<section class="bloque bloque-bloqueo"><h2>Fix before measuring</h2><ul class="lista-simple">' + d.bloqueos.map(function (b) { return '<li>' + esc(b) + '</li>'; }).join('') + '</ul></section>';
+    html += '<div class="dos"><section class="bloque"><h2>What can be measured</h2><ul class="lista-kpis">' + kpis + '</ul></section>' +
+      '<section class="bloque"><h2>Data reliability ' + n[1].toLowerCase() + '</h2>' + (d.avisos.length ? '<ul class="lista-kpis">' + d.avisos.map(function (x) { return '<li class="no"><span class="v-ico aviso" aria-hidden="true">!</span><div><b>' + esc(x.nombre) + ': ' + esc(x.valor) + '</b><span>' + esc(x.arreglo) + '</span></div></li>'; }).join('') + '</ul>' : '<p class="nota">All ' + d.fiabilidad.comprobaciones.length + ' checks pass.</p>') +
+      '<p class="nota"><button class="btn-txt" data-accion="fiabilidad">All checks</button></p></section></div>';
+    html += '<p class="botones botones-fin">' + (d.veredicto === 'not_ready' ? '<button class="btn" data-accion="datos-sec" data-s="lectura">Fix the export</button><button class="btn btn-sec" data-accion="datacheck-continuar">Continue anyway</button>' : '<button class="btn btn-grande" data-accion="datacheck-continuar">Go to Measure</button>') + '</p>';
+    return html;
   }
   function vistaSetup() {
     var sec = SECCIONES_SETUP.some(function (x) { return x[0] === App.setup; }) ? App.setup : 'data';
@@ -413,7 +519,7 @@
   function tablero() { return App.ver === 'area' ? vistaArea() : vistaEquipo(App.r.modelo.equipos.filter(function (e) { return e.nombre === App.ver; })[0]); }
   function problemas(eq, ids) {
     var out = { critico: [], atencion: [] };
-    (ids || COLUMNAS).forEach(function (id) { var e = estadoDe(eq.medidas[id]); if (out[e]) out[e].push(id); });
+    (ids || columnas()).forEach(function (id) { var e = estadoDe(eq.medidas[id]); if (out[e]) out[e].push(id); });
     return out;
   }
   function tarjetaKpi(id, m, conSerie) {
@@ -446,7 +552,7 @@
     var fuera = eqs.filter(function (e) { var p = problemas(e); return p.critico.length || p.atencion.length; });
     var nRec = recomendaciones().length, info = App.cfg.equiposInfo || {};
     var html = estadoArea(fuera);
-    html += '<section class="kpis" aria-label="Area indicators">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), true); }).join('') + '</section>';
+    html += '<section class="kpis" aria-label="Area indicators">' + columnas().map(function (id) { return tarjetaKpi(id, med(a, id), true); }).join('') + '</section>';
     if (eqs.length > 1) {
       var marca_ = function (st) { return st === 'atencion' || st === 'critico' ? '<span class="sr"> (' + ESTADO[st].toLowerCase() + ')</span>' : ''; };
       html += '<section class="bloque"><div class="bloque-cab"><h2>Teams</h2>' + (nRec ? '<button class="btn btn-peq" data-accion="vista" data-v="analyze">' + nRec + ' things to do</button>' : '') + '</div><div class="tabla-caja"><table class="tabla-equipos"><thead><tr><th scope="col">Team</th>' +
@@ -470,7 +576,7 @@
     var sub = (info.tipo === 'proveedor' ? (info.proveedor || 'Vendor') + '. ' : info.tipo === 'interno' ? 'In-house. ' : '') + 'Against its own previous 12 weeks.';
     var recs = recomendaciones().filter(function (x) { return x.equipos.indexOf(eq.nombre) >= 0; });
     var html = '<section class="titular cab-area"><div><button class="btn-txt" data-accion="ver" data-e="area">Back to the area</button><h2 class="h-area">' + esc(eq.nombre) + '</h2><p>' + esc(sub) + '</p></div></section>';
-    html += '<section class="kpis" aria-label="Team indicators">' + KPI_EQUIPO.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
+    html += '<section class="kpis" aria-label="Team indicators">' + columnas().map(function (id) { return tarjetaKpi(id, med(eq, id), true); }).join('') + '</section>';
     html += '<div class="equipo-abajo"><section class="bloque grafico-plazo"><h2>Lead time, week by week</h2>' + graficoPlazo(eq.medidas.ciclo) + '</section>' +
       bloqueRecEquipo(eq, recs) + '</div>';
     return html;
@@ -647,7 +753,10 @@
       return '<div class="leido" id="ajuste-' + k + '"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Done' : 'Change') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
     };
     var revisar = det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; });
-    var html = '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Teams and states</h2></div>' +
+    var c = contexto(), objs = OBJETIVOS.filter(function (o) { return c.objetivos.indexOf(o.id) >= 0; }).map(function (o) { return o.nombre; });
+    var html = '<section class="bloque" id="contexto-setup"><div class="bloque-cab"><h2>Goals and way of working</h2></div>' +
+      fila('objetivos', 'Context', esc(lista(objs)) + '. ' + esc(TRABAJO.filter(function (t) { return t[0] === c.trabajo; })[0][1]) + '.' + (c.proveedores ? ' Vendors.' : '') + (c.coste ? ' Cost.' : '') + ' Shows ' + columnas().length + ' KPIs.', function () { return formularioContexto(true); }) + '</section>';
+    html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Teams and states</h2></div>' +
       fila('campo', 'Team field', 'From ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
       fila('equipos', 'Vendors, areas, FTE and cost', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'vendor') + ')'; }))) + ' belong to vendors. The rest are in-house.' : 'All teams are treated as in-house. Mark which ones belong to a vendor to compare them.') + ' ' + textoCapacidad(eqs), panelEquipos) +
       fila('estados', 'States', esc(det.estados.map(function (e) { return e.nombre + ' is ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (revisar ? ' <span class="chip chip-atencion">Review</span>' : '') + (App.iaMapeo ? ' <span class="chip chip-bien">AI proposal applied</span>' : ''), panelEstados) +
@@ -744,7 +853,7 @@
     if (cacheRecs.r === App.r) return cacheRecs.v;
     var r = App.r, porId = {}, out = [];
     function deEquipo(id, gravedad, equipo, evidencia) {
-      if (!C.casos[id]) return;
+      if (!casoActivo(id)) return;
       var x = porId[id] = porId[id] || { id: id, gravedad: 'atencion', equipos: [], evidencias: [], grupo: false };
       if (gravedad === 'critico') x.gravedad = 'critico';
       x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]);
@@ -753,7 +862,7 @@
     r.casosAgentReady.forEach(function (c) { deEquipo(c.id, c.gravedad, c.equipo, c.evidencia); });
     Object.keys(porId).forEach(function (k) { out.push(porId[k]); });
     var dims = r.casosGrupo.some(function (x) { return x.dimension !== 'area'; }) ? ['tipo', 'proveedor'] : ['area'];
-    r.casosGrupo.filter(function (x) { return dims.indexOf(x.dimension) >= 0 && C.casos[x.id]; }).forEach(function (x) {
+    r.casosGrupo.filter(function (x) { return dims.indexOf(x.dimension) >= 0 && casoActivo(x.id); }).forEach(function (x) {
       var cmp = r.comparaciones.filter(function (c) { return c.dimension === x.dimension && c.ambito === x.ambito; })[0];
       var g = cmp ? cmp.grupos.filter(function (y) { return y.id === x.grupo; })[0] : null;
       var eqs = g ? g.equipos : [x.grupo];
@@ -774,6 +883,8 @@
     var cat = recomendaciones();
     cat.forEach(function (c) { c.ia = null; });
     return App.iaRecs.filter(function (x) {
+      if (x.causa.caso && !casoActivo(x.causa.caso)) return false;
+      if (x.medida && MED[x.medida] && columnas().indexOf(x.medida) < 0) return false;
       var mismo = x.causa.caso && cat.filter(function (c) { return c.id === x.causa.caso && !c.ia && x.equipos.some(function (e) { return c.equipos.indexOf(e) >= 0; }); })[0];
       if (mismo) { mismo.ia = x; return false; }
       return true;
@@ -1195,7 +1306,7 @@
   function bloqueEstandar() {
     var det = App.det, mp = mapeo(), n = det.estados.length;
     var comunes = {}; det.estados.forEach(function (e) { comunes[mp[e.nombre] || e.estado] = 1; });
-    return '<section class="bloque linea" id="estandar"><div><h2>Same rules for every team</h2><p class="nota">5 measures, 1 definition each. ' + n + ' tool states mapped to ' + Object.keys(comunes).length + ' common states.</p></div>' +
+    return '<section class="bloque linea" id="estandar"><div><h2>Same rules for every team</h2><p class="nota">' + columnas().length + ' measures, 1 definition each. ' + n + ' tool states mapped to ' + Object.keys(comunes).length + ' common states.</p></div>' +
       '<div class="cab-acc"><button class="btn btn-sec btn-peq" data-accion="definiciones" data-f="docx">KPI catalogue (Word)</button><button class="btn btn-sec btn-peq" data-accion="modelo">Measurement model</button></div></section>';
   }
   // ---------- step 4: Learn and evolve ----------
@@ -1274,15 +1385,15 @@
   }
   function matriz() {
     var eqs = App.r.modelo.equipos.slice(0, 8);
-    var cab = '<span></span>' + COLUMNAS.map(function (id) { return '<span class="h">' + esc(MED[id].nombre) + '</span>'; }).join('');
+    var cols = columnas(), cab = '<span></span>' + cols.map(function (id) { return '<span class="h">' + esc(MED[id].nombre) + '</span>'; }).join('');
     var filas = eqs.map(function (eq, k) {
-      return '<span class="eq pe" style="--d:' + (k + 2) + '">' + esc(eq.nombre) + '</span>' + COLUMNAS.map(function (id) {
+      return '<span class="eq pe" style="--d:' + (k + 2) + '">' + esc(eq.nombre) + '</span>' + cols.map(function (id) {
         var m = eq.medidas[id], e = estadoDe(m);
         var v = m && m.disponible ? cifra(id, m.valor).g : '';
         return '<span class="v-celda pe ' + e + '" style="--d:' + (k + 2) + '" title="' + esc(eq.nombre + ', ' + MED[id].nombre + ': ' + (ESTADO[e] || 'normal')) + '">' + esc(v) + '</span>';
       }).join('');
     }).join('');
-    return '<div class="v-matriz">' + cab + filas + '</div><p class="v-leyenda pe" style="--d:9"><span class="v-l bien"></span>Good <span class="v-l atencion"></span>Attention <span class="v-l critico"></span>Critical <span class="v-l sin"></span>No data</p>';
+    return '<div class="v-matriz" style="--c:' + cols.length + '">' + cab + filas + '</div><p class="v-leyenda pe" style="--d:9"><span class="v-l bien"></span>Good <span class="v-l atencion"></span>Attention <span class="v-l critico"></span>Critical <span class="v-l sin"></span>No data</p>';
   }
   function segundos(ms) { var s = Math.max(0.1, Math.round(ms / 100) / 10); return s.toLocaleString('en-GB') + ' ' + (s === 1 ? 'second' : 'seconds'); }
   function configCarga(simulada) {
@@ -1342,10 +1453,10 @@
         }).join('') + '</tbody></table></div>',
       resultado: cap.costeMes != null ? cuenta(Math.round(cap.costeMes), 'eur') + ' a month for ' + n1(cap.fteTotal) + ' FTE' : '<b>Pending</b>: set in Setup'
     };
-    var total = eqs.length * COLUMNAS.length, s = senales();
+    var total = eqs.length * columnas().length, s = senales();
     var p6 = {
       nombre: 'Baseline', titulo: 'We measure each team against itself',
-      texto: 'Five measures per team, each against its own previous 12 weeks.',
+      texto: columnas().length + ' measures per team, chosen from your goals, each against its own previous 12 weeks.',
       visual: matriz(),
       resultado: cuenta(s.n) + ' of ' + total + ' figures outside what is normal'
     };
@@ -1361,13 +1472,20 @@
         visual: '<div class="v-resumen">' + [[inf.tareas, 'tasks'], [eqs.length, plural(eqs.length, 'team', 'teams')], [semanas, 'weeks'], [s.n, plural(s.n, 'figure outside normal', 'figures outside normal')]].map(function (x, k) {
           return '<div class="pe" style="--d:' + (k + 2) + '">' + cuenta(x[0]) + '<span>' + x[1] + '</span></div>';
         }).join('') + '</div>',
-        boton: 'See the baseline'
+        boton: 'See the data check'
       }
     };
   }
   function animarCarga(simulada) {
     if (!App.r || !window.Proceso) return Promise.resolve('sin-animacion');
     try { return window.Proceso.reproducir(configCarga(simulada)); } catch (e) { if (window.console) console.error(e); return Promise.resolve('error'); }
+  }
+  // Start of the flow: Context (once per client) -> loading method -> Data check -> Measure. Update repeats the check and only stops if it got worse.
+  function arrancar(simulada) {
+    if (!App.r) return;
+    if (App.vista === 'contexto') { render(); window.scrollTo(0, 0); return; }
+    App.vista = 'datacheck'; render(); window.scrollTo(0, 0);
+    animarCarga(simulada).then(function () { render(); window.scrollTo(0, 0); });
   }
 
   // ---------- tutorial: the four steps on the real interface ----------
@@ -1378,7 +1496,7 @@
     var ir = function (v) { return function () { App.vista = v; App.ver = 'area'; App.editar = null; App.nuevaIni = false; render(); }; };
     return [
       { sel: '.pasos-nav', kicker: 'The four steps', titulo: 'Measure, Analyze, Improve, Learn', antes: ir('measure'),
-        texto: 'Four steps, four screens. Setup holds the data checks and the context.' },
+        texto: 'Four steps, four screens. The context and the data check come first; Setup keeps them.' },
       { sel: '.kpis', kicker: 'Step 1 · Measure', titulo: 'The baseline',
         texto: 'Four figures for the area, each against its own previous 12 weeks. Only what stands out is marked.' },
       { sel: '.tabla-equipos', kicker: 'Step 1 · Measure', titulo: 'One team per row',
@@ -1398,6 +1516,7 @@
     if (window.Proceso) window.Proceso.cerrar();
     var cargadoAqui = false;
     if (!App.r) { if (!verDemo(null)) return; cargadoAqui = true; }
+    if (App.vista === 'contexto' || App.vista === 'datacheck') { App.vista = 'measure'; App.ver = 'area'; render(); }
     guardarLocal(CLAVE_TUT, { visto: new Date().toISOString() });
     window.Tutorial.iniciar(pasosTutorial(), {
       alCerrar: function () {
@@ -1421,8 +1540,11 @@
     'leer-carpeta': function () { if (App.carpeta) leerCarpeta(App.carpeta); },
     fuente: function (el) { App.fuente = el.getAttribute('data-f'); render(); },
     fuentes: function () { App.fuente = null; render(); },
-    conectar: function (el) { var k = el.getAttribute('data-f'); if (verDemo(k)) animarCarga(App.simulada); },
-    demo: function () { if (verDemo(null)) animarCarga(null); },
+    conectar: function (el) { var k = el.getAttribute('data-f'); if (verDemo(k)) arrancar(App.simulada); },
+    demo: function () { if (verDemo(null)) arrancar(null); },
+    'contexto-guardar': guardarContexto,
+    'datacheck': function () { App.vista = 'datacheck'; render(); window.scrollTo(0, 0); },
+    'datacheck-continuar': function () { App.vista = 'measure'; App.ver = 'area'; render(); window.scrollTo(0, 0); },
     tutorial: tutorial,
     rec: function (el) {
       App.recSel = el.getAttribute('data-k'); render();
@@ -1437,6 +1559,7 @@
     'salir-demo': function () { salirDemo(); if (!App.r) { App.vista = 'inicio'; render(); } },
     actualizar: function () {
       if (App.demo) { aviso('There is nothing to update in the sample data. Press "Load my data" to use yours.'); return; }
+      App.actualizando = true;
       if (App.carpeta) return leerCarpeta(App.carpeta);
       if (App.origen === 'datosjs') return location.reload();
       document.getElementById('entrada-ficheros').click();
@@ -1468,10 +1591,12 @@
   document.addEventListener('submit', function (e) {
     var f = e.target;
     if (f && f.getAttribute && f.getAttribute('data-accion-form') === 'guardar-ini') { e.preventDefault(); guardarIni(f); }
+    if (f && f.getAttribute && f.getAttribute('data-accion-form') === 'contexto') { e.preventDefault(); guardarContexto(f); }
   });
   document.addEventListener('toggle', function (e) { var d = e.target; if (d.tagName === 'DETAILS' && d.getAttribute('data-k')) App.abiertas[d.getAttribute('data-k')] = d.open; }, true);
   document.addEventListener('change', function (e) {
     var el = e.target, tipo = el.getAttribute('data-cambio');
+    if (el.closest && el.closest('.opcion')) { var grupo = el.closest('.opciones'); [].forEach.call(grupo.querySelectorAll('.opcion'), function (o) { o.classList.toggle('on', o.querySelector('input').checked); }); return; }
     if (el.id === 'entrada-ficheros') { cargarFicheros(el.files); el.value = ''; return; }
     if (!tipo) return;
     var en = el.getAttribute('data-e');
