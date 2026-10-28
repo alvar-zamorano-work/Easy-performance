@@ -69,7 +69,7 @@ export function generarPaquete(e: EntradaPaquete) {
     arPorEquipo[nombre] = agregar(creadas.map((d) => d.ar), RUBRICA);
   }
   const ficheros = e.lectura.informe.ficheros.map((f) => f.nombre);
-  const sinFicheros = (t: string) => ficheros.reduce((s, f) => s.split(f).join('Un fichero'), t);
+  const sinFicheros = (t: string) => ficheros.reduce((s, f) => s.split(f).join('A file'), t);
   const contexto = Object.fromEntries(CATEGORIAS.map((c) => {
     const docs = (e.contexto?.documentos || []).filter((d) => d.categoria === c);
     return [c, { vacia: docs.length === 0, documentos: docs.map((d) => ({ documento: d.titulo, sintesis: d.resumen, fecha: d.fecha })) }];
@@ -175,23 +175,23 @@ const SECCIONES = ['version', 'generado', 'cliente', 'equipos', 'medidas', 'caso
 /** Problemas que impiden exportar el paquete. Lista vacía = se puede exportar. */
 export function comprobarPaquete(p: unknown, opciones: { nombresProhibidos?: string[] } = {}): string[] {
   const problemas: string[] = [];
-  if (!p || typeof p !== 'object' || Array.isArray(p)) return ['El paquete no es un objeto.'];
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return ['The package is not an object.'];
   const claves = Object.keys(p);
-  SECCIONES.forEach((s) => { if (!claves.includes(s)) problemas.push(`Falta la sección "${s}".`); });
-  claves.forEach((k) => { if (!SECCIONES.includes(k)) problemas.push(`Sección no prevista: "${k}".`); });
+  SECCIONES.forEach((s) => { if (!claves.includes(s)) problemas.push(`Missing section "${s}".`); });
+  claves.forEach((k) => { if (!SECCIONES.includes(k)) problemas.push(`Unexpected section: "${k}".`); });
   const prohibidos = (opciones.nombresProhibidos || []).filter(Boolean);
   const recorrer = (v: unknown, ruta: string) => {
     if (typeof v === 'string') {
-      if (CLAVE_TICKET.test(v)) problemas.push(`${ruta}: parece una clave de ticket ("${v.match(CLAVE_TICKET)![0]}").`);
-      if (v.length > TEXTO_LARGO && !ruta.startsWith('contexto.')) problemas.push(`${ruta}: texto demasiado largo; puede ser una descripción de ticket.`);
-      for (const n of prohibidos) if (v.includes(n)) problemas.push(`${ruta}: contiene un nombre que no puede salir ("${n}").`);
+      if (CLAVE_TICKET.test(v)) problemas.push(`${ruta}: looks like a ticket key ("${v.match(CLAVE_TICKET)![0]}").`);
+      if (v.length > TEXTO_LARGO && !ruta.startsWith('contexto.')) problemas.push(`${ruta}: text too long; it may be a ticket description.`);
+      for (const n of prohibidos) if (v.includes(n)) problemas.push(`${ruta}: contains a name that must not be shared ("${n}").`);
       return;
     }
     if (Array.isArray(v)) { v.forEach((w, i) => recorrer(w, `${ruta}[${i}]`)); return; }
     if (v && typeof v === 'object') {
       for (const [k, w] of Object.entries(v)) {
-        if (CAMPOS_PROHIBIDOS.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: campo que nunca puede ir en el paquete.`);
-        if (CLAVE_TICKET.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: parece una clave de ticket.`);
+        if (CAMPOS_PROHIBIDOS.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: field that can never go in the package.`);
+        if (CLAVE_TICKET.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: looks like a ticket key.`);
         recorrer(w, ruta ? `${ruta}.${k}` : k);
       }
     }

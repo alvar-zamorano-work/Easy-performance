@@ -25,41 +25,41 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
 interface Resultado { estado: Semaforo; texto: string }
 
 export function estadoMedida(id: string, v: number | null | undefined, ref: Rango | undefined, limEquipo: Limites | null, def: DefSemaforo): Resultado {
-  if (v == null) return { estado: 'sin', texto: 'Sin datos suficientes en las últimas semanas.' };
+  if (v == null) return { estado: 'sin', texto: 'Not enough data in recent weeks.' };
   if (!def.dir) return { estado: 'neutro', texto: '' };
   const orden: Record<string, number> = { bien: 0, atencion: 1, critico: 2 };
   const fmt = (x: number) => formatear(x, def.formato);
   function absoluto(lim: Limites | null | undefined): Resultado | null {
     if (!lim || (lim.atencion == null && lim.critico == null)) return null;
     if (def.dir === 'menos') {
-      if (lim.critico != null && v! >= lim.critico) return { estado: 'critico', texto: 'Llega al límite crítico de ' + fmt(lim.critico) + '.' };
-      if (lim.atencion != null && v! >= lim.atencion) return { estado: 'atencion', texto: 'Llega al límite de atención de ' + fmt(lim.atencion) + '.' };
+      if (lim.critico != null && v! >= lim.critico) return { estado: 'critico', texto: 'At or above the critical limit of ' + fmt(lim.critico) + '.' };
+      if (lim.atencion != null && v! >= lim.atencion) return { estado: 'atencion', texto: 'At or above the attention limit of ' + fmt(lim.atencion) + '.' };
     } else {
-      if (lim.critico != null && v! <= lim.critico) return { estado: 'critico', texto: 'Está por debajo del límite crítico de ' + fmt(lim.critico) + '.' };
-      if (lim.atencion != null && v! <= lim.atencion) return { estado: 'atencion', texto: 'Está por debajo del límite de atención de ' + fmt(lim.atencion) + '.' };
+      if (lim.critico != null && v! <= lim.critico) return { estado: 'critico', texto: 'At or below the critical limit of ' + fmt(lim.critico) + '.' };
+      if (lim.atencion != null && v! <= lim.atencion) return { estado: 'atencion', texto: 'At or below the attention limit of ' + fmt(lim.atencion) + '.' };
     }
-    return { estado: 'bien', texto: 'Dentro de los límites del equipo.' };
+    return { estado: 'bien', texto: 'Within the limits set for this team.' };
   }
   if (limEquipo) return absoluto(limEquipo) || { estado: 'bien', texto: '' };
   let rel: Resultado | null = null;
   if (ref) {
-    const rango = 'su rango habitual (' + fmt(ref.lo) + ' a ' + fmt(ref.hi) + ')';
+    const rango = 'its usual range (' + fmt(ref.lo) + ' to ' + fmt(ref.hi) + ')';
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
     if (def.dir === 'menos') {
-      if (v <= ref.hi + margen) rel = { estado: 'bien', texto: 'Dentro de ' + rango + ' o mejor.' };
-      else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: 'Peor que ' + rango + '.' };
-      else rel = { estado: 'critico', texto: 'Bastante peor que ' + rango + '.' };
+      if (v <= ref.hi + margen) rel = { estado: 'bien', texto: 'Within ' + rango + ' or better.' };
+      else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: 'Worse than ' + rango + '.' };
+      else rel = { estado: 'critico', texto: 'Much worse than ' + rango + '.' };
     } else {
-      if (v >= ref.lo - margen) rel = { estado: 'bien', texto: 'Dentro de ' + rango + ' o mejor.' };
-      else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: 'Peor que ' + rango + '.' };
-      else rel = { estado: 'critico', texto: 'Bastante peor que ' + rango + '.' };
+      if (v >= ref.lo - margen) rel = { estado: 'bien', texto: 'Within ' + rango + ' or better.' };
+      else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: 'Worse than ' + rango + '.' };
+      else rel = { estado: 'critico', texto: 'Much worse than ' + rango + '.' };
     }
   }
   const abs = absoluto(def.limites);
   const cands = [rel, abs].filter((x): x is Resultado => !!x);
-  if (!cands.length) return { estado: 'sin', texto: 'Aún no hay semanas suficientes para saber qué es lo habitual en este equipo.' };
+  if (!cands.length) return { estado: 'sin', texto: 'Not enough weeks yet to know what is normal for this team.' };
   cands.sort((a, b) => orden[b.estado] - orden[a.estado]);
   return cands[0];
 }

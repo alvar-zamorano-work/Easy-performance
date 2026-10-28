@@ -69,7 +69,7 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
   // Derivados por tarea
   const porEquipo: Record<string, Derivada[]> = {};
   tareas.forEach((t) => {
-    let eq = valor(t) || 'Sin equipo';
+    let eq = valor(t) || 'No team';
     if (incluidos && incluidos.indexOf(eq) < 0) return;
     if (cfg.unirComo) eq = cfg.unirComo; // visión del área: los equipos incluidos, juntos como uno solo
     const f = t.fechas;
@@ -283,14 +283,14 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
-    else if (req === 'tiempos') out[id] = hayTiempos ? true : 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.';
-    else if (req === 'inicio') out[id] = hayInicio ? true : 'No se puede saber cuándo empezó cada tarea con este export.';
-    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : 'Hay muy pocas tareas con puntos de historia.';
-    else if (req === 'errores') out[id] = hayErrores ? true : 'El export no trae el tipo de tarea.';
-    else if (req === 'primera') out[id] = hayPrimera ? true : 'El export no trae la fecha de primera respuesta.';
+    else if (req === 'tiempos') out[id] = hayTiempos ? true : 'The export has no time in each status (in Jira, the Time in Status field). Export with All fields.';
+    else if (req === 'inicio') out[id] = hayInicio ? true : 'This export does not say when each task started.';
+    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : 'Very few tasks have story points.';
+    else if (req === 'errores') out[id] = hayErrores ? true : 'The export has no task type.';
+    else if (req === 'primera') out[id] = hayPrimera ? true : 'The export has no date of first response.';
     else if (req === 'sprints') out[id] = sp.fiables ? true : (sp.motivo as string);
-    else if (req === 'descripcion') out[id] = hayDescripciones ? true : 'El export no trae la descripción de las tareas.';
-    else if (req === 'api') out[id] = 'Necesita saber qué había al empezar cada sprint: con la API de Jira o con fotos semanales.';
+    else if (req === 'descripcion') out[id] = hayDescripciones ? true : 'The export has no task descriptions.';
+    else if (req === 'api') out[id] = 'It needs to know what was in each sprint at the start: with the Jira API or weekly snapshots.';
     else out[id] = true;
   });
   return out;

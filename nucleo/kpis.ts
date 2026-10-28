@@ -23,19 +23,19 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
   }
   function copia(id: string, base: string): MedidaCalculada {
     const b = M[base];
-    if (!b || !b.disponible) return { id, disponible: false, motivo: b ? b.motivo : 'No disponible con estos datos.' };
+    if (!b || !b.disponible) return { id, disponible: false, motivo: b ? b.motivo : 'Not available with this data.' };
     return { id, disponible: true, serie: b.serie, valor: b.valor, ref: b.ref, ventana: b.ventana, estado: b.estado, estadoTexto: b.estadoTexto };
   }
 
   // Throughput / FTE: tareas terminadas al mes (media de 4 semanas) entre las personas equivalentes del equipo.
   if (fte) out.throughput = desdeSerie('throughput', s.entregasMedia.map((x) => (x == null ? null : x * 52 / 12 / fte)), K, { dir: 'mas', formato: 'num' });
-  else out.throughput = { id: 'throughput', disponible: false, falta: 'fte', motivo: 'Indica cuántas personas (FTE) tiene el equipo en Ajustes.' };
+  else out.throughput = { id: 'throughput', disponible: false, falta: 'fte', motivo: 'Enter how many people (FTE) the team has in Settings.' };
   // Coste por entrega: lo que cuesta el equipo al mes (FTE por el coste mensual de un FTE) entre las tareas terminadas al mes.
   // Solo si se ha indicado algún coste: sin él, los resultados son los mismos que en la v0.
   if (c.cfg.coste) {
     const costeFte = c.cfg.coste[nombre] != null && c.cfg.coste[nombre] > 0 ? +c.cfg.coste[nombre] : null;
     if (fte && costeFte) out.coste = desdeSerie('coste', s.entregasMedia.map((x) => (x == null || x <= 0 ? null : fte * costeFte / (x * 52 / 12))), K, { dir: 'menos', formato: 'eur' });
-    else out.coste = { id: 'coste', disponible: false, falta: fte ? 'coste' : 'fte', motivo: fte ? 'Indica el coste mensual de un FTE de este equipo.' : 'Indica cuántas personas (FTE) tiene el equipo y lo que cuesta cada una al mes.' };
+    else out.coste = { id: 'coste', disponible: false, falta: fte ? 'coste' : 'fte', motivo: fte ? 'Enter the monthly cost of one FTE for this team.' : 'Enter how many people (FTE) the team has and what each one costs per month.' };
   }
   out.entrega = copia('entrega', 'ciclo');
   // Valor entregado: parte de lo terminado que es funcionalidad nueva (historias), frente a su propia historia.
@@ -44,6 +44,6 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
   out.calidad = copia('calidad', 'retrabajo');
   out.carga = s.pendienteEdad.some((x) => x != null)
     ? desdeSerie('carga', s.pendienteEdad, 1, { dir: 'menos', formato: 'dias' })
-    : { id: 'carga', disponible: false, motivo: 'No hay trabajo pendiente suficiente para medirlo.' };
+    : { id: 'carga', disponible: false, motivo: 'Not enough backlog to measure it.' };
   return out;
 }

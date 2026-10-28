@@ -76,10 +76,10 @@ export function nombresDeEstado(tareas: TareaJiraParaTiempos[]): { nombrePorId: 
 
   const avisos: Aviso[] = [];
   const sinNombre = Object.keys(ids).filter((id) => !nombrePorId[id]).length;
-  if (sinNombre) avisos.push({ tipo: 'aviso', texto: sinNombre + ' estado(s) del campo Tiempo en estado no tienen nombre en el export. Revisa a qué etapa pertenecen.' });
+  if (sinNombre) avisos.push({ tipo: 'aviso', texto: sinNombre + ' status(es) in the Time in Status field have no name in the export. Check which stage they belong to.' });
   return { nombrePorId, avisos };
 }
 
 export function nombreDeId(nombrePorId: Record<string, string>, id: string): string {
-  return nombrePorId[id] || ('Estado ' + id);
+  return nombrePorId[id] || ('Status ' + id);
 }

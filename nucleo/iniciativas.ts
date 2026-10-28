@@ -75,12 +75,12 @@ export function evaluarIniciativa(ini: Iniciativa, p: Preparacion): EvaluacionIn
   const resultados = ini.medidas_objetivo.map((mo: MedidaObjetivo): ResultadoMedida => {
     const def = MEDIDAS_INICIATIVA[mo.medida];
     const base = { medida: mo.medida, direccion: mo.direccion };
-    if (!def) return { ...base, disponible: false, motivo: 'Esta medida no se puede evaluar en una iniciativa.' };
-    if (!participan.length) return { ...base, disponible: false, motivo: 'Los equipos de la iniciativa no están en los datos.' };
+    if (!def) return { ...base, disponible: false, motivo: 'This measure cannot be evaluated in an initiative.' };
+    if (!participan.length) return { ...base, disponible: false, motivo: 'The teams in the initiative are not in the data.' };
     const W = def.semanas * 7;
     const antes: Ventana = { desde: sumarDias(inicio, -W), hasta: inicio };
     const desdeDespues = sumarDias(inicio, LATENCIA_DIAS);
-    if (desdeDespues >= limite) return { ...base, disponible: false, motivo: 'Aún no hay datos después de la latencia de dos semanas.' };
+    if (desdeDespues >= limite) return { ...base, disponible: false, motivo: 'No data yet after the two-week latency.' };
     const hastaDespues = new Date(Math.min(sumarDias(desdeDespues, W).getTime(), limite.getTime()));
     const despues: Ventana = { desde: desdeDespues, hasta: hastaDespues };
     const completa = hastaDespues.getTime() - desdeDespues.getTime() >= W * DIA - 36e5;
@@ -106,7 +106,7 @@ export function evaluarIniciativa(ini: Iniciativa, p: Preparacion): EvaluacionIn
     const enDireccion = efecto == null ? null : (mo.direccion === 'bajar' ? efecto < 0 : efecto > 0);
     return {
       ...base, disponible: a.valor != null && d.valor != null,
-      ...(a.valor == null || d.valor == null ? { motivo: 'No hay tareas suficientes en alguna de las dos ventanas.' } : {}),
+      ...(a.valor == null || d.valor == null ? { motivo: 'Not enough tasks in one of the two windows.' } : {}),
       antes: a.valor, despues: d.valor, control: control.length ? { antes: ca.valor, despues: cd.valor } : null,
       efecto, confianza, ruido, enDireccionEsperada: enDireccion,
       muestra: { antes: a.n, despues: d.n, controlAntes: ca.n, controlDespues: cd.n },

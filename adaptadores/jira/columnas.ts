@@ -62,12 +62,12 @@ const PARECE_PERSONA = /\b(user|usuario|email|correo|account id|id de cuenta)\b/
 
 /** Qué es cada campo, en palabras llanas. */
 const QUE_ES: Record<string, string> = {
-  clave: 'Clave de la tarea', resumen: 'Título: solo en memoria, no sale en el paquete', descripcion: 'Descripción: solo para ver si el ticket está bien definido',
-  tipo: 'Tipo: historia, tarea, error u otro', estado: 'Estado: se traduce a uno de los nueve comunes', categoria: 'Categoría del estado: ayuda si el nombre no basta',
-  cambioCategoria: 'Fecha del último cambio de estado', creada: 'Fecha de creación', actualizada: 'Fecha de la última actualización', resuelta: 'Fecha de terminado',
-  resolucion: 'Resolución: separa lo descartado de lo terminado', prioridad: 'Prioridad', componentes: 'Componente', etiquetas: 'Etiquetas',
-  sprint: 'Sprints por los que pasó: se juntan en una lista', puntos: 'Estimación', equipo: 'Campo Equipo', tis: 'Tiempo en cada estado',
-  primera: 'Fecha de la primera respuesta', padre: 'Épica a la que pertenece (título)', padreClave: 'Épica a la que pertenece (clave)', proyecto: 'Proyecto',
+  clave: 'Task key', resumen: 'Title: only in memory, never in the package', descripcion: 'Description: only to check whether the ticket is well defined',
+  tipo: 'Type: story, task, bug or other', estado: 'Status: mapped to one of the nine common statuses', categoria: 'Status category: helps when the name is not enough',
+  cambioCategoria: 'Date of the last status change', creada: 'Creation date', actualizada: 'Date of the last update', resuelta: 'Done date',
+  resolucion: 'Resolution: separates discarded from done', prioridad: 'Priority', componentes: 'Component', etiquetas: 'Labels',
+  sprint: 'Sprints it went through: joined into a list', puntos: 'Estimate', equipo: 'Team field', tis: 'Time in each status',
+  primera: 'Date of first response', padre: 'Epic it belongs to (title)', padreClave: 'Epic it belongs to (key)', proyecto: 'Project',
 };
 /** Campos de los que no se enseña un ejemplo: texto libre o valores ilegibles. */
 const SIN_EJEMPLO: Record<string, 1> = { resumen: 1, descripcion: 1, tis: 1 };
@@ -115,7 +115,7 @@ export function describirColumnas(texto: string): ColumnaLeida[] {
     }
     const c: ColumnaLeida = {
       columna: nombre, veces: 1, campo, ejemplo,
-      que: persona ? 'Persona' : conNombres ? 'Texto que puede llevar nombres' : campo ? QUE_ES[campo] : 'Sin reconocer',
+      que: persona ? 'Person' : conNombres ? 'Text that may contain names' : campo ? QUE_ES[campo] : 'Not recognised',
       accion: persona || conNombres ? 'descarta' : campo ? 'usa' : 'ignora',
     };
     vistas[nombre] = c;
