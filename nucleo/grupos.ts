@@ -153,16 +153,16 @@ export function gruposDe(equipos: Equipo[], dimension: Dimension): { ambito: str
   const nombres = (f: (e: Equipo) => boolean) => equipos.filter(f).map((e) => e.nombre);
   if (dimension === 'tipo') {
     const g = [
-      { id: 'interno', nombre: 'Internos', equipos: nombres((e) => e.tipo === 'interno') },
-      { id: 'proveedor', nombre: 'Proveedores', equipos: nombres((e) => e.tipo === 'proveedor') },
+      { id: 'interno', nombre: 'In-house', equipos: nombres((e) => e.tipo === 'interno') },
+      { id: 'proveedor', nombre: 'Vendors', equipos: nombres((e) => e.tipo === 'proveedor') },
     ].filter((x) => x.equipos.length);
     return g.length >= 2 ? [{ ambito: null, grupos: g }] : [];
   }
   if (dimension === 'proveedor') {
-    const provs = [...new Set(equipos.filter((e) => e.tipo === 'proveedor' && e.proveedor).map((e) => e.proveedor!))].sort((a, b) => a.localeCompare(b, 'es'));
+    const provs = [...new Set(equipos.filter((e) => e.tipo === 'proveedor' && e.proveedor).map((e) => e.proveedor!))].sort((a, b) => a.localeCompare(b, 'en'));
     return provs.length >= 2 ? [{ ambito: null, grupos: provs.map((p) => ({ id: p, nombre: p, equipos: nombres((e) => e.proveedor === p) })) }] : [];
   }
-  const areas = [...new Set(equipos.filter((e) => e.area).map((e) => e.area!))].sort((a, b) => a.localeCompare(b, 'es'));
+  const areas = [...new Set(equipos.filter((e) => e.area).map((e) => e.area!))].sort((a, b) => a.localeCompare(b, 'en'));
   return areas.map((a) => ({ ambito: a, grupos: equipos.filter((e) => e.area === a).map((e) => ({ id: e.nombre, nombre: e.nombre, equipos: [e.nombre] })) }))
     .filter((x) => x.grupos.length >= 2);
 }

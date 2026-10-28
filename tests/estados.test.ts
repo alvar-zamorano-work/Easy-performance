@@ -24,8 +24,9 @@ test('misma etapa que la v0 (y mismo bloqueo en curso o espera) para cientos de 
   for (const a of palabras) for (const b of palabras.slice(0, 25)) nombres.add(a + ' ' + b);
   let comprobados = 0;
   for (const n of nombres) {
-    // Arreglos deliberados sobre la v0: "Listo" es Done en Jira en castellano; "Selected for Development" está sin empezar.
-    if (/\blisto\b|selected for|seleccionad[oa]s? para|ready for (dev|develop)/.test(norm(n))) continue;
+    // Arreglos deliberados sobre la v0: "Listo" es Done en Jira en castellano; "Selected for Development" está sin empezar;
+    // "UAT", "Quality assurance" y "Staging" son esperas (pruebas o despliegue), no pendiente.
+    if (/\blisto\b|selected for|seleccionad[oa]s? para|ready for (dev|develop)|\buat\b|quality assurance|staging/.test(norm(n))) continue;
     for (const c of categorias) {
       const p = proponerEstado(n, c), etapa = etapaDe(p), etapaV0 = v0.etapaPropuesta(n, c);
       assert.equal(etapa, etapaV0, `"${n}" (${c}): ${p}`);
@@ -41,7 +42,9 @@ test('Jira en castellano y nombres habituales', () => {
     ['Tareas por hacer', 'Por hacer', 'pendiente'], ['En curso', 'En curso', 'en_curso'], ['Listo', 'Listo', 'terminado'],
     ['Listo para pruebas', 'En curso', 'en_pruebas'], ['Listo para desplegar', 'En curso', 'en_espera'], ['En revisión', '', 'en_revision'], ['QA', '', 'en_pruebas'],
     ['Bloqueado', '', 'bloqueado'], ['Backlog', '', 'nuevo'], ['Selected for Development', 'To Do', 'pendiente'], ['Ready for development', '', 'pendiente'],
-    ['Cancelada', 'Done', 'descartado'], ['Cancelada', 'To Do', 'pendiente'], ['Estado 10005', '', 'pendiente'],
+    ['Cancelada', 'Done', 'descartado'], ['Cancelada', 'To Do', 'pendiente'], ['Status 10005', '', 'pendiente'],
+    ['Active', '', 'en_curso'], ['Removed', '', 'descartado'], ['Committed', '', 'pendiente'], ['Approved', '', 'pendiente'], ['Deployed', '', 'terminado'],
+    ['On Hold', '', 'bloqueado'], ['Scheduled', '', 'en_espera'], ['Authorize', '', 'en_revision'], ['Assess', '', 'pendiente'], ['UAT', '', 'en_pruebas'], ['Work in Progress', '', 'en_curso'],
   ];
   for (const [n, c, e] of casos) assert.equal(proponerEstado(n, c), e, n);
 });

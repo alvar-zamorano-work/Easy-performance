@@ -1,11 +1,11 @@
 {
   "id": "definicion-listo-siniestros",
-  "nombre": "Definición de listo en Siniestros",
-  "descripcion": "Ninguna historia entra en el sprint de Siniestros sin criterios de aceptación revisados con negocio. El responsable de producto los revisa en el refinamiento y, si faltan, la historia espera al siguiente sprint.",
+  "nombre": "Definition of ready in Claims",
+  "descripcion": "No story enters the Claims sprint without acceptance criteria reviewed with the business. The product owner reviews them in refinement and, if they are missing, the story waits for the next sprint.",
   "fecha_inicio": "2026-05-04",
   "fecha_fin": null,
   "equipos": [
-    "Siniestros"
+    "Claims"
   ],
   "medidas_objetivo": [
     {
@@ -13,7 +13,7 @@
       "direccion": "bajar"
     }
   ],
-  "efecto_esperado": "Retrabajo por debajo del 12% en dos meses.",
+  "efecto_esperado": "Rework below 12% in two months.",
   "estado": "en_curso",
   "origen": "retrabajo",
   "evaluacion": null,

@@ -12,9 +12,9 @@ interface Acumulado {
 }
 
 export function analizarSprints(items: Derivada[], c: ContextoCalculo): InfoSprints {
-  const out: InfoSprints = { fiables: false, motivo: 'El export no trae sprints.', ultimos: [] };
+  const out: InfoSprints = { fiables: false, motivo: 'The export has no sprints.', ultimos: [] };
   if (!c.det.haySprints) return out;
-  if (c.det.sprintsComoFecha) { out.motivo = 'Los nombres de sprint parecen fechas, no sprints de verdad.'; return out; }
+  if (c.det.sprintsComoFecha) { out.motivo = 'Sprint names look like dates, not real sprints.'; return out; }
   const porSprint: Record<string, Acumulado> = {};
   items.forEach((d) => {
     d.t.sprints.forEach((sp, i) => {
@@ -26,9 +26,9 @@ export function analizarSprints(items: Derivada[], c: ContextoCalculo): InfoSpri
   const lista = Object.keys(porSprint).map((k) => porSprint[k]).filter((x) => x.cierres.length >= 3);
   const recientes = items.filter((d) => d.entregada && d.t.fechas.terminada! >= sumarDias(c.semanaFin, -84));
   const conSprint = recientes.filter((d) => d.t.sprints.length).length;
-  if (!recientes.length || conSprint / recientes.length < 0.5) { out.motivo = 'Menos de la mitad del trabajo reciente está en sprints.'; return out; }
+  if (!recientes.length || conSprint / recientes.length < 0.5) { out.motivo = 'Less than half of recent work is in sprints.'; return out; }
   const semanasSpan = Math.max(1, (c.fechaRef.getTime() - c.det.fechaMin.getTime()) / (7 * DIA));
-  if (lista.length > semanasSpan + 2) { out.motivo = 'Hay más sprints que semanas: no parecen sprints de verdad.'; return out; }
+  if (lista.length > semanasSpan + 2) { out.motivo = 'There are more sprints than weeks: they do not look like real sprints.'; return out; }
   out.fiables = true;
   out.motivo = null;
   lista.forEach((x) => {

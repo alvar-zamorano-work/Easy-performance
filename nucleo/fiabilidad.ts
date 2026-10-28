@@ -36,7 +36,7 @@ export const SEMANAS_MINIMAS = 16;
 export const COMPROBACIONES_EQUIPO = ['tiempos', 'flujo', 'registro', 'estimacion', 'sprints', 'historia'];
 
 // Sin redondear a 100% lo que no llega: 99,8% se muestra con un decimal
-const pct = (x: number) => (x < 1 && Math.round(x * 100) === 100 ? (Math.floor(x * 1000) / 10).toLocaleString('es-ES') : String(Math.round(x * 100))) + '%';
+const pct = (x: number) => (x < 1 && Math.round(x * 100) === 100 ? (Math.floor(x * 1000) / 10).toLocaleString('en-GB') : String(Math.round(x * 100))) + '%';
 
 interface Parcial { valor: string; estado: EstadoComprobacion; detalle: string }
 
@@ -46,31 +46,31 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion): Record<stri
   const ent = items.filter((d) => d.entregada && d.t.fechas.terminada! >= desde && d.t.fechas.terminada! < p.ctx.semanaFin);
   const out: Record<string, Parcial> = {};
   // Tiempo en cada estado
-  if (!det.hayTiempos) out.tiempos = { valor: 'No viene', estado: 'revisar', detalle: 'El export no trae el tiempo en cada estado: no se pueden medir el plazo, el retrabajo ni el bloqueo.' };
-  else if (ent.length < 5) out.tiempos = { valor: 'Pocas tareas', estado: 'sin', detalle: 'Hay menos de 5 tareas terminadas en las últimas semanas.' };
+  if (!det.hayTiempos) out.tiempos = { valor: 'Missing', estado: 'revisar', detalle: 'The export has no time in each status: lead time, rework and blocked time cannot be measured.' };
+  else if (ent.length < 5) out.tiempos = { valor: 'Few tasks', estado: 'sin', detalle: 'Fewer than 5 tasks were done in recent weeks.' };
   else {
     const x = ent.filter((d) => d.conTiempos).length / ent.length;
-    out.tiempos = { valor: pct(x), estado: x >= 0.8 ? 'bien' : 'revisar', detalle: pct(x) + ' de lo terminado trae el tiempo en cada estado.' };
+    out.tiempos = { valor: pct(x), estado: x >= 0.8 ? 'bien' : 'revisar', detalle: pct(x) + ' of done work has the time in each status.' };
   }
   // Pasan por en curso
-  if (ent.length < 5) out.flujo = { valor: 'Pocas tareas', estado: 'sin', detalle: 'Hay menos de 5 tareas terminadas en las últimas semanas.' };
+  if (ent.length < 5) out.flujo = { valor: 'Few tasks', estado: 'sin', detalle: 'Fewer than 5 tasks were done in recent weeks.' };
   else {
     const x = 1 - ent.filter((d) => d.salto).length / ent.length;
-    out.flujo = { valor: pct(x), estado: x >= 0.95 ? 'bien' : 'revisar', detalle: pct(x) + ' de lo terminado pasó por en curso antes de cerrarse.' };
+    out.flujo = { valor: pct(x), estado: x >= 0.95 ? 'bien' : 'revisar', detalle: pct(x) + ' of done work went through in progress before it was closed.' };
   }
   // Registro a tiempo: las tareas se crean antes de hacer el trabajo
-  if (ent.length < 30) out.registro = { valor: 'Pocas tareas', estado: 'sin', detalle: 'Hacen falta 30 tareas terminadas para valorarlo.' };
+  if (ent.length < 30) out.registro = { valor: 'Few tasks', estado: 'sin', detalle: 'It takes 30 done tasks to assess this.' };
   else {
     const p85 = cuantil(ent.map((d) => d.total!), 0.85)!;
     const x = ent.filter((d) => (d.total || 0) >= 1).length / ent.length;
-    out.registro = { valor: pct(x), estado: p85 >= 1 ? 'bien' : 'revisar', detalle: pct(x) + ' de lo terminado tardó al menos un día desde que se creó.' };
+    out.registro = { valor: pct(x), estado: p85 >= 1 ? 'bien' : 'revisar', detalle: pct(x) + ' of done work took at least one day from creation.' };
   }
   // Historias estimadas
   const historias = items.filter((d) => d.t.tipo === 'historia');
-  if (historias.length < 10) out.estimacion = { valor: 'Pocas historias', estado: 'sin', detalle: 'Hay menos de 10 historias.' };
+  if (historias.length < 10) out.estimacion = { valor: 'Few stories', estado: 'sin', detalle: 'There are fewer than 10 stories.' };
   else {
     const x = historias.filter((d) => d.t.estimacion != null).length / historias.length;
-    out.estimacion = { valor: pct(x), estado: x >= 0.7 ? 'bien' : 'revisar', detalle: pct(x) + ' de las historias tiene estimación.' };
+    out.estimacion = { valor: pct(x), estado: x >= 0.7 ? 'bien' : 'revisar', detalle: pct(x) + ' of stories have an estimate.' };
   }
   return out;
 }
@@ -82,9 +82,9 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
   // Por equipo
   const porEquipo: FiabilidadEquipo[] = modelo.equipos.map((eq) => {
     const x = deItems(p.porEquipo[eq.nombre] || [], p, det);
-    const sp: Parcial = !det.haySprints || det.sprintsComoFecha || !usaSprints(eq.nombre) ? { valor: 'No aplica', estado: 'sin', detalle: '' }
-      : { valor: eq.sprints.fiables ? 'Sí' : 'No', estado: eq.sprints.fiables ? 'bien' : 'revisar', detalle: eq.sprints.motivo || '' };
-    const hi: Parcial = { valor: eq.semanasConDatos + ' semanas', estado: eq.semanasConDatos >= SEMANAS_MINIMAS ? 'bien' : 'revisar', detalle: '' };
+    const sp: Parcial = !det.haySprints || det.sprintsComoFecha || !usaSprints(eq.nombre) ? { valor: 'Not applicable', estado: 'sin', detalle: '' }
+      : { valor: eq.sprints.fiables ? 'Yes' : 'No', estado: eq.sprints.fiables ? 'bien' : 'revisar', detalle: eq.sprints.motivo || '' };
+    const hi: Parcial = { valor: eq.semanasConDatos + ' weeks', estado: eq.semanasConDatos >= SEMANAS_MINIMAS ? 'bien' : 'revisar', detalle: '' };
     const valores: FiabilidadEquipo['valores'] = {};
     const todosX: Record<string, Parcial> = { ...x, sprints: sp, historia: hi };
     COMPROBACIONES_EQUIPO.forEach((k) => { valores[k] = { valor: todosX[k].valor, estado: todosX[k].estado }; });
@@ -94,7 +94,7 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
   const conEquipos = (id: string, x: Parcial): Parcial => {
     const malos = porEquipo.filter((e) => e.valores[id] && e.valores[id].estado === 'revisar');
     if (!malos.length) return x;
-    return { valor: x.valor, estado: 'revisar', detalle: x.detalle + ' Revisar en ' + malos.map((e) => e.equipo + ' (' + e.valores[id].valor + ')').join(', ') + '.' };
+    return { valor: x.valor, estado: 'revisar', detalle: x.detalle + ' Check ' + malos.map((e) => e.equipo + ' (' + e.valores[id].valor + ')').join(', ') + '.' };
   };
   const comp: Comprobacion[] = [];
   const nuevo = (id: string, nombre: string, que: string, umbral: string, arreglo: string, x: Parcial) => comp.push({ id, nombre, que, umbral, arreglo, valor: x.valor, estado: x.estado, detalle: x.detalle });
@@ -102,58 +102,58 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
   // Tareas con equipo
   const total = lectura.tareas.length, conEquipo = todas.length;
   const cobertura = total ? conEquipo / total : 0;
-  nuevo('equipo', 'Tareas con equipo', 'Parte de las tareas que se pueden asignar a uno de los equipos medidos.', '90% o más',
-    'Revisar el campo que dice de qué equipo es cada tarea, o pedir a los equipos que lo rellenen.',
-    { valor: pct(cobertura), estado: cobertura >= 0.9 ? 'bien' : 'revisar', detalle: conEquipo.toLocaleString('es-ES') + ' de ' + total.toLocaleString('es-ES') + ' tareas tienen un equipo de la lista.' });
+  nuevo('equipo', 'Tasks with a team', 'Share of tasks that can be assigned to one of the measured teams.', '90% or more',
+    'Check the field that says which team each task belongs to, or ask the teams to fill it in.',
+    { valor: pct(cobertura), estado: cobertura >= 0.9 ? 'bien' : 'revisar', detalle: conEquipo.toLocaleString('en-GB') + ' of ' + total.toLocaleString('en-GB') + ' tasks have a team from the list.' });
 
   // Estados reconocidos
   const confirmados = Object.assign({}, cfg.mapeoEstados || {});
   const porRevisar = det.estados.filter((e) => e.propuestaPor !== 'nombre' && !confirmados[e.nombre]);
-  nuevo('estados', 'Estados reconocidos', 'Estados de la herramienta que se han traducido con seguridad a un estado común.', 'Todos',
-    'Confirmar en Vuestros datos el estado común de los que están por revisar.',
-    { valor: (det.estados.length - porRevisar.length) + ' de ' + det.estados.length, estado: porRevisar.length ? 'revisar' : 'bien',
-      detalle: porRevisar.length ? 'Por confirmar: ' + porRevisar.map((e) => e.nombre).join(', ') + '.' : 'Todos se reconocen por su nombre o están confirmados.' });
+  nuevo('estados', 'Recognised statuses', 'Statuses from the tool that map with confidence to a common status.', 'All',
+    'Confirm in Settings the common status of those still to review.',
+    { valor: (det.estados.length - porRevisar.length) + ' of ' + det.estados.length, estado: porRevisar.length ? 'revisar' : 'bien',
+      detalle: porRevisar.length ? 'To confirm: ' + porRevisar.map((e) => e.nombre).join(', ') + '.' : 'All are recognised by name or confirmed.' });
 
-  nuevo('tiempos', 'Tiempo en cada estado', 'Si lo terminado trae cuánto tiempo pasó en cada estado. Sin él no hay plazo, retrabajo ni bloqueo.', '80% o más',
-    'Exportar con el campo Tiempo en estado, o conectar con la API, que trae el historial de cambios.', conEquipos('tiempos', area.tiempos));
-  nuevo('flujo', 'Pasan por en curso', 'Si las tareas se mueven por en curso al empezar, en lugar de saltar de pendiente a hecho.', '95% o más',
-    'Mover cada tarea a en curso cuando se empieza a trabajar en ella.', conEquipos('flujo', area.flujo));
+  nuevo('tiempos', 'Time in each status', 'Whether done work includes how long it spent in each status. Without it there is no lead time, rework or blocked time.', '80% or more',
+    'Export with the Time in Status field, or connect to the API, which brings the change history.', conEquipos('tiempos', area.tiempos));
+  nuevo('flujo', 'Go through in progress', 'Whether tasks move to in progress when they start, instead of jumping from backlog to done.', '95% or more',
+    'Move each task to in progress when work on it starts.', conEquipos('flujo', area.flujo));
 
   // Cierres en bloque
   const bloques = modelo.cierresBloque;
-  nuevo('bloque', 'Sin cierres en bloque', 'Momentos en los que se cerraron 10 o más tareas en el mismo minuto, típico de una limpieza del tablero.', 'Ninguno',
-    'Si fue una limpieza, cerrar esas tareas como descartadas para que no cuenten como entregas.',
+  nuevo('bloque', 'No bulk closures', 'Moments when 10 or more tasks were closed in the same minute, typical of a board clean-up.', 'None',
+    'If it was a clean-up, close those tasks as discarded so they do not count as deliveries.',
     { valor: String(bloques.length), estado: bloques.length ? 'revisar' : 'bien',
-      detalle: bloques.length ? bloques.length + (bloques.length === 1 ? ' cierre en bloque' : ' cierres en bloque') + ', con ' + bloques.reduce((s, b) => s + b.n, 0) + ' tareas en total.' : 'No hay cierres masivos.' });
+      detalle: bloques.length ? bloques.length + (bloques.length === 1 ? ' bulk closure' : ' bulk closures') + ', with ' + bloques.reduce((s, b) => s + b.n, 0) + ' tasks in total.' : 'No bulk closures.' });
 
-  nuevo('registro', 'Registro a tiempo', 'Si las tareas se crean antes de hacer el trabajo y no después, para apuntarlo.', '15% o más: si casi todo se cierra el mismo día en que se crea, se apuntó al terminar',
-    'Crear las tareas al planificar, no al terminar el trabajo.', conEquipos('registro', area.registro));
-  nuevo('estimacion', 'Historias estimadas', 'Parte de las historias con estimación. Sin ella no se puede ver si las estimaciones predicen.', '70% o más',
-    'Estimar las historias antes de empezar, aunque sea con tallas.', conEquipos('estimacion', area.estimacion));
+  nuevo('registro', 'Logged on time', 'Whether tasks are created before the work is done, not afterwards just to record it.', '15% or more: if almost everything is closed the same day it is created, it was logged at the end',
+    'Create tasks when planning, not when the work is finished.', conEquipos('registro', area.registro));
+  nuevo('estimacion', 'Estimated stories', 'Share of stories with an estimate. Without it there is no way to see whether estimates predict.', '70% or more',
+    'Estimate stories before starting, even with t-shirt sizes.', conEquipos('estimacion', area.estimacion));
 
   // Sprints creíbles
   const conSprints = modelo.equipos.filter((e) => usaSprints(e.nombre));
   const fiables = conSprints.filter((e) => e.sprints.fiables);
-  const sprints: Parcial = !det.haySprints ? { valor: 'No hay', estado: 'sin', detalle: 'Los datos no traen sprints.' }
-    : det.sprintsComoFecha ? { valor: 'No creíbles', estado: 'revisar', detalle: 'Los nombres de sprint parecen fechas y horas.' }
-      : !conSprints.length ? { valor: 'Pocos', estado: 'sin', detalle: 'No hay sprints suficientes para valorarlo.' }
-        : { valor: fiables.length + ' de ' + conSprints.length + ' equipos', estado: fiables.length === conSprints.length ? 'bien' : 'revisar',
-          detalle: fiables.length === conSprints.length ? 'Los sprints de todos los equipos se pueden usar para medir.' : 'Equipos con sprints poco creíbles: ' + conSprints.filter((e) => !e.sprints.fiables).map((e) => e.nombre).join(', ') + '.' };
-  nuevo('sprints', 'Sprints creíbles', 'Si los sprints se abren y se cierran de verdad en la herramienta, para medir lo que pasa de un sprint a otro.', 'Todos los equipos',
-    'Cerrar cada sprint en la herramienta y mover lo pendiente al siguiente.', sprints);
+  const sprints: Parcial = !det.haySprints ? { valor: 'None', estado: 'sin', detalle: 'The data has no sprints.' }
+    : det.sprintsComoFecha ? { valor: 'Not credible', estado: 'revisar', detalle: 'Sprint names look like dates and times.' }
+      : !conSprints.length ? { valor: 'Few', estado: 'sin', detalle: 'Not enough sprints to assess this.' }
+        : { valor: fiables.length + ' of ' + conSprints.length + ' teams', estado: fiables.length === conSprints.length ? 'bien' : 'revisar',
+          detalle: fiables.length === conSprints.length ? 'The sprints of every team can be used to measure.' : 'Teams with sprints that are not credible: ' + conSprints.filter((e) => !e.sprints.fiables).map((e) => e.nombre).join(', ') + '.' };
+  nuevo('sprints', 'Credible sprints', 'Whether sprints really open and close in the tool, so carried over work can be measured.', 'All teams',
+    'Close each sprint in the tool and move unfinished work to the next one.', sprints);
 
   // Actividad hasta el final del periodo
-  const cortado = det.avisos.some((a) => /actividad/i.test(a.texto));
-  nuevo('actividad', 'Datos hasta el final', 'Si el export llega hasta la última semana o parece cortado antes.', 'Sin cortes',
-    'Exportar de nuevo con todo el periodo.',
-    { valor: cortado ? 'Cortado' : 'Completo', estado: cortado ? 'revisar' : 'bien', detalle: cortado ? 'Las últimas semanas casi no tienen actividad.' : 'Hay actividad hasta el final del periodo.' });
+  const cortado = det.avisos.some((a) => /activity/i.test(a.texto));
+  nuevo('actividad', 'Data up to the end', 'Whether the export reaches the last week or looks cut off before it.', 'No cut-off',
+    'Export again with the whole period.',
+    { valor: cortado ? 'Cut off' : 'Complete', estado: cortado ? 'revisar' : 'bien', detalle: cortado ? 'The last weeks have almost no activity.' : 'There is activity up to the end of the period.' });
 
   // Historia suficiente para saber qué es lo normal
   const cortos = modelo.equipos.filter((e) => e.semanasConDatos < SEMANAS_MINIMAS);
-  nuevo('historia', 'Historia suficiente', 'Semanas con actividad de cada equipo. Hacen falta 12 para saber qué es lo normal y 4 para medir.', SEMANAS_MINIMAS + ' semanas o más',
-    'Cargar un periodo más largo en la primera ingesta.',
-    { valor: (modelo.equipos.length - cortos.length) + ' de ' + modelo.equipos.length + ' equipos', estado: cortos.length ? 'revisar' : 'bien',
-      detalle: cortos.length ? 'Con poca historia: ' + cortos.map((e) => e.nombre + ' (' + e.semanasConDatos + ' semanas)').join(', ') + '.' : 'Todos los equipos tienen historia suficiente.' });
+  nuevo('historia', 'Enough history', 'Weeks with activity for each team. It takes 12 to know what is normal and 4 to measure.', SEMANAS_MINIMAS + ' weeks or more',
+    'Load a longer period in the first import.',
+    { valor: (modelo.equipos.length - cortos.length) + ' of ' + modelo.equipos.length + ' teams', estado: cortos.length ? 'revisar' : 'bien',
+      detalle: cortos.length ? 'Short history: ' + cortos.map((e) => e.nombre + ' (' + e.semanasConDatos + ' weeks)').join(', ') + '.' : 'Every team has enough history.' });
 
   const revisar = comp.filter((c) => c.estado === 'revisar').length, bien = comp.filter((c) => c.estado === 'bien').length;
   let nivel: NivelFiabilidad = revisar <= 1 ? 'alta' : revisar <= 3 ? 'media' : 'baja';

@@ -24,16 +24,18 @@ export interface OpcionesDefiniciones {
   catalogo?: Catalogo;
 }
 
-const NOMBRE_ETAPA: Record<Etapa, string> = { pendiente: 'Pendiente', curso: 'En curso', espera: 'En espera', hecho: 'Hecho' };
+const NOMBRE_ETAPA: Record<Etapa, string> = { pendiente: 'Backlog', curso: 'In progress', espera: 'Waiting', hecho: 'Done' };
 const ORDEN_ESTADOS: EstadoNormalizado[] = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
-const NOMBRE_ORIGEN: Record<string, string> = { contrato: 'contrato', declarado: 'declarado por el equipo', estimado: 'estimado' };
+const NOMBRE_ORIGEN: Record<string, string> = { contrato: 'contract', declarado: 'declared by the team', estimado: 'estimated' };
 const REQUISITO: Record<string, string> = {
-  tiempos: 'el tiempo en cada estado', inicio: 'la fecha en que empieza el trabajo', puntos: 'la estimación en puntos', errores: 'el tipo de tarea Error',
-  primera: 'la fecha de primera respuesta', sprints: 'los sprints', api: 'la conexión directa con la plataforma', descripcion: 'la descripción de los tickets',
+  tiempos: 'the time in each status', inicio: 'the date work starts', puntos: 'the estimate in points', errores: 'the Bug task type',
+  primera: 'the date of first response', sprints: 'the sprints', api: 'a direct connection to the platform', descripcion: 'the ticket descriptions',
 };
+const SIN_CLIENTE = 'the client';
 
 const plataformaTexto = (p: string) => (p === 'jira' ? 'Jira' : p.charAt(0).toUpperCase() + p.slice(1));
-const n = (x: number) => x.toLocaleString('es-ES');
+const n = (x: number) => x.toLocaleString('en-GB');
+const mayuscula = (s: string) => s.replace(/^./, (c) => c.toUpperCase());
 
 export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: OpcionesDefiniciones = {}): Documento {
   const cat = opciones.catalogo || CATALOGO;
@@ -43,7 +45,7 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
   const generado = opciones.generado || new Date();
   const inf = lectura.informe;
   const plataforma = plataformaTexto(lectura.plataforma);
-  const nombreCliente = (cliente.nombre || '').trim() || 'el cliente';
+  const nombreCliente = (cliente.nombre || '').trim() || SIN_CLIENTE;
   const mapeo: Record<string, EstadoNormalizado> = { ...det.mapeoEstados, ...(cliente.mapeoEstados || {}), ...(cfg.mapeoEstados || {}) };
   const b: Bloque[] = [];
   const h1 = (t: string) => b.push({ tipo: 'h1', texto: t });
@@ -52,114 +54,114 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
   const lista = (items: Texto[]) => { if (items.length) b.push({ tipo: 'lista', items }); };
   const tabla = (cabecera: string[], filas: string[][], anchos: number[]) => b.push({ tipo: 'tabla', cabecera, filas, anchos });
 
-  p('Este documento fija cómo se mide el rendimiento de los equipos de ' + nombreCliente + '. Recoge de dónde salen los datos, qué es cada equipo, qué significa cada estado y cómo se calcula cada medida.');
-  p('Cuando las dos partes lo firman, estas reglas valen para el tablero, las comparaciones y la evaluación de iniciativas. Si una regla cambia, se cambia antes aquí.');
+  p('This document sets how the performance of the teams of ' + nombreCliente + ' is measured. It records where the data comes from, what each team is, what each status means and how each measure is calculated.');
+  p('Once both parties sign it, these rules apply to the dashboard, the comparisons and the evaluation of initiatives. If a rule changes, it changes here first.');
 
   // 1. Objetivos
   const objetivos = cat.objetivos.filter((o) => o.fijo || cliente.objetivos.includes(o.id));
   if (objetivos.length) {
-    h1('1. Qué queremos conseguir');
+    h1('1. What we want to achieve');
     lista(objetivos.map((o) => [{ b: o.titulo + '.' }, ' ' + o.frase]));
   }
 
   // 2. Datos
-  h1('2. De dónde salen los datos');
+  h1('2. Where the data comes from');
   const desde = det.fechaMin, hasta = new Date(Math.min(det.fechaRef.getTime(), det.fechaMax.getTime()));
   lista([
-    [{ b: 'Fuente. ' }, 'Export de ' + plataforma + ' en CSV con todos los campos.'],
-    [{ b: 'Periodo. ' }, 'Del ' + fechaCorta(desde) + ' al ' + fechaCorta(hasta) + '. Las medidas llegan hasta la semana que termina el ' + fechaCorta(new Date(modelo.semanaFin.getTime() - 864e5)) + '.'],
-    [{ b: 'Tareas. ' }, n(inf.tareas) + ' tareas. No cuentan las épicas (' + n(inf.epicas) + ') ni las subtareas (' + n(inf.subtareas) + '). Las filas repetidas (' + n(inf.duplicadas) + ') cuentan una vez, con su versión más reciente.'],
-    [{ b: 'Personas. ' }, 'Solo se mide a equipos. Las columnas de personas (asignado, informador, comentarios) no se leen.'],
+    [{ b: 'Source. ' }, plataforma + ' CSV export with all fields.'],
+    [{ b: 'Period. ' }, 'From ' + fechaCorta(desde) + ' to ' + fechaCorta(hasta) + '. Measures run up to the week ending ' + fechaCorta(new Date(modelo.semanaFin.getTime() - 864e5)) + '.'],
+    [{ b: 'Tasks. ' }, n(inf.tareas) + ' tasks. Epics (' + n(inf.epicas) + ') and subtasks (' + n(inf.subtareas) + ') do not count. Repeated rows (' + n(inf.duplicadas) + ') count once, with their most recent version.'],
+    [{ b: 'People. ' }, 'Only teams are measured. People columns (assignee, reporter, comments) are not read.'],
   ]);
-  if (inf.ficheros.length) tabla(['Fichero', 'Filas', 'Columnas con datos'], inf.ficheros.map((f) => [f.nombre, n(f.filas), f.columnasConDatos + ' de ' + f.columnas]), [6, 2, 2]);
+  if (inf.ficheros.length) tabla(['File', 'Rows', 'Columns with data'], inf.ficheros.map((f) => [f.nombre, n(f.filas), f.columnasConDatos + ' of ' + f.columnas]), [6, 2, 2]);
 
   // 3. Equipos
-  h1('3. Equipos');
+  h1('3. Teams');
   const opcion = det.opcionesEquipo.find((o) => o.id === cfg.campoEquipo);
   const campo = det.camposEquipo.find((c) => c.id === cfg.campoEquipo);
-  if (!opcion || opcion.id === 'todos') p('Todo el trabajo se mide como un solo equipo.');
-  else p('Cada tarea pertenece al equipo que indica el campo ' + (campo ? campo.nombre : cfg.campoEquipo || '').replace(/^campo\s+/i, '') + '. Las tareas sin ese campo o de equipos que no están en la lista no cuentan.');
+  if (!opcion || opcion.id === 'todos') p('All work is measured as a single team.');
+  else p('Each task belongs to the team given by the ' + (campo ? campo.nombre : cfg.campoEquipo || '').replace(/\s+field$/i, '') + ' field. Tasks without that field, or from teams not on the list, do not count.');
   const tareasDe = (nombre: string) => (opcion && opcion.id !== 'todos' ? (opcion.valores.find((v) => v.valor === nombre)?.n ?? 0) : inf.tareas);
   const info = new Map(cliente.equipos.lista.map((e) => [e.nombre, e]));
-  tabla(['Equipo', 'Tareas', 'Tipo', 'Área', 'FTE'], modelo.equipos.map((eq) => {
+  tabla(['Team', 'Tasks', 'Type', 'Area', 'FTE'], modelo.equipos.map((eq) => {
     const e = info.get(eq.nombre);
     const ultimo = e ? e.fte.slice().sort((a, x) => a.periodo.localeCompare(x.periodo)).pop() : undefined;
-    const fte = ultimo ? formatear(ultimo.valor, 'num') + ' (' + (NOMBRE_ORIGEN[ultimo.origen] || ultimo.origen) + ')' : 'Sin indicar';
-    const tipo = e && e.tipo === 'proveedor' ? 'Proveedor: ' + (e.proveedor || 'sin nombre') : 'Interno';
-    return [eq.nombre, n(tareasDe(eq.nombre)), tipo, (e && e.area) || 'Sin indicar', fte];
+    const fte = ultimo ? formatear(ultimo.valor, 'num') + ' (' + (NOMBRE_ORIGEN[ultimo.origen] || ultimo.origen) + ')' : 'Not given';
+    const tipo = e && e.tipo === 'proveedor' ? 'Vendor: ' + (e.proveedor || 'unnamed') : 'In-house';
+    return [eq.nombre, n(tareasDe(eq.nombre)), tipo, (e && e.area) || 'Not given', fte];
   }), [3, 1.5, 3, 2.5, 2.5]);
-  p('FTE son las personas a jornada completa de cada equipo. ' + plataforma + ' no lo trae: sale del contrato, lo declara el equipo o se estima. Sin FTE, la medida Throughput / FTE no se calcula para ese equipo.', true);
+  p('FTE is the number of full-time people in each team. ' + plataforma + ' does not have it: it comes from the contract, the team declares it or it is estimated. Without FTE, the Throughput / FTE measure is not calculated for that team.', true);
   if (cfg.coste && Object.keys(cfg.coste).length) {
-    h2('Capacidad y coste');
-    p('El coste de cada equipo sale de su FTE por el coste mensual de un FTE: el coste interno cargado para los equipos propios y la tarifa del contrato para los de proveedores. Es un dato de equipo, nunca el salario de una persona.');
-    tabla(['Equipo', 'FTE', 'Coste de un FTE al mes', 'Coste del equipo al mes'], modelo.equipos.map((eq) => {
+    h2('Capacity and cost');
+    p('The cost of each team is its FTE times the monthly cost of one FTE: the internal charged cost for in-house teams and the contract rate for vendor teams. It is a team figure, never the salary of a person.');
+    tabla(['Team', 'FTE', 'Cost of one FTE per month', 'Team cost per month'], modelo.equipos.map((eq) => {
       const f = cfg.fte && cfg.fte[eq.nombre], c = cfg.coste![eq.nombre];
-      return [eq.nombre, f ? formatear(f, 'num') : 'Sin indicar', c ? formatear(c, 'eur') : 'Sin indicar', f && c ? formatear(f * c, 'eur') : 'Sin calcular'];
+      return [eq.nombre, f ? formatear(f, 'num') : 'Not given', c ? formatear(c, 'eur') : 'Not given', f && c ? formatear(f * c, 'eur') : 'Not calculated'];
     }), [3, 1.5, 2.75, 2.75]);
     lista([
-      [{ b: 'Coste por entrega. ' }, 'Coste del equipo al mes entre las tareas terminadas al mes (media de las últimas 4 semanas). Las descartadas no cuentan. Mejor cuanto más bajo.'],
-      [{ b: 'Cómo se lee. ' }, 'Una tarea no es una unidad fija de trabajo. El coste por entrega sirve para ver la tendencia de cada equipo frente a su propia historia y, entre grupos, solo con un reparto de trabajo parecido.'],
+      [{ b: 'Cost per delivery. ' }, 'Team cost per month divided by the tasks done per month (average of the last 4 weeks). Discarded tasks do not count. Lower is better.'],
+      [{ b: 'How to read it. ' }, 'A task is not a fixed unit of work. Cost per delivery shows the trend of each team against its own history and, between groups, only with a similar mix of work.'],
     ]);
   }
 
   // 4. Estados
-  h1('4. Estados');
-  p('Cada estado de ' + plataforma + ' se traduce a un estado común. Así todos los equipos se miden con las mismas reglas, aunque cada uno use sus propios estados.');
+  h1('4. Statuses');
+  p('Each ' + plataforma + ' status maps to a common status. This way every team is measured with the same rules, even if each one uses its own statuses.');
   const actuales = new Map(det.estados.map((e) => [e.nombre, e]));
   const nombres = Object.keys(mapeo).filter((k) => actuales.has(k));
   nombres.sort((a, x) => ORDEN_ESTADOS.indexOf(mapeo[a]) - ORDEN_ESTADOS.indexOf(mapeo[x]) || (actuales.get(x)!.visitas - actuales.get(a)!.visitas));
-  tabla(['Estado en ' + plataforma, 'Categoría en ' + plataforma, 'Estado común', 'Cuenta como', 'Tareas ahora'], nombres.map((k) => {
+  tabla(['Status in ' + plataforma, 'Category in ' + plataforma, 'Common status', 'Counts as', 'Tasks now'], nombres.map((k) => {
     const e = actuales.get(k)!, comun = mapeo[k];
-    return [k, e.categoria || 'Sin categoría', cat.estados.estados[comun].nombre, NOMBRE_ETAPA[etapaDe(comun, cat.estados)] + (comun === 'descartado' ? ' (no es entrega)' : ''), n(e.actuales)];
+    return [k, e.categoria || 'No category', cat.estados.estados[comun].nombre, NOMBRE_ETAPA[etapaDe(comun, cat.estados)] + (comun === 'descartado' ? ' (not a delivery)' : ''), n(e.actuales)];
   }), [3, 2.5, 2.2, 2.3, 1.5]);
   // Estados que nadie ha confirmado y que no se reconocieron por su nombre
   const sinRegla = nombres.filter((k) => actuales.get(k)!.propuestaPor !== 'nombre' && !(cliente.mapeoEstados && cliente.mapeoEstados[k]) && !(cfg.mapeoEstados && cfg.mapeoEstados[k]));
-  if (sinRegla.length) p([{ b: 'Por confirmar. ' }, 'Estos estados no se reconocieron por su nombre y se han asignado por su categoría o por defecto: ' + sinRegla.join(', ') + '.']);
+  if (sinRegla.length) p([{ b: 'To confirm. ' }, 'These statuses were not recognised by name and were assigned by category or by default: ' + sinRegla.join(', ') + '.']);
   const usados = new Set(nombres.map((k) => mapeo[k]));
-  h2('Qué significa cada estado común');
-  tabla(['Estado común', 'Qué significa', 'Cuenta como'], ORDEN_ESTADOS.filter((s) => usados.has(s)).map((s) => {
+  h2('What each common status means');
+  tabla(['Common status', 'Meaning', 'Counts as'], ORDEN_ESTADOS.filter((s) => usados.has(s)).map((s) => {
     const d = cat.estados.estados[s];
     return [d.nombre, d.descripcion, NOMBRE_ETAPA[d.etapa]];
   }), [2.2, 6, 1.8]);
-  h2('Reglas que salen de los estados');
+  h2('Rules that follow from the statuses');
   lista([
-    'El tiempo de ciclo de una tarea suma el tiempo que pasa en estados En curso y En espera. El tiempo en Pendiente no cuenta.',
-    'El tiempo en espera suma los estados Bloqueado, En revisión, En pruebas y En espera.',
-    'Una tarea Descartada no cuenta como entrega.',
-    'Si una tarea terminada entró más de una vez en un mismo estado de trabajo, es retrabajo. Las vueltas tras un bloqueo no cuentan.',
+    'The lead time of a task adds up the time spent in In progress and Waiting statuses. Time in Backlog does not count.',
+    'Waiting time adds up the Blocked, Review, Testing and Waiting statuses.',
+    'A Discarded task does not count as a delivery.',
+    'If a done task entered the same work status more than once, it is rework. Returns after a block do not count.',
   ]);
 
   // 5. Medidas
   const medidas = cliente.medidas.filter((id) => cat.medidas[id]);
-  h1('5. Medidas');
-  p('Cada medida se compara con lo habitual en el propio equipo, nunca con otros equipos. Lo habitual es el rango en el que está la medida 7 de cada 10 semanas, mirando las ' + (cfg.semanasReferencia || 12) + ' semanas anteriores a las que se están midiendo.');
+  h1('5. Measures');
+  p('Each measure is compared with what is normal for the team itself, never with other teams. Normal is the range the measure sits in 7 weeks out of 10, looking at the ' + (cfg.semanasReferencia || 12) + ' weeks before the ones being measured.');
   lista([
-    [{ b: 'Bien. ' }, 'Dentro de lo habitual o mejor, con un margen del 10%.'],
-    [{ b: 'Atención. ' }, 'Peor que lo habitual, hasta un 25% más allá del margen.'],
-    [{ b: 'Crítico. ' }, 'Bastante peor que lo habitual.'],
-    [{ b: 'Límites fijos. ' }, 'Algunas medidas tienen además un límite de atención y otro crítico. Si un equipo acuerda sus propios límites, mandan sus límites.'],
+    [{ b: 'Good. ' }, 'Within the usual range or better, with a 10% margin.'],
+    [{ b: 'Attention. ' }, 'Worse than usual, up to 25% beyond the margin.'],
+    [{ b: 'Critical. ' }, 'Much worse than usual.'],
+    [{ b: 'Fixed limits. ' }, 'Some measures also have an attention limit and a critical limit. If a team agrees its own limits, its limits apply.'],
   ]);
   medidas.forEach((id) => {
     const def = cat.medidas[id];
     h2(def.nombre);
     p([{ b: def.pregunta + ' ' }, def.como]);
     const extra: Texto[] = [];
-    const unidad = def.formato === 'pct' ? ('Porcentaje ' + (def.unidad || '')).trim() : (def.unidad || '');
-    if (unidad) extra.push([{ b: 'Unidad. ' }, unidad.charAt(0).toUpperCase() + unidad.slice(1) + '.', def.dir ? ' Mejor cuanto ' + (def.dir === 'menos' ? 'más baja.' : 'más alta.') : '']);
+    const unidad = def.formato === 'pct' ? ('Percentage ' + (def.unidad || '')).trim() : (def.unidad || '');
+    if (unidad) extra.push([{ b: 'Unit. ' }, mayuscula(unidad) + '.', def.dir ? (def.dir === 'menos' ? ' Lower is better.' : ' Higher is better.') : '']);
     if (def.limites && (def.limites.atencion != null || def.limites.critico != null)) {
       const f = (x: number) => formatear(x, def.formato);
-      extra.push([{ b: 'Límites fijos. ' }, [def.limites.atencion != null ? 'atención desde ' + f(def.limites.atencion) : '', def.limites.critico != null ? 'crítico desde ' + f(def.limites.critico) : ''].filter(Boolean).join(' y ').replace(/^./, (c) => c.toUpperCase()) + '.']);
+      extra.push([{ b: 'Fixed limits. ' }, mayuscula([def.limites.atencion != null ? 'attention from ' + f(def.limites.atencion) : '', def.limites.critico != null ? 'critical from ' + f(def.limites.critico) : ''].filter(Boolean).join(' and ')) + '.']);
     }
     const propios = modelo.equipos.filter((eq) => cfg.limites && cfg.limites[eq.nombre] && cfg.limites[eq.nombre][id]);
     if (propios.length) {
-      extra.push([{ b: 'Límites propios. ' }, propios.map((eq) => {
+      extra.push([{ b: 'Team limits. ' }, propios.map((eq) => {
         const l = cfg.limites![eq.nombre][id];
-        return eq.nombre + ': ' + [l.atencion != null ? 'atención ' + formatear(l.atencion, def.formato) : '', l.critico != null ? 'crítico ' + formatear(l.critico, def.formato) : ''].filter(Boolean).join(', ');
+        return eq.nombre + ': ' + [l.atencion != null ? 'attention ' + formatear(l.atencion, def.formato) : '', l.critico != null ? 'critical ' + formatear(l.critico, def.formato) : ''].filter(Boolean).join(', ');
       }).join('; ') + '.']);
     }
-    if (def.requiere) extra.push([{ b: 'Necesita. ' }, (REQUISITO[def.requiere] || def.requiere).replace(/^./, (c) => c.toUpperCase()) + ' en el export.']);
+    if (def.requiere) extra.push([{ b: 'Needs. ' }, mayuscula(REQUISITO[def.requiere] || def.requiere) + ' in the export.']);
     const sin = modelo.equipos.filter((eq) => !(eq.medidas[id] && eq.medidas[id].disponible));
-    if (sin.length) extra.push([{ b: 'Sin datos en ' + sin.map((eq) => eq.nombre).join(', ') + '. ' }, (sin[0].medidas[id] && sin[0].medidas[id].motivo) || 'El export no trae lo necesario.']);
+    if (sin.length) extra.push([{ b: 'No data in ' + sin.map((eq) => eq.nombre).join(', ') + '. ' }, (sin[0].medidas[id] && sin[0].medidas[id].motivo) || 'The export does not have what is needed.']);
     lista(extra);
   });
 
@@ -167,77 +169,77 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
   const proveedores = cliente.equipos.lista.some((e) => e.tipo === 'proveedor');
   const areas = new Set(cliente.equipos.lista.map((e) => e.area).filter(Boolean));
   let s = 6;
-  h1(s++ + '. Comparaciones entre grupos');
-  p(proveedores || areas.size ? 'Se comparan equipos internos y de proveedores, proveedores entre sí y equipos de una misma área, con estas reglas:' : 'Cuando haya equipos de proveedores o áreas con varios equipos, se compararán con estas reglas:');
+  h1(s++ + '. Comparisons between groups');
+  p(proveedores || areas.size ? 'In-house and vendor teams, vendors against each other and teams within the same area are compared with these rules:' : 'When there are vendor teams or areas with several teams, they will be compared with these rules:');
   lista([
-    'Solo medidas que no dependen del tamaño del equipo: plazo en el que se termina casi todo lo empezado (el 85% de las tareas), retrabajo, reaperturas, tiempo bloqueado, tareas que pasan de sprint, antigüedad del pendiente, Throughput / FTE y tickets listos para agentes.',
-    'Nunca volumen bruto y nunca personas.',
-    'Lo terminado se compara dentro del mismo tipo y tamaño de tarea. Al lado se muestra el reparto del trabajo de cada grupo.',
-    'Se miran las últimas ' + SEMANAS_COMPARACION + ' semanas. Si una celda tiene menos de ' + MUESTRA_MINIMA + ' tareas, dice "pocos datos".',
-    'Una diferencia cuenta si es clara (no se explica por azar) y relevante (un ' + Math.round(DIFERENCIA_MINIMA * 100) + '% o más).',
-    'No mide el esfuerzo ni la dificultad. Una diferencia es una pregunta para la reunión, no un ranking.',
+    'Only measures that do not depend on team size: the lead time in which almost everything started is done (85% of tasks), rework, reopened tasks, blocked time, tasks carried over sprints, backlog age, Throughput / FTE and tickets ready for AI agents.',
+    'Never raw volume and never people.',
+    'Done work is compared within the same task type and size. The mix of work of each group is shown next to it.',
+    'The last ' + SEMANAS_COMPARACION + ' weeks are used. If a cell has fewer than ' + MUESTRA_MINIMA + ' tasks, it says "few data".',
+    'A difference counts if it is clear (not explained by chance) and relevant (' + Math.round(DIFERENCIA_MINIMA * 100) + '% or more).',
+    'It does not measure effort or difficulty. A difference is a question for the meeting, not a ranking.',
   ]);
 
   // 7. Iniciativas
-  h1(s++ + '. Iniciativas');
-  p('Una iniciativa es un cambio que se prueba en uno o varios equipos, con una medida objetivo y un efecto esperado. Se evalúa así:');
+  h1(s++ + '. Initiatives');
+  p('An initiative is a change tried in one or more teams, with a target measure and an expected effect. It is evaluated like this:');
   lista([
-    'Antes: las semanas de la medida (4 para plazos y entregas, 8 para porcentajes) justo antes de que empiece.',
-    'Después: las mismas semanas, empezando ' + Math.round(LATENCIA_DIAS / 7) + ' semanas después del inicio para dar tiempo a que el cambio se note.',
-    'Se compara el cambio de los equipos con la iniciativa con el de los equipos que no la tienen, en las mismas fechas.',
-    'La confianza (alta, media o baja) depende del número de tareas y de cuánto varía la medida en ese equipo.',
-    'No es un experimento controlado: indica si merece la pena seguir, no demuestra la causa.',
+    'Before: the weeks of the measure (4 for lead times and deliveries, 8 for percentages) right before it starts.',
+    'After: the same number of weeks, starting ' + Math.round(LATENCIA_DIAS / 7) + ' weeks after the start to give the change time to show.',
+    'The change in the teams with the initiative is compared with the change in the teams without it, over the same dates.',
+    'Confidence (high, medium or low) depends on the number of tasks and on how much the measure varies in that team.',
+    'It is not a controlled experiment: it says whether it is worth continuing, it does not prove the cause.',
   ]);
 
   // 8. Listo para agentes
   if (medidas.includes('agent_readiness') || modelo.equipos.some((eq) => eq.medidas.agent_readiness && eq.medidas.agent_readiness.disponible)) {
-    h1(s++ + '. Tickets listos para agentes de IA');
-    p(RUBRICA.definicion + ' Cada ticket suma un punto por criterio. Está listo con ' + RUBRICA.listoDesde + ' de 5 o más.');
-    tabla(['Criterio', 'Cuándo se cumple'], Object.values(RUBRICA.criterios).map((c) => [c.nombre, c.como]), [3, 7]);
-    p('Se calcula sobre el texto de los tickets en el navegador. Fuera solo salen cifras agregadas, nunca el texto.', true);
+    h1(s++ + '. Tickets ready for AI agents');
+    p(RUBRICA.definicion + ' Each ticket scores one point per criterion. It is ready with ' + RUBRICA.listoDesde + ' out of 5 or more.');
+    tabla(['Criterion', 'When it is met'], Object.values(RUBRICA.criterios).map((c) => [c.nombre, c.como]), [3, 7]);
+    p('It is calculated on the ticket text in the browser. Only aggregate figures leave, never the text.', true);
   }
 
   // 9. Calidad de los datos
-  h1(s++ + '. Calidad de los datos');
-  p('Señales de que ' + plataforma + ' no refleja bien lo que pasa. Conviene revisarlas con cada equipo antes de sacar conclusiones.');
+  h1(s++ + '. Data quality');
+  p('Signs that ' + plataforma + ' does not reflect what really happens. Review them with each team before drawing conclusions.');
   const generales = inf.avisos.concat(det.avisos).map((a) => a.texto);
-  if (generales.length) { h2('Del export'); lista(generales); }
+  if (generales.length) { h2('From the export'); lista(generales); }
   // Lo que se repite en todos los equipos va una sola vez
   const eqs = modelo.equipos;
   const comunes = eqs.length > 1 ? eqs[0].calidad.avisos.filter((a) => eqs.every((eq) => eq.calidad.avisos.includes(a))) : [];
   const filasCalidad = eqs.map((eq) => {
     const propios = eq.calidad.avisos.filter((a) => !comunes.includes(a));
-    return [eq.nombre, propios.length ? propios.join(' ') : (comunes.length ? 'Nada más.' : 'Sin avisos.')];
+    return [eq.nombre, propios.length ? propios.join(' ') : (comunes.length ? 'Nothing else.' : 'No warnings.')];
   });
-  if (comunes.length) filasCalidad.unshift(['Todos los equipos', comunes.join(' ')]);
-  tabla(['Equipo', 'Avisos'], filasCalidad, [2.5, 7.5]);
+  if (comunes.length) filasCalidad.unshift(['All teams', comunes.join(' ')]);
+  tabla(['Team', 'Warnings'], filasCalidad, [2.5, 7.5]);
   const noDisponibles = cat.ordenMedidas.filter((id) => !modelo.equipos.some((eq) => eq.medidas[id] && eq.medidas[id].disponible));
   if (noDisponibles.length) {
-    h2('Lo que no se puede medir con estos datos');
+    h2('What cannot be measured with this data');
     lista(noDisponibles.map((id) => {
       const m = modelo.equipos[0] && modelo.equipos[0].medidas[id];
-      return [{ b: cat.medidas[id].nombre + '. ' }, (m && m.motivo) || 'El export no trae lo necesario.'];
+      return [{ b: cat.medidas[id].nombre + '. ' }, (m && m.motivo) || 'The export does not have what is needed.'];
     }));
   }
 
   // 10. Qué no mide
-  h1(s++ + '. Qué no mide');
+  h1(s++ + '. What it does not measure');
   lista([
-    'No mide a personas: todas las cifras son de equipo.',
-    'No mide el esfuerzo ni la dificultad de cada tarea.',
-    'No compara equipos para hacer rankings. Cada equipo se mide contra su propia historia.',
+    'It does not measure people: every figure is a team figure.',
+    'It does not measure the effort or difficulty of each task.',
+    'It does not compare teams to make rankings. Each team is measured against its own history.',
   ]);
 
   // Firma
-  h1(s++ + '. Conformidad');
-  p('Las dos partes revisan estas definiciones y las aceptan como base de la medición.');
-  b.push({ tipo: 'firma', partes: [nombreCliente === 'el cliente' ? 'Cliente' : nombreCliente, 'Capgemini Invent'] });
+  h1(s++ + '. Agreement');
+  p('Both parties review these definitions and accept them as the basis for measurement.');
+  b.push({ tipo: 'firma', partes: [nombreCliente === SIN_CLIENTE ? 'Client' : nombreCliente, 'Capgemini Invent'] });
 
   return {
-    titulo: 'Definiciones de medida',
-    subtitulo: (nombreCliente === 'el cliente' ? 'Easy Performance' : nombreCliente + ' · Easy Performance'),
-    meta: 'Versión para revisar y firmar. Preparado el ' + fechaCorta(generado) + ' con los datos de ' + plataforma + ' hasta el ' + fechaCorta(hasta) + '.',
-    pie: 'Definiciones de medida' + (nombreCliente === 'el cliente' ? '' : ' · ' + nombreCliente),
+    titulo: 'Measurement definitions',
+    subtitulo: (nombreCliente === SIN_CLIENTE ? 'Easy Performance' : nombreCliente + ' · Easy Performance'),
+    meta: 'Version for review and signature. Prepared on ' + fechaCorta(generado) + ' with ' + plataforma + ' data up to ' + fechaCorta(hasta) + '.',
+    pie: 'Measurement definitions' + (nombreCliente === SIN_CLIENTE ? '' : ' · ' + nombreCliente),
     bloques: b,
   };
 }

@@ -53,10 +53,10 @@ test('agent readiness: cada ticket saca exactamente el índice sembrado', () => 
 test('agent readiness: los equipos quedan en el orden sembrado y el más bajo es un proveedor', () => {
   const ar = r.paquete.agent_readiness.equipos as Record<string, { indiceMedio: number }>;
   const orden = Object.entries(ar).sort((a, b) => b[1].indiceMedio - a[1].indiceMedio).map(([n]) => n);
-  assert.deepEqual(orden, ['Pagos', 'Riesgos', 'Portal clientes', 'App móvil']);
+  assert.deepEqual(orden, ['Payments', 'Risk', 'Customer Portal', 'Mobile App']);
   assert.equal(orden[3], escenarios.agent_readiness_bajo);
-  assert.ok(r.casosGrupo.some((c) => c.id === 'grupo_agent_ready' && c.dimension === 'proveedor' && c.grupo === 'Proveedor Norte'));
-  assert.ok(r.casosAgentReady.some((c) => c.equipo === 'App móvil' && c.gravedad === 'critico'));
+  assert.ok(r.casosGrupo.some((c) => c.id === 'grupo_agent_ready' && c.dimension === 'proveedor' && c.grupo === 'Vendor North'));
+  assert.ok(r.casosAgentReady.some((c) => c.equipo === 'Mobile App' && c.gravedad === 'critico'));
 });
 
 test('internos frente a proveedores: se detecta la diferencia sembrada en plazo, retrabajo y reaperturas', () => {
@@ -84,7 +84,7 @@ test('cada celda con menos de 20 tareas dice "pocos datos" (valor nulo)', () => 
 
 test('un reparto de trabajo distinto no fabrica diferencias: la comparación es dentro del mismo tipo y tamaño', () => {
   // Mismos equipos internos partidos en dos grupos: uno con más tareas grandes y otro con más pequeñas.
-  const internos = [...r.preparacion.porEquipo['Pagos'], ...r.preparacion.porEquipo['Riesgos']].filter((d) => d.entregada && d.ciclo != null);
+  const internos = [...r.preparacion.porEquipo['Payments'], ...r.preparacion.porEquipo['Risk']].filter((d) => d.entregada && d.ciclo != null);
   const a: typeof internos = [], b: typeof internos = [];
   internos.forEach((d, i) => {
     const grande = tamanoDe(d) !== 'pequena';
@@ -123,21 +123,21 @@ test('paquete de diagnóstico: cumple el esquema y no lleva nada prohibido', () 
 
 test('paquete de diagnóstico: el validador rechaza campos prohibidos, claves de ticket y nombres que no pueden salir', () => {
   const p = json(r.paquete) as Record<string, any>;
-  const conTitulo = structuredClone(p); conTitulo.casos_activos[0].titulo = 'Mejorar el pago';
+  const conTitulo = structuredClone(p); conTitulo.casos_activos[0].titulo = 'Improve payments';
   assert.ok(comprobarPaquete(conTitulo).some((x) => /titulo/.test(x)));
   assert.equal(validar('paquete', conTitulo).valido, false);
   const conClave = structuredClone(p); conClave.casos_grupo[0].evidencia += ' Ver PAG-12.';
-  assert.ok(comprobarPaquete(conClave).some((x) => /clave de ticket/.test(x)));
+  assert.ok(comprobarPaquete(conClave).some((x) => /ticket key/.test(x)));
   const conPersona = structuredClone(p); conPersona.equipos[0].asignado = 'Persona PAG1';
   assert.ok(comprobarPaquete(conPersona).some((x) => /asignado/.test(x)));
   const conDescripcion = structuredClone(p); conDescripcion.datos.avisos.push({ tipo: 'aviso', texto: 'x'.repeat(700) });
-  assert.ok(comprobarPaquete(conDescripcion).some((x) => /demasiado largo/.test(x)));
-  assert.ok(comprobarPaquete(p, { nombresProhibidos: ['Pagos'] }).length > 0);
+  assert.ok(comprobarPaquete(conDescripcion).some((x) => /too long/.test(x)));
+  assert.ok(comprobarPaquete(p, { nombresProhibidos: ['Payments'] }).length > 0);
   assert.deepEqual(comprobarPaquete(p), []);
 });
 
 test('paquete de diagnóstico con alias: no aparece el nombre real de ningún equipo', () => {
-  const alias = { 'Pagos': 'Equipo A', 'Riesgos': 'Equipo B', 'App móvil': 'Equipo C', 'Portal clientes': 'Equipo D' };
+  const alias = { 'Payments': 'Team A', 'Risk': 'Team B', 'Mobile App': 'Team C', 'Customer Portal': 'Team D' };
   const ra = diagnosticar(lectura, cliente, iniciativas, contexto, { alias, generado: new Date(2026, 9, 15) });
   assert.deepEqual(comprobarPaquete(ra.paquete, { nombresProhibidos: Object.keys(alias) }), []);
   assert.ok(validar('paquete', json(ra.paquete)).valido);

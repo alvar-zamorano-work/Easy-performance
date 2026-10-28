@@ -2,693 +2,693 @@
   "version": 1,
   "casos": {
     "atascado": {
-      "accionArea": "Revisar con los equipos qué dependencia común frena las tareas bloqueadas",
-      "comun": "Cuando se repite, suele faltar algo que todos esperan: una revisión, un entorno o una persona de otro equipo.",
-      "titulo": "Trabajo bloqueado",
+      "accionArea": "Review with the teams which shared dependency is holding blocked tasks",
+      "comun": "When it repeats, something everyone waits for is usually missing: a review, an environment or a person from another team.",
+      "titulo": "Blocked work",
       "objetivos": [
         "tardamos",
         "avez"
       ],
       "medida": "edad",
-      "senal": "Hay tareas en curso que ya superan el plazo en el que el equipo termina casi todo lo que empieza.",
+      "senal": "There are tasks in progress that already exceed the lead time in which the team finishes almost everything it starts.",
       "causas": [
-        "Dependencia de otro equipo o de alguien externo",
-        "La tarea era más grande de lo previsto",
-        "El equipo ha empezado otras cosas y nadie la empuja",
-        "Espera de revisión o de pruebas"
+        "Dependency on another team or on someone outside",
+        "The task was bigger than expected",
+        "The team has started other things and nobody pushes it",
+        "Waiting for review or testing"
       ],
       "preguntas": [
-        "¿Qué necesita cada una de estas tareas para avanzar hoy?",
-        "¿Alguna se puede dividir y entregar por partes?",
-        "¿Dependen de alguien de fuera del equipo?"
+        "What does each of these tasks need to move forward today?",
+        "Can any of them be split and delivered in parts?",
+        "Do they depend on someone outside the team?"
       ],
       "plan": [
         {
-          "paso": "Revisar el tablero de derecha a izquierda en la reunión diaria, empezando por estas tareas",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "5 minutos al día"
+          "paso": "Walk the board from right to left in the daily meeting, starting with these tasks",
+          "quien": "Team lead",
+          "esfuerzo": "5 minutes a day"
         },
         {
-          "paso": "Acordar para cada una quién la desbloquea, o pedir ayuda a otra persona del equipo",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Agree for each one who unblocks it, or ask another person in the team for help",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si es demasiado grande, dividirla y entregar la primera parte",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "If it is too big, split it and deliver the first part",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En dos semanas no debería quedar ninguna tarea por encima de lo habitual.",
-      "respaldo": "Métricas de flujo: edad del trabajo en curso (Daniel Vacanti)."
+      "comprobar": "In two weeks no task should be above the usual range.",
+      "respaldo": "Flow metrics: work item age (Daniel Vacanti)."
     },
     "demasiado_a_la_vez": {
-      "accionArea": "Limitar lo que entra en el área hasta terminar lo empezado",
-      "comun": "Cuando se repite, el exceso suele venir de arriba: entra en el área más trabajo del que puede terminar.",
-      "titulo": "Demasiadas cosas a la vez",
+      "accionArea": "Limit what comes into the area until what is started gets done",
+      "comun": "When it repeats, the excess usually comes from above: more work enters the area than it can finish.",
+      "titulo": "Too many things at once",
       "objetivos": [
         "avez"
       ],
       "medida": "wip",
-      "senal": "El trabajo en curso ha crecido y las tareas tardan más, sin que se entregue más.",
+      "senal": "Work in progress has grown and tasks take longer, without more being delivered.",
       "causas": [
-        "Se empieza trabajo nuevo antes de terminar el anterior",
-        "Interrupciones y cambios de prioridad",
-        "Esperas largas que invitan a coger otra tarea"
+        "New work starts before the previous work is done",
+        "Interruptions and changes of priority",
+        "Long waits that invite picking up another task"
       ],
       "preguntas": [
-        "¿Cuántas tareas puede llevar el equipo a la vez sin que se paren?",
-        "¿Por qué se empezó trabajo nuevo: era más urgente o lo otro estaba bloqueado?"
+        "How many tasks can the team carry at once without them stalling?",
+        "Why was new work started: was it more urgent or was the other work blocked?"
       ],
       "plan": [
         {
-          "paso": "Acordar un límite de trabajo en curso; para empezar, el número de personas del equipo",
-          "quien": "Equipo",
-          "esfuerzo": "Una reunión"
+          "paso": "Agree a work in progress limit; to start, the number of people in the team",
+          "quien": "Team",
+          "esfuerzo": "One meeting"
         },
         {
-          "paso": "Mientras se esté en el límite, no empezar nada nuevo: primero ayudar a terminar",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "While at the limit, start nothing new: help finish first",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Revisar el límite cada dos semanas con estos datos",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Review the limit every two weeks with this data",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En cuatro semanas el trabajo en curso debería bajar y el tiempo de ciclo volver a su rango habitual.",
-      "respaldo": "Ley de Little y método Kanban."
+      "comprobar": "In four weeks work in progress should fall and lead time should return to its usual range.",
+      "respaldo": "Little's law and the Kanban method."
     },
     "sprint_no_cumple": {
-      "accionArea": "Revisar cómo se fijan los compromisos de sprint en el área",
-      "comun": "Cuando se repite, mira cómo se planifica en el área: compromisos fijados desde fuera o interrupciones comunes.",
-      "titulo": "El sprint no se cumple",
+      "accionArea": "Review how sprint commitments are set in the area",
+      "comun": "When it repeats, look at how the area plans: commitments set from outside or shared interruptions.",
+      "titulo": "The sprint is not met",
       "objetivos": [
         "cumplir"
       ],
       "medida": "arrastradas",
       "requiere": "sprints",
-      "senal": "Una parte importante del trabajo pasa al sprint siguiente, sprint tras sprint.",
+      "senal": "A significant part of the work is carried over to the next sprint, sprint after sprint.",
       "causas": [
-        "Se compromete más de lo que el equipo entrega de verdad",
-        "Historias demasiado grandes",
-        "Trabajo imprevisto que entra a mitad de sprint"
+        "More is committed than the team really delivers",
+        "Stories that are too big",
+        "Unplanned work that comes in mid-sprint"
       ],
       "preguntas": [
-        "¿Cuánto entregamos de media en los últimos sprints y cuánto comprometemos?",
-        "¿Qué tienen en común las tareas que se arrastran?"
+        "How much do we deliver on average in recent sprints and how much do we commit to?",
+        "What do the carried over tasks have in common?"
       ],
       "plan": [
         {
-          "paso": "Comprometer según lo entregado de media en los tres últimos sprints",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Bajo"
+          "paso": "Commit based on the average delivered in the last three sprints",
+          "quien": "Team with product owner",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Reservar una parte de la capacidad para imprevistos",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Reserve part of the capacity for unplanned work",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Dividir las historias que no caben en medio sprint",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "Split the stories that do not fit in half a sprint",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En tres sprints lo arrastrado debería bajar del 30%.",
-      "respaldo": "Guía Scrum; planificación con entregas reales."
+      "comprobar": "In three sprints carried over work should fall below 30%.",
+      "respaldo": "Scrum Guide; planning with real deliveries."
     },
     "pendiente_crece": {
-      "accionArea": "Acordar con negocio qué entra y qué se archiva del pendiente",
-      "comun": "Cuando se repite, el área recibe más de lo que puede hacer. Es una conversación de prioridades con negocio, no con los equipos.",
-      "titulo": "El pendiente crece",
+      "accionArea": "Agree with the business what comes in and what is archived from the backlog",
+      "comun": "When it repeats, the area receives more than it can do. It is a conversation about priorities with the business, not with the teams.",
+      "titulo": "The backlog is growing",
       "objetivos": [
         "pendiente"
       ],
       "medida": "pendiente",
-      "senal": "Entra más trabajo del que sale, semana tras semana.",
+      "senal": "More work comes in than goes out, week after week.",
       "causas": [
-        "Entra todo lo que se pide, sin filtrar",
-        "La capacidad del equipo ha bajado",
-        "Hay trabajo viejo que ya no tiene sentido y nadie cierra"
+        "Everything requested comes in, with no filter",
+        "The team's capacity has dropped",
+        "There is old work that no longer makes sense and nobody closes"
       ],
       "preguntas": [
-        "¿Qué parte del pendiente haríamos de verdad en los próximos tres meses?",
-        "¿Quién decide qué entra y con qué criterio?"
+        "What part of the backlog would we really do in the next three months?",
+        "Who decides what comes in and with what criteria?"
       ],
       "plan": [
         {
-          "paso": "Revisar el pendiente con producto y archivar lo que lleva meses sin moverse",
-          "quien": "Producto y responsable de equipo",
-          "esfuerzo": "Una reunión"
+          "paso": "Review the backlog with the product owner and archive what has not moved for months",
+          "quien": "Product owner and team lead",
+          "esfuerzo": "One meeting"
         },
         {
-          "paso": "Acordar qué información y qué valor debe tener una petición para entrar",
-          "quien": "Producto",
-          "esfuerzo": "Bajo"
+          "paso": "Agree what information and what value a request needs to come in",
+          "quien": "Product owner",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si sigue entrando más de lo que sale, decidir con negocio qué no se hará",
-          "quien": "Dirección y producto",
-          "esfuerzo": "Medio"
+          "paso": "If more keeps coming in than goes out, decide with the business what will not be done",
+          "quien": "Management and product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En cuatro semanas las salidas deberían igualar a las entradas.",
-      "respaldo": "Métricas de flujo: entradas frente a salidas."
+      "comprobar": "In four weeks what goes out should match what comes in.",
+      "respaldo": "Flow metrics: arrivals versus departures."
     },
     "mucha_espera": {
-      "accionArea": "Localizar el paso compartido donde esperan las tareas y darle capacidad",
-      "comun": "Cuando se repite, suele estar en un paso que los equipos comparten: revisión, pruebas, despliegue o aprobación.",
-      "titulo": "Mucha espera",
+      "accionArea": "Find the shared step where tasks wait and give it capacity",
+      "comun": "When it repeats, it is usually in a step the teams share: review, testing, deployment or approval.",
+      "titulo": "Too much waiting",
       "objetivos": [
         "tardamos"
       ],
       "medida": "espera",
-      "senal": "Las tareas pasan más tiempo esperando que en trabajo activo.",
+      "senal": "Tasks spend more time waiting than in active work.",
       "causas": [
-        "Revisiones o pruebas que se acumulan",
-        "Dependencias de otros equipos",
-        "Bloqueos que nadie resuelve"
+        "Reviews or tests that pile up",
+        "Dependencies on other teams",
+        "Blocks that nobody resolves"
       ],
       "preguntas": [
-        "¿En qué estado se para más el trabajo y por qué?",
-        "¿Quién puede revisar o probar, y cuándo lo hace?"
+        "In which status does work stop most, and why?",
+        "Who can review or test, and when do they do it?"
       ],
       "plan": [
         {
-          "paso": "Acordar un plazo interno para atender el estado donde más se espera",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Agree an internal deadline to attend to the status where work waits most",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Dar prioridad a revisar y probar antes que a empezar trabajo nuevo",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Give priority to reviewing and testing over starting new work",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si la espera es de otro equipo, tratar la dependencia con su responsable",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Medio"
+          "paso": "If the wait is on another team, take the dependency up with its team lead",
+          "quien": "Team lead",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En cuatro semanas la espera debería bajar de la mitad del tiempo de ciclo.",
-      "respaldo": "Eficiencia de flujo (Flow Framework, Mik Kersten)."
+      "comprobar": "In four weeks waiting should fall below half of lead time.",
+      "respaldo": "Flow efficiency (Flow Framework, Mik Kersten)."
     },
     "retrabajo": {
-      "accionArea": "Revisar cómo llegan los requisitos y qué se entiende por terminado",
-      "comun": "Cuando se repite, revisa lo común: cómo llegan los requisitos y qué se entiende por terminado.",
-      "titulo": "Mucho retrabajo",
+      "accionArea": "Review how requirements arrive and what counts as done",
+      "comun": "When it repeats, review what is shared: how requirements arrive and what counts as done.",
+      "titulo": "Too much rework",
       "objetivos": [
         "arreglos"
       ],
       "medida": "retrabajo",
-      "senal": "Muchas tareas vuelven a un estado por el que ya habían pasado.",
+      "senal": "Many tasks go back to a status they had already been through.",
       "causas": [
-        "Criterios de aceptación poco claros",
-        "Revisiones tardías que encuentran problemas grandes",
-        "Una definición de terminado que no se cumple"
+        "Unclear acceptance criteria",
+        "Late reviews that find big problems",
+        "A definition of done that is not met"
       ],
       "preguntas": [
-        "¿Por qué volvieron atrás las últimas tareas?",
-        "¿Están claros los criterios de aceptación antes de empezar?"
+        "Why did the latest tasks go back?",
+        "Are the acceptance criteria clear before starting?"
       ],
       "plan": [
         {
-          "paso": "Revisar las últimas cinco tareas que volvieron atrás y anotar el motivo",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Review the last five tasks that went back and note the reason",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Reforzar la definición de terminado y los criterios de aceptación",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "Strengthen the definition of done and the acceptance criteria",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Enseñar el trabajo a mitad, no solo al final",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Show the work halfway, not only at the end",
+          "quien": "Team",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En cuatro semanas el retrabajo debería bajar del 20%.",
-      "respaldo": "Definición de terminado (Guía Scrum)."
+      "comprobar": "In four weeks rework should fall below 20%.",
+      "respaldo": "Definition of done (Scrum Guide)."
     },
     "errores_capacidad": {
-      "accionArea": "Reservar capacidad fija para calidad y pruebas automáticas",
-      "comun": "Cuando se repite, mira la base común: una plataforma, un entorno de pruebas o la falta de pruebas automáticas.",
-      "titulo": "Los errores se comen la capacidad",
+      "accionArea": "Reserve fixed capacity for quality and automated tests",
+      "comun": "When it repeats, look at the shared base: a platform, a test environment or the lack of automated tests.",
+      "titulo": "Bugs eat up the capacity",
       "objetivos": [
         "arreglos"
       ],
       "medida": "errores",
-      "senal": "Una parte grande y creciente de lo terminado son errores.",
+      "senal": "A large and growing part of done work is bugs.",
       "causas": [
-        "Deuda técnica acumulada",
-        "Pocas pruebas automáticas",
-        "Se arregla el síntoma y no la causa"
+        "Accumulated technical debt",
+        "Few automated tests",
+        "The symptom is fixed, not the cause"
       ],
       "preguntas": [
-        "¿Qué errores se repiten y en qué parte del sistema?",
-        "¿Cuánta capacidad queremos dedicar a calidad de forma estable?"
+        "Which bugs repeat, and in which part of the system?",
+        "How much capacity do we want to dedicate to quality on a stable basis?"
       ],
       "plan": [
         {
-          "paso": "Agrupar los errores del último mes por causa y por parte del sistema",
-          "quien": "Equipo",
-          "esfuerzo": "Medio"
+          "paso": "Group the bugs of the last month by cause and by part of the system",
+          "quien": "Team",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Reservar una parte fija de cada sprint para atacar esas causas",
-          "quien": "Responsable de equipo y producto",
-          "esfuerzo": "Medio"
+          "paso": "Reserve a fixed part of each sprint to tackle those causes",
+          "quien": "Team lead and product owner",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Añadir pruebas automáticas en las zonas con más errores",
-          "quien": "Equipo",
-          "esfuerzo": "Alto"
+          "paso": "Add automated tests in the areas with most bugs",
+          "quien": "Team",
+          "esfuerzo": "High"
         }
       ],
-      "comprobar": "En ocho semanas los errores deberían bajar del 30% de lo terminado.",
-      "respaldo": "Distribución del trabajo (Flow Framework, Mik Kersten)."
+      "comprobar": "In eight weeks bugs should fall below 30% of done work.",
+      "respaldo": "Flow distribution (Flow Framework, Mik Kersten)."
     },
     "todo_al_final": {
-      "accionArea": "Pedir historias más pequeñas y validar durante el sprint, no al final",
-      "comun": "Cuando se repite, suele ser una costumbre del área: historias grandes o una validación que solo llega al final.",
-      "titulo": "Todo llega al final del sprint",
+      "accionArea": "Ask for smaller stories and validate during the sprint, not at the end",
+      "comun": "When it repeats, it is usually a habit of the area: big stories or validation that only arrives at the end.",
+      "titulo": "Everything lands at the end of the sprint",
       "objetivos": [
         "cumplir"
       ],
       "medida": "entregas",
       "requiere": "sprints",
-      "senal": "La mayoría de las tareas se cierra en los dos últimos días del sprint.",
+      "senal": "Most tasks are closed in the last two days of the sprint.",
       "causas": [
-        "Historias grandes que solo se terminan al final",
-        "Revisión y pruebas concentradas al final",
-        "Se cierra en bloque para la revisión del sprint"
+        "Big stories that only finish at the end",
+        "Review and testing concentrated at the end",
+        "Closed in bulk for the sprint review"
       ],
       "preguntas": [
-        "¿Qué impide terminar tareas a mitad de sprint?",
-        "¿Se cierra en Jira al terminar o antes de la revisión?"
+        "What prevents finishing tasks mid-sprint?",
+        "Is it closed in Jira when done, or before the review?"
       ],
       "plan": [
         {
-          "paso": "Dividir las historias para poder terminarlas en pocos días",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "Split the stories so they can be finished in a few days",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Revisar y probar cada día, no al final",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Review and test every day, not at the end",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Cerrar en Jira en el momento en que algo está terminado",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Close in Jira the moment something is done",
+          "quien": "Team",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En tres sprints menos de la mitad debería cerrarse en los dos últimos días.",
-      "respaldo": "Flujo continuo dentro del sprint."
+      "comprobar": "In three sprints less than half should be closed in the last two days.",
+      "respaldo": "Continuous flow within the sprint."
     },
     "entregas_irregulares": {
-      "accionArea": "Identificar las dependencias o ventanas que marcan el ritmo de entrega",
-      "comun": "Cuando se repite, busca dependencias comunes o ventanas de despliegue que marcan el ritmo de todos.",
-      "titulo": "Entregas irregulares",
+      "accionArea": "Identify the dependencies or windows that set the delivery rhythm",
+      "comun": "When it repeats, look for shared dependencies or deployment windows that set the rhythm for everyone.",
+      "titulo": "Irregular deliveries",
       "objetivos": [
         "cumplir"
       ],
       "medida": "regularidad",
-      "senal": "Lo que se entrega cambia mucho de una semana a otra.",
+      "senal": "What gets delivered changes a lot from one week to the next.",
       "causas": [
-        "Tareas de tamaños muy distintos",
-        "Dependencias que llegan a golpes",
-        "Cierres en bloque"
+        "Tasks of very different sizes",
+        "Dependencies that arrive in bursts",
+        "Bulk closures"
       ],
       "preguntas": [
-        "¿Las semanas flojas coinciden con algo: vacaciones, incidencias, dependencias?",
-        "¿Qué tamaño tienen las tareas que más tardan?"
+        "Do the weak weeks coincide with something: holidays, incidents, dependencies?",
+        "How big are the tasks that take longest?"
       ],
       "plan": [
         {
-          "paso": "Revisar las semanas más bajas y anotar la causa",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Review the lowest weeks and note the cause",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Homogeneizar el tamaño de las tareas al refinarlas",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "Even out task sizes when refining them",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Reducir dependencias externas en lo que se compromete",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Medio"
+          "paso": "Reduce external dependencies in what gets committed",
+          "quien": "Team lead",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En ocho semanas la variación semanal debería bajar.",
-      "respaldo": "Previsión con datos de entregas (Daniel Vacanti)."
+      "comprobar": "In eight weeks the weekly variation should fall.",
+      "respaldo": "Forecasting with delivery data (Daniel Vacanti)."
     },
     "estimaciones_no_predicen": {
-      "accionArea": "Simplificar la estimación: contar tareas en lugar de puntos",
-      "comun": "Cuando se repite, el problema es el método de estimar, no los equipos. Contar tareas suele bastar.",
-      "titulo": "Las estimaciones no predicen",
+      "accionArea": "Simplify estimation: count tasks instead of points",
+      "comun": "When it repeats, the problem is the estimation method, not the teams. Counting tasks is usually enough.",
+      "titulo": "Estimates do not predict",
       "objetivos": [
         "cumplir"
       ],
       "medida": "estimacion",
       "requiere": "puntos",
-      "senal": "Las tareas con pocos puntos tardan lo mismo o más que las de muchos puntos.",
+      "senal": "Tasks with few points take as long as or longer than tasks with many points.",
       "causas": [
-        "La estimación mide otra cosa que la duración",
-        "La espera pesa más que el trabajo real",
-        "Se estima con prisa o sin conocer bien la tarea"
+        "The estimate measures something other than duration",
+        "Waiting weighs more than real work",
+        "Estimated in a hurry or without knowing the task well"
       ],
       "preguntas": [
-        "¿Para qué usamos hoy los puntos?",
-        "¿Nos serviría más contar tareas que sumar puntos?"
+        "What do we use points for today?",
+        "Would counting tasks serve us better than adding up points?"
       ],
       "plan": [
         {
-          "paso": "Comparar en una retro varias tareas pequeñas que tardaron mucho",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Compare in a retro several small tasks that took a long time",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si las tareas son de tamaño parecido, planificar contando tareas en lugar de puntos",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Bajo"
+          "paso": "If tasks are of similar size, plan by counting tasks instead of points",
+          "quien": "Team with product owner",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si se mantienen los puntos, estimar después de refinar y no antes",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "If points are kept, estimate after refining and not before",
+          "quien": "Team",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En doce semanas la relación entre puntos y duración debería mejorar, o los puntos dejar de usarse para planificar.",
-      "respaldo": "Previsión probabilística (Daniel Vacanti)."
+      "comprobar": "In twelve weeks the relation between points and duration should improve, or points should stop being used for planning.",
+      "respaldo": "Probabilistic forecasting (Daniel Vacanti)."
     },
     "todo_urgente": {
-      "accionArea": "Acordar con negocio qué es urgente y limitar su volumen",
-      "comun": "Cuando se repite, la prioridad se decide fuera de los equipos. Hay que acordar con negocio qué es urgente de verdad.",
-      "titulo": "Todo es urgente",
+      "accionArea": "Agree with the business what is urgent and limit its volume",
+      "comun": "When it repeats, priority is decided outside the teams. Agree with the business what is really urgent.",
+      "titulo": "Everything is urgent",
       "objetivos": [
         "tiempo"
       ],
       "medida": "reparto",
-      "senal": "Una parte muy grande del trabajo entra con la prioridad máxima.",
+      "senal": "A very large part of the work comes in with the highest priority.",
       "causas": [
-        "No hay un criterio común de qué es urgente",
-        "Marcar como urgente es la única forma de que algo se atienda",
-        "Varias personas piden sin coordinarse"
+        "There is no shared criterion for what is urgent",
+        "Marking as urgent is the only way to get something attended to",
+        "Several people make requests without coordinating"
       ],
       "preguntas": [
-        "¿Qué pasaría si estas tareas esperasen una semana?",
-        "¿Quién decide la prioridad y con qué criterio?"
+        "What would happen if these tasks waited a week?",
+        "Who decides the priority and with what criteria?"
       ],
       "plan": [
         {
-          "paso": "Definir con negocio qué es urgente, con dos o tres ejemplos",
-          "quien": "Producto y dirección",
-          "esfuerzo": "Una reunión"
+          "paso": "Define with the business what is urgent, with two or three examples",
+          "quien": "Product owner and management",
+          "esfuerzo": "One meeting"
         },
         {
-          "paso": "Crear un carril urgente con un límite, por ejemplo una tarea a la vez",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Create an urgent lane with a limit, for example one task at a time",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Revisar cada mes qué entró como urgente y si lo era",
-          "quien": "Producto",
-          "esfuerzo": "Bajo"
+          "paso": "Review every month what came in as urgent and whether it was",
+          "quien": "Product owner",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En ocho semanas lo marcado como urgente debería bajar del 25%.",
-      "respaldo": "Clases de servicio (método Kanban)."
+      "comprobar": "In eight weeks what is marked as urgent should fall below 25%.",
+      "respaldo": "Classes of service (Kanban method)."
     },
     "urgente_no_rapido": {
-      "accionArea": "Usar la prioridad para ordenar el trabajo de verdad",
-      "comun": "Cuando se repite, la prioridad no se usa para ordenar el trabajo en el área.",
-      "titulo": "Lo urgente no va más rápido",
+      "accionArea": "Use priority to really order the work",
+      "comun": "When it repeats, priority is not used to order the work in the area.",
+      "titulo": "Urgent work is not faster",
       "objetivos": [
         "tiempo"
       ],
       "medida": "total",
-      "senal": "Las tareas de máxima prioridad tardan lo mismo que el resto.",
+      "senal": "Tasks with the highest priority take as long as the rest.",
       "causas": [
-        "La prioridad no se usa para ordenar el trabajo",
-        "Hay tantas tareas urgentes que se anulan entre sí",
-        "Lo urgente espera en las mismas colas que lo demás"
+        "Priority is not used to order the work",
+        "There are so many urgent tasks that they cancel each other out",
+        "Urgent work waits in the same queues as everything else"
       ],
       "preguntas": [
-        "¿El equipo mira la prioridad al elegir la siguiente tarea?",
-        "¿Cuántas tareas urgentes hay a la vez?"
+        "Does the team look at priority when choosing the next task?",
+        "How many urgent tasks are there at once?"
       ],
       "plan": [
         {
-          "paso": "Ordenar el pendiente por prioridad y respetar ese orden al elegir",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Order the backlog by priority and respect that order when choosing",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Crear un carril urgente que salte las colas de revisión",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Create an urgent lane that skips the review queues",
+          "quien": "Team",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Si casi todo es urgente, atender antes el caso \"Todo es urgente\"",
-          "quien": "Producto",
-          "esfuerzo": "Medio"
+          "paso": "If almost everything is urgent, deal first with the case \"Everything is urgent\"",
+          "quien": "Product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En ocho semanas lo urgente debería tardar claramente menos que el resto.",
-      "respaldo": "Clases de servicio (método Kanban)."
+      "comprobar": "In eight weeks urgent work should clearly take less time than the rest.",
+      "respaldo": "Classes of service (Kanban method)."
     },
     "datos_poco_fiables": {
-      "accionArea": "Acordar cómo se usa Jira antes de sacar conclusiones",
-      "comun": "Cuando se repite, falta un acuerdo común sobre cómo se usa Jira: estados, cierres y sprints.",
-      "titulo": "Datos poco fiables",
+      "accionArea": "Agree how Jira is used before drawing conclusions",
+      "comun": "When it repeats, there is no shared agreement on how Jira is used: statuses, closures and sprints.",
+      "titulo": "Unreliable data",
       "objetivos": [
         "datos"
       ],
       "medida": null,
-      "senal": "Jira no refleja del todo cómo se trabaja, y eso afecta a las medidas.",
+      "senal": "Jira does not fully reflect how the team works, and that affects the measures.",
       "causas": [
-        "Las tareas se mueven en Jira después de hacer el trabajo",
-        "El flujo de estados no se usa como se diseñó",
-        "Campos que no se rellenan"
+        "Tasks are moved in Jira after the work is done",
+        "The status flow is not used as designed",
+        "Fields that are not filled in"
       ],
       "preguntas": [
-        "¿Movemos las tareas en Jira cuando cambian de estado de verdad?",
-        "¿Qué campos necesitamos rellenar siempre?"
+        "Do we move tasks in Jira when they really change status?",
+        "Which fields do we always need to fill in?"
       ],
       "plan": [
         {
-          "paso": "Acordar tres reglas de uso: mover al empezar, mover al terminar y rellenar los puntos",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Agree three rules of use: move when starting, move when finishing and fill in the points",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Revisar el flujo de estados para que refleje el trabajo real",
-          "quien": "Responsable con el administrador de Jira",
-          "esfuerzo": "Medio"
+          "paso": "Review the status flow so it reflects the real work",
+          "quien": "Team lead with the Jira admin",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Repetir el chequeo de datos en cuatro semanas",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Repeat the data check in four weeks",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En cuatro semanas los avisos de calidad del dato deberían desaparecer o bajar.",
-      "respaldo": "Requisito previo de cualquier medición."
+      "comprobar": "In four weeks the data quality warnings should disappear or fall.",
+      "respaldo": "Prerequisite for any measurement."
     },
     "no_planificado": {
-      "accionArea": "Crear una única puerta de entrada para lo no planificado",
-      "comun": "Cuando se repite, suele venir de la misma fuente: soporte, incidencias o peticiones directas al área.",
-      "titulo": "Trabajo no planificado",
+      "accionArea": "Create a single entry point for unplanned work",
+      "comun": "When it repeats, it usually comes from the same source: support, incidents or direct requests to the area.",
+      "titulo": "Unplanned work",
       "objetivos": [
         "cumplir"
       ],
       "medida": null,
       "requiere": "api",
-      "senal": "Una parte importante de lo terminado entró con el sprint ya empezado.",
+      "senal": "A significant part of done work came in after the sprint had started.",
       "causas": [
-        "Incidencias de producción",
-        "Peticiones directas que saltan la planificación"
+        "Production incidents",
+        "Direct requests that skip planning"
       ],
       "preguntas": [
-        "¿Por dónde entra el trabajo imprevisto?"
+        "Where does unplanned work come in?"
       ],
       "plan": [
         {
-          "paso": "Reservar capacidad fija para imprevistos",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Reserve fixed capacity for unplanned work",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Crear una única puerta de entrada para lo urgente",
-          "quien": "Producto",
-          "esfuerzo": "Medio"
+          "paso": "Create a single entry point for urgent work",
+          "quien": "Product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "Lo que entra a mitad de sprint debería bajar del 15%.",
-      "respaldo": "Guía Scrum."
+      "comprobar": "What comes in mid-sprint should fall below 15%.",
+      "respaldo": "Scrum Guide."
     },
     "grupo_plazo": {
-      "accionArea": "Revisar con el grupo que tarda más dónde se para el trabajo: revisiones, entornos o dependencias",
-      "comun": "Cuando un grupo tarda más en el mismo tipo y tamaño de tarea, suele haber un paso que espera más: revisión, pruebas, accesos o respuestas de otro equipo.",
-      "titulo": "Un grupo tarda más en el mismo tipo de trabajo",
+      "accionArea": "Review with the slower group where work stops: reviews, environments or dependencies",
+      "comun": "When a group takes longer on the same task type and size, there is usually a step that waits more: review, testing, access or answers from another team.",
+      "titulo": "A group takes longer on the same type of work",
       "objetivos": [
         "comparar"
       ],
       "medida": "ciclo",
-      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tarda claramente más que el resto.",
+      "senal": "Within the same task type and size, a group takes clearly longer than the rest.",
       "causas": [
-        "Esperas más largas en revisión o pruebas",
-        "Dependencias de otros equipos o del cliente",
-        "Menos acceso a entornos, datos o personas que deciden",
-        "Tareas que llegan peor definidas"
+        "Longer waits in review or testing",
+        "Dependencies on other teams or on the client",
+        "Less access to environments, data or people who decide",
+        "Tasks that arrive less well defined"
       ],
       "preguntas": [
-        "¿En qué estado se para más el trabajo de este grupo?",
-        "¿Tiene el mismo acceso a entornos, revisiones y decisiones que el resto?",
-        "¿Llegan sus tareas igual de definidas?"
+        "In which status does this group's work stop most?",
+        "Does it have the same access to environments, reviews and decisions as the rest?",
+        "Do its tasks arrive as well defined?"
       ],
       "plan": [
         {
-          "paso": "Comparar con el grupo el tiempo en cada estado y elegir el paso que más espera",
-          "quien": "Responsable del grupo y oficina de mejora",
-          "esfuerzo": "Una reunión"
+          "paso": "Compare with the group the time in each status and pick the step that waits most",
+          "quien": "Group lead and improvement office",
+          "esfuerzo": "One meeting"
         },
         {
-          "paso": "Acordar un plazo para ese paso y quién lo atiende",
-          "quien": "Responsables de los equipos implicados",
-          "esfuerzo": "Bajo"
+          "paso": "Agree a deadline for that step and who attends to it",
+          "quien": "Team leads of the teams involved",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Revisar la diferencia en la siguiente comparación mensual",
-          "quien": "Oficina de mejora",
-          "esfuerzo": "Bajo"
+          "paso": "Review the difference in the next monthly comparison",
+          "quien": "Improvement office",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En dos meses la diferencia en el plazo debería bajar de un 25%.",
-      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; métricas de flujo."
+      "comprobar": "In two months the difference in lead time should fall below 25%.",
+      "respaldo": "Stratified comparison by task type and size; flow metrics."
     },
     "grupo_calidad": {
-      "accionArea": "Revisar con el grupo cómo llegan los requisitos y qué se entiende por terminado",
-      "comun": "Cuando un grupo vuelve atrás o reabre más en el mismo tipo de trabajo, suele fallar el acuerdo de qué es terminado o cómo se valida.",
-      "titulo": "Un grupo vuelve atrás o reabre más",
+      "accionArea": "Review with the group how requirements arrive and what counts as done",
+      "comun": "When a group goes back or reopens more on the same type of work, the agreement on what is done or how it is validated usually fails.",
+      "titulo": "A group goes back or reopens more",
       "objetivos": [
         "comparar"
       ],
       "medida": "retrabajo",
-      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tiene claramente más retrabajo o más tareas reabiertas.",
+      "senal": "Within the same task type and size, a group has clearly more rework or more reopened tasks.",
       "causas": [
-        "Criterios de aceptación poco claros para ese grupo",
-        "Validación tardía o por otro equipo",
-        "Definición de terminado distinta a la del resto",
-        "Menos pruebas automáticas"
+        "Unclear acceptance criteria for that group",
+        "Late validation, or validation by another team",
+        "A definition of done different from the rest",
+        "Fewer automated tests"
       ],
       "preguntas": [
-        "¿Usa este grupo la misma definición de terminado que el resto?",
-        "¿Quién valida su trabajo y cuándo?",
-        "¿Por qué se reabrieron las últimas tareas?"
+        "Does this group use the same definition of done as the rest?",
+        "Who validates its work, and when?",
+        "Why were the latest tasks reopened?"
       ],
       "plan": [
         {
-          "paso": "Revisar con el grupo las últimas diez tareas que volvieron atrás y anotar el motivo",
-          "quien": "Responsable del grupo",
-          "esfuerzo": "Bajo"
+          "paso": "Review with the group the last ten tasks that went back and note the reason",
+          "quien": "Group lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Alinear la definición de terminado y los criterios de aceptación con el resto",
-          "quien": "Oficina de mejora y responsables",
-          "esfuerzo": "Medio"
+          "paso": "Align the definition of done and the acceptance criteria with the rest",
+          "quien": "Improvement office and team leads",
+          "esfuerzo": "Medium"
         },
         {
-          "paso": "Validar durante el trabajo, no solo al final",
-          "quien": "Equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Validate during the work, not only at the end",
+          "quien": "Team",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En dos meses el retrabajo y las reaperturas del grupo deberían acercarse a las del resto.",
-      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; definición de terminado (Guía Scrum)."
+      "comprobar": "In two months the group's rework and reopened tasks should get closer to the rest.",
+      "respaldo": "Stratified comparison by task type and size; definition of done (Scrum Guide)."
     },
     "grupo_agent_ready": {
-      "accionArea": "Acordar con el grupo una plantilla de ticket con criterios de aceptación y referencias",
-      "comun": "Cuando un grupo escribe tickets menos completos, suele faltar una plantilla común o tiempo de refinamiento.",
-      "titulo": "Un grupo tiene el backlog menos preparado para agentes",
+      "accionArea": "Agree with the group a ticket template with acceptance criteria and references",
+      "comun": "When a group writes less complete tickets, a shared template or refinement time is usually missing.",
+      "titulo": "A group has its backlog less ready for AI agents",
       "objetivos": [
         "comparar",
         "agentes"
       ],
       "medida": "agent_readiness",
-      "senal": "La parte de tickets listos para un agente es claramente más baja en un grupo que en el resto.",
+      "senal": "The share of tickets ready for an AI agent is clearly lower in one group than in the rest.",
       "causas": [
-        "No hay plantilla de ticket o no se usa",
-        "El refinamiento se hace de palabra y no queda escrito",
-        "Los criterios de aceptación se acuerdan fuera de la herramienta"
+        "There is no ticket template, or it is not used",
+        "Refinement happens verbally and is not written down",
+        "Acceptance criteria are agreed outside the tool"
       ],
       "preguntas": [
-        "¿Qué plantilla de ticket usa este grupo?",
-        "¿Dónde quedan escritos los criterios de aceptación?"
+        "Which ticket template does this group use?",
+        "Where are the acceptance criteria written down?"
       ],
       "plan": [
         {
-          "paso": "Revisar con el grupo cinco tickets recientes con la rúbrica de agent readiness",
-          "quien": "Oficina de mejora",
-          "esfuerzo": "Bajo"
+          "paso": "Review with the group five recent tickets against the agent readiness rubric",
+          "quien": "Improvement office",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Adoptar una plantilla con descripción, criterios de aceptación y referencias",
-          "quien": "Responsable del grupo y producto",
-          "esfuerzo": "Bajo"
+          "paso": "Adopt a template with description, acceptance criteria and references",
+          "quien": "Group lead and product owner",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Repetir la medida en un mes",
-          "quien": "Oficina de mejora",
-          "esfuerzo": "Bajo"
+          "paso": "Repeat the measure in a month",
+          "quien": "Improvement office",
+          "esfuerzo": "Low"
         }
       ],
-      "comprobar": "En un mes la parte de tickets listos del grupo debería acercarse a la del resto.",
-      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
+      "comprobar": "In a month the group's share of ready tickets should get closer to the rest.",
+      "respaldo": "Capgemini agent readiness rubric (catalogo/rubrica_agent_ready.json)."
     },
     "backlog_no_listo": {
-      "accionArea": "Acordar una plantilla de ticket común en el área",
-      "comun": "Cuando se repite en varios equipos, falta un acuerdo común sobre cómo se escribe un ticket.",
-      "titulo": "El backlog no está listo para agentes",
+      "accionArea": "Agree a shared ticket template in the area",
+      "comun": "When it repeats in several teams, there is no shared agreement on how a ticket is written.",
+      "titulo": "The backlog is not ready for AI agents",
       "objetivos": [
         "agentes"
       ],
       "medida": "agent_readiness",
-      "senal": "Menos de la mitad de los tickets nuevos cumple cuatro de los cinco criterios de la rúbrica.",
+      "senal": "Less than half of new tickets meet four of the five criteria of the rubric.",
       "causas": [
-        "Descripciones cortas o que repiten el título",
-        "Sin criterios de aceptación escritos",
-        "Tickets demasiado grandes o con dependencias abiertas"
+        "Short descriptions, or descriptions that repeat the title",
+        "No written acceptance criteria",
+        "Tickets that are too big or have open dependencies"
       ],
       "preguntas": [
-        "¿Qué criterio falla más en los tickets del equipo?",
-        "¿Podría alguien de fuera del equipo hacer este ticket sin preguntar?"
+        "Which criterion fails most in the team's tickets?",
+        "Could someone outside the team do this ticket without asking?"
       ],
       "plan": [
         {
-          "paso": "Mirar qué criterio de la rúbrica falla más y empezar por ese",
-          "quien": "Responsable de equipo",
-          "esfuerzo": "Bajo"
+          "paso": "Look at which criterion of the rubric fails most and start with that one",
+          "quien": "Team lead",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Añadir a la plantilla de ticket una sección de criterios de aceptación y otra de referencias",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Bajo"
+          "paso": "Add to the ticket template a section for acceptance criteria and another for references",
+          "quien": "Team with product owner",
+          "esfuerzo": "Low"
         },
         {
-          "paso": "Dividir los tickets de más de cinco puntos antes de empezarlos",
-          "quien": "Equipo con producto",
-          "esfuerzo": "Medio"
+          "paso": "Split tickets of more than five points before starting them",
+          "quien": "Team with product owner",
+          "esfuerzo": "Medium"
         }
       ],
-      "comprobar": "En un mes más de la mitad de los tickets nuevos debería estar listo para un agente.",
-      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
+      "comprobar": "In a month more than half of new tickets should be ready for an AI agent.",
+      "respaldo": "Capgemini agent readiness rubric (catalogo/rubrica_agent_ready.json)."
     }
   }
 }

@@ -12,7 +12,7 @@ import { generarPaquete, comprobarPaquete } from './paquete.ts';
 import { capacidadArea } from './coste.ts';
 import type { Contexto, Iniciativa, Lectura } from './modelo.ts';
 
-export const NOMBRE_AREA = 'El área';
+export const NOMBRE_AREA = 'Whole area';
 
 export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: Iniciativa[], contexto: Contexto | null, opciones: { alias?: Record<string, string>; generado?: Date; config?: ConfigCalculo } = {}) {
   const det = detectar(lectura);

@@ -1,11 +1,11 @@
 {
   "id": "formacion-pruebas-riesgos",
-  "nombre": "Formación en pruebas automáticas en Riesgos",
-  "descripcion": "Dos sesiones de formación en pruebas automáticas para Riesgos y una guía con ejemplos. Cada historia nueva lleva sus pruebas antes de pasar a revisión.",
+  "nombre": "Automated testing training in Risk",
+  "descripcion": "Two automated testing training sessions for Risk and a guide with examples. Every new story has its tests before it goes to review.",
   "fecha_inicio": "2026-06-01",
   "fecha_fin": null,
   "equipos": [
-    "Riesgos"
+    "Risk"
   ],
   "medidas_objetivo": [
     {
@@ -13,7 +13,7 @@
       "direccion": "bajar"
     }
   ],
-  "efecto_esperado": "Retrabajo por debajo del 10% en dos meses.",
+  "efecto_esperado": "Rework below 10% in two months.",
   "estado": "en_curso",
   "origen": "retrabajo",
   "evaluacion": null,

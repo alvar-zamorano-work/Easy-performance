@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ConfigCalculo, Deteccion } from '../nucleo/tipos.ts';
-import { escenarios, fichero, json, motorV0, recorrido } from './ayudas.ts';
+import { escenarios, fichero, json, motorV0, nombreNuevo, recorrido } from './ayudas.ts';
 
 /** Configuraciones que ejercitan las ramas del cálculo. Se pasan igual a la v0 y al núcleo nuevo (que acepta "etapas" de la v0). */
 function configuraciones(det: Deteccion): [string, ConfigCalculo][] {
@@ -20,7 +20,7 @@ function configuraciones(det: Deteccion): [string, ConfigCalculo][] {
     ['por defecto', {}],
     ['equipo por componente', { campoEquipo: 'componentes' }],
     ['todo un solo equipo', { campoEquipo: 'todos' }],
-    ['área unida con FTE', { campoEquipo: det.equipoRecomendado, equipos, unirComo: 'El área', fte: { 'El área': 18 } }],
+    ['área unida con FTE', { campoEquipo: det.equipoRecomendado, equipos, unirComo: 'Whole area', fte: { 'Whole area': 18 } }],
     ['límites, FTE y etapas', {
       campoEquipo: det.equipoRecomendado, equipos: equipos.slice(0, 3), fte, etapas,
       limites: primero ? { [primero]: { ciclo: { atencion: 5, critico: 10 }, entregas: { atencion: 8, critico: 4 }, errores: { critico: 0.05 } } } : {},
@@ -29,17 +29,21 @@ function configuraciones(det: Deteccion): [string, ConfigCalculo][] {
   ];
 }
 
-/** Cambios de redacción aprobados después de la v0 (oct 2026): mismas cifras, otro texto. Se aplican a lo de la v0 antes de comparar. */
-const REDACCION: [string, string][] = [
-  ['en los que el equipo termina 8 de cada 10 tareas', 'en los que el equipo termina casi todo lo que empieza'],
-  ['8 de cada 10 tareas se cierran en menos de un día desde que se crean', 'Casi todas las tareas se cierran menos de un día después de crearse'],
-];
-function redaccionNueva<T>(x: T): T {
-  let s = JSON.stringify(x);
-  for (const [viejo, nuevo] of REDACCION) s = s.split(viejo).join(nuevo);
-  return JSON.parse(s);
+/**
+ * Los textos pasaron a inglés después de la v0 (oct 2026): mismas cifras, otro idioma. Antes de comparar se quitan los
+ * campos de texto libre (estadoTexto, evidencia, motivo, avisos) y los nombres fijos de la v0 se traducen a los nuevos.
+ * Los textos en inglés los comprueban los demás tests (casos sembrados, banco de exports, fiabilidad, definiciones).
+ */
+const CAMPOS_TEXTO = new Set(['estadoTexto', 'evidencia', 'motivo', 'avisos']);
+function sinTextos<T>(x: T): T {
+  const recorrer = (v: unknown): unknown => {
+    if (typeof v === 'string') return nombreNuevo(v);
+    if (Array.isArray(v)) return v.map(recorrer);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).filter(([k]) => !CAMPOS_TEXTO.has(k)).map(([k, w]) => [nombreNuevo(k), recorrer(w)]));
+    return v;
+  };
+  return recorrer(json(x)) as T;
 }
-const textos = (a: { texto: string }[]) => a.map((x) => x.texto).sort();
 
 /** Lo que el núcleo añade después de la v0 (B3: agent readiness) no existe en la v0: se quita antes de comparar. */
 function sinNovedades(m: unknown): unknown {
@@ -62,7 +66,9 @@ for (const esc of escenarios()) {
         assert.deepEqual(json(inf[k]), json(infV[k]), k);
       }
       for (const k of Object.keys(infV.campos)) assert.equal(inf.campos[k], infV.campos[k], 'campo ' + k);
-      assert.deepEqual(textos([...inf.avisos, ...det.avisos]), redaccionNueva(textos([...infV.avisos, ...detV.avisos])), 'avisos');
+      // Los avisos están en inglés: se comprueba que son los mismos en número y tipo (su texto lo prueban el banco de exports y los fallos sembrados)
+      const tipos = (a: { tipo: string }[]) => a.map((x) => x.tipo).sort();
+      assert.deepEqual(tipos([...inf.avisos, ...det.avisos]), tipos([...infV.avisos, ...detV.avisos]), 'avisos');
       assert.equal(lectura.detalle.unidadTiempoMs, detV.factorTis, 'unidad del Tiempo en estado');
       assert.deepEqual(lectura.detalle.nombrePorId, detV.nombrePorId, 'nombres de estado por id');
     });
@@ -86,7 +92,7 @@ for (const esc of escenarios()) {
           primera: o.primera, prioridad: o.prioridad, urgente: o.urgente, etiquetas: o.etiquetas,
           sprints: o.sprints, puntos: o.puntos, equipoCampo: o.equipoCampo, componente: o.componentes[0] || '',
           proyecto: o.proyecto, padre: o.padre, descartada: o.descartada,
-          tis: o.tis.map((x: any) => [detV.nombrePorId[x.id] || 'Estado ' + x.id, x.n, x.v * detV.factorTis]),
+          tis: o.tis.map((x: any) => [detV.nombrePorId[x.id] || 'Status ' + x.id, x.n, x.v * detV.factorTis]),
         };
         assert.deepEqual(json(proyeccion), json(esperado), 'tarea ' + o.clave);
       });
@@ -94,11 +100,11 @@ for (const esc of escenarios()) {
 
     await t.test('detección', () => {
       for (const k of ['fechaMin', 'fechaMax', 'fechaRef', 'opcionesEquipo', 'equipoRecomendado', 'haySprints', 'sprintsComoFecha'] as const) {
-        assert.deepEqual(json(det[k]), json(detV[k]), k);
+        assert.deepEqual(sinTextos(det[k]), sinTextos(detV[k]), k);
       }
       assert.equal(det.hayTiempos, detV.hayTis);
       const proy = (e: any) => ({ nombre: e.nombre, actuales: e.actuales, visitas: e.visitas, categoria: e.categoria, horasMedias: e.horasMedias, etapa: e.etapa, bloqueo: e.bloqueo });
-      assert.deepEqual(json(det.estados.map(proy)), json(detV.estados.map(proy)), 'estados');
+      assert.deepEqual(sinTextos(det.estados.map(proy)), sinTextos(detV.estados.map(proy)), 'estados');
     });
 
     for (const [nombre, cfg] of configuraciones(det)) {
@@ -106,7 +112,7 @@ for (const esc of escenarios()) {
         const mN = recorrido(ficheros, structuredClone(cfg)).modelo;
         const mV = motorV0.calcular(viejo.tareas, detV, structuredClone(cfg));
         assert.ok(mN.equipos.length > 0, 'hay equipos');
-        assert.deepEqual(sinNovedades(mN), redaccionNueva(json(mV)));
+        assert.deepEqual(sinTextos(sinNovedades(mN)), sinTextos(mV));
       });
     }
   });

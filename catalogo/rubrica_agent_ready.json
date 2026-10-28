@@ -1,32 +1,32 @@
 {
   "version": 1,
-  "definicion": "Un ticket está listo para un agente si alguien ajeno al equipo podría completarlo sin preguntar.",
+  "definicion": "A ticket is ready for an AI agent if someone outside the team could complete it without asking.",
   "listoDesde": 4,
   "criterios": {
     "contenido": {
-      "nombre": "Descripción con contenido",
-      "como": "La descripción tiene al menos 40 palabras y no se limita a repetir el título.",
+      "nombre": "Description with content",
+      "como": "The description has at least 40 words and does not just repeat the title.",
       "minimoPalabras": 40
     },
     "criterios": {
-      "nombre": "Criterios de aceptación",
-      "como": "Hay una sección o un patrón reconocible: criterios de aceptación, dado / cuando / entonces, lista con casillas o frases que empiezan por debe / no debe.",
+      "nombre": "Acceptance criteria",
+      "como": "There is a section or a recognisable pattern: acceptance criteria, given / when / then, a checklist or sentences starting with must / should.",
       "patrones": [
-        { "patron": "criterios? de aceptacion|acceptance criteria|definicion de hecho|definition of done" },
+        { "patron": "criterios? de aceptacion|acceptance criteria|acceptance tests?|definicion de hecho|definition of done" },
         { "patron": "\\b(dado|given)\\b[\\s\\S]{0,300}?\\b(cuando|when)\\b[\\s\\S]{0,300}?\\b(entonces|then)\\b" },
         { "patron": "^\\s*[-*]?\\s*\\[( |x)\\]", "flags": "m" },
-        { "patron": "^\\s*[-*]?\\s*(el sistema |la aplicacion |la app )?(no )?(debe|must|should)\\b", "flags": "m" }
+        { "patron": "^\\s*[-*]?\\s*(el sistema |la aplicacion |la app |the system |the application |the app |the user |it )?(no )?(debe|must|should|shall)\\b", "flags": "m" }
       ]
     },
     "acotado": {
-      "nombre": "Alcance acotado",
-      "como": "No es una épica y su estimación (o su duración, si no tiene estimación) no pasa del límite.",
+      "nombre": "Bounded scope",
+      "como": "It is not an epic and its estimate (or its duration, if it has no estimate) does not exceed the limit.",
       "maximoEstimacion": 5,
       "maximoDias": 5
     },
     "referencias": {
-      "nombre": "Referencias",
-      "como": "Tiene al menos un enlace, una clave de otro ticket, un adjunto o una ruta de código o de diseño.",
+      "nombre": "References",
+      "como": "It has at least one link, another ticket key, an attachment or a code or design path.",
       "patrones": [
         { "patron": "\\b[A-Z][A-Z0-9]{1,9}-\\d+\\b", "sobreOriginal": true },
         { "patron": "https?://" },
@@ -34,10 +34,10 @@
       ]
     },
     "sinDependencias": {
-      "nombre": "Sin dependencias abiertas",
-      "como": "No está bloqueado y no dice que depende de otra cosa o que está bloqueado por algo.",
+      "nombre": "No open dependencies",
+      "como": "It is not blocked and does not say it depends on something else or is blocked by something.",
       "patrones": [
-        { "patron": "\\b(depende de|dependemos de|bloquead[oa] por|a la espera de|pendiente de que|blocked by|depends on|waiting for)\\b" }
+        { "patron": "\\b(depende de|dependemos de|bloquead[oa] por|a la espera de|pendiente de que|blocked by|blocked until|blocked on|depends on|depends upon|dependent on|waiting for|waiting on|waiting until|on hold until)\\b" }
       ]
     }
   }

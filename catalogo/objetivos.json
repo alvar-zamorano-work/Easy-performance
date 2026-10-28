@@ -3,8 +3,8 @@
   "objetivos": [
     {
       "id": "cumplir",
-      "titulo": "Cumplir lo que prometemos",
-      "frase": "Queremos entregar lo comprometido y cuando lo dijimos.",
+      "titulo": "Deliver what we promise",
+      "frase": "We want to deliver what we committed to, when we said we would.",
       "medidas": [
         "regularidad",
         "arrastradas",
@@ -21,8 +21,8 @@
     },
     {
       "id": "tardamos",
-      "titulo": "Tardamos demasiado",
-      "frase": "Queremos saber cuánto tarda una tarea y dónde se para.",
+      "titulo": "We take too long",
+      "frase": "We want to know how long a task takes and where it stops.",
       "medidas": [
         "ciclo",
         "total",
@@ -36,8 +36,8 @@
     },
     {
       "id": "avez",
-      "titulo": "Hacemos demasiadas cosas a la vez",
-      "frase": "Queremos terminar antes de empezar.",
+      "titulo": "We do too many things at once",
+      "frase": "We want to finish before we start.",
       "medidas": [
         "wip",
         "edad",
@@ -50,8 +50,8 @@
     },
     {
       "id": "arreglos",
-      "titulo": "Arreglamos más que construimos",
-      "frase": "Queremos saber cuánto esfuerzo se va en errores y en repetir.",
+      "titulo": "We fix more than we build",
+      "frase": "We want to know how much effort goes into bugs and redoing work.",
       "medidas": [
         "errores",
         "retrabajo",
@@ -64,8 +64,8 @@
     },
     {
       "id": "pendiente",
-      "titulo": "El pendiente no para de crecer",
-      "frase": "Queremos que no entre más de lo que sale.",
+      "titulo": "The backlog keeps growing",
+      "frase": "We want no more to come in than goes out.",
       "medidas": [
         "pendiente",
         "entregas"
@@ -76,8 +76,8 @@
     },
     {
       "id": "tiempo",
-      "titulo": "¿En qué se nos va el tiempo?",
-      "frase": "Queremos que el esfuerzo vaya a lo que prioriza el negocio.",
+      "titulo": "Where does our time go?",
+      "frase": "We want the effort to go where the business sets priorities.",
       "medidas": [
         "reparto",
         "total",
@@ -90,8 +90,8 @@
     },
     {
       "id": "comparar",
-      "titulo": "Medir igual a internos y proveedores",
-      "frase": "Queremos comparar equipos y proveedores con las mismas reglas, sin rankings.",
+      "titulo": "Measure in-house and vendors the same way",
+      "frase": "We want to compare teams and vendors with the same rules, without rankings.",
       "medidas": [
         "ciclo",
         "retrabajo",
@@ -105,8 +105,8 @@
     },
     {
       "id": "agentes",
-      "titulo": "Preparar el backlog para agentes",
-      "frase": "Queremos que el trabajo esté descrito para que lo pueda hacer un agente de IA.",
+      "titulo": "Get the backlog ready for AI agents",
+      "frase": "We want the work described so that an AI agent could do it.",
       "medidas": [
         "agent_readiness"
       ],
@@ -117,8 +117,8 @@
     },
     {
       "id": "datos",
-      "titulo": "Fiarnos de los datos",
-      "frase": "Queremos que Jira refleje lo que pasa de verdad.",
+      "titulo": "Trust the data",
+      "frase": "We want Jira to reflect what really happens.",
       "fijo": true,
       "medidas": [],
       "casos": [

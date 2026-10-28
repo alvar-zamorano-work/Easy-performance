@@ -27,13 +27,13 @@ export function calidadEquipo(items: Derivada[], c: ContextoCalculo, sp: InfoSpr
   const bloque = c.cierresBloque.filter((b) =>
     items.some((d) => d.t.fechas.terminada && Math.floor(d.t.fechas.terminada.getTime() / 60000) === Math.floor(b.fecha.getTime() / 60000)));
   const avisos: string[] = [];
-  if (ent.length && saltos / ent.length > 0.05) avisos.push(Math.round(saltos / ent.length * 100) + '% de lo terminado pasó de pendiente a hecho sin estar en curso (' + saltos + ' tareas).');
-  if (bloque.length) avisos.push(bloque.length === 1 ? 'Hay un cierre en bloque: ' + bloque[0].n + ' tareas cerradas en el mismo minuto (' + fechaCorta(bloque[0].fecha) + ').' : 'Hay ' + bloque.length + ' cierres en bloque (10 o más tareas cerradas en el mismo minuto).');
+  if (ent.length && saltos / ent.length > 0.05) avisos.push(Math.round(saltos / ent.length * 100) + '% of done work went from backlog to done without being in progress (' + saltos + ' tasks).');
+  if (bloque.length) avisos.push(bloque.length === 1 ? 'There is a bulk closure: ' + bloque[0].n + ' tasks closed in the same minute (' + fechaCorta(bloque[0].fecha) + ').' : 'There are ' + bloque.length + ' bulk closures (10 or more tasks closed in the same minute).');
   const totales = ent.map((d) => d.total);
-  if (ent.length >= 30 && cuantil(totales, 0.85)! < 1) avisos.push('Casi todas las tareas se cierran menos de un día después de crearse: parece que se registran en Jira después de hacer el trabajo.');
-  if (historias.length >= 10 && sinPuntos / historias.length > 0.3) avisos.push(Math.round(sinPuntos / historias.length * 100) + '% de las historias no tienen puntos.');
+  if (ent.length >= 30 && cuantil(totales, 0.85)! < 1) avisos.push('Almost all tasks are closed less than a day after they are created: they seem to be logged in Jira after the work is done.');
+  if (historias.length >= 10 && sinPuntos / historias.length > 0.3) avisos.push(Math.round(sinPuntos / historias.length * 100) + '% of stories have no points.');
   // Un equipo que no usa sprints (Kanban) no es un fallo: solo se avisa si los usa y no son creíbles
   if (det.haySprints && !sp.fiables && sp.motivo && items.some((d) => d.t.sprints.length > 0)) avisos.push(sp.motivo);
-  if (det.hayTiempos && items.length && items.filter((d) => d.t.fechas.terminada && !d.conTiempos).length / items.length > 0.2) avisos.push('Muchas tareas cerradas no traen Tiempo en estado.');
+  if (det.hayTiempos && items.length && items.filter((d) => d.t.fechas.terminada && !d.conTiempos).length / items.length > 0.2) avisos.push('Many closed tasks have no Time in Status.');
   return { saltos, saltosParte: ent.length ? saltos / ent.length : 0, sinPuntos, historias: historias.length, cierresBloque: bloque, avisos };
 }

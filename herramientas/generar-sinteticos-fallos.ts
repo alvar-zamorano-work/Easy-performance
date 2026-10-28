@@ -16,8 +16,8 @@ const SEMILLA = 20261016;
 export const CORTE = new Date(2026, 8, 21, 9, 0); // lunes 21 sep 2026
 /** Las comprobaciones miran las 16 semanas anteriores al final de los datos. */
 const VENTANA = new Date(CORTE.getTime() - 16 * SEMANA);
-export const ESTADO_PROPIO = { nombre: 'Ventana de paso a PRE', id: '10010' };
-export const EQUIPO_NUEVO = { nombre: 'Datos', prefijo: 'DAT', area: 'Plataforma', fte: 4 };
+export const ESTADO_PROPIO = { nombre: 'Pre-production window', id: '10010' };
+export const EQUIPO_NUEVO = { nombre: 'Data', prefijo: 'DAT', area: 'Platform', fte: 4 };
 
 export interface Sembrado {
   /** Id de la comprobación de fiabilidad que lo detecta. */
@@ -56,7 +56,7 @@ export function generarFallos() {
   // 1. Equipo nuevo con poca historia: empezó a registrar su trabajo ocho semanas antes del corte
   const desdeNuevo = new Date(CORTE.getTime() - 8 * SEMANA);
   let n = 0, idNuevo = 40000;
-  const nuevas = filas.filter((f) => de('Pagos')(f) && fecha(f, c.creada)! >= desdeNuevo && fecha(f, c.creada)! < CORTE).map((f) => {
+  const nuevas = filas.filter((f) => de('Payments')(f) && fecha(f, c.creada)! >= desdeNuevo && fecha(f, c.creada)! < CORTE).map((f) => {
     const g = f.slice();
     g[c.clave] = `${EQUIPO_NUEVO.prefijo}-${++n}`; g[c.id] = String(++idNuevo); g[c.proyecto] = EQUIPO_NUEVO.prefijo;
     g[c.equipo] = EQUIPO_NUEVO.nombre; g[c.componentes] = EQUIPO_NUEVO.nombre;
@@ -67,7 +67,7 @@ export function generarFallos() {
   });
   filas = filas.concat(nuevas);
   sembrados.push({ id: 'historia', ambito: 'ambos', equipo: EQUIPO_NUEVO.nombre, tareas: nuevas.length,
-    que: 'Un equipo nuevo, ' + EQUIPO_NUEVO.nombre + ', solo tiene ocho semanas registradas. No basta para saber qué es lo normal en él.' });
+    que: 'A new team, ' + EQUIPO_NUEVO.nombre + ', only has eight weeks on record. Not enough to know what is normal for it.' });
 
   // 2. Export cortado: tras el corte solo hay un goteo de tareas nuevas y lo que pasó después no está
   const goteo: Record<number, number> = {};
@@ -106,77 +106,77 @@ export function generarFallos() {
     return true;
   });
   sembrados.push({ id: 'actividad', ambito: 'area', equipo: null, tareas: cortadas,
-    que: 'El export se cortó el ' + CORTE.getDate() + ' de septiembre: de las últimas tres semanas solo quedan unas pocas tareas nuevas.' });
+    que: 'The export was cut off on ' + CORTE.getDate() + ' September: only a few new tasks remain from the last three weeks.' });
 
-  // 3. Estado propio que no se reconoce por su nombre (App móvil)
+  // 3. Estado propio que no se reconoce por su nombre (Mobile App)
   let conEstado = 0;
-  filas.filter((f) => de('App móvil')(f) && hecha(f) && resueltaEntre(VENTANA, CORTE)(f)).forEach((f) => {
+  filas.filter((f) => de('Mobile App')(f) && hecha(f) && resueltaEntre(VENTANA, CORTE)(f)).forEach((f) => {
     if (az.r() < 0.35) { f[c.tis] = escribirTis(leerTis(f[c.tis]).concat([{ id: ESTADO_PROPIO.id, n: 1, v: az.entre(1, 3) * DIA }])); conEstado++; }
   });
-  const enEstado = filas.filter((f) => de('App móvil')(f) && f[c.estado] === 'In Progress').slice(0, 4);
-  if (!enEstado.length) throw new Error('No hay tareas de App móvil en curso para el estado propio.');
+  const enEstado = filas.filter((f) => de('Mobile App')(f) && f[c.estado] === 'In Progress').slice(0, 4);
+  if (!enEstado.length) throw new Error('No Mobile App tasks in progress for the custom status.');
   enEstado.forEach((f) => {
     f[c.tis] = escribirTis(leerTis(f[c.tis]).map((x) => (x.id === '3' ? { ...x, v: az.entre(1, 4) * DIA } : x)).concat([{ id: ESTADO_PROPIO.id, n: 1, v: 0 }]));
     f[c.estado] = ESTADO_PROPIO.nombre;
   });
-  sembrados.push({ id: 'estados', ambito: 'area', equipo: 'App móvil', tareas: conEstado + enEstado.length,
-    que: 'App móvil usa un estado propio, «' + ESTADO_PROPIO.nombre + '». Es una espera, pero no se reconoce por el nombre y por su categoría se contaría como en curso.' });
+  sembrados.push({ id: 'estados', ambito: 'area', equipo: 'Mobile App', tareas: conEstado + enEstado.length,
+    que: 'Mobile App uses a custom status, "' + ESTADO_PROPIO.nombre + '". It is a wait, but it is not recognised by name and by its category it would count as in progress.' });
 
-  // 4. Tareas que saltan de pendiente a hecho sin pasar por en curso (Pagos)
+  // 4. Tareas que saltan de pendiente a hecho sin pasar por en curso (Payments)
   let saltos = 0;
-  filas.filter((f) => de('Pagos')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
+  filas.filter((f) => de('Payments')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
     if (az.r() < 0.35) {
       const lead = fecha(f, c.resuelta)!.getTime() - fecha(f, c.creada)!.getTime();
       f[c.tis] = escribirTis([{ id: '10000', n: 1, v: lead }, { id: '10002', n: 1, v: 0 }]);
       saltos++;
     }
   });
-  sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Pagos', tareas: saltos,
-    que: 'En Pagos, una de cada tres tareas se mueve de pendiente a hecho de golpe, sin pasar por en curso.' });
+  sembrados.push({ id: 'flujo', ambito: 'ambos', equipo: 'Payments', tareas: saltos,
+    que: 'In Payments, one in three tasks moves from backlog to done in one go, without going through in progress.' });
 
-  // 5. Dos cierres en bloque de App móvil, al acabar dos sprints
+  // 5. Dos cierres en bloque de Mobile App, al acabar dos sprints
   const bloques: [Date, number][] = [[new Date(2026, 7, 28, 18, 0), 14], [new Date(2026, 8, 18, 18, 0), 12]];
   let enBloque = 0;
   const usadas = new Set<string>();
   for (const [cuando, cuantas] of bloques) {
-    const candidatas = filas.filter((f) => de('App móvil')(f) && hecha(f) && !usadas.has(f[c.clave]) && resueltaEntre(new Date(cuando.getTime() - 21 * DIA), cuando)(f) && fecha(f, c.creada)! < cuando)
+    const candidatas = filas.filter((f) => de('Mobile App')(f) && hecha(f) && !usadas.has(f[c.clave]) && resueltaEntre(new Date(cuando.getTime() - 21 * DIA), cuando)(f) && fecha(f, c.creada)! < cuando)
       .sort((a, b) => fecha(b, c.resuelta)!.getTime() - fecha(a, c.resuelta)!.getTime()).slice(0, cuantas);
     if (candidatas.length < cuantas) throw new Error('No hay tareas suficientes para el cierre en bloque del ' + cuando.toISOString());
     candidatas.forEach((f) => { f[c.resuelta] = fechaJira(cuando); f[c.actualizada] = fechaJira(cuando); f[c.cambio] = fechaJira(cuando); usadas.add(f[c.clave]); enBloque++; });
   }
-  sembrados.push({ id: 'bloque', ambito: 'area', equipo: 'App móvil', tareas: enBloque,
-    que: 'App móvil cerró de golpe 14 y 12 tareas en el mismo minuto, al final de dos sprints, para limpiar el tablero.' });
+  sembrados.push({ id: 'bloque', ambito: 'area', equipo: 'Mobile App', tareas: enBloque,
+    que: 'Mobile App closed 14 and 12 tasks at once in the same minute, at the end of two sprints, to clean up the board.' });
 
-  // 6. Registro a posteriori: Portal clientes crea las tareas cuando ya las ha hecho
+  // 6. Registro a posteriori: Customer Portal crea las tareas cuando ya las ha hecho
   let tarde = 0;
-  filas.filter((f) => de('Portal clientes')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
+  filas.filter((f) => de('Customer Portal')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 2 * SEMANA), CORTE)(f)).forEach((f) => {
     const creada = new Date(fecha(f, c.resuelta)!.getTime() - az.entre(2, 6) * 36e5);
     f[c.creada] = fechaJira(creada); f[c.primera] = fechaIso(new Date(creada.getTime() + 36e5));
     tarde++;
   });
-  sembrados.push({ id: 'registro', ambito: 'ambos', equipo: 'Portal clientes', tareas: tarde,
-    que: 'Portal clientes registra las tareas en la herramienta cuando ya las ha terminado, unas horas antes de cerrarlas.' });
+  sembrados.push({ id: 'registro', ambito: 'ambos', equipo: 'Customer Portal', tareas: tarde,
+    que: 'Customer Portal logs tasks in the tool once they are already finished, a few hours before closing them.' });
 
-  // 7. Portal clientes deja de usar sprints en la herramienta
+  // 7. Customer Portal deja de usar sprints en la herramienta
   let sinSprint = 0;
   const desdeSprints = new Date(CORTE.getTime() - 14 * SEMANA);
-  filas.filter((f) => de('Portal clientes')(f) && (fecha(f, c.creada)! >= desdeSprints || (fecha(f, c.resuelta) && fecha(f, c.resuelta)! >= desdeSprints))).forEach((f) => {
+  filas.filter((f) => de('Customer Portal')(f) && (fecha(f, c.creada)! >= desdeSprints || (fecha(f, c.resuelta) && fecha(f, c.resuelta)! >= desdeSprints))).forEach((f) => {
     if (f[c.sprint1] || f[c.sprint2]) { f[c.sprint1] = ''; f[c.sprint2] = ''; sinSprint++; }
   });
-  sembrados.push({ id: 'sprints', ambito: 'ambos', equipo: 'Portal clientes', tareas: sinSprint,
-    que: 'Portal clientes dice trabajar por sprints, pero desde hace tres meses no los apunta en la herramienta.' });
+  sembrados.push({ id: 'sprints', ambito: 'ambos', equipo: 'Customer Portal', tareas: sinSprint,
+    que: 'Customer Portal says it works in sprints, but for three months it has not recorded them in the tool.' });
 
-  // 8. Historias sin estimar en Riesgos
+  // 8. Historias sin estimar en Risk
   let sinPuntos = 0;
-  filas.filter((f) => de('Riesgos')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.6) { f[c.puntos] = ''; sinPuntos++; } });
-  sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Riesgos', tareas: sinPuntos,
-    que: 'Riesgos deja sin estimar seis de cada diez historias.' });
+  filas.filter((f) => de('Risk')(f) && f[c.tipo] === 'Story').forEach((f) => { if (az.r() < 0.6) { f[c.puntos] = ''; sinPuntos++; } });
+  sembrados.push({ id: 'estimacion', ambito: 'ambos', equipo: 'Risk', tareas: sinPuntos,
+    que: 'Risk leaves six out of ten stories without an estimate.' });
 
-  // 9. Sin tiempo en cada estado: Riesgos cambió de flujo y su export ya no lo trae
+  // 9. Sin tiempo en cada estado: Risk cambió de flujo y su export ya no lo trae
   let sinTiempos = 0;
-  filas.filter((f) => de('Riesgos')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 4 * SEMANA), CORTE)(f)).forEach((f) => { f[c.tis] = ''; sinTiempos++; });
-  sembrados.push({ id: 'tiempos', ambito: 'ambos', equipo: 'Riesgos', tareas: sinTiempos,
-    que: 'Riesgos cambió de flujo y desde mayo sus tareas cerradas no traen el tiempo en cada estado.' });
+  filas.filter((f) => de('Risk')(f) && hecha(f) && resueltaEntre(new Date(VENTANA.getTime() - 4 * SEMANA), CORTE)(f)).forEach((f) => { f[c.tis] = ''; sinTiempos++; });
+  sembrados.push({ id: 'tiempos', ambito: 'ambos', equipo: 'Risk', tareas: sinTiempos,
+    que: 'Risk changed its workflow and since May its closed tasks have no time in each status.' });
 
   // 10. Tareas sin equipo: desde abril el campo Equipo no es obligatorio
   const desdeAbril = new Date(2026, 3, 1);
@@ -186,7 +186,7 @@ export function generarFallos() {
     if (az.r() < 0.3) { f[c.equipo] = ''; f[c.componentes] = ''; sinEquipo++; }
   });
   sembrados.push({ id: 'equipo', ambito: 'area', equipo: null, tareas: sinEquipo,
-    que: 'Desde abril el campo Equipo no es obligatorio y casi una de cada tres tareas nuevas se crea sin él.' });
+    que: 'Since April the Team field is not mandatory and almost one in three new tasks is created without it.' });
 
   return { cab, filas, sembrados };
 }
@@ -194,7 +194,7 @@ export function generarFallos() {
 export function ficherosFallos(): Record<string, string> {
   const { cab, filas, sembrados } = generarFallos();
   const escenarios = {
-    descripcion: 'Fallos sembrados en jira-con-fallos.csv. Parte del export limpio de B3. Lo generan herramientas/generar-sinteticos-fallos.ts.',
+    descripcion: 'Faults seeded in jira-con-fallos.csv. Based on the clean B3 export. Generated by herramientas/generar-sinteticos-fallos.ts.',
     fecha_export: '2026-10-12T09:00:00',
     corte: '2026-09-21T09:00:00',
     sembrados,
@@ -205,7 +205,7 @@ export function ficherosFallos(): Record<string, string> {
     fte: [{ periodo: '2026-09', valor: EQUIPO_NUEVO.fte, origen: 'declarado' }], limites: {} });
   // El mapeo firmado solo recoge los estados de siempre: el estado propio queda por confirmar
   const cliente = {
-    version: 2, nombre: 'Cliente sintético con fallos', sector: 'banca', plataforma: 'jira',
+    version: 2, nombre: 'Synthetic client with faults', sector: 'banking', plataforma: 'jira',
     mapeoEstados: { 'To Do': 'pendiente', 'In Progress': 'en_curso', 'In Review': 'en_revision', 'Blocked': 'bloqueado', 'Done': 'terminado' },
     equipos: { campo: 'equipo', lista: equipos },
     objetivos: ['tardamos', 'arreglos', 'comparar', 'agentes', 'datos'],

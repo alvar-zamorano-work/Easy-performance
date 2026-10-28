@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "nombre": "Cliente sintético aseguradora",
-  "sector": "seguros",
+  "nombre": "Synthetic insurer",
+  "sector": "insurance",
   "plataforma": "jira",
   "mapeoEstados": {
     "Tareas por hacer": "pendiente",
@@ -15,10 +15,10 @@
     "lista": [
       {
         "id": "sin",
-        "nombre": "Siniestros",
+        "nombre": "Claims",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Negocio",
+        "area": "Business",
         "usa_sprints": true,
         "fte": [
           {
@@ -31,10 +31,10 @@
       },
       {
         "id": "pol",
-        "nombre": "Pólizas",
+        "nombre": "Policies",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Negocio",
+        "area": "Business",
         "usa_sprints": true,
         "fte": [
           {
@@ -47,10 +47,10 @@
       },
       {
         "id": "can",
-        "nombre": "Canal digital",
+        "nombre": "Digital Channel",
         "tipo": "proveedor",
-        "proveedor": "Proveedor Este",
-        "area": "Canales",
+        "proveedor": "Vendor East",
+        "area": "Channels",
         "usa_sprints": true,
         "fte": [
           {
@@ -63,10 +63,10 @@
       },
       {
         "id": "int",
-        "nombre": "Integraciones",
+        "nombre": "Integrations",
         "tipo": "proveedor",
-        "proveedor": "Proveedor Oeste",
-        "area": "Plataforma",
+        "proveedor": "Vendor West",
+        "area": "Platform",
         "usa_sprints": false,
         "fte": [
           {
@@ -79,10 +79,10 @@
       },
       {
         "id": "dat",
-        "nombre": "Datos y BI",
+        "nombre": "Data and BI",
         "tipo": "interno",
         "proveedor": null,
-        "area": "Plataforma",
+        "area": "Platform",
         "usa_sprints": true,
         "fte": [
           {

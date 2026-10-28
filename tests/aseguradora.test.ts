@@ -33,9 +33,9 @@ test('el ejemplo de la aseguradora sale idéntico al regenerarlo', () => {
 
 test('aseguradora: cinco equipos distintos de los del banco, reconocidos por Componentes en un export en castellano', () => {
   assert.equal(r.det.equipoRecomendado, 'componentes');
-  assert.deepEqual(r.modelo.equipos.map((e) => e.nombre).sort(), ['Canal digital', 'Datos y BI', 'Integraciones', 'Pólizas', 'Siniestros']);
+  assert.deepEqual(r.modelo.equipos.map((e) => e.nombre).sort(), ['Claims', 'Data and BI', 'Digital Channel', 'Integrations', 'Policies']);
   assert.ok(r.det.estados.some((e) => e.nombre === 'Listo' && e.estado === 'terminado'));
-  assert.ok(!r.det.estados.some((e) => /^Estado \d/.test(e.nombre)), 'todos los estados tienen nombre');
+  assert.ok(!r.det.estados.some((e) => /^Status \d/.test(e.nombre)), 'todos los estados tienen nombre');
 });
 
 for (const s of escenarios.sembrados as { id: string; ambito: string; equipo: string | null }[]) {
