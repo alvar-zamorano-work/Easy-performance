@@ -9,8 +9,6 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(RAIZ, 'web', 'src');
 const DEMO = join(RAIZ, 'datos-sinteticos', 'b3');
-const FALLOS = join(RAIZ, 'datos-sinteticos', 'fallos');
-const ASEGURADORA = join(RAIZ, 'datos-sinteticos', 'aseguradora');
 const leerJson = (...p: string[]) => JSON.parse(readFileSync(join(...p), 'utf8'));
 
 /** Sin "</script" dentro de un bloque <script>. */
@@ -23,7 +21,7 @@ function fuentes(): string {
   }).join('\n');
 }
 
-/** Datos de una demo: equipos y FTE de su cliente, más sus iniciativas y su contexto (por defecto, los de B3). */
+/** Datos de ejemplo: equipos y FTE del cliente ficticio, más sus iniciativas y su contexto (los de B3). */
 function demoCliente(cliente: { sector: string; equipos: { lista: any[] } }, extra: Record<string, unknown> = {}, nombre = 'Banco ficticio', dir = DEMO): string {
   const dirIni = join(dir, 'cliente', 'iniciativas');
   const iniciativas = readdirSync(dirIni).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(dirIni, f), 'utf8')));
@@ -48,25 +46,13 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
   const nucleo = r.outputFiles[0].text;
   const demoCsv = readFileSync(join(DEMO, 'jira-b3.csv'), 'utf8');
   if (/<\/script/i.test(demoCsv)) throw new Error('El CSV de la demo contiene </script');
-  // Segunda demo: el mismo banco con un fallo sembrado por cada comprobación de fiabilidad
-  const fallosCsv = readFileSync(join(FALLOS, 'jira-con-fallos.csv'), 'utf8');
-  if (/<\/script/i.test(fallosCsv)) throw new Error('El CSV con fallos contiene </script');
-  const escenarios = leerJson(FALLOS, 'escenarios.json');
-  // Tercera demo: una aseguradora con un export de Jira en castellano y solo tres fallos
-  const asegCsv = readFileSync(join(ASEGURADORA, 'jira-aseguradora.csv'), 'utf8');
-  if (/<\/script/i.test(asegCsv)) throw new Error('El CSV de la aseguradora contiene </script');
-  const escAseg = leerJson(ASEGURADORA, 'escenarios.json');
   const piezas: Record<string, string> = {
     '/*ESTILOS*/': readFileSync(join(SRC, 'app.css'), 'utf8').replace('/*FUENTES*/', fuentes()),
     '/*DEMO*/': demoCsv,
     '/*DEMO_CLIENTE*/': seguro(demoCliente(leerJson(DEMO, 'cliente', 'cliente.json'))),
-    '/*DEMO_FALLOS*/': fallosCsv,
-    '/*DEMO_FALLOS_CLIENTE*/': seguro(demoCliente(leerJson(FALLOS, 'cliente', 'cliente.json'), { sembrados: escenarios.sembrados })),
-    '/*DEMO_ASEGURADORA*/': asegCsv,
-    '/*DEMO_ASEGURADORA_CLIENTE*/': seguro(demoCliente(leerJson(ASEGURADORA, 'cliente', 'cliente.json'), { sembrados: escAseg.sembrados, sin_fallo: escAseg.sin_fallo }, 'Aseguradora ficticia', ASEGURADORA)),
     '/*NUCLEO*/': seguro(nucleo),
-    // proceso.js (la animación del método) va antes de la interfaz, que lo usa
-    '/*APP*/': seguro(readFileSync(join(SRC, 'proceso.js'), 'utf8') + '\n' + readFileSync(join(SRC, 'app.js'), 'utf8')),
+    // tutorial.js (el recorrido guiado) va antes de la interfaz, que lo usa
+    '/*APP*/': seguro(readFileSync(join(SRC, 'tutorial.js'), 'utf8') + '\n' + readFileSync(join(SRC, 'app.js'), 'utf8')),
   };
   let html = readFileSync(join(SRC, 'plantilla.html'), 'utf8');
   for (const [marca, contenido] of Object.entries(piezas)) {
@@ -79,11 +65,11 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance'))
   // Carpeta de trabajo del cliente, como en la v0, más iniciativas/ y contexto/
   const leeme: Record<string, string> = {
     exports: 'Deja aquí los CSV exportados de Jira (con Todos los campos). Easy Performance los une y quita los repetidos.\n',
-    configuracion: 'Aquí va cliente.json: lo que se ha cambiado en Cómo funciona (proveedores, áreas, FTE, estados). También los documentos de definiciones.\n',
-    iniciativas: 'Un fichero .json por iniciativa de mejora. Los crea el consultor.\n',
+    configuracion: 'Aquí va cliente.json: lo que se ha cambiado en Ajustes (proveedores, áreas, FTE, estados, iniciativas registradas). También los documentos de definiciones.\n',
+    iniciativas: 'Un fichero .json por iniciativa de mejora. Los escribe la página al registrar una, o se dejan a mano.\n',
     contexto: 'contexto.json: resúmenes que escribe o aprueba el consultor (método, organización, stack, contratos). Solo los usa el paquete de diagnóstico.\n',
     historico: 'Fotos semanales de lo abierto. Las guarda la página al leer la carpeta.\n',
-    diagnostico: 'Paquetes de diagnóstico exportados desde Cómo funciona. Solo llevan cifras agregadas.\n',
+    diagnostico: 'Paquetes de diagnóstico exportados desde Ajustes. Solo llevan cifras agregadas.\n',
   };
   for (const [sub, texto] of Object.entries(leeme)) { mkdirSync(join(destino, sub), { recursive: true }); writeFileSync(join(destino, sub, 'LEEME.txt'), texto); }
   // datos.js vacío: así la página no da error al abrirla antes de ejecutar actualizar

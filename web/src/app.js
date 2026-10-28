@@ -1,18 +1,18 @@
-// Easy Performance: tablero, recomendaciones y cómo funciona.
-// Sin puesta en marcha: al cargar el export se detecta todo (campo de equipo, estados) y se ve el tablero.
-// Lo que no se puede detectar (proveedores, áreas, FTE) y lo que se quiera corregir se cambia en "Cómo funciona".
+// Easy Performance: tablero, recomendaciones, iniciativas, datos y ajustes.
+// Al cargar el export se detecta todo (campo de equipo, estados) y se ve el tablero.
+// Lo que no se puede detectar (proveedores, áreas, FTE) y lo que se quiera corregir se cambia en Ajustes.
+// El tutorial (tutorial.js) recorre la interfaz con los datos de ejemplo o con los del cliente.
 // Usa el núcleo empaquetado en la página: window.Motor, window.Nucleo y window.CATALOGO.
 (function () {
   'use strict';
   var C = window.CATALOGO, N = window.Nucleo, M = window.Motor;
-  var CLAVE = 'easyperformance.config.v2', CLAVE_V1 = 'easyperformance.configuracion.v1';
+  var CLAVE = 'easyperformance.config.v2', CLAVE_V1 = 'easyperformance.configuracion.v1', CLAVE_TUT = 'easyperformance.tutorial';
   var App = {
     vista: 'inicio', ver: 'area', editar: null, demo: false, carpeta: null, origen: null,
     lectura: null, det: null, cfg: {}, iniciativas: [], contexto: null, r: null, real: null, abiertas: {},
-    fuente: null, simulada: null, generadas: false, recSel: null, recEquipo: 'todos', tiempoMs: 0, como: 'metodo'
+    recSel: null, recEquipo: 'todos', tiempoMs: 0, datos: 'fiabilidad', ajustes: null, nuevaIni: false
   };
   window.EasyPerformance = App;
-
   // ---------- utilidades ----------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function n1(v) { return (Math.round(v * 10) / 10).toLocaleString('es-ES'); }
@@ -31,27 +31,9 @@
   };
   var COLUMNAS = ['ciclo', 'entregas', 'retrabajo', 'arrastradas', 'agent_readiness'];
   // Fuentes de la entrada. Jira funciona hoy con el export CSV; la conexión directa y el resto son una simulación
-  // que carga los datos de ejemplo. Los estados son ejemplos habituales de cada herramienta.
-  var FUENTES = {
-    jira: { nombre: 'Jira', sub: 'Cloud y Data Center', ico: 'J', unidad: 'incidencias', instancia: 'banco-ejemplo.atlassian.net', proyecto: 'Canales digitales', equipo: 'Campo Equipo o componente', csv: true,
-      lee: ['Incidencias, su tipo y su épica', 'Estados y tiempo en cada estado', 'Sprints y estimación', 'Descripción, solo para ver si el ticket está bien definido'],
-      estados: [['To Do', 'pendiente'], ['In Progress', 'en_curso'], ['In Review', 'en_revision'], ['Blocked', 'bloqueado'], ['Done', 'terminado']] },
-    ado: { nombre: 'Azure DevOps', sub: 'Boards', ico: 'AZ', unidad: 'elementos de trabajo', instancia: 'dev.azure.com/banco-ejemplo', proyecto: 'Canales digitales', equipo: 'Area Path',
-      lee: ['Elementos de trabajo y su tipo', 'Estados y su historial de cambios', 'Iteraciones y esfuerzo', 'Descripción y criterios de aceptación'],
-      estados: [['New', 'nuevo'], ['Active', 'en_curso'], ['Resolved', 'en_pruebas'], ['Closed', 'terminado'], ['Removed', 'descartado']] },
-    servicenow: { nombre: 'ServiceNow', sub: 'Agile Development', ico: 'SN', unidad: 'historias', instancia: 'banco-ejemplo.service-now.com', proyecto: 'Canales digitales', equipo: 'Grupo de asignación',
-      lee: ['Historias, tareas y defectos', 'Estados y su historial', 'Sprints y puntos', 'Descripción y criterios de aceptación'],
-      estados: [['Draft', 'nuevo'], ['Ready', 'pendiente'], ['Work in progress', 'en_curso'], ['Testing', 'en_pruebas'], ['Complete', 'terminado'], ['Cancelled', 'descartado']] },
-    gitlab: { nombre: 'GitLab', sub: 'Issues y boards', ico: 'GL', unidad: 'issues', instancia: 'gitlab.banco-ejemplo.es', proyecto: 'Canales digitales', equipo: 'Grupo o etiqueta de equipo',
-      lee: ['Issues y sus etiquetas', 'Estados y etiquetas de flujo', 'Iteraciones y peso', 'Descripción'],
-      estados: [['Open', 'pendiente'], ['workflow::doing', 'en_curso'], ['workflow::review', 'en_revision'], ['Closed', 'terminado']] },
-    otra: { nombre: 'Otra herramienta', sub: 'Con su adaptador', ico: '+', otra: true }
-  };
-  // El coste por entrega solo aparece si se ha indicado el coste de algún equipo; no cuenta para el titular
-  // porque repite lo que ya dicen las entregas, visto desde el dinero.
   function hayCoste() { var c = App.cfg.coste; return !!(c && Object.keys(c).some(function (k) { return c[k] > 0; })); }
   function columnas() { return hayCoste() ? COLUMNAS.concat(['coste']) : COLUMNAS; }
-  function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Indica el FTE y el coste de cada equipo en Cómo funciona.' } : eq.medidas[id]; }
+  function med(eq, id) { return id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: 'Indica el FTE y el coste de cada equipo en Ajustes.' } : eq.medidas[id]; }
   // Siempre con punto de miles (en castellano, toLocaleString no lo pone en las cifras de cuatro dígitos)
   function euros(v) { return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' €'; }
   var KPI_AREA = ['ciclo', 'entregas', 'retrabajo', 'agent_readiness'];
@@ -171,8 +153,7 @@
     App.lectura = r.lectura; App.det = M.detectar(r.tareas); App.origen = origen; App.ficheros = ficheros;
     recalcular();
     App.tiempoMs = ((window.performance && performance.now) ? performance.now() : Date.now()) - t0;
-    // Datos nuevos: las recomendaciones se vuelven a generar
-    App.generadas = false; App.recSel = null; App.recEquipo = 'todos';
+    App.recSel = null; App.recEquipo = 'todos'; App.nuevaIni = false;
     App.vista = 'tablero';
     return true;
   }
@@ -180,11 +161,9 @@
     var csv = [].filter.call(files, function (f) { return /\.csv$/i.test(f.name) || /csv/.test(f.type); });
     if (!csv.length) { aviso('Elige uno o varios CSV exportados de Jira.'); return; }
     salirDemo(false);
-    // El método se enseña al cargar desde la entrada, no al actualizar
-    var animar = !App.r || App.vista === 'inicio';
     ocupado(true, 'Leyendo datos…');
     Promise.all(csv.map(function (f) { return f.arrayBuffer().then(descodificar).then(function (t) { return { nombre: f.name, texto: t }; }); }))
-      .then(function (fs) { setTimeout(function () { try { if (procesar(fs, 'ficheros')) { App.fuente = null; render(); window.scrollTo(0, 0); if (animar) animarCarga(null); } } finally { ocupado(false); } }, 20); })
+      .then(function (fs) { setTimeout(function () { try { if (procesar(fs, 'ficheros')) { render(); window.scrollTo(0, 0); } } finally { ocupado(false); } }, 20); })
       .catch(function () { ocupado(false); aviso('No se pudieron leer los ficheros.'); });
   }
 
@@ -223,7 +202,6 @@
   function sub(h, nombre) { return h.getDirectoryHandle(nombre).catch(function () { return null; }); }
   function leerCarpeta(h) {
     salirDemo(false);
-    var animar = !App.r || App.vista === 'inicio';
     ocupado(true, 'Leyendo la carpeta…');
     return permiso(h, 'readwrite').catch(function () { return permiso(h, 'read'); }).then(function (ok) {
       if (!ok) throw new Error('permiso');
@@ -240,7 +218,7 @@
         x[2].forEach(function (f) { var d = leer(f.texto, 'contexto/' + f.nombre); if (d && d.documentos) docs = docs.concat(d.documentos); });
         App.contexto = docs.length ? { documentos: docs } : null;
         setTimeout(function () {
-          try { if (procesar(fs, 'carpeta')) { guardarFoto(); guardarSeguimiento(); App.fuente = null; render(); aviso('Leídos ' + fs.length + ' fichero(s) de la carpeta.'); if (animar) animarCarga(null); } } finally { ocupado(false); }
+          try { if (procesar(fs, 'carpeta')) { guardarFoto(); guardarSeguimiento(); render(); aviso('Leídos ' + fs.length + ' fichero(s) de la carpeta.'); } } finally { ocupado(false); }
         }, 20);
       });
     }).catch(function () { ocupado(false); aviso('No hay permiso para leer la carpeta. Pulsa otra vez "Leer la carpeta".'); });
@@ -267,118 +245,76 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
-  // ---------- demo con datos de ejemplo ----------
-  // Tres ejemplos para cargar: el banco con datos limpios, una aseguradora con algunos fallos y el banco con un
-  // fallo sembrado por cada comprobación de fiabilidad. Cada uno lleva su export de Jira y su carpeta de cliente.
-  var DEMOS = {
-    b3: { pre: 'demo-', fichero: 'datos-de-ejemplo.csv', nombre: 'Banco ficticio', sub: 'Datos limpios', nivel: 'alta',
-      banda: '<b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados.' },
-    aseguradora: { pre: 'demo-aseguradora-', fichero: 'export-jira-aseguradora.csv', nombre: 'Aseguradora ficticia', sub: 'Algunos datos por revisar', nivel: 'media',
-      banda: '<b>Aseguradora ficticia:</b> cinco equipos y un export de Jira en castellano, con el equipo en Componentes. Tres datos por revisar; el resto está bien.' },
-    fallos: { pre: 'demo-fallos-', fichero: 'export-jira-con-fallos.csv', nombre: 'Banco con fallos', sub: 'Un fallo en cada comprobación', nivel: 'baja',
-      banda: '<b>Export con fallos:</b> el mismo banco ficticio con un fallo sembrado en los datos por cada comprobación de fiabilidad.' }
-  };
-  function verDemo(simulada, cual) {
-    cual = DEMOS[cual] ? cual : 'b3';
-    var pre = DEMOS[cual].pre;
-    var t = (document.getElementById(pre + 'csv') || {}).textContent || '';
-    if (!t.trim()) { aviso('Esta copia no incluye datos de ejemplo.'); return; }
-    var dc = {}; try { dc = JSON.parse(document.getElementById(pre + 'cliente').textContent || '{}'); } catch (e) { dc = {}; }
-    if (!App.demo) App.real = { lectura: App.lectura, det: App.det, cfg: App.cfg, iniciativas: App.iniciativas, contexto: App.contexto, r: App.r, origen: App.origen, ver: App.ver, vista: App.vista, generadas: App.generadas, recSel: App.recSel, tiempoMs: App.tiempoMs };
-    enSegundoPlano(function () {
-      App.demo = true;
-      App.cfg = { nombre: dc.nombre || 'Banco ficticio', equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {} };
-      App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null;
-      App.demoId = cual; App.sembrados = dc.sembrados || null; App.sinFallo = dc.sin_fallo || [];
-      procesar([{ nombre: DEMOS[cual].fichero, texto: t }], 'ejemplo');
-      App.simulada = FUENTES[simulada] && !FUENTES[simulada].otra ? simulada : null; App.fuente = null;
-      render(); window.scrollTo(0, 0);
-      animarCarga(App.simulada);
-    }, 'Preparando la demo…');
+  // ---------- datos de ejemplo ----------
+  // Un banco ficticio con dos equipos internos y dos de proveedores, un año de historia, dos iniciativas y costes
+  // inventados. Los usa el tutorial y se pueden cargar para probar la página. Nunca tocan los datos reales.
+  var DEMO = { fichero: 'datos-de-ejemplo.csv', nombre: 'Banco ficticio' };
+  function hayDemo() { var t = document.getElementById('demo-csv'); return !!(t && t.textContent.trim()); }
+  function verDemo() {
+    var t = (document.getElementById('demo-csv') || {}).textContent || '';
+    if (!t.trim()) { aviso('Esta copia no incluye datos de ejemplo.'); return false; }
+    var dc = {}; try { dc = JSON.parse(document.getElementById('demo-cliente').textContent || '{}'); } catch (e) { dc = {}; }
+    if (!App.demo) App.real = { lectura: App.lectura, det: App.det, cfg: App.cfg, iniciativas: App.iniciativas, contexto: App.contexto, r: App.r, origen: App.origen, ver: App.ver, vista: App.vista, recSel: App.recSel, tiempoMs: App.tiempoMs, ficheros: App.ficheros };
+    App.demo = true;
+    App.cfg = { nombre: dc.nombre || DEMO.nombre, equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {} };
+    App.iniciativas = dc.iniciativas || []; App.contexto = dc.contexto || null; App.ver = 'area'; App.editar = null; App.nuevaIni = false;
+    procesar([{ nombre: DEMO.fichero, texto: t }], 'ejemplo');
+    render(); window.scrollTo(0, 0);
+    return true;
   }
   function salirDemo(pintar) {
     if (!App.demo) return;
+    if (window.Tutorial) window.Tutorial.cerrar();
     var r = App.real || {};
     App.demo = false;
     App.lectura = r.lectura || null; App.det = r.det || null; App.cfg = r.cfg || cfgInicial(); App.iniciativas = r.iniciativas || [];
-    App.contexto = r.contexto || null; App.r = r.r || null; App.origen = r.origen || null; App.ver = r.ver || 'area';
-    App.generadas = !!r.generadas; App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0; App.simulada = null; App.sembrados = null; App.sinFallo = null; App.demoId = null;
-    App.vista = App.r ? 'tablero' : 'inicio'; App.real = null; App.editar = null;
+    App.contexto = r.contexto || null; App.r = r.r || null; App.origen = r.origen || null; App.ver = r.ver || 'area'; App.ficheros = r.ficheros || null;
+    App.recSel = r.recSel || null; App.recEquipo = 'todos'; App.tiempoMs = r.tiempoMs || 0;
+    App.vista = App.r ? 'tablero' : 'inicio'; App.real = null; App.editar = null; App.nuevaIni = false;
     if (pintar !== false) { render(); window.scrollTo(0, 0); }
   }
 
   // ---------- pintado ----------
+  var VISTAS = [['tablero', 'Tablero'], ['recomendaciones', 'Recomendaciones'], ['iniciativas', 'Iniciativas'], ['datos', 'Datos'], ['ajustes', 'Ajustes']];
   function render() {
     var html;
     if (!App.r || App.vista === 'inicio') html = inicio();
-    else html = cabecera() + (App.demo ? bandaDemo() : '') + '<main class="pagina">' + ({ tablero: tablero, recomendaciones: vistaRecomendaciones, iniciativas: vistaIniciativas, como: comoFunciona }[App.vista] || tablero)() + '</main>';
+    else html = cabecera() + (App.demo ? bandaDemo() : '') + '<main class="pagina">' + ({ tablero: tablero, recomendaciones: vistaRecomendaciones, iniciativas: vistaIniciativas, datos: vistaDatos, ajustes: vistaAjustes }[App.vista] || tablero)() + '</main>';
     document.getElementById('app').innerHTML = html;
   }
   function marca() { return '<div class="marca"><span class="logo" aria-hidden="true"></span><b>Easy Performance</b></div>'; }
   function cabecera() {
     var recs = recomendaciones().length;
-    var pest = [['tablero', 'Tablero'], ['recomendaciones', 'Recomendaciones'], ['iniciativas', 'Iniciativas'], ['como', 'Cómo funciona']].map(function (p) {
+    var pest = VISTAS.map(function (p) {
       return '<button class="pestana" data-accion="vista" data-v="' + p[0] + '"' + (App.vista === p[0] ? ' aria-current="page"' : '') + '>' + p[1] +
-        (p[0] === 'recomendaciones' && recs && App.generadas ? ' <span class="cuenta">' + recs + '</span>' : '') + '</button>';
+        (p[0] === 'recomendaciones' && recs ? ' <span class="cuenta">' + recs + '</span>' : '') + '</button>';
     }).join('');
     var hasta = new Date(App.r.modelo.semanaFin.getTime() - 864e5);
     return '<header class="cab"><div class="cab-in">' + marca() + '<nav class="pestanas" aria-label="Secciones">' + pest + '</nav><span class="hueco"></span>' +
-      '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="actualizar">Actualizar</button></div></header>';
+      '<span class="fecha">Datos hasta el ' + esc(fechaCorta(hasta)) + '</span><button class="btn btn-cab" data-accion="tutorial">Tutorial</button><button class="btn btn-cab btn-actualizar" data-accion="actualizar">Actualizar</button></div></header>';
   }
   function bandaDemo() {
-    if (App.simulada) return '<div class="banda-demo"><span><b>Simulación de ' + esc(FUENTES[App.simulada].nombre) + ':</b> datos de ejemplo de un banco ficticio, con costes inventados.</span>' +
-      '<span class="banda-acc"><button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
-    var id = DEMOS[App.demoId] ? App.demoId : 'b3';
-    var otros = Object.keys(DEMOS).filter(function (k) { return k !== id; });
-    return '<div class="banda-demo"><span>' + DEMOS[id].banda + '</span><span class="banda-acc">' +
-      (App.sembrados ? '<button class="btn-txt" data-accion="fiabilidad">Ver cómo se detectan</button>' : '') +
-      '<span class="banda-otros">Otros ejemplos: ' + otros.map(function (k) { return '<button class="btn-txt" data-accion="demo" data-d="' + k + '">' + esc(DEMOS[k].nombre) + '</button>'; }).join(' ') + '</span>' +
-      '<button class="btn btn-peq" data-accion="salir-demo">Cargar mis datos</button></span></div>';
+    return '<div class="banda-demo"><span><b>Datos de ejemplo:</b> un banco ficticio con dos equipos internos y dos de proveedores, un año de historia y costes inventados. Lo que cambies aquí no se guarda.</span>' +
+      '<span class="banda-acc"><button class="btn btn-peq" data-accion="salir-demo">' + (App.real && App.real.r ? 'Volver a mis datos' : 'Cargar mis datos') + '</button></span></div>';
   }
 
-  // Pantalla de entrada: conectar una herramienta (simulación), cargar exports o cargar un ejemplo
+  // Pantalla de entrada: cargar los exports (ficheros o carpeta) o empezar por el tutorial con datos de ejemplo
   function inicio() {
-    var f = App.fuente && FUENTES[App.fuente];
-    return '<div class="inicio"><div class="inicio-in"><div class="inicio-txt">' + marca() +
-      '<h1 class="claim">Deja de montar el informe. <em>Empieza a usarlo.</em></h1>' +
-      '<p class="inicio-sub">Conecta la herramienta donde trabajan vuestros equipos. Verás cómo va cada uno, cuánto cuesta y qué hacer, con las mismas reglas para todos.</p>' +
-      '<ol class="metodo-mini" aria-label="El método">' + ['Leer', 'Hacer fiable', 'Medir', 'Recomendar'].map(function (t, k) { return '<li><span>' + (k + 1) + '</span>' + t + '</li>'; }).join('') + '</ol>' +
-      '<div class="ejemplos" role="group" aria-label="Ejemplos para cargar"><p>O carga un ejemplo</p>' + Object.keys(DEMOS).map(function (k) {
-        var d = DEMOS[k], n = NIVEL[d.nivel];
-        return '<button class="ejemplo" data-accion="demo" data-d="' + k + '"><b>' + esc(d.nombre) + '</b><small>' + esc(d.sub) + '</small><span class="chip chip-' + n[0] + '">Fiabilidad ' + n[1].toLowerCase() + '</span></button>';
-      }).join('') + '</div>' +
+    var carpetaOk = !!window.showDirectoryPicker, demo = hayDemo();
+    return '<div class="inicio"><div class="inicio-in">' +
+      '<div class="inicio-txt">' + marca() + '<h1>Rendimiento de equipos desde Jira</h1>' +
+      '<p class="inicio-sub">Carga el export de Jira y verás cómo va cada equipo, qué hacer y si las iniciativas de mejora funcionan. Solo equipos, nunca personas.</p>' +
+      (demo ? '<div class="inicio-tut"><button class="btn btn-claro" data-accion="tutorial">Ver el tutorial con datos de ejemplo</button><span>Cinco minutos. No toca tus datos.</span></div>' : '') +
       '<p class="nota">Los datos no salen de este ordenador: todo se calcula en el navegador.</p></div>' +
-      '<section class="fuentes" aria-label="De dónde salen los datos">' + (f ? panelFuente(App.fuente, f) : panelFuentes()) + '</section></div></div>';
-  }
-  function panelFuentes() {
-    var carpetaOk = !!window.showDirectoryPicker;
-    var tiles = Object.keys(FUENTES).map(function (k) {
-      var f = FUENTES[k], estado = k === 'jira' ? 'Export CSV hoy' : (f.otra ? 'Con adaptador' : 'Simulación');
-      return '<button class="conector' + (f.otra ? ' otra' : '') + '" data-accion="fuente" data-f="' + k + '"><span class="con-cab"><span class="con-ico" aria-hidden="true">' + f.ico + '</span><b>' + esc(f.nombre) + '</b></span>' +
-        '<small>' + esc(f.sub) + '</small><span class="con-estado' + (k === 'jira' ? ' si' : '') + '">' + estado + '</span></button>';
-    }).join('');
-    return '<h2>Conecta vuestra herramienta</h2><div class="conectores">' + tiles + '</div>' +
-      '<p class="separador">o deja aquí los exports</p>' +
-      '<div class="zona" id="zona"><b>Suelta aquí el CSV de Jira</b><span>Exportado con todos los campos. Puedes soltar varios.</span>' +
+      '<section class="fuentes" aria-label="Cargar los datos"><h2>Cargar los datos</h2>' +
+      '<div class="zona" id="zona"><b>Suelta aquí el CSV de Jira</b><span>Exportado con todos los campos, en Jira Cloud o Data Center. Puedes soltar varios ficheros: se unen y se quitan los repetidos.</span>' +
       '<div class="botones"><button class="btn" data-accion="ficheros">Elegir ficheros</button>' + (carpetaOk ? '<button class="btn btn-sec" data-accion="carpeta">Elegir carpeta</button>' : '') +
-      (App.carpeta ? '<button class="btn btn-sec" data-accion="leer-carpeta">Leer la carpeta «' + esc(App.carpeta.name) + '»</button>' : '') + '</div></div>';
+      (App.carpeta ? '<button class="btn btn-sec" data-accion="leer-carpeta">Leer la carpeta «' + esc(App.carpeta.name) + '»</button>' : '') + '</div></div>' +
+      '<dl class="con-datos"><dt>Ficheros</dt><dd>Uno o varios CSV. Para cargar más de 10.000 tareas, exporta por partes.</dd>' +
+      '<dt>Carpeta</dt><dd>Con una carpeta (exports, configuracion, iniciativas, contexto) cada semana basta con dejar el export nuevo y pulsar Actualizar.</dd>' +
+      '<dt>Otras herramientas</dt><dd>Azure DevOps, GitLab y ServiceNow entran con su adaptador al mismo modelo. Hoy funciona Jira.</dd></dl>' +
+      '</section></div></div>';
   }
-  function panelFuente(k, f) {
-    var volver = '<button class="btn-txt volver" data-accion="fuentes">Volver a las fuentes</button>';
-    var li = function (t) { return '<li>' + esc(t) + '</li>'; };
-    if (f.otra) {
-      return volver + '<h2>Otra herramienta</h2><p class="con-texto">Cualquier herramienta con export o API sirve. Se añade un adaptador que traduce sus tareas, estados y equipos al modelo común. Lo demás no cambia: medidas, comparaciones y recomendaciones.</p>' +
-        '<dl class="con-datos"><dt>Ya funciona</dt><dd>Export CSV de Jira</dd><dt>Siguientes</dt><dd>Azure DevOps, ServiceNow y GitLab</dd><dt>Plantilla y coste</dt><dd>Excel de la herramienta de plantilla o de finanzas</dd></dl>' +
-        '<div class="botones"><button class="btn btn-claro" data-accion="demo">Ver con datos de ejemplo</button></div>';
-    }
-    return volver + '<h2>Conectar ' + esc(f.nombre) + '</h2>' +
-      '<dl class="con-datos"><dt>Instancia</dt><dd class="mono">' + esc(f.instancia) + '</dd><dt>Proyecto</dt><dd>' + esc(f.proyecto) + '</dd><dt>Equipo</dt><dd>' + esc(f.equipo) + '</dd>' +
-      '<dt>Periodo</dt><dd>Últimos 12 meses</dd><dt>Acceso</dt><dd>Solo lectura, lo concede vuestro administrador</dd></dl>' +
-      '<div class="con-dos"><div><b>Qué leemos</b><ul>' + f.lee.map(li).join('') + '</ul></div><div><b>Qué no leemos</b><ul>' + ['Personas asignadas ni informadores', 'Comentarios ni adjuntos'].map(li).join('') + '</ul></div></div>' +
-      '<div class="botones"><button class="btn btn-claro" data-accion="conectar" data-f="' + k + '">Conectar y cargar</button>' + (f.csv ? '<button class="btn btn-sec" data-accion="ficheros">Cargar un export CSV</button>' : '') + '</div>' +
-      '<p class="nota">Simulación: carga los datos de ejemplo de un banco ficticio. ' + (f.csv ? 'Con el export CSV ya se usan datos reales. ' : '') + 'La conexión directa se configura en el piloto con vuestro equipo de sistemas.</p>';
-  }
-
   // ---------- tablero ----------
   function selector() {
     var eqs = App.r.modelo.equipos;
@@ -426,8 +362,7 @@
     var de = function (t) { return eqs.filter(function (e) { return (info[e.nombre] || {}).tipo === t; }).length; };
     var nProv = de('proveedor'), nInt = de('interno');
     var sub = eqs.length + ' ' + plural(eqs.length, 'equipo', 'equipos') + (nProv ? ': ' + nInt + ' ' + plural(nInt, 'interno', 'internos') + ' y ' + nProv + ' de ' + plural(nProv, 'proveedor', 'proveedores') : '');
-    var accion = !nRec ? '' : App.generadas ? '<button class="btn btn-sec" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>' :
-      '<button class="btn" data-accion="generar">Generar recomendaciones</button>';
+    var accion = !nRec ? '' : '<button class="btn" data-accion="vista" data-v="recomendaciones">Ver ' + (nRec === 1 ? 'la recomendación' : 'las ' + nRec + ' recomendaciones') + '</button>';
     var html = '<section class="titular cab-area"><div><h1>' + esc(App.cfg.nombre || 'Todo el área') + '</h1><p>' + esc(sub) + '</p></div><div class="cab-acc">' + selector() + accion + '</div></section>';
     html += estadoArea(fuera);
     html += '<section class="kpis" aria-label="Indicadores del área">' + KPI_AREA.concat(hayCoste() ? ['coste'] : []).map(function (id) { return tarjetaKpi(id, med(a, id), true); }).join('') + '</section>';
@@ -452,7 +387,7 @@
   }
   function bloqueGrupos() {
     var c = App.r.comparaciones.filter(function (x) { return x.dimension === 'tipo'; })[0];
-    if (!c) return '<section class="bloque"><h2>Internos y proveedores</h2><p class="nota">Para comparar, indica qué equipos son de un proveedor en <button class="btn-txt" data-accion="editar" data-e="equipos">Cómo funciona</button>.</p></section>';
+    if (!c) return '<section class="bloque"><h2>Internos y proveedores</h2><p class="nota">Para comparar, indica qué equipos son de un proveedor en <button class="btn-txt" data-accion="editar" data-e="equipos">Ajustes</button>.</p></section>';
     var g = c.grupos, peor = {}; c.diferencias.forEach(function (d) { peor[d.medida + '|' + d.peor] = 1; });
     var filas = [['plazo_p85', 'Plazo', 'ciclo'], ['retrabajo', 'Retrabajo', 'retrabajo'], ['arrastradas', 'Pasa de sprint', 'arrastradas']].filter(function (f) { return c.medidas[f[0]] && c.medidas[f[0]].disponible; });
     if (!filas.length) return '';
@@ -470,7 +405,7 @@
           var cel = seg.porGrupo[x.id], v = cel && cel.valor != null ? valor(f[2], cel.valor) : null, mal = peor[f[0] + '|' + x.id];
           return '<td' + (mal ? ' class="peor"' : '') + '>' + (v ? esc(v) + (mal ? ' · peor' : '') : '<span class="apagado">pocos datos</span>') + '</td>';
         }).join('') + '</tr>';
-      }).join('') + filasCoste + '</tbody></table><p class="nota">Plazo, retrabajo y paso de sprint, con el mismo tipo y tamaño de tarea. ' + (filasCoste ? 'Entregas y coste, con todo lo terminado en 12 semanas: dependen del tamaño de las tareas. ' : 'Con el FTE y el coste de cada equipo (en <button class="btn-txt" data-accion="editar" data-e="equipos">Cómo funciona</button>) se ven también entregas por FTE y coste por entrega. ') + 'Es una pregunta para la reunión, no un ranking.</p></section>';
+      }).join('') + filasCoste + '</tbody></table><p class="nota">Plazo, retrabajo y paso de sprint, con el mismo tipo y tamaño de tarea. ' + (filasCoste ? 'Entregas y coste, con todo lo terminado en 12 semanas: dependen del tamaño de las tareas. ' : 'Con el FTE y el coste de cada equipo (en <button class="btn-txt" data-accion="editar" data-e="equipos">Ajustes</button>) se ven también entregas por FTE y coste por entrega. ') + 'Es una pregunta para la reunión, no un ranking.</p></section>';
   }
   function textoIni(ev) {
     var x = ev.resultados[0];
@@ -498,14 +433,11 @@
       bloqueRecEquipo(eq, recs, fuera) + '</div>';
     return html;
   }
-  // Antes de generar: qué está fuera de lo normal y el botón. Después: las recomendaciones del equipo.
+  // Las recomendaciones del equipo, si las hay
   function bloqueRecEquipo(eq, recs, fuera) {
     if (!recs.length) return '<section class="bloque bloque-oscuro"><h2>Sin recomendaciones para ' + esc(eq.nombre) + '</h2><p>No hay nada fuera de lo normal que pida actuar.</p></section>';
-    if (!App.generadas) {
-      return '<section class="bloque bloque-oscuro"><h2>Qué hacer en ' + esc(eq.nombre) + '</h2><p>' + (fuera.length ? mayus(lista(fuera)) + (fuera.length === 1 ? ' está' : ' están') + ' fuera de lo normal. ' : 'Hay cifras que piden actuar. ') +
-        'Genera las recomendaciones para ver el plan de acción.</p><button class="btn btn-claro" data-accion="generar">Generar recomendaciones</button></section>';
-    }
     return '<section class="bloque bloque-oscuro"><h2>' + (recs.length === 1 ? 'Una recomendación' : (NUMEROS[recs.length] || recs.length) + ' recomendaciones') + ' para ' + esc(eq.nombre) + '</h2>' +
+      (fuera.length ? '<p>' + mayus(lista(fuera)) + (fuera.length === 1 ? ' está' : ' están') + ' fuera de lo normal.</p>' : '') +
       '<ol>' + recs.map(function (x) { return '<li>' + esc(x.titulo) + '</li>'; }).join('') + '</ol><button class="btn btn-claro" data-accion="ver-recs" data-e="' + esc(eq.nombre) + '">Ver qué hacer</button></section>';
   }
   function graficoPlazo(m) {
@@ -558,34 +490,9 @@
     cacheRecs = { r: App.r, v: out };
     return out;
   }
-  // Las recomendaciones se generan con un botón: antes se ve qué se ha detectado y cómo se van a generar.
-  var PASOS_RECS = ['Señales', 'Contexto', 'Banco de casos', 'Priorizar', 'IA', 'Revisión'];
   function claveRec(x) { return x.id + '|' + x.para; }
   function plural(n, uno, varios) { return n === 1 ? uno : varios; }
-  // Cifras fuera de lo normal en las cinco medidas de cada equipo
-  function senales() {
-    var n = 0, eqs = 0;
-    App.r.modelo.equipos.forEach(function (eq) {
-      var k = COLUMNAS.filter(function (id) { var e = estadoDe(eq.medidas[id]); return e === 'atencion' || e === 'critico'; }).length;
-      n += k; if (k) eqs++;
-    });
-    // Diferencias entre grupos: internos y proveedores o entre proveedores; si no hay, entre equipos de un área
-    var cmp = App.r.comparaciones, dims = cmp.some(function (c) { return c.dimension !== 'area'; }) ? ['tipo', 'proveedor'] : ['area'];
-    var difs = cmp.filter(function (c) { return dims.indexOf(c.dimension) >= 0; }).reduce(function (s, c) { return s + c.diferencias.filter(function (d) { return d.peor; }).length; }, 0);
-    return { n: n, equipos: eqs, difs: difs };
-  }
-  function pantallaGenerar() {
-    var s = senales(), nCasos = Object.keys(C.casos).length;
-    return '<section class="generar estrecho"><p class="kicker">Recomendaciones</p><h1>Del diagnóstico al plan de acción</h1>' +
-      '<p>Cruzamos vuestras cifras con el banco de casos de Capgemini. Para cada equipo sale qué hacer, de qué cifra sale, el primer paso y cómo comprobar si funcionó.</p>' +
-      '<div class="generar-datos"><div class="dato"><b>' + s.n + '</b><span>' + plural(s.n, 'cifra fuera de lo normal', 'cifras fuera de lo normal') + '</span></div>' +
-      '<div class="dato"><b>' + s.equipos + '</b><span>' + plural(s.equipos, 'equipo afectado', 'equipos afectados') + '</span></div>' +
-      '<div class="dato"><b>' + nCasos + '</b><span>casos en el banco de Capgemini</span></div></div>' +
-      '<button class="btn btn-grande" data-accion="generar">Generar recomendaciones</button>' +
-      '<ol class="generar-pasos" aria-label="Cómo se generan">' + PASOS_RECS.map(function (t, i) { return '<li><span>' + (i + 1) + '</span>' + t + '</li>'; }).join('') + '</ol></section>';
-  }
   function vistaRecomendaciones() {
-    if (!App.generadas) return pantallaGenerar();
     var todas = recomendaciones(), funcionan = App.r.iniciativas.filter(function (x) { return N.conEfecto(x.evaluacion); });
     var filtro = App.recEquipo && App.recEquipo !== 'todos' ? App.recEquipo : null;
     var recs = filtro ? todas.filter(function (x) { return x.equipos.indexOf(filtro) >= 0; }) : todas;
@@ -597,7 +504,7 @@
     var opciones = '<option value="todos">Todos los equipos</option>' + App.r.modelo.equipos.map(function (e) { return '<option value="' + esc(e.nombre) + '"' + (filtro === e.nombre ? ' selected' : '') + '>' + esc(e.nombre) + '</option>'; }).join('');
     var html = '<section class="titular"><div><h1>Qué hacer, por orden</h1><p>' + esc(resumen) + '</p></div>' +
       '<div class="rec-filtros"><label class="selector">Ver <select data-cambio="rec-equipo" aria-label="Equipo">' + opciones + '</select></label>' +
-      '<button class="btn-txt" data-accion="generar">Volver a generar</button></div></section>';
+      '</div></section>';
     html += funcionan.map(function (x) { return '<div class="funciona"><span class="chip chip-bien-fuerte">Funciona</span><p><b>' + esc(x.iniciativa.nombre) + '.</b> ' + esc(textoIni(x.evaluacion).t) + ' Merece la pena seguir.</p></div>'; }).join('');
     if (!recs.length) {
       html += '<section class="bloque"><h2>' + (filtro ? 'Sin recomendaciones para ' + esc(filtro) : 'Nada que pida actuar ahora') + '</h2><p class="nota">' + (filtro ? 'Sus cifras están dentro de lo normal.' : 'Todas las cifras están dentro de lo normal en cada equipo.') + '</p></section>';
@@ -610,7 +517,7 @@
     }).join('');
     html += '<div class="recs-md"><nav class="recs-lista" aria-label="Recomendaciones">' + items + '</nav>' +
       '<article class="rec rec-detalle" id="rec-detalle" aria-live="polite">' + detalleRec(sel, todas.indexOf(sel) + 1) + '</article></div>';
-    html += '<p class="nota">Las recomendaciones salen del banco de casos de Capgemini a partir de vuestras cifras. El consultor las revisa con vosotros antes de ponerlas en marcha.</p>';
+    html += '<p class="nota">Las recomendaciones salen del banco de casos a partir de vuestras cifras. Conviene revisarlas con los responsables de equipo antes de ponerlas en marcha.</p>';
     return html;
   }
   function idIniciativa(x) { return 'rec-' + x.id + '-' + slug(x.equipos.join('-')); }
@@ -632,200 +539,14 @@
     var y = window.scrollY;
     enSegundoPlano(function () { recalcular(); render(); window.scrollTo(0, y); aviso('Iniciativa registrada. Su evolución se ve en el tablero, en Iniciativas.'); });
   }
-  function generar() {
-    if (!App.r) return;
-    App.vista = 'recomendaciones'; App.editar = null;
-    render(); window.scrollTo(0, 0);
-    var cfg = configRecs();
-    window.Proceso.reproducir(cfg).then(function () {
-      App.generadas = true;
-      var recs = recomendaciones();
-      if (!recs.some(function (x) { return claveRec(x) === App.recSel; })) App.recSel = recs[0] ? claveRec(recs[0]) : null;
-      if (App.vista === 'recomendaciones') { render(); window.scrollTo(0, 0); }
-    });
-  }
-
-  // ---------- el método animado (proceso.js) ----------
   var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  function miles(n) { return window.Proceso ? window.Proceso.miles(n) : String(n); }
-  function cuenta(n, formato) { return '<b data-cuenta="' + n + '"' + (formato ? ' data-formato="' + formato + '"' : '') + '>' + miles(n) + '</b>'; }
-  function recortar(t, n) { t = String(t || ''); return t.length > n ? t.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : t; }
-  function vfila(etiqueta, n, clase, d) {
-    return '<div class="v-fila pe ' + (clase || '') + '" style="--d:' + d + '"><span>' + etiqueta + '</span><b><i data-cuenta="' + n + '">' + miles(n) + '</i></b></div>';
-  }
-  function matriz(soloSenales) {
-    var eqs = App.r.modelo.equipos.slice(0, 8);
-    var cab = '<span></span>' + COLUMNAS.map(function (id) { return '<span class="h">' + conTip(MED[id].nombre, MED[id].que) + '</span>'; }).join('');
-    var filas = eqs.map(function (eq, k) {
-      return '<span class="eq pe" style="--d:' + (k + 2) + '">' + esc(eq.nombre) + '</span>' + COLUMNAS.map(function (id) {
-        var m = eq.medidas[id], e = estadoDe(m), fuera = e === 'atencion' || e === 'critico';
-        var v = m && m.disponible ? cifra(id, m.valor).g : '';
-        return '<span class="v-celda pe ' + e + (soloSenales && !fuera ? ' apagada' : '') + '" style="--d:' + (k + 2) + '" title="' + esc(eq.nombre + ', ' + MED[id].nombre + ': ' + (ESTADO[e] || 'normal')) + '">' + esc(v) + '</span>';
-      }).join('');
-    }).join('');
-    return '<div class="v-matriz">' + cab + filas + '</div><p class="v-leyenda pe" style="--d:9"><span class="v-l bien"></span>Bien <span class="v-l atencion"></span>Atención <span class="v-l critico"></span>Crítico <span class="v-l sin"></span>Sin datos</p>';
-  }
+  function miles(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function listaAvisos() {
     var vistos = {};
     App.lectura.informe.avisos.concat(App.det.avisos).forEach(function (a) { vistos[a.texto] = 1; });
     App.r.modelo.equipos.forEach(function (e) { e.calidad.avisos.forEach(function (a) { vistos[a] = 1; }); });
     return Object.keys(vistos);
   }
-  function segundos(ms) { var s = Math.max(0.1, Math.round(ms / 100) / 10); return s.toLocaleString('es-ES') + ' ' + (s === 1 ? 'segundo' : 'segundos'); }
-  function configCarga(simulada) {
-    var f = simulada ? FUENTES[simulada] : null, r = App.r, inf = App.lectura.informe, det = App.det, eqs = r.modelo.equipos, op = opcion(campo());
-    var E = C.estados.estados, mp = mapeo(), info = App.cfg.equiposInfo || {};
-    var hasta = new Date(Math.min(det.fechaRef, det.fechaMax));
-    var origen = f ? f.nombre : 'Jira';
-    var valores = op && op.id !== 'todos' ? op.valores : [];
-    var tareasDe = function (nombre) { var v = valores.filter(function (x) { return x.valor === nombre; })[0]; return v ? v.n : null; };
-    var campoTxt = f ? f.equipo.toLowerCase() : (op ? (op.id === 'todos' ? '' : op.nombre.replace(/^campo\s+/i, 'el campo ')) : '');
-    // 1. Leer
-    var p1 = {
-      nombre: 'Leer', titulo: f ? 'Leemos los ' + f.unidad + ' de ' + f.nombre : 'Leemos los exports',
-      texto: 'Unimos todo lo que llega y nos quedamos con la versión más reciente de cada tarea. Cada trabajo cuenta una sola vez.',
-      visual: '<div class="v-lista">' + vfila(f ? 'Registros leídos de ' + f.nombre : 'Filas leídas de ' + inf.ficheros.length + ' ' + plural(inf.ficheros.length, 'fichero', 'ficheros'), inf.filasLeidas, '', 1) +
-        vfila('Repetidas: cuentan una vez', inf.duplicadas, 'fuera', 2) + (inf.epicas + inf.subtareas ? vfila('Otros tipos de incidencia', inf.epicas + inf.subtareas, 'fuera', 3) : '') +
-        (inf.sinClave ? vfila('Sin clave: no se pueden seguir', inf.sinClave, 'fuera', 3) : '') +
-        vfila('Tareas para medir', inf.tareas, 'total', 4) + '</div>',
-      resultado: cuenta(inf.tareas) + ' tareas del ' + esc(fechaCorta(det.fechaMin)) + ' al ' + esc(fechaCorta(hasta))
-    };
-    // 2. Equipos
-    var p2 = {
-      nombre: 'Equipos', titulo: 'Reconocemos los equipos',
-      texto: 'Detectamos el campo que dice de qué equipo es cada tarea' + (campoTxt ? ' (aquí, ' + esc(campoTxt) + ')' : '') + '. Lo que no se puede detectar, como qué equipo es de un proveedor, se indica una vez y se guarda.',
-      visual: '<div class="v-chips">' + eqs.map(function (e, k) {
-        var i = info[e.nombre] || {}, prov = i.tipo === 'proveedor', n = tareasDe(e.nombre);
-        return '<span class="v-chip pe' + (prov ? ' prov' : '') + '" style="--d:' + (k + 2) + '"><b>' + esc(e.nombre) + '</b><small>' + (n != null ? miles(n) + ' tareas' : '') + (prov ? (n != null ? ', ' : '') + esc(i.proveedor || 'proveedor') : (i.tipo === 'interno' ? (n != null ? ', ' : '') + 'interno' : '')) + '</small></span>';
-      }).join('') + '</div>',
-      resultado: cuenta(eqs.length) + ' ' + plural(eqs.length, 'equipo', 'equipos') + ', cada uno medido por separado'
-    };
-    // 3. Estados
-    var pares = f ? f.estados : det.estados.map(function (e) { return [e.nombre, mp[e.nombre] || e.estado]; });
-    var p3 = {
-      nombre: 'Estados', titulo: 'Traducimos los estados',
-      texto: 'Cada estado de ' + esc(origen) + ' pasa a uno de nueve estados comunes. Así todos los equipos se miden con las mismas reglas, aunque cada uno trabaje con sus propios estados.',
-      visual: '<div class="v-mapeo">' + pares.slice(0, 7).map(function (x, k) {
-        var d = E[x[1]] || E.pendiente;
-        return '<span class="v-org pe" style="--d:' + (k + 2) + '">' + esc(x[0]) + '</span><span class="v-flecha pe" aria-hidden="true" style="--d:' + (k + 2) + '">→</span><span class="v-comun pe e-' + d.etapa + '" style="--d:' + (k + 2) + '">' + esc(d.nombre) + '</span>';
-      }).join('') + '</div>' + (pares.length > 7 ? '<p class="v-mas pe" style="--d:9">Y ' + (pares.length - 7) + ' estados más</p>' : ''),
-      resultado: cuenta(pares.length) + ' estados de ' + esc(origen) + ' con su estado común'
-    };
-    // 4. Calidad
-    // 4. Fiabilidad: las mismas diez comprobaciones del apartado de Cómo funciona
-    var fz = fiab(), revs = fz.comprobaciones.filter(function (c) { return c.estado === 'revisar'; });
-    var p4 = {
-      nombre: 'Calidad', titulo: 'Comprobamos que los datos son fiables',
-      texto: 'Diez comprobaciones buscan señales de que la herramienta no refleja el trabajo real. Si las hay, se avisan antes de sacar conclusiones, nunca se esconden.',
-      visual: '<div class="v-checks v-checks-2">' + fz.comprobaciones.map(function (c, k) {
-        var ico = c.estado === 'revisar' ? 'aviso' : c.estado === 'bien' ? 'ok' : 'pend';
-        return '<div class="v-check pe" style="--d:' + (Math.floor(k / 2) + 2) + '"><span class="v-ico ' + ico + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span><div><b>' + esc(c.nombre) + '</b><span>' + esc(c.valor) + (c.estado === 'revisar' ? ', revisar' : '') + '</span></div></div>';
-      }).join('') + '</div>',
-      resultado: '<b>Fiabilidad ' + NIVEL[fz.nivel][1].toLowerCase() + '</b>: ' + (revs.length ? cuenta(revs.length) + ' ' + plural(revs.length, 'comprobación', 'comprobaciones') + ' para revisar con los equipos' : 'los datos reflejan bien el trabajo')
-    };
-    // 5. Plantilla y coste
-    var cfgC = cfgCalculo(), nombres = eqs.map(function (e) { return e.nombre; }), cap = N.capacidadArea(cfgC, nombres), fte = cfgC.fte || {}, coste = cfgC.coste || {};
-    var p5 = {
-      nombre: 'Coste', titulo: 'Unimos plantilla y coste',
-      texto: 'Cruzamos cada equipo con sus personas equivalentes (FTE) y lo que cuesta cada una. ' + esc(origen) + ' no los trae: salen de la herramienta de plantilla, de los contratos o de finanzas. Siempre por equipo, nunca salarios.',
-      visual: '<div class="v-tabla pe" style="--d:2"><table><thead><tr><th scope="col">Equipo</th><th scope="col">FTE</th><th scope="col">Un FTE al mes</th><th scope="col">Equipo al mes</th></tr></thead><tbody>' +
-        nombres.slice(0, 8).map(function (e) {
-          var a = fte[e], b = coste[e];
-          return '<tr><th scope="row">' + esc(e) + '</th><td>' + (a ? n1(a) : '<span class="v-falta">Sin indicar</span>') + '</td><td>' + (b ? euros(b) : '<span class="v-falta">Sin indicar</span>') + '</td><td>' + (a && b ? euros(a * b) : '') + '</td></tr>';
-        }).join('') + '</tbody></table></div>',
-      resultado: cap.costeMes != null ? cuenta(Math.round(cap.costeMes), 'eur') + ' al mes en ' + n1(cap.fteTotal) + ' FTE' : '<b>Pendiente</b>: el FTE y el coste se indican en Cómo funciona'
-    };
-    // 6. Medir
-    var total = eqs.length * COLUMNAS.length, s = senales();
-    var p6 = {
-      nombre: 'Medir', titulo: 'Medimos cada equipo contra sí mismo',
-      texto: 'Cinco medidas por equipo y semana. Cada cifra se compara con las 12 semanas anteriores de ese mismo equipo. Entre grupos, solo con el mismo tipo y tamaño de tarea.',
-      visual: matriz(false),
-      resultado: cuenta(s.n) + ' de ' + total + ' cifras fuera de lo normal'
-    };
-    var semanas = r.modelo.semanas.length;
-    return {
-      kicker: 'El método', titulo: 'Así hacemos fiables vuestros datos',
-      fuente: f ? esc(f.nombre) + ' (simulación)' : (App.origen === 'ejemplo' ? 'Datos de ejemplo' : esc(recortar(inf.ficheros.map(function (x) { return x.nombre; }).join(', '), 48))),
-      pie: f ? 'Simulación con los datos de ejemplo de un banco ficticio' : 'Todo se calcula en este navegador: los datos no salen del ordenador',
-      pasos: [p1, p2, p3, p4, p5, p6], ultimo: 'Ver el resumen',
-      final: {
-        titulo: 'Datos listos para usar',
-        texto: 'Calculado en este navegador en ' + segundos(App.tiempoMs || 0) + '. Cada cifra del tablero sale de estos pasos, y el documento de definiciones los recoge para firmarlos.',
-        visual: '<div class="v-resumen">' + [[inf.tareas, 'tareas'], [eqs.length, plural(eqs.length, 'equipo', 'equipos')], [semanas, 'semanas'], [s.n, plural(s.n, 'cifra fuera de lo normal', 'cifras fuera de lo normal')]].map(function (x, k) {
-          return '<div class="pe" style="--d:' + (k + 2) + '">' + cuenta(x[0]) + '<span>' + x[1] + '</span></div>';
-        }).join('') + '</div>',
-        boton: 'Ver el tablero'
-      }
-    };
-  }
-  function animarCarga(simulada) {
-    if (!App.r || !window.Proceso) return;
-    try { window.Proceso.reproducir(configCarga(simulada)); } catch (e) { if (window.console) console.error(e); }
-  }
-  function configRecs() {
-    var r = App.r, recs = recomendaciones(), eqs = r.modelo.equipos, info = App.cfg.equiposInfo || {}, s = senales();
-    var crit = recs.filter(function (x) { return x.gravedad === 'critico'; }).length;
-    // 2. Contexto
-    var internos = eqs.filter(function (e) { return (info[e.nombre] || {}).tipo !== 'proveedor'; }).length;
-    var provs = {}; eqs.forEach(function (e) { var i = info[e.nombre] || {}; if (i.tipo === 'proveedor') provs[i.proveedor || 'Proveedor'] = 1; });
-    var provLista = Object.keys(provs), nProv = eqs.length - internos;
-    var funcionan = r.iniciativas.filter(function (x) { return N.conEfecto(x.evaluacion); }).length;
-    var ctx = [[internos + ' ' + plural(internos, 'equipo interno', 'equipos internos'), ''], [nProv + ' de ' + plural(nProv, 'proveedor', 'proveedores'), provLista.join(', ')]];
-    if (r.iniciativas.length) ctx.push([r.iniciativas.length + ' ' + plural(r.iniciativas.length, 'iniciativa evaluada', 'iniciativas evaluadas'), funcionan ? funcionan + ' ' + plural(funcionan, 'funciona', 'funcionan') : 'ninguna con efecto claro']);
-    if (s.difs) ctx.push([s.difs + ' ' + plural(s.difs, 'diferencia entre grupos', 'diferencias entre grupos'), 'mismo tipo y tamaño de tarea']);
-    if (hayCoste()) ctx.push(['Coste por entrega', 'por equipo y por grupo']);
-    if (App.contexto && App.contexto.documentos) ctx.push([App.contexto.documentos.length + ' ' + plural(App.contexto.documentos.length, 'documento de contexto', 'documentos de contexto'), 'método, organización, stack']);
-    // 3. Banco de casos
-    var activos = {}; recs.forEach(function (x) { activos[x.id] = 1; });
-    var ids = Object.keys(C.casos), nAct = Object.keys(activos).length, orden = 0;
-    var banco = '<div class="v-banco">' + ids.map(function (id) {
-      var on = activos[id];
-      return '<span class="v-caso' + (on ? ' on' : '') + '"' + (on ? ' style="--d:' + (orden++) + '"' : '') + '>' + esc(C.casos[id].titulo) + '</span>';
-    }).join('') + '</div>';
-    // 4. Priorizar
-    var orden4 = '<ol class="v-orden">' + recs.slice(0, 5).map(function (x, k) {
-      return '<li class="pe" style="--d:' + (k + 2) + '"><span class="rec-n">' + (k + 1) + '</span><span><b>' + esc(x.titulo) + '</b><small>' + esc(recortar(x.para, 60)) + '</small></span>' + chip(x.gravedad) + '</li>';
-    }).join('') + '</ol>' + (recs.length > 5 ? '<p class="v-mas pe" style="--d:8">Y ' + (recs.length - 5) + ' más</p>' : '');
-    // 5. IA: borrador del primero, con sus cifras reales
-    var top = recs[0], borrador = top ? '<div class="v-borrador pe" style="--d:1"><p class="v-borr-cab"><span>Borrador</span>' + esc(top.para) + '</p><h4>' + esc(top.titulo) + '</h4>' +
-      top.evidencias.slice(0, 2).map(function (e, k) { return '<p class="v-linea" style="--d:' + (k + 1) + '">' + esc(recortar((e[0] && top.evidencias.length > 1 ? e[0] + ': ' : '') + e[1], 120)) + '</p>'; }).join('') +
-      '<p class="v-linea" style="--d:3"><b>Primer paso:</b> ' + esc(recortar(top.caso.plan[0].paso, 100)) + '</p></div>' : '<p class="nota">Sin recomendaciones que redactar.</p>';
-    var pasos = [
-      { nombre: 'Señales', titulo: 'Buscamos las señales', texto: 'Miramos qué cifras están fuera de lo normal en cada equipo y qué diferencias claras hay entre grupos con el mismo tipo de trabajo.',
-        visual: matriz(true), resultado: cuenta(s.n) + ' ' + plural(s.n, 'cifra fuera de lo normal', 'cifras fuera de lo normal') + (s.difs ? ' y ' + s.difs + ' ' + plural(s.difs, 'diferencia entre grupos', 'diferencias entre grupos') : '') },
-      { nombre: 'Contexto', titulo: 'Añadimos el contexto', texto: 'Una cifra sola no explica nada. Sumamos qué equipos son propios o de proveedores, qué iniciativas están en marcha y si funcionan, y el coste.',
-        visual: '<div class="v-chips">' + ctx.map(function (x, k) { return '<span class="v-chip pe" style="--d:' + (k + 2) + '"><b>' + esc(x[0]) + '</b>' + (x[1] ? '<small>' + esc(x[1]) + '</small>' : '') + '</span>'; }).join('') + '</div>',
-        resultado: cuenta(eqs.length) + ' ' + plural(eqs.length, 'equipo', 'equipos') + ' con su contexto' },
-      { nombre: 'Banco de casos', titulo: 'Cruzamos con el banco de casos', texto: 'Cada caso del banco de Capgemini une una señal con sus causas habituales, un plan de acción y cómo comprobar si funcionó. Solo se activan los que encajan con vuestras cifras.',
-        visual: banco, resultado: cuenta(nAct) + ' de ' + ids.length + ' casos se activan con vuestras cifras' },
-      { nombre: 'Priorizar', titulo: 'Ordenamos por lo que más importa', texto: 'Primero lo más grave y lo que afecta a más equipos. Si un mismo problema aparece en varios equipos, va una sola vez.',
-        visual: orden4, resultado: cuenta(recs.length) + ' ' + plural(recs.length, 'recomendación', 'recomendaciones') + (crit ? ', ' + crit + ' ' + plural(crit, 'crítica', 'críticas') : '') },
-      { nombre: 'IA', titulo: 'La IA adapta el plan', etiqueta: 'Próxima fase', texto: 'La IA del consultor adaptará cada plan a vuestro contexto y lo redactará citando estas cifras. Los números los calcula siempre la herramienta, nunca la IA. Hoy el plan sale tal cual del banco de casos.',
-        visual: borrador, resultado: '' },
-      { nombre: 'Revisión', titulo: 'El consultor lo revisa con vosotros', texto: 'Un consultor de Capgemini revisa cada recomendación con los responsables de equipo antes de ponerla en marcha.',
-        visual: '<div class="v-checks">' + [['Cada recomendación cita la cifra de la que sale', true], ['Primer paso con quién lo hace y su esfuerzo', true], ['Cómo saber si funcionó, como iniciativa', true], ['Revisión con los responsables de equipo', false]].map(function (c, k) {
-          return '<div class="v-check pe" style="--d:' + (k + 2) + '"><span class="v-ico ' + (c[1] ? 'ok' : 'pend') + '" aria-hidden="true">' + (c[1] ? CHECK : '') + '</span><div><b>' + c[0] + '</b>' + (c[1] ? '' : '<span>Con el consultor, antes de empezar</span>') + '</div></div>';
-        }).join('') + '</div>',
-        resultado: '<b>Plan listo</b> para revisar con vosotros' }
-    ];
-    return {
-      kicker: 'Generar recomendaciones', titulo: 'Del diagnóstico al plan de acción', fuente: App.demo ? 'Datos de ejemplo' : '',
-      pie: 'Las recomendaciones salen del banco de casos de Capgemini a partir de vuestras cifras',
-      pasos: pasos, ultimo: 'Ver el resumen',
-      final: {
-        titulo: recs.length ? 'Plan de acción listo' : 'Nada que pida actuar ahora',
-        texto: recs.length ? 'Cada recomendación trae de qué cifra sale, el plan, la iniciativa para comprobarlo y las preguntas para la reunión.' : 'Todas las cifras están dentro de lo normal en cada equipo.',
-        visual: '<div class="v-resumen">' + [[recs.length, plural(recs.length, 'recomendación', 'recomendaciones')], [crit, plural(crit, 'crítica', 'críticas')], [recs.filter(registrable).length, plural(recs.filter(registrable).length, 'iniciativa propuesta', 'iniciativas propuestas')]].map(function (x, k) {
-          return '<div class="pe" style="--d:' + (k + 2) + '">' + cuenta(x[0]) + '<span>' + x[1] + '</span></div>';
-        }).join('') + '</div>',
-        boton: 'Ver las recomendaciones'
-      }
-    };
-  }
-
-  // ---------- ayudas al pasar el cursor (tooltips) ----------
-  // Un solo globo para toda la página, colocado junto al elemento con data-tip. Se abre también con el teclado (foco).
   function medTip(id) {
     if (MED[id]) return MED[id].que;
     var d = C.medidas[id];
@@ -925,102 +646,136 @@
     return '<div class="v-tl pe" style="--d:1">' + seg('antes', ant, 'Antes', fechaCorta(v.antes.desde) + ' a ' + fechaCorta(menos1(v.antes.hasta))) +
       seg('margen', mar, 'Margen', 'no cuenta') + seg('despues', des, 'Después', fechaCorta(v.despues.desde) + ' a ' + fechaCorta(menos1(v.despues.hasta))) + '</div>';
   }
-  function configEval(x) {
+  // Cómo se ha evaluado una iniciativa, con sus cifras: antes, margen, después, el resto de equipos, efecto y confianza
+  function detalleEval(x) {
     var s = x.s, ini = x.ini, r = resultadoEval(x), F = function (v) { return fmtSeg(s, v); }, D = function (v) { return fmtDif(s, v); };
-    // Los porcentajes, con un decimal: así las restas de la animación cuadran a la vista
     if (s.formato === 'pct') {
       var dec = function (v) { return (Math.round(v * 1000) / 10).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 }); };
       F = function (v) { return v == null ? 's/d' : dec(v) + '%'; };
-      D = function (v) { return v == null ? 's/d' : (v > 0.0005 ? '+' : v < -0.0005 ? '\u2212' : '') + dec(Math.abs(v)) + ' puntos'; };
+      D = function (v) { return v == null ? 's/d' : (v > 0.0005 ? '+' : v < -0.0005 ? '−' : '') + dec(Math.abs(v)) + ' puntos'; };
     }
     var nom = nombreMedida(s.medida).toLowerCase(), eqs = lista(ini.equipos), m = r.muestra || { antes: 0, despues: 0, controlAntes: 0, controlDespues: 0 };
     var W = Math.round((r.ventanas.antes.hasta - r.ventanas.antes.desde) / (7 * 864e5));
     var hayCtrl = !!(r.control && r.control.antes != null && r.control.despues != null);
     var cambio = r.despues - r.antes, cambioCtrl = hayCtrl ? r.control.despues - r.control.antes : 0;
     var tareas = function (n) { return miles(n) + ' ' + plural(n, 'tarea terminada', 'tareas terminadas'); };
-    var fila = function (et, a, d, n, cls, k) {
-      return '<div class="v-fila pe' + (cls ? ' ' + cls : '') + '" style="--d:' + k + '"><span>' + et + '<small>' + n + '</small></span><b>' + F(a) + '</b><i aria-hidden="true">→</i><b>' + F(d) + '</b><em>' + D(d - a) + '</em></div>';
+    var fila = function (et, a, d, n, cls) {
+      return '<div class="v-fila' + (cls ? ' ' + cls : '') + '"><span>' + et + '<small>' + n + '</small></span><b>' + F(a) + '</b><i aria-hidden="true">→</i><b>' + F(d) + '</b><em>' + D(d - a) + '</em></div>';
     };
     var veces = r.ruido ? Math.abs(r.efecto) / r.ruido : null, nMin = Math.min(m.antes, m.despues);
-    var check = function (ok, titulo, sub, k) {
-      return '<div class="v-check pe" style="--d:' + k + '"><span class="v-ico ' + (ok ? 'ok' : 'aviso') + '" aria-hidden="true">' + (ok ? CHECK : '!') + '</span><div><b>' + titulo + '</b><span>' + sub + '</span></div></div>';
+    var check = function (ok, titulo, sub) {
+      return '<div class="v-check"><span class="v-ico ' + (ok ? 'ok' : 'aviso') + '" aria-hidden="true">' + (ok ? CHECK : '!') + '</span><div><b>' + titulo + '</b><span>' + sub + '</span></div></div>';
     };
-    var pasos = [
-      { nombre: 'Antes', titulo: 'Medimos antes de empezar', texto: 'Tomamos ' + esc(nom) + ' de ' + esc(eqs) + ' en las ' + W + ' semanas anteriores al inicio, el ' + esc(fechaCorta(s.inicio)) + '.',
-        visual: lineaEval(r, 'antes') + '<div class="v-filas">' + '<div class="v-fila pe" style="--d:2"><span>' + esc(eqs) + '<small>' + tareas(m.antes) + '</small></span><b>' + F(r.antes) + '</b></div></div>',
-        resultado: '<b>' + F(r.antes) + '</b> antes de empezar' },
-      { nombre: 'Margen', titulo: 'Dejamos dos semanas de margen', texto: 'Un cambio tarda en notarse. Las dos semanas después de empezar no cuentan, ni para bien ni para mal.',
-        visual: lineaEval(r, 'margen'), resultado: 'Del ' + esc(fechaCorta(s.inicio)) + ' al ' + esc(fechaCorta(s.desdeDespues)) + ' no cuenta' },
-      { nombre: 'Después', titulo: 'Medimos después', texto: 'La misma medida, en las ' + W + ' semanas siguientes' + (r.ventanas.completa ? '.' : ', que aún no se han completado.'),
-        visual: lineaEval(r, 'despues') + '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, tareas(m.despues) + ' después', '', 2) + '</div>',
-        resultado: 'De <b>' + F(r.antes) + '</b> a <b>' + F(r.despues) + '</b>' },
-      { nombre: 'Resto', titulo: 'Miramos al resto de equipos', texto: 'En las mismas fechas, ¿cambió también el resto? Así se descuenta lo que afecta a todos, como vacaciones o picos de trabajo.',
-        visual: '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, 'equipos de la iniciativa', '', 1) +
-          (hayCtrl ? fila('El resto de equipos', r.control.antes, r.control.despues, tareas(m.controlDespues) + ' después', 'v-fila-ctrl', 3) : '<p class="v-mas pe" style="--d:3">No hay otros equipos con los que comparar.</p>') + '</div>',
-        resultado: hayCtrl ? 'El resto pasó de ' + F(r.control.antes) + ' a ' + F(r.control.despues) : 'Sin otros equipos, cuenta el cambio tal cual' },
-      { nombre: 'Efecto', titulo: 'Calculamos el efecto propio', texto: 'Es el cambio de los equipos de la iniciativa menos el cambio del resto en las mismas fechas.',
-        visual: '<div class="v-ecu pe" style="--d:2"><span>' + D(cambio) + '<small>la iniciativa</small></span><i aria-hidden="true">\u2212</i><span>' + (cambioCtrl < 0 ? '(' + D(cambioCtrl) + ')' : D(cambioCtrl)) + '<small>el resto</small></span><i aria-hidden="true">=</i><span class="v-ecu-res">' + D(r.efecto) + '<small>efecto propio</small></span></div>',
-        resultado: 'Efecto propio de <b>' + D(r.efecto) + '</b>, ' + (r.enDireccionEsperada ? 'en la dirección buscada' : 'en contra de lo buscado') },
-      { nombre: 'Confianza', titulo: '¿Es más que ruido?', texto: 'Comparamos el efecto con lo que ' + esc(nom) + ' suele variar sola en estos equipos, y miramos cuántas tareas hay detrás.',
-        visual: '<div class="v-checks">' +
-          check(veces != null && veces >= 1, veces != null ? 'El efecto es ' + (Math.round(veces * 10) / 10).toLocaleString('es-ES') + ' veces lo que varía sola' : 'No hay historia para saber cuánto varía sola', veces != null ? 'Varía sola unos ' + D(r.ruido).replace(/^\+/, '') + '. Confianza alta desde el doble.' : 'Hacen falta varias ventanas anteriores al inicio.', 2) +
-          check(nMin >= 10, miles(nMin) + ' ' + plural(nMin, 'tarea', 'tareas') + ' en la ventana más pequeña', 'Media desde 10 tareas; alta desde 20.', 3) +
-          check(r.ventanas.completa, r.ventanas.completa ? 'Ventana de después completa' : 'Ventana de después aún incompleta', r.ventanas.completa ? 'Las ' + W + ' semanas ya tienen datos.' : 'Completa el ' + esc(fechaCorta(s.completaEl)) + '.', 4) + '</div>',
-        resultado: 'Confianza <b>' + esc(r.confianza || 'baja') + '</b>' }
-    ];
-    var e = EST_SEG[s.estado] || ['neutro', s.estado];
-    return {
-      kicker: 'Evaluar la iniciativa', titulo: esc(ini.nombre), fuente: App.demo ? 'Datos de ejemplo' : '', siempre: true,
-      pie: 'No es un experimento controlado: dice si merece seguir, no demuestra la causa',
-      pasos: pasos, ultimo: 'Ver el resultado',
-      final: {
-        titulo: e[1], texto: esc(s.texto),
-        visual: '<div class="v-resumen">' + [[F(r.antes), 'antes'], [F(r.despues), 'después'], [hayCtrl ? D(cambioCtrl) : 's/d', 'cambio del resto'], [D(r.efecto), 'efecto propio']].map(function (z, k) {
-          return '<div class="pe" style="--d:' + (k + 2) + '"><b>' + z[0] + '</b><span>' + z[1] + '</span></div>';
-        }).join('') + '</div>',
-        boton: 'Volver al seguimiento'
-      }
-    };
+    var paso = function (n, titulo, texto, visual) { return '<li class="ev-paso"><div class="ev-cab"><span class="paso-n">' + n + '</span><div><b>' + titulo + '</b><p>' + texto + '</p></div></div><div class="ev-visual">' + visual + '</div></li>'; };
+    return '<ol class="ev-pasos">' +
+      paso(1, 'Antes de empezar', 'Se toma ' + esc(nom) + ' de ' + esc(eqs) + ' en las ' + W + ' semanas anteriores al inicio, el ' + esc(fechaCorta(s.inicio)) + '.',
+        lineaEval(r, 'antes') + '<div class="v-filas"><div class="v-fila"><span>' + esc(eqs) + '<small>' + tareas(m.antes) + '</small></span><b>' + F(r.antes) + '</b></div></div>') +
+      paso(2, 'Dos semanas de margen', 'Un cambio tarda en notarse. Del ' + esc(fechaCorta(s.inicio)) + ' al ' + esc(fechaCorta(s.desdeDespues)) + ' no cuenta, ni para bien ni para mal.', lineaEval(r, 'margen')) +
+      paso(3, 'Después', 'La misma medida en las ' + W + ' semanas siguientes' + (r.ventanas.completa ? '.' : ', que aún no se han completado.'),
+        lineaEval(r, 'despues') + '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, tareas(m.despues) + ' después', '') + '</div>') +
+      paso(4, 'El resto de equipos', 'En las mismas fechas, ¿cambió también el resto? Así se descuenta lo que afecta a todos, como vacaciones o picos de trabajo.',
+        '<div class="v-filas">' + fila(esc(eqs), r.antes, r.despues, 'equipos de la iniciativa', '') +
+        (hayCtrl ? fila('El resto de equipos', r.control.antes, r.control.despues, tareas(m.controlDespues) + ' después', 'v-fila-ctrl') : '<p class="v-mas">No hay otros equipos con los que comparar.</p>') + '</div>') +
+      paso(5, 'Efecto propio', 'Es el cambio de los equipos de la iniciativa menos el cambio del resto en las mismas fechas. ' + (r.enDireccionEsperada ? 'Va en la dirección buscada.' : 'Va en contra de lo buscado.'),
+        '<div class="v-ecu"><span>' + D(cambio) + '<small>la iniciativa</small></span><i aria-hidden="true">−</i><span>' + (cambioCtrl < 0 ? '(' + D(cambioCtrl) + ')' : D(cambioCtrl)) + '<small>el resto</small></span><i aria-hidden="true">=</i><span class="v-ecu-res">' + D(r.efecto) + '<small>efecto propio</small></span></div>') +
+      paso(6, 'Confianza ' + esc(r.confianza || 'baja'), 'El efecto se compara con lo que ' + esc(nom) + ' suele variar sola en estos equipos, y se mira cuántas tareas hay detrás.',
+        '<div class="v-checks">' +
+        check(veces != null && veces >= 1, veces != null ? 'El efecto es ' + (Math.round(veces * 10) / 10).toLocaleString('es-ES') + ' veces lo que varía sola' : 'No hay historia para saber cuánto varía sola', veces != null ? 'Varía sola unos ' + D(r.ruido).replace(/^\+/, '') + '. Confianza alta desde el doble.' : 'Hacen falta varias ventanas anteriores al inicio.') +
+        check(nMin >= 10, miles(nMin) + ' ' + plural(nMin, 'tarea', 'tareas') + ' en la ventana más pequeña', 'Media desde 10 tareas; alta desde 20.') +
+        check(r.ventanas.completa, r.ventanas.completa ? 'Ventana de después completa' : 'Ventana de después aún incompleta', r.ventanas.completa ? 'Las ' + W + ' semanas ya tienen datos.' : 'Completa el ' + esc(fechaCorta(s.completaEl)) + '.') + '</div>') +
+      '</ol><p class="nota">No es un experimento controlado: dice si merece seguir, no demuestra la causa.</p>';
   }
 
   // En qué consiste la iniciativa: qué se hace, por qué y qué se espera. Si viene de una recomendación, su plan entero.
   function fichaIni(ini, caso) {
     var desdeRec = caso && caso.plan && caso.plan.length && ini.descripcion === caso.plan[0].paso;
-    var hace = desdeRec ? '<ol>' + caso.plan.map(function (p) { return '<li>' + esc(p.paso) + '</li>'; }).join('') + '</ol>' : '<p>' + esc(ini.descripcion || 'Sin descripción. Añádela en el fichero de la iniciativa.') + '</p>';
+    var hace = desdeRec ? '<ol>' + caso.plan.map(function (p) { return '<li>' + esc(p.paso) + '</li>'; }).join('') + '</ol>' : '<p>' + esc(ini.descripcion || 'Sin descripción.') + '</p>';
     var parte = function (et, html) { return html ? '<div><h3 class="seg-h3">' + et + '</h3>' + html + '</div>' : ''; };
     return '<div class="seg-ficha">' + parte('En qué consiste', hace) + parte('Por qué', caso && caso.senal ? '<p>' + esc(caso.senal) + '</p>' : '') +
       parte('Qué se espera', ini.efecto_esperado ? '<p>' + esc(ini.efecto_esperado) + '</p>' : '') + '</div>';
   }
+  // Una iniciativa se puede quitar desde la página si se registró aquí (vive en la configuración), no si viene de la carpeta
+  function propiaIni(id) { return (App.cfg.iniciativas || []).some(function (i) { return i.id === id; }); }
   function tarjetaSeg(x) {
     var s = x.s, ini = x.ini, caso = C.casos[ini.origen];
     var dato = function (et, v) { return '<div><dt>' + et + '</dt><dd>' + v + '</dd></div>'; };
     var progreso = s.estado === 'planificada' ? 0 : s.progreso;
-    return '<article class="seg">' +
-      '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + (caso ? ', desde la recomendación «' + esc(caso.titulo) + '»' : '') + '</p></div>' + chipSeg(s.estado) + '</header>' +
+    var origen = caso ? ', desde la recomendación «' + esc(caso.titulo) + '»' : (propiaIni(ini.id) ? ', registrada en esta página' : ', de la carpeta iniciativas');
+    var k = 'ev|' + ini.id;
+    return '<article class="seg" data-ini="' + esc(ini.id) + '">' +
+      '<header class="seg-cab"><div><h2>' + esc(ini.nombre) + '</h2><p>' + esc(lista(ini.equipos)) + origen + '</p></div><div class="seg-cab-acc">' + chipSeg(s.estado) +
+      (propiaIni(ini.id) ? '<button class="btn-txt" data-accion="quitar-ini" data-i="' + esc(ini.id) + '">Quitar</button>' : '') + '</div></header>' +
       fichaIni(ini, caso) +
       '<div class="seg-cuerpo"><div class="seg-datos"><h3 class="seg-h3">Cómo va</h3><p class="seg-texto">' + esc(s.texto) + '</p>' +
-      (resultadoEval(x) ? '<p><button class="btn btn-sec btn-peq" data-accion="ver-evaluacion" data-i="' + esc(ini.id) + '">Ver cómo se ha evaluado</button></p>' : '') +
       cifrasSeg(s) +
       '<dl class="seg-dl">' + dato('Medida objetivo', nomMed(s.medida) + ', ' + s.direccion) + dato('Inicio', esc(fechaCorta(s.inicio))) +
       dato('Se mide desde', esc(fechaCorta(s.desdeDespues))) + dato('Evaluación completa', esc(fechaCorta(s.completaEl))) + (s.confianza ? dato('Confianza', s.confianza) : '') + '</dl>' +
       '<div class="seg-prog" role="progressbar" aria-label="Ventana evaluada" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + Math.round(progreso * 100) + '"><span style="transform:scaleX(' + progreso.toFixed(3) + ')"></span></div>' +
       '<p class="nota">' + (s.completa ? 'Ventana de evaluación completa.' : Math.round(progreso * 100) + '% de la ventana de evaluación con datos.') + '</p></div>' +
-      '<div class="seg-grafico">' + graficoSeg(s) + '</div></div></article>';
+      '<div class="seg-grafico">' + graficoSeg(s) + '</div></div>' +
+      (resultadoEval(x) ? '<details class="seg-eval" data-k="' + esc(k) + '"' + (App.abiertas[k] ? ' open' : '') + '><summary>Cómo se ha evaluado</summary>' + detalleEval(x) + '</details>' : '') +
+      '</article>';
+  }
+  // Alta de una iniciativa desde la página: lo mismo que se registra desde una recomendación, pero escrito a mano
+  function formularioIni() {
+    var eqs = App.r.modelo.equipos.map(function (e) { return e.nombre; });
+    var medidas = Object.keys(N.MEDIDAS_INICIATIVA).filter(function (id) { return C.medidas[id]; });
+    var hoy = hoyTexto();
+    return '<form class="bloque form-ini" id="form-ini" data-accion-form="guardar-ini"><h2>Nueva iniciativa</h2>' +
+      '<p class="nota">Un cambio que se prueba en uno o varios equipos, con una medida objetivo. Desde que se registra, cada carga de datos recalcula su efecto frente a los equipos que no la tienen.</p>' +
+      '<div class="form-grid">' +
+      '<label class="campo-linea">Nombre <input type="text" name="nombre" required maxlength="120" placeholder="Por ejemplo, límite de trabajo en curso en Pagos"></label>' +
+      '<label class="campo-linea">Fecha de inicio <input type="date" name="fecha_inicio" required value="' + hoy + '"></label>' +
+      '<label class="campo-linea">Fecha de fin (opcional) <input type="date" name="fecha_fin"></label>' +
+      '<label class="campo-linea">Medida objetivo <select name="medida">' + medidas.map(function (id) { var d = C.medidas[id]; return '<option value="' + esc(id) + '">' + esc(nombreMedida(id)) + ' (' + (d.dir === 'mas' ? 'subir' : 'bajar') + ')</option>'; }).join('') + '</select></label>' +
+      '<label class="campo-linea form-ancho">En qué consiste <textarea name="descripcion" rows="2" maxlength="600" placeholder="Qué se cambia y quién lo hace"></textarea></label>' +
+      '<label class="campo-linea form-ancho">Qué se espera <input type="text" name="efecto_esperado" maxlength="300" placeholder="Por ejemplo, que el plazo baje a lo normal en ocho semanas"></label>' +
+      '<fieldset class="form-ancho form-eqs"><legend>Equipos</legend>' + eqs.map(function (e) { return '<label><input type="checkbox" name="equipos" value="' + esc(e) + '"> ' + esc(e) + '</label>'; }).join('') + '</fieldset>' +
+      '</div><p class="botones"><button type="submit" class="btn">Registrar la iniciativa</button><button type="button" class="btn btn-sec" data-accion="cancelar-ini">Cancelar</button></p></form>';
+  }
+  function guardarIni(form) {
+    var d = function (n) { var el = form.elements[n]; return el ? String(el.value || '').trim() : ''; };
+    var equipos = [].map.call(form.querySelectorAll('input[name="equipos"]:checked'), function (c) { return c.value; });
+    if (!d('nombre')) { aviso('Ponle un nombre a la iniciativa.'); return; }
+    if (!equipos.length) { aviso('Elige al menos un equipo.'); return; }
+    if (!d('fecha_inicio')) { aviso('Indica la fecha de inicio.'); return; }
+    var medida = d('medida'), def = C.medidas[medida];
+    if (!def) { aviso('Elige la medida objetivo.'); return; }
+    var ini = {
+      id: 'ini-' + slug(d('nombre')).slice(0, 40) + '-' + d('fecha_inicio'), nombre: d('nombre'), descripcion: d('descripcion') || null, fecha_inicio: d('fecha_inicio'), fecha_fin: d('fecha_fin') || null,
+      equipos: equipos, medidas_objetivo: [{ medida: medida, direccion: def.dir === 'mas' ? 'subir' : 'bajar' }],
+      efecto_esperado: d('efecto_esperado') || null, estado: 'planificada', origen: null, evaluacion: null, notas: 'Registrada desde la página.'
+    };
+    if (ini.fecha_fin && ini.fecha_fin < ini.fecha_inicio) { aviso('La fecha de fin no puede ser anterior al inicio.'); return; }
+    App.cfg.iniciativas = (App.cfg.iniciativas || []).filter(function (i) { return i.id !== ini.id; }).concat([ini]);
+    guardarCfg();
+    escribirEnCarpeta('iniciativas', ini.id + '.json', JSON.stringify(ini, null, 2));
+    App.nuevaIni = false;
+    enSegundoPlano(function () { recalcular(); render(); window.scrollTo(0, 0); aviso('Iniciativa registrada. Se mide sola con cada carga de datos.'); });
+  }
+  function quitarIni(id) {
+    var ini = (App.cfg.iniciativas || []).filter(function (i) { return i.id === id; })[0];
+    if (!ini) return;
+    if (!window.confirm('¿Quitar la iniciativa «' + ini.nombre + '»? Se deja de medir. Si está en la carpeta iniciativas, borra también su fichero.')) return;
+    App.cfg.iniciativas = App.cfg.iniciativas.filter(function (i) { return i.id !== id; });
+    guardarCfg();
+    enSegundoPlano(function () { recalcular(); render(); aviso('Iniciativa quitada.'); });
   }
   function vistaIniciativas() {
     var v = seguimientos();
     var cuenta = {}; v.forEach(function (x) { cuenta[x.s.estado] = (cuenta[x.s.estado] || 0) + 1; });
-    var html = '<section class="titular"><div><h1>Seguimiento de iniciativas</h1><p>Se recalcula solo cada vez que se actualizan los datos: estado, evolución de la medida y cuándo estará completa la evaluación.</p>' +
-      (v.length ? '<div class="seg-resumen">' + ['funciona', 'sin_efecto', 'empeora', 'midiendo', 'planificada'].filter(function (k) { return cuenta[k]; }).map(function (k) { return '<span>' + chipSeg(k) + ' ' + cuenta[k] + '</span>'; }).join('') + '</div>' : '') + '</div></section>';
+    var html = '<section class="titular"><div><h1>Iniciativas</h1><p>Cada iniciativa se mide sola con cada carga de datos: estado, evolución de la medida y cuándo estará completa la evaluación.</p>' +
+      (v.length ? '<div class="seg-resumen">' + ['funciona', 'sin_efecto', 'empeora', 'midiendo', 'planificada'].filter(function (k) { return cuenta[k]; }).map(function (k) { return '<span>' + chipSeg(k) + ' ' + cuenta[k] + '</span>'; }).join('') + '</div>' : '') + '</div>' +
+      '<div class="cab-acc">' + (App.nuevaIni ? '' : '<button class="btn" data-accion="nueva-ini">Nueva iniciativa</button>') + '</div></section>';
+    if (App.nuevaIni) html += formularioIni();
     if (!v.length) {
-      return html + '<section class="bloque estrecho"><h2>Aún no hay iniciativas</h2><p>Una iniciativa es un cambio que se prueba en uno o varios equipos, con una medida objetivo. Se registra desde una recomendación, o la deja el consultor en la carpeta iniciativas.</p>' +
-        '<p><button class="btn" data-accion="vista" data-v="recomendaciones">Ir a las recomendaciones</button></p></section>';
+      return html + (App.nuevaIni ? '' : '<section class="bloque estrecho"><h2>Aún no hay iniciativas</h2><p>Una iniciativa es un cambio que se prueba en uno o varios equipos, con una medida objetivo. Se registra desde una recomendación, con el botón Nueva iniciativa, o dejando un fichero en la carpeta iniciativas.</p>' +
+        '<p class="botones"><button class="btn" data-accion="nueva-ini">Nueva iniciativa</button><button class="btn btn-sec" data-accion="vista" data-v="recomendaciones">Ver las recomendaciones</button></p></section>');
     }
     html += v.map(tarjetaSeg).join('');
-    html += '<p class="nota">Cómo se evalúa: la medida en las semanas antes del inicio frente a las mismas semanas después, dejando dos semanas de margen, y el cambio de los equipos de la iniciativa frente al del resto. No es un experimento controlado: dice si merece seguir, no demuestra la causa.</p>';
+    html += '<p class="nota">Cómo se evalúa: la medida en las semanas antes del inicio frente a las mismas semanas después, dejando dos semanas de margen, y el cambio de los equipos de la iniciativa frente al del resto. Cada tarjeta lo detalla con sus cifras en «Cómo se ha evaluado».</p>';
     return html;
   }
-  // Con la carpeta compartida, cada carga deja una foto del seguimiento en historico/
   function guardarSeguimiento() {
     if (!App.carpeta || !App.r || !App.r.iniciativas.length) return;
     var foto = seguimientos().map(function (x) { return { id: x.ini.id, nombre: x.ini.nombre, estado: x.s.estado, texto: x.s.texto, antes: x.s.antes, despues: x.s.despues, confianza: x.s.confianza, progreso: x.s.progreso }; });
@@ -1054,47 +809,21 @@
   }
   var ICO_EST = { bien: CHECK, revisar: '!', sin: '' };
   var COLS_FIAB = { tiempos: 'Tiempo en cada estado', flujo: 'Pasan por en curso', registro: 'Registro a tiempo', estimacion: 'Historias estimadas', sprints: 'Sprints creíbles', historia: 'Historia' };
-  // Un fallo sembrado está detectado si su comprobación pide revisar donde se sembró: en el área, en su equipo o en los dos
-  function detectado(s, f) {
-    var c = f.comprobaciones.filter(function (x) { return x.id === s.id; })[0];
-    var e = s.equipo ? f.porEquipo.filter(function (x) { return x.equipo === s.equipo; })[0] : null;
-    var area = s.ambito === 'equipo' ? null : !!(c && c.estado === 'revisar');
-    var equipo = s.ambito === 'area' || !COLS_FIAB[s.id] ? null : !!(e && e.valores[s.id] && e.valores[s.id].estado === 'revisar');
-    return { nombre: c ? c.nombre : s.id, area: area, equipo: equipo, ok: area !== false && equipo !== false, valor: equipo !== null && e ? e.valores[s.id].valor : (c ? c.valor : '') };
-  }
-  function panelSembrados(f) {
-    var filas = App.sembrados.map(function (s) { return { s: s, d: detectado(s, f) }; });
-    var n = filas.filter(function (x) { return x.d.ok; }).length;
-    var ids = {}; App.sembrados.forEach(function (s) { ids[s.id] = 1; });
-    var resto = f.comprobaciones.filter(function (c) { return !ids[c.id]; });
-    var falsas = resto.filter(function (c) { return c.estado === 'revisar'; });
-    var intro = resto.length ? 'Estos datos se estropearon a propósito en solo ' + filas.length + ' sitios.' : 'Partimos del export limpio del banco ficticio y estropeamos los datos a propósito, un fallo por comprobación.';
-    var sinFallo = (App.sinFallo || []).map(function (s) {
-      var e = f.porEquipo.filter(function (x) { return x.equipo === s.equipo; })[0], v = e && e.valores[s.id];
-      var bien = !!v && v.estado !== 'revisar';
-      return '<li><span class="chip chip-' + (bien ? 'bien' : 'critico') + '">' + (bien ? 'No se marca' : 'Marcado por error') + '</span> ' + esc(s.que) + '</li>';
-    }).join('');
-    return '<section class="bloque sembrados"><h2>Fallos sembrados en este ejemplo</h2>' +
-      '<p class="nota">' + intro + ' Esta tabla se calcula en vivo: cruza cada fallo con la comprobación que debería saltar. <b>' + n + ' de ' + filas.length + ' detectados.</b>' +
-      (resto.length ? ' <b>' + (falsas.length ? falsas.length + ' falsas alarmas' : 'Las otras ' + resto.length + ' comprobaciones salen bien: sin falsas alarmas.') + '</b>' : '') + '</p>' +
-      '<div class="tabla-caja"><table class="tabla-sembrados"><thead><tr><th scope="col">Qué se estropeó</th><th scope="col">Lo detecta</th><th scope="col">Resultado</th></tr></thead><tbody>' +
-      filas.map(function (x) {
-        var s = x.s, d = x.d;
-        var donde = d.area && d.equipo ? 'En el área y en ' + s.equipo : d.equipo ? 'En ' + s.equipo : 'En el área';
-        return '<tr><td>' + esc(s.que) + ' <small>' + miles(s.tareas) + ' ' + plural(s.tareas, 'tarea', 'tareas') + ' tocadas</small></td>' +
-          '<td><b>' + esc(d.nombre) + '</b><small>' + esc(donde) + ': ' + esc(d.valor) + '</small></td>' +
-          '<td><span class="chip chip-' + (d.ok ? 'bien' : 'critico') + '">' + (d.ok ? 'Detectado' : 'No detectado') + '</span></td></tr>';
-      }).join('') + '</tbody></table></div>' +
-      (sinFallo ? '<h3 class="sem-h3">Lo que parece un fallo y no lo es</h3><ul class="sin-fallo">' + sinFallo + '</ul>' : '') +
-      '<p class="nota">Es un export de Jira normal. Si lo <button class="btn-txt" data-accion="bajar-ejemplo">descargas</button> y lo cargas desde la entrada, las comprobaciones salen igual.</p></section>';
+  // ---------- datos: fiabilidad y cómo se ha leído el export ----------
+  var SECCIONES_DATOS = [['fiabilidad', 'Fiabilidad'], ['lectura', 'Cómo se ha leído el export']];
+  function vistaDatos() {
+    var s = SECCIONES_DATOS.some(function (x) { return x[0] === App.datos; }) ? App.datos : 'fiabilidad';
+    var html = '<section class="titular"><div><h1>Datos</h1><p>Si la herramienta no refleja bien el trabajo, las cifras tampoco. Aquí se ve qué hay que revisar y qué se ha leído del export.</p></div></section>' +
+      '<nav class="subnav" aria-label="Secciones de Datos">' + SECCIONES_DATOS.map(function (x) {
+        return '<button class="subnav-b" data-accion="datos-sec" data-s="' + x[0] + '"' + (x[0] === s ? ' aria-current="page"' : '') + '>' + x[1] + '</button>';
+      }).join('') + '</nav>';
+    return html + (s === 'lectura' ? secLectura() : secFiabilidad());
   }
   function secFiabilidad() {
     var f = fiab(), n = NIVEL[f.nivel];
     var html = '<section class="bloque fiab-cab"><div class="fiab-nivel fiab-' + f.nivel + '"><span>Fiabilidad</span><b>' + n[1] + '</b></div><div><h2>Fiabilidad de los datos</h2>' +
-      '<p>Antes de sacar conclusiones comprobamos que la herramienta refleja bien el trabajo. ' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones están bien' + (f.revisar ? ' y ' + f.revisar + (f.revisar === 1 ? ' hay que revisarla' : ' hay que revisarlas') : '') + '. Las comprobaciones no cambian ninguna cifra: avisan.</p>' +
-      '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p>' +
-      (App.sembrados ? '' : '<p class="nota">Para ver cómo se detectan los fallos, carga un ejemplo: <button class="btn-txt" data-accion="demo" data-d="aseguradora">con algunos fallos</button> o <button class="btn-txt" data-accion="demo" data-d="fallos">con un fallo en cada comprobación</button>.</p>') + '</div></section>';
-    if (App.sembrados) html += panelSembrados(f);
+      '<p>' + f.bien + ' de ' + f.comprobaciones.length + ' comprobaciones están bien' + (f.revisar ? ' y ' + f.revisar + (f.revisar === 1 ? ' hay que revisarla' : ' hay que revisarlas') : '') + '. Las comprobaciones no cambian ninguna cifra: avisan.</p>' +
+      '<p class="nota">Alta: como mucho una comprobación por revisar. Media: dos o tres, o falta el tiempo en cada estado. Baja: cuatro o más, o menos de la mitad de las tareas tiene equipo.</p></div></section>';
     html += '<div class="fiab-grid">' + f.comprobaciones.map(function (c) {
       return '<article class="fiab-c fiab-' + c.estado + '"><div class="fiab-c-cab"><span class="v-ico ' + (c.estado === 'bien' ? 'ok' : c.estado === 'revisar' ? 'aviso' : 'pend') + '" aria-hidden="true">' + ICO_EST[c.estado] + '</span>' +
         '<h3>' + conTip(esc(c.nombre), c.que) + '</h3><b class="fiab-valor">' + esc(c.valor) + '</b></div>' +
@@ -1110,132 +839,44 @@
     html += '<section class="bloque"><h2>Avisos de los datos</h2>' + calidad() + '</section>';
     return html;
   }
-
-  // ---------- cómo funciona: el método, fuentes e ingesta, fiabilidad y vuestros datos ----------
-  var SECCIONES_COMO = [['metodo', 'El método'], ['fuentes', 'Fuentes e ingesta'], ['fiabilidad', 'Fiabilidad de los datos'], ['datos', 'Vuestros datos']];
-  function comoFunciona() {
-    var s = App.como || 'metodo';
-    var html = '<section class="titular"><div><h1>Cómo funciona</h1><p>De vuestras herramientas al plan de acción, con las mismas reglas para todos los equipos.</p></div></section>' +
-      '<nav class="subnav" aria-label="Secciones de Cómo funciona">' + SECCIONES_COMO.map(function (x) {
-        return '<button class="subnav-b" data-accion="como-sec" data-s="' + x[0] + '"' + (x[0] === s ? ' aria-current="page"' : '') + '>' + x[1] + '</button>';
-      }).join('') + '</nav>';
-    return html + ({ metodo: secMetodo, fuentes: secFuentes, fiabilidad: secFiabilidad, datos: secDatos }[s] || secMetodo)();
-  }
-  function secMetodo() {
-    var nodos = [
-      ['Fuentes', 'Jira, Azure DevOps, ServiceNow o GitLab. Plantilla y coste de cada equipo.'],
-      ['Adaptador', 'Uno por plataforma: traduce columnas, estados y equipo al modelo común.'],
-      ['Modelo común', 'Tarea, equipo, estado común, capacidad y coste. Nunca personas.'],
-      ['Medidas', 'Cinco por equipo y semana, cada una frente a la historia del propio equipo.'],
-      ['Banco de casos', Object.keys(C.casos).length + ' casos de Capgemini: señal, causas, plan y cómo comprobarlo.'],
-      ['Plan de acción', 'Recomendaciones e iniciativas, revisadas por el consultor con vosotros.']
-    ];
-    var flujo = '<div class="flujo" role="list">' + nodos.map(function (n, k) {
-      return (k ? '<span class="fl-flecha" aria-hidden="true"></span>' : '') + '<div class="fl-nodo' + (k === 4 ? ' fl-banco' : '') + '" role="listitem"><span class="fl-n">' + (k + 1) + '</span><b>' + n[0] + '</b><small>' + n[1] + '</small>' +
-        (k === 5 ? '<span class="fl-ia">IA del consultor: adapta y redacta el plan citando las cifras <em>Próxima fase</em></span>' : '') + '</div>';
-    }).join('') + '<div class="fl-vuelta" aria-hidden="true"></div><p class="fl-vuelta-txt">Cada iniciativa se sigue sola y lo que funciona vuelve al banco de casos</p></div>';
-    var html = '<section class="bloque"><h2>Del dato al plan de acción</h2><p class="nota">Seis pasos, siempre los mismos. Los números los calcula la herramienta; las recomendaciones salen del banco de casos a partir de esos números.</p>' + flujo + '</section>';
-    // El banco de casos: grupos por objetivo y un caso completo de ejemplo
-    var objs = {}; C.objetivos.forEach(function (o) { objs[o.id] = o; });
-    var grupos = {}, orden = [];
-    Object.keys(C.casos).forEach(function (id) {
-      var c = C.casos[id], g = (c.objetivos && c.objetivos[0] && objs[c.objetivos[0]]) ? objs[c.objetivos[0]].titulo : (/^grupo_/.test(id) ? 'Comparar grupos' : 'Otros');
-      if (!grupos[g]) { grupos[g] = []; orden.push(g); }
-      grupos[g].push(c.titulo);
-    });
-    var ej = C.casos.retrabajo || C.casos[Object.keys(C.casos)[0]];
-    var parte = function (et, cont) { return '<div class="caso-parte"><span class="caso-et">' + et + '</span>' + cont + '</div>'; };
-    html += '<section class="bloque"><h2>El banco de casos</h2><div class="banco">' +
-      '<div><p>Cada caso une una señal en las cifras con lo que suele haber detrás y con qué hacer. Lo escribe y lo mantiene Capgemini a partir de proyectos y de prácticas conocidas, y crece con lo que funciona en cada cliente.</p>' +
-      '<div class="banco-grupos">' + orden.map(function (g) { return '<div><b>' + esc(g) + '</b><ul>' + grupos[g].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>'; }).join('') + '</div></div>' +
-      '<article class="caso-ej" aria-label="Un caso completo de ejemplo"><p class="caso-tit"><span class="chip chip-neutro">Ejemplo</span> ' + esc(ej.titulo) + '</p>' +
-      parte('Señal', '<p>' + esc(ej.senal) + '</p>') + parte('Medida', '<p>' + nomMed(ej.medida) + '</p>') +
-      parte('Causas habituales', '<ul>' + ej.causas.slice(0, 3).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>') +
-      parte('Plan de acción', '<ol>' + ej.plan.map(function (s) { return '<li>' + esc(s.paso) + ' <span class="apagado">(' + esc(s.quien.toLowerCase()) + ')</span></li>'; }).join('') + '</ol>') +
-      parte('Cómo comprobarlo', '<p>' + esc(ej.comprobar) + '</p>') + parte('Respaldo', '<p>' + esc(ej.respaldo) + '</p>') + '</article></div></section>';
-    html += '<div class="dos"><section class="bloque"><h2>Las medidas</h2><dl class="defs">' + COLUMNAS.concat(['coste']).map(function (id) { return '<dt>' + MED[id].nombre + '</dt><dd>' + esc(MED[id].que) + '</dd>'; }).join('') + '</dl></section>';
-    html += '<section class="bloque"><h2>Cómo se lee el estado</h2><p class="nota">Lo normal es el rango en el que está la medida 7 de cada 10 semanas en ese equipo, mirando las 12 semanas anteriores.</p><dl class="leyenda">' +
-      '<dt>' + chip('bien', true) + '</dt><dd>Dentro de lo normal o mejor.</dd><dt>' + chip('atencion') + '</dt><dd>Peor que lo normal.</dd><dt>' + chip('critico') + '</dt><dd>Bastante peor que lo normal, o por encima de un límite fijo (por ejemplo, retrabajo del 30%).</dd></dl></section></div>';
-    return html;
-  }
-  var PLATAFORMAS = [
-    { k: 'jira', nombre: 'Jira', lee: 'Incidencias', equipo: 'Campo Equipo o componente', tiempos: 'Campo Tiempo en estado del export, o historial de cambios por la API', iter: 'Sprints', est: 'Puntos de historia', hoy: 'Funciona con el export CSV', ok: true },
-    { k: 'ado', nombre: 'Azure DevOps', lee: 'Elementos de trabajo', equipo: 'Area Path', tiempos: 'Historial de revisiones de cada elemento', iter: 'Iteraciones', est: 'Story Points o Effort', hoy: 'Adaptador por construir' },
-    { k: 'servicenow', nombre: 'ServiceNow', lee: 'Historias, tareas y defectos', equipo: 'Grupo de asignación', tiempos: 'Historial de auditoría', iter: 'Sprints', est: 'Puntos', hoy: 'Adaptador por construir' },
-    { k: 'gitlab', nombre: 'GitLab', lee: 'Issues', equipo: 'Grupo o etiqueta de equipo', tiempos: 'Eventos de estado y de etiquetas', iter: 'Iteraciones', est: 'Peso', hoy: 'Adaptador por construir' }
-  ];
-  function secFuentes() {
-    var E = C.estados.estados, comunes = ['nuevo', 'pendiente', 'en_curso', 'bloqueado', 'en_revision', 'en_pruebas', 'en_espera', 'terminado', 'descartado'];
-    var plat = '<div class="plat"><div class="plat-fuentes">' + PLATAFORMAS.map(function (p) {
-      var f = FUENTES[p.k];
-      return '<div class="plat-c"><b>' + p.nombre + '</b><span>Equipo: ' + esc(p.equipo) + '</span><span class="plat-est">' + f.estados.map(function (x) { return '<code>' + esc(x[0]) + '</code>'; }).join('') + '</span></div>';
-    }).join('') + '<div class="plat-c plat-coste"><b>Plantilla y coste</b><span>FTE y coste de un FTE por equipo y mes, de la herramienta de plantilla, los contratos o finanzas</span></div></div>' +
-      '<div class="plat-medio" aria-hidden="true"><span class="plat-fl"></span><small>Un adaptador por plataforma</small></div>' +
-      '<div class="plat-modelo"><b>Modelo común</b><ul><li>Tarea y su tipo común</li><li>Equipo, con un identificador igual en todas las fuentes</li><li>Fechas y tiempo en cada estado</li><li>Iteración y estimación</li><li>Capacidad y coste del equipo</li></ul>' +
-      '<span class="plat-comunes">' + comunes.map(function (k) { return '<span class="v-comun e-' + E[k].etapa + '">' + esc(E[k].nombre) + '</span>'; }).join('') + '</span>' +
-      '<p class="nota">Nunca se leen personas: ni asignados, ni informadores, ni comentarios.</p></div></div>';
-    var html = '<section class="bloque"><h2>Cómo se tratan los datos de cada plataforma</h2><p class="nota">Cada herramienta llama distinto a las mismas cosas. El adaptador de cada una las traduce al mismo modelo, y a partir de ahí todo se calcula igual: medidas, comparaciones y recomendaciones.</p>' + plat +
-      '<div class="tabla-caja"><table class="tabla-plat"><thead><tr><th scope="col">Plataforma</th><th scope="col">Qué se lee</th><th scope="col">Equipo</th><th scope="col">Tiempo en cada estado</th><th scope="col">Iteración</th><th scope="col">Estimación</th><th scope="col">Hoy</th></tr></thead><tbody>' +
-      PLATAFORMAS.map(function (p) { return '<tr><th scope="row">' + p.nombre + '</th><td>' + p.lee + '</td><td>' + p.equipo + '</td><td>' + p.tiempos + '</td><td>' + p.iter + '</td><td>' + p.est + '</td><td>' + (p.ok ? '<span class="chip chip-bien">' + p.hoy + '</span>' : '<span class="apagado">' + p.hoy + '</span>') + '</td></tr>'; }).join('') +
-      '</tbody></table></div></section>';
-    html += capaSemantica();
-    // Primera ingesta y actualizaciones
-    var ticks = ''; for (var k = 1; k <= 13; k++) ticks += '<span class="lt-tick' + (k % 4 === 0 ? ' mes' : '') + (k === 13 ? ' trim' : '') + '"></span>';
-    html += '<section class="bloque"><h2>Primera ingesta y actualizaciones</h2><p class="nota">La primera carga trae el histórico para saber qué es lo normal en cada equipo. Después basta con lo que cambia cada semana.</p>' +
-      '<div class="linea-t" role="img" aria-label="Histórico de 12 meses, primera ingesta y después una actualización cada semana, comité cada mes y revisión cada trimestre">' +
-      '<div class="lt-hist"><b>Histórico</b><small>12 meses hacia atrás</small></div><div class="lt-hito"><span>Primera ingesta</span></div>' +
-      '<div class="lt-semanas"><div class="lt-ticks">' + ticks + '</div><div class="lt-etq"><span>Cada lunes, una actualización</span><span>Comité mensual</span><span>Revisión trimestral</span></div></div></div>' +
-      '<div class="cadencias">' +
-      '<div><b>Primera ingesta</b><small>Semana 1</small><p>Al menos 12 meses de histórico (16 semanas como mínimo). Si el export tiene un límite de filas, se exporta por tramos de fechas y la herramienta los une. Se firman el mapeo de estados y las definiciones.</p></div>' +
-      '<div><b>Cada semana</b><small>El lunes</small><p>Se cargan las tareas creadas o cambiadas desde la última vez. Se unen por su clave y se queda la versión más reciente. Las medidas cierran la semana anterior y se guarda una foto de lo abierto.</p></div>' +
-      '<div><b>Cada mes</b><small>Comité de productividad</small><p>Se revisan las recomendaciones y las iniciativas, que ya se han evaluado solas con cada carga.</p></div>' +
-      '<div><b>Cada trimestre</b><small>Revisión del modelo</small><p>Se revisan equipos, mapeo de estados y definiciones. Si una regla cambia, se cambia antes en el documento de definiciones.</p></div></div>' +
-      '<p class="nota">Por qué semanal: las medidas son semanales y lo normal se calcula por semanas. Cargar cada día no cambia las cifras, solo el trabajo en curso.</p></section>';
-    // Automatizar
-    html += '<section class="bloque"><h2>Cómo automatizar la ingesta</h2><div class="auto">' +
-      '<div><span class="kicker">Hoy</span><b>Carpeta y script</b><p>Los exports se dejan en la carpeta exports y se pulsa Actualizar. El script actualizar.ps1 los une para abrir la página sin pedir permisos.</p></div>' +
-      '<div><span class="kicker">Programada</span><b>Tarea semanal</b><p>Una tarea programada ejecuta cada lunes un script que pide los datos a la API de solo lectura de la herramienta y deja el fichero en exports. La clave de acceso vive en el almacén de credenciales del equipo, nunca en el script.</p></div>' +
-      '<div><span class="kicker">A escala</span><b>Conector</b><p>Con muchos equipos, un conector carga los datos en la plataforma de datos del cliente con el mismo modelo de medida. Lo configura Capgemini con el equipo de sistemas.</p></div></div></section>';
+  // Cómo se ha leído el export: ficheros, qué resuelve la página sola y qué hay que confirmar, cuánta historia trae y columna a columna
+  function secLectura() {
+    var inf = App.lectura.informe, det = App.det, desde = det.fechaMin, hasta = new Date(Math.min(det.fechaRef, det.fechaMax));
+    var html = '<section class="bloque"><h2>Ficheros</h2><p>' + esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + miles(inf.tareas) + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) +
+      (inf.duplicadas ? ', ' + miles(inf.duplicadas) + ' repetidas que cuentan una vez' : '') + (inf.epicas + inf.subtareas ? ', ' + miles(inf.epicas + inf.subtareas) + ' épicas y subtareas fuera del cálculo' : '') + '.</p>' +
+      (App.origen === 'carpeta' || App.origen === 'datosjs' ? '<p class="nota">Leídos de la carpeta. Para actualizar, deja el export nuevo en exports y pulsa Actualizar.</p>' : '') + '</section>';
+    html += '<section class="bloque">' + hallazgosExport() + '</section>';
+    html += '<section class="bloque">' + historiaExport() + '</section>';
+    var cols = columnasLeidas();
+    if (cols) html += '<section class="bloque">' + cols + '</section>';
     return html;
   }
 
-  // La capa semántica: el diccionario que dice qué es cada columna de cada plataforma, dónde va y qué hay que arreglar
-  function capaSemantica() {
-    var prox = ' <span class="sem-prox">Próxima fase</span>';
-    var pasos = [
-      ['Reconocer la fuente', 'Por las cabeceras: Issue key es Jira, Work Item Type es Azure DevOps, IID es GitLab, number y sys_ es ServiceNow.'],
-      ['Clasificar cada columna', 'Por su nombre, en inglés o castellano, y por cómo son sus valores: fechas, claves, rutas, listas, correos.'],
-      ['Traducir los valores', 'Estados, tipos y prioridades de cada herramienta pasan a los del modelo común. Fechas, listas y HTML se normalizan.'],
-      ['Decir qué arreglar', 'Lo que falta o está mal, a qué medidas afecta y quién lo arregla: el consultor en el mapeo o el cliente reexportando.']
-    ];
-    var ej = [
-      ['Issue key', 'Clave de la tarea', 'Se usa', 'bien'],
-      ['Status', 'Estado: se traduce a uno de los nueve comunes', 'Se usa', 'bien'],
-      ['Sprint (tres columnas)', 'Sprints por los que pasó: se juntan en una lista', 'Se usa', 'bien'],
-      ['Custom field (Story Points)', 'Estimación', 'Se usa', 'bien'],
-      ['Resolved', 'Fecha de terminado', 'Se usa', 'bien'],
-      ['Component/s', 'Equipo, propuesto', 'A confirmar', 'atencion'],
-      ['Assignee, Reporter', 'Persona', 'Se descarta', 'critico'],
-      ['Comment', 'Texto con nombres', 'Se descarta', 'critico'],
-      ['Custom field (Cliente)', 'Sin reconocer', 'Se ignora y se lista', 'sin']
-    ];
-    return '<section class="bloque" id="semantica"><h2>Cómo reconoce cada columna</h2>' +
-      '<p>Cada plataforma llama distinto a lo mismo, y cada cliente la configura a su manera. Capgemini mantiene un diccionario propio que dice, para cada plataforma, cómo se llama cada dato, cómo son sus valores y dónde va en el modelo común. Con él, al cargar un export la página sabe qué tipo de dato es cada columna, dónde colocarlo y qué hay que arreglar antes de medir.</p>' +
-      '<div class="sem-dic"><div><b>Conceptos</b><small>Lo que el modelo sabe recibir</small><p>Clave, estado, fechas, sprint, estimación, equipo, enlaces. Y lo que nunca se usa: personas y comentarios.</p></div>' +
-      '<div><b>Firmas por plataforma</b><small>Cómo aparece cada concepto</small><p>Nombres de columna en inglés y castellano, columnas repetidas, formato de los valores y su traducción.</p></div>' +
-      '<div><b>Valores</b><small>Estados, tipos y prioridades</small><p>Por ejemplo, Active, In Progress, En curso y Work in progress son todos el estado común En curso.</p></div></div>' +
-      '<ol class="sem-pasos">' + pasos.map(function (p, k) { return '<li><span class="fl-n">' + (k + 1) + '</span><b>' + p[0] + '</b><p>' + p[1] + '</p></li>'; }).join('') + '</ol>' +
-      (columnasLeidas() || '<h3 class="sem-h3">Así se lee un export de Jira</h3>' +
-      '<div class="tabla-caja"><table class="tabla-sem"><thead><tr><th scope="col">Columna del export</th><th scope="col">Qué es</th><th scope="col">Qué se hace</th></tr></thead><tbody>' +
-      ej.map(function (f) { return '<tr><th scope="row"><code>' + f[0] + '</code></th><td>' + f[1] + '</td><td><span class="chip chip-' + f[3] + '">' + f[2] + '</span></td></tr>'; }).join('') +
-      '</tbody></table></div>') +
-      '<p class="nota">Lo que se reconoce con seguridad se coloca solo. Lo dudoso lo confirma el consultor en el arranque. Una columna que puede ser de personas se descarta aunque haya dudas: es la única regla que prefiere perder un dato.</p>' +
-      hallazgosExport() + historiaExport() +
-      '<div class="sem-estado"><div><span class="kicker">Hoy</span><p>Con Jira: reconoce el campo de equipo y los estados por su nombre, nunca lee personas y comprueba la calidad de los datos (en Fiabilidad de los datos).</p></div>' +
-      '<div><span class="kicker">Siguiente' + prox + '</span><p>El diccionario completo en ficheros para Jira, Azure DevOps, GitLab y ServiceNow: confianza por columna, nivel de historia y aviso cuando el export cambia de una semana a otra. Un consultor lo amplía sin tocar código.</p></div></div>' +
+  // ---------- ajustes ----------
+  // Lo que no se puede detectar (proveedores, áreas, FTE, coste) y lo que se quiera corregir (campo de equipo, estados).
+  // Se guarda en el navegador y, con la carpeta, en configuracion/cliente.json.
+  function vistaAjustes() {
+    var r = App.r, det = App.det, eqs = r.modelo.equipos.map(function (e) { return e.nombre; });
+    var info = App.cfg.equiposInfo || {}, mp = mapeo(), E = C.estados.estados, op = opcion(campo());
+    var provs = eqs.filter(function (e) { return (info[e] || {}).tipo === 'proveedor'; });
+    var campoNombre = op ? (op.id === 'todos' ? 'ninguno: todo el trabajo como un solo equipo' : 'el campo ' + op.nombre.replace(/^campo\s+/i, '')) : '';
+    var ed = App.editar;
+    var fila = function (k, titulo, texto, panel) {
+      return '<div class="leido" id="ajuste-' + k + '"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Listo' : 'Cambiar') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
+    };
+    var html = '<section class="titular"><div><h1>Ajustes</h1><p>Lo que la página detecta sola y lo que hay que indicar una vez. Se guarda en el navegador' + (App.carpeta ? ' y en la carpeta, en configuracion/cliente.json' : '') + '.</p></div></section>';
+    html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Equipos y estados</h2></div>' +
+      fila('campo', 'Campo de equipo', 'Según ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
+      fila('equipos', 'Proveedores, áreas, FTE y coste', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.') + ' ' + textoCapacidad(eqs), panelEquipos) +
+      fila('estados', 'Estados', esc(det.estados.map(function (e) { return e.nombre + ' es ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }) ? ' <span class="chip chip-atencion">Revisar</span>' : ''), panelEstados) +
       '</section>';
+    html += '<section class="bloque" id="ajuste-cliente"><h2>Cliente y documentos</h2>' +
+      '<label class="campo-linea">Nombre del cliente <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
+      '<p class="nota">El documento de definiciones recoge el campo de equipo, los equipos, los estados y las medidas, para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas, sin títulos ni claves de ticket. El modelo de medida es la definición de cada medida en JSON.</p>' +
+      '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button><button class="btn btn-sec" data-accion="modelo">Descargar el modelo de medida</button></p></section>';
+    html += '<section class="bloque" id="ajuste-datos"><h2>Datos de ejemplo</h2><p class="nota">' + (App.demo ? 'Estás viendo los datos de ejemplo. Lo que cambies aquí no se guarda.' : 'Para ver la página con un banco ficticio sin tocar tus datos: <button class="btn-txt" data-accion="demo">cargar los datos de ejemplo</button>. Para repasar cómo funciona: <button class="btn-txt" data-accion="tutorial">ver el tutorial</button>.') + '</p></section>';
+    return html;
   }
-  // Qué ha encontrado en el export cargado, según quién lo resuelve: la página sola, el consultor o el cliente al exportar
   var CAMPO_TXT = { equipo: 'del campo Equipo', componentes: 'del componente', proyecto: 'del proyecto', etiquetas: 'de las etiquetas' };
   var nombresCol = function (cs) { return lista(cs.map(function (c) { return '«' + c.columna + '»'; })); };
   function hallazgosExport() {
@@ -1246,10 +887,10 @@
     if (fuera.length) solo.push('Descarta ' + fuera.length + ' ' + plural(fuera.length, 'columna', 'columnas') + ' con personas o comentarios: ' + nombresCol(fuera) + '. No se leen.');
     if (inf.duplicadas) solo.push(miles(inf.duplicadas) + ' ' + plural(inf.duplicadas, 'tarea venía repetida', 'tareas venían repetidas') + ': cuenta la versión más reciente.');
     if (ign.length) solo.push('Ignora ' + ign.length + ' ' + plural(ign.length, 'columna que no reconoce', 'columnas que no reconoce') + (ign.length <= 4 ? ': ' + nombresCol(ign) : '') + '. No hacen falta para medir.');
-    if (!App.cfg.campoEquipo) consultor.push('Confirmar que el equipo de cada tarea sale ' + (CAMPO_TXT[campo()] || 'de la columna propuesta') + '.');
+    if (!App.cfg.campoEquipo) consultor.push('Confirmar en Ajustes que el equipo de cada tarea sale ' + (CAMPO_TXT[campo()] || 'de la columna propuesta') + '.');
     det.estados.filter(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }).forEach(function (e) {
       var com = E[mp[e.nombre] || e.estado];
-      consultor.push('Confirmar el estado «' + e.nombre + '»: no se reconoce por el nombre y ahora cuenta como ' + (com ? com.nombre.toLowerCase() : 'sin traducir') + '.');
+      consultor.push('Confirmar en Ajustes el estado «' + e.nombre + '»: no se reconoce por el nombre y ahora cuenta como ' + (com ? com.nombre.toLowerCase() : 'sin traducir') + '.');
     });
     if (!det.hayTiempos) cliente.push('No trae el tiempo en cada estado. Sin él no hay plazo desde que se empieza, retrabajo ni bloqueo. Hay que exportar con ese campo.');
     if (!det.haySprints) cliente.push('No trae sprints: no se ve lo que pasa de un sprint a otro. Si los equipos trabajan por sprints, hay que exportar con el campo Sprint.');
@@ -1261,9 +902,9 @@
     };
     return '<h3 class="sem-h3">Qué ha encontrado en este export</h3><div class="hallazgos">' +
       grupo('solo', 'Lo resuelve la página sola', solo, 'Nada que resolver.') +
-      grupo('consultor', 'Lo confirma el consultor', consultor, 'Nada pendiente.') +
-      grupo('cliente', 'Lo arregla el cliente al exportar', cliente, 'Nada: el export trae lo necesario.') + '</div>' +
-      '<p class="nota">Esto es sobre el export. Lo que los equipos registran mal en la herramienta se ve en <button class="btn-txt" data-accion="como-sec" data-s="fiabilidad">Fiabilidad de los datos</button>.</p>';
+      grupo('consultor', 'Por confirmar en Ajustes', consultor, 'Nada pendiente.') +
+      grupo('cliente', 'Se arregla al exportar', cliente, 'Nada: el export trae lo necesario.') + '</div>' +
+      '<p class="nota">Esto es sobre el export. Lo que los equipos registran mal en la herramienta se ve en <button class="btn-txt" data-accion="datos-sec" data-s="fiabilidad">Fiabilidad</button>.</p>';
   }
   // Cuánta historia trae el export: de ella depende qué se puede medir
   function historiaExport() {
@@ -1293,7 +934,7 @@
     cols.forEach(function (c) { cuenta[c.accion] += c.veces; });
     var fila = function (c) {
       var que = c.que, a = ACCION_COL[c.accion];
-      if (c.campo && c.campo === eqCampo) que = 'Equipo de cada tarea: ' + (confirmado ? 'confirmado' : 'propuesto, lo confirma el consultor');
+      if (c.campo && c.campo === eqCampo) que = 'Equipo de cada tarea: ' + (confirmado ? 'confirmado en Ajustes' : 'propuesto; se confirma en Ajustes');
       var ej = c.accion === 'descarta' ? '<span class="apagado">No se lee</span>' : c.ejemplo ? '<code>' + esc(c.ejemplo) + '</code>' : '';
       return '<tr' + (c.accion === 'descarta' ? ' class="col-fuera"' : '') + '><th scope="row"><code>' + esc(c.columna) + '</code>' + (c.veces > 1 ? ' <small>(' + c.veces + ' columnas)</small>' : '') + '</th>' +
         '<td>' + esc(que) + '</td><td>' + ej + '</td><td><span class="chip chip-' + a[0] + '">' + a[1] + '</span></td></tr>';
@@ -1349,35 +990,6 @@
       '<div><b>Causas habituales</b><ul>' + c.causas.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>' +
       '<div><b>Respaldo</b><p>' + esc(c.respaldo || '') + '</p>' + (c.comun ? '<p>' + esc(c.comun) + '</p>' : '') + '</div></div></details>';
   }
-
-  // ---------- cómo funciona: vuestros datos ----------
-  function secDatos() {
-    var r = App.r, inf = App.lectura.informe, det = App.det, eqs = r.modelo.equipos.map(function (e) { return e.nombre; });
-    var info = App.cfg.equiposInfo || {}, mp = mapeo(), E = C.estados.estados, op = opcion(campo());
-    var provs = eqs.filter(function (e) { return (info[e] || {}).tipo === 'proveedor'; });
-    var campoNombre = op ? (op.id === 'todos' ? 'ninguno: todo el trabajo como un solo equipo' : 'el campo ' + op.nombre.replace(/^campo\s+/i, '')) : '';
-    var desde = det.fechaMin, hasta = new Date(Math.min(det.fechaRef, det.fechaMax));
-    var html = '';
-    // Así hemos leído los datos, con lo que se puede cambiar
-    var ed = App.editar;
-    var fila = function (k, titulo, texto, panel) {
-      return '<div class="leido"><div class="leido-cab"><b>' + titulo + '</b><p>' + texto + '</p>' + (panel !== undefined ? '<button class="btn btn-sec btn-peq" data-accion="editar" data-e="' + k + '" aria-expanded="' + (ed === k) + '">' + (ed === k ? 'Listo' : 'Cambiar') + '</button>' : '') + '</div>' + (ed === k && panel ? '<div class="leido-panel">' + panel() + '</div>' : '') + '</div>';
-    };
-    html += '<section class="bloque" id="leido"><div class="bloque-cab"><h2>Así hemos leído vuestros datos</h2></div>' +
-      fila('fichero', 'Ficheros', esc(inf.ficheros.map(function (f) { return f.nombre; }).join(', ')) + ': ' + inf.tareas.toLocaleString('es-ES') + ' tareas del ' + esc(fechaCorta(desde)) + ' al ' + esc(fechaCorta(hasta)) + '.') +
-      fila('campo', 'Equipos', 'Según ' + esc(campoNombre) + ': ' + esc(lista(eqs)) + '.', panelCampo) +
-      fila('equipos', 'Proveedores, áreas, FTE y coste', (provs.length ? esc(lista(provs.map(function (e) { return e + ' (' + ((info[e] || {}).proveedor || 'proveedor') + ')'; }))) + ' son de proveedores. El resto, internos.' : 'Todos los equipos se tratan como internos. Indica cuáles son de un proveedor para poder compararlos.') + ' ' + textoCapacidad(eqs), panelEquipos) +
-      fila('estados', 'Estados', esc(det.estados.map(function (e) { return e.nombre + ' es ' + E[mp[e.nombre] || e.estado].nombre.toLowerCase(); }).join('; ')) + '.' + (det.estados.some(function (e) { return e.propuestaPor !== 'nombre' && !(App.cfg.mapeoEstados || {})[e.nombre]; }) ? ' <span class="chip chip-atencion">Revisar</span>' : ''), panelEstados) +
-      calidad() + '</section>';
-    html += modeloDeMedida();
-    html += '<section class="bloque"><h2>Documentos para el consultor</h2><p class="nota">El documento de definiciones recoge todo lo anterior para firmarlo con el cliente. El paquete de diagnóstico lleva solo cifras agregadas para la IA del consultor.</p>' +
-      '<label class="campo-linea">Nombre del cliente <input type="text" data-cambio="nombre" value="' + esc(App.cfg.nombre || '') + '" placeholder="Por ejemplo, Banco Ejemplo"></label>' +
-      '<p class="botones"><button class="btn" data-accion="definiciones" data-f="docx">Descargar definiciones (Word)</button><button class="btn btn-sec" data-accion="definiciones" data-f="md">En markdown</button><button class="btn btn-sec" data-accion="paquete">Exportar paquete de diagnóstico</button><button class="btn btn-sec" data-accion="modelo">Descargar el modelo de medida</button></p>' +
-      (App.demo ? '' : '<p class="nota">Para enseñarlo, <button class="btn-txt" data-accion="demo">carga los datos de ejemplo</button>. La demo no toca vuestros datos.</p>') + '</section>';
-    html += '<section class="bloque bloque-oscuro"><h2>Lo que no hace</h2><ul><li>No mide a personas: todas las cifras son de equipo y no se lee quién hace cada tarea. El coste es el del equipo, nunca el salario de nadie.</li><li>No saca los datos de este ordenador: todo se calcula en el navegador.</li><li>No hace rankings: comparar internos y proveedores es una pregunta para la reunión, con el mismo tipo de trabajo.</li><li>No demuestra causas: una iniciativa que mejora una cifra dice si merece seguir, no por qué.</li></ul></section>';
-    return html;
-  }
-  // Resumen de FTE y coste para "Así hemos leído vuestros datos"
   function textoCapacidad(eqs) {
     var cap = N.capacidadArea(cfgCalculo(), eqs);
     if (cap.costeMes != null) return 'Plantilla de ' + n1(cap.fteTotal) + ' FTE con un coste de ' + euros(cap.costeMes) + ' al mes.';
@@ -1385,21 +997,6 @@
     return 'Indica el FTE y el coste de cada equipo para ver entregas por FTE y coste por entrega.';
   }
   // El modelo de medida: las mismas definiciones, de cualquier fuente a cualquier herramienta
-  function modeloDeMedida() {
-    var col = function (titulo, items, oscuro) {
-      return '<div class="modelo-col' + (oscuro ? ' modelo-centro' : '') + '"><b>' + titulo + '</b><ul>' + items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
-    };
-    return '<section class="bloque" id="modelo"><h2>El modelo de medida</h2>' +
-      '<p>Lo que da valor no es el número de campos conectados, sino que todos midan con las mismas definiciones y que el trabajo, la plantilla y el coste se unan por el mismo equipo. Eso es el modelo de medida (lo que en una plataforma de datos se llama capa semántica). Esta página es una forma de usarlo.</p>' +
-      '<div class="modelo" role="group" aria-label="De las fuentes a las salidas">' +
-      col('Fuentes', ['<b>Gestión del trabajo:</b> Jira hoy, Azure DevOps u otra con su adaptador', '<b>Plantilla:</b> FTE de cada equipo por mes', '<b>Finanzas y contratos:</b> coste de un FTE']) +
-      col('Modelo común', ['Tarea, equipo, capacidad, coste e iniciativa', 'Unidos por el equipo y el mes', 'Estados de cada herramienta traducidos a nueve estados comunes'], true) +
-      col('Definiciones', ['Una por medida, firmada con el cliente', 'Cada equipo frente a su propia historia', 'Comparaciones solo con medidas normalizadas']) +
-      col('Salidas', ['<b>Piloto:</b> esta página, sin servidor', '<b>Escala:</b> la plataforma de datos del cliente con conectores', '<b>IA:</b> paquete de diagnóstico solo con cifras agregadas']) +
-      '</div>' +
-      '<p class="nota">Probado con datos sintéticos: 200 equipos y 62.000 tareas al año (unos 1.000 desarrolladores) cargan en unos 13 segundos en un portátil. Con miles de desarrolladores, el mismo modelo se monta en la plataforma de datos del cliente. Lo que suele faltar para escalar es un identificador de equipo común en las tres fuentes.</p>' +
-      '</section>';
-  }
   function descargarModelo() {
     var m = N.modeloDeMedida({ generado: new Date() }), nombre = 'modelo-de-medida.json', texto = JSON.stringify(m, null, 2);
     escribirEnCarpeta('configuracion', nombre, texto).then(function (ok) { if (ok) aviso('Modelo guardado en la carpeta configuracion.'); else descargar(nombre, texto); });
@@ -1464,6 +1061,49 @@
   }
 
   // ---------- acciones ----------
+  // ---------- tutorial ----------
+  // Recorre la interfaz con los datos que haya cargados. Sin datos, carga los de ejemplo (y los quita al terminar).
+  function pasosTutorial() {
+    var eqs = App.r.modelo.equipos, conProblema = eqs.filter(function (e) { var p = problemas(e); return p.critico.length || p.atencion.length; })[0] || eqs[0];
+    var conRec = recomendaciones().filter(function (x) { return x.equipos.indexOf(conProblema.nombre) >= 0; })[0];
+    var ver = function (v) { return function () { if (App.vista !== v || App.ver !== 'area') { App.vista = v; App.ver = 'area'; App.editar = null; App.nuevaIni = false; render(); } }; };
+    var pasos = [
+      { sel: '.kpis', titulo: 'Las medidas del área', antes: ver('tablero'),
+        texto: 'Plazo, entregas, retrabajo y tickets listos para agentes, con su tendencia. Cada cifra se compara con lo normal en las 12 semanas anteriores. Solo se marca lo que se sale de lo normal: sin etiqueta es que está bien.' },
+      { sel: '.estado-area', titulo: 'Fiabilidad y equipos que necesitan atención',
+        texto: 'A la izquierda, si los datos reflejan bien el trabajo. A la derecha, los equipos con alguna cifra fuera de lo normal. Pulsa uno para ver su detalle.' },
+      { sel: '.tabla-equipos', titulo: 'Un equipo por fila',
+        texto: 'Las cinco medidas de cada equipo. El color es el estado: atención o crítico frente a su propia historia. No es un ranking: cada equipo se compara consigo mismo.' },
+      { sel: '.grafico-plazo', titulo: 'El detalle de un equipo', antes: function () { App.vista = 'tablero'; App.ver = conProblema.nombre; App.editar = null; render(); },
+        texto: 'El plazo semana a semana, con la franja de lo normal en ese equipo. Debajo, sus recomendaciones.' },
+      { sel: '.recs-lista', titulo: 'Qué hacer, por orden', antes: function () { App.vista = 'recomendaciones'; App.recEquipo = 'todos'; App.recSel = conRec ? claveRec(conRec) : null; App.editar = null; render(); },
+        texto: 'Salen del banco de casos a partir de las cifras. Primero lo más grave y lo que afecta a más equipos. Cada una dice de qué cifra sale, el primer paso y el plan.' },
+      { sel: '.rec-seg', titulo: 'Registrar como iniciativa',
+        texto: 'Si decidís probar el plan, se registra como iniciativa. Desde ese momento se mide sola: antes, después y frente a los equipos que no la tienen.' },
+      { sel: '.seg', titulo: 'Si las iniciativas funcionan', antes: ver('iniciativas'),
+        texto: 'Cada iniciativa con su estado (funciona, sin efecto claro, va a peor, midiendo) y la evolución de su medida frente al resto. «Cómo se ha evaluado» enseña las cifras paso a paso. Con «Nueva iniciativa» se registra una a mano.' },
+      { sel: '.fiab-grid', titulo: 'Fiabilidad de los datos', antes: function () { App.vista = 'datos'; App.datos = 'fiabilidad'; App.editar = null; render(); },
+        texto: 'Diez comprobaciones sobre cómo se registra el trabajo en la herramienta, con cómo se arregla cada una. Avisan, no cambian ninguna cifra. En «Cómo se ha leído el export» está el detalle columna a columna.' },
+      { sel: '#leido', titulo: 'Ajustes', antes: function () { App.vista = 'ajustes'; App.editar = null; render(); },
+        texto: 'Lo que la página detecta sola (campo de equipo, estados) se puede corregir. Lo que no puede saber (qué equipos son de un proveedor, cuántas personas tiene cada uno, lo que cuestan) se indica una vez y se guarda.' },
+      { sel: '.btn-actualizar', titulo: 'Cada semana, Actualizar', antes: ver('tablero'), ultimo: 'Terminar',
+        texto: 'Con una carpeta (exports, configuracion, iniciativas), cada semana basta con dejar el export nuevo y pulsar Actualizar. Sin carpeta, se vuelven a cargar los ficheros.' }
+    ];
+    return pasos;
+  }
+  function tutorial() {
+    if (!window.Tutorial) return;
+    var cargadoAqui = false;
+    if (!App.r) { if (!verDemo()) return; cargadoAqui = true; }
+    guardarLocal(CLAVE_TUT, { visto: new Date().toISOString() });
+    window.Tutorial.iniciar(pasosTutorial(), {
+      alCerrar: function () {
+        if (cargadoAqui && App.demo) { aviso('Fin del tutorial. Pulsa «Cargar mis datos» para empezar con los vuestros.'); }
+      }
+    });
+  }
+
+  // ---------- acciones ----------
   function cambiar(fn) {
     // Cambio de configuración: se guarda, se recalcula todo y se vuelve a pintar en el mismo sitio
     var y = window.scrollY;
@@ -1471,42 +1111,36 @@
     enSegundoPlano(function () { recalcular(); render(); window.scrollTo(0, y); });
   }
   var ACC = {
-    vista: function (el) { App.vista = el.getAttribute('data-v'); App.editar = null; ocultarTip(null); render(); window.scrollTo(0, 0); },
+    vista: function (el) { App.vista = el.getAttribute('data-v'); App.editar = null; App.nuevaIni = false; ocultarTip(null); render(); window.scrollTo(0, 0); },
     ver: function (el) { App.ver = el.getAttribute('data-e'); App.vista = 'tablero'; render(); window.scrollTo(0, 0); },
     ficheros: function () { document.getElementById('entrada-ficheros').click(); },
     carpeta: elegirCarpeta,
     'leer-carpeta': function () { if (App.carpeta) leerCarpeta(App.carpeta); },
-    demo: function (el) { verDemo(null, el && el.getAttribute('data-d')); },
-    fuente: function (el) { App.fuente = el.getAttribute('data-f'); render(); },
-    fuentes: function () { App.fuente = null; render(); },
-    conectar: function (el) { verDemo(el.getAttribute('data-f')); },
-    generar: generar,
+    demo: function () { verDemo(); },
+    tutorial: tutorial,
     rec: function (el) {
       App.recSel = el.getAttribute('data-k'); render();
       var d = document.getElementById('rec-detalle');
       if (d) { d.classList.add('entra'); if (window.innerWidth < 1000) d.scrollIntoView({ block: 'start' }); }
     },
     registrar: function (el) { registrar(el.getAttribute('data-k')); },
-    'ver-evaluacion': function (el) {
-      var id = el.getAttribute('data-i'), x = seguimientos().filter(function (y) { return y.ini.id === id; })[0];
-      if (x && resultadoEval(x)) window.Proceso.reproducir(configEval(x));
-    },
     'ver-recs': function (el) { App.recEquipo = el.getAttribute('data-e') || 'todos'; App.recSel = null; App.vista = 'recomendaciones'; render(); window.scrollTo(0, 0); },
-    'demo-fallos': function () { verDemo(null, 'fallos'); },
-    'bajar-ejemplo': function () { var d = DEMOS[App.demoId] || DEMOS.b3; descargar(d.fichero, (document.getElementById(d.pre + 'csv') || {}).textContent || '', 'text/csv'); },
+    'nueva-ini': function () { App.nuevaIni = true; render(); var f = document.getElementById('form-ini'); if (f) { f.scrollIntoView({ block: 'start' }); var n = f.elements.nombre; if (n) n.focus(); } },
+    'cancelar-ini': function () { App.nuevaIni = false; render(); },
+    'quitar-ini': function (el) { quitarIni(el.getAttribute('data-i')); },
     'salir-demo': function () { salirDemo(); if (!App.r) { App.vista = 'inicio'; render(); } },
     actualizar: function () {
-      if (App.demo) { aviso('En la demo los datos son fijos. Pulsa "Cargar mis datos" para usar los vuestros.'); return; }
+      if (App.demo) { aviso('En los datos de ejemplo no hay nada que actualizar. Pulsa «Cargar mis datos» para usar los vuestros.'); return; }
       if (App.carpeta) return leerCarpeta(App.carpeta);
       if (App.origen === 'datosjs') return location.reload();
       document.getElementById('entrada-ficheros').click();
     },
-    'como-sec': function (el) { App.como = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
-    fiabilidad: function () { App.vista = 'como'; App.como = 'fiabilidad'; App.editar = null; render(); window.scrollTo(0, 0); },
+    'datos-sec': function (el) { App.vista = 'datos'; App.datos = el.getAttribute('data-s'); App.editar = null; render(); window.scrollTo(0, 0); },
+    fiabilidad: function () { App.vista = 'datos'; App.datos = 'fiabilidad'; App.editar = null; render(); window.scrollTo(0, 0); },
     editar: function (el) {
       var k = el.getAttribute('data-e');
       if (k === 'calidad') { ACC.fiabilidad(); return; }
-      if (App.vista !== 'como' || App.como !== 'datos') { App.vista = 'como'; App.como = 'datos'; App.editar = k; render(); var s = document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
+      if (App.vista !== 'ajustes') { App.vista = 'ajustes'; App.editar = k; render(); var s = document.getElementById('ajuste-' + k) || document.getElementById('leido'); if (s) s.scrollIntoView(); return; }
       var y = window.scrollY; App.editar = App.editar === k ? null : k; render(); window.scrollTo(0, y);
     },
     definiciones: function (el) { definiciones(el.getAttribute('data-f')); },
@@ -1518,6 +1152,10 @@
     if (!el) return;
     var f = ACC[el.getAttribute('data-accion')];
     if (f) { e.preventDefault(); f(el); }
+  });
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (f && f.getAttribute && f.getAttribute('data-accion-form') === 'guardar-ini') { e.preventDefault(); guardarIni(f); }
   });
   document.addEventListener('toggle', function (e) { var d = e.target; if (d.tagName === 'DETAILS' && d.getAttribute('data-k')) App.abiertas[d.getAttribute('data-k')] = d.open; }, true);
   document.addEventListener('change', function (e) {
@@ -1563,6 +1201,6 @@
       } else render();
     });
   }
-  App.render = render; App.ACC = ACC; App.leerCarpeta = leerCarpeta; App.recomendaciones = recomendaciones; App.procesar = procesar;
+  App.render = render; App.ACC = ACC; App.leerCarpeta = leerCarpeta; App.recomendaciones = recomendaciones; App.procesar = procesar; App.tutorial = tutorial; App.verDemo = verDemo; App.fiab = fiab;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar); else iniciar();
 })();
