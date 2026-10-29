@@ -15,6 +15,7 @@ interface Acumulado {
 export function analizarSprints(items: Derivada[], c: ContextoCalculo): InfoSprints {
   const out: InfoSprints = { fiables: false, motivo: Tx('The export has no sprints.', 'El export no trae sprints.'), ultimos: [] };
   if (!c.det.haySprints) return out;
+  if (c.det.sprintsSoloActual) { out.motivo = Tx('The export only has the current sprint of each task: carry-over between sprints cannot be measured.', 'El export solo trae el sprint actual de cada tarea: no se puede medir lo que pasa de un sprint a otro.'); return out; }
   if (c.det.sprintsComoFecha) { out.motivo = Tx('Sprint names look like dates, not real sprints.', 'Los nombres de sprint parecen fechas, no sprints de verdad.'); return out; }
   const porSprint: Record<string, Acumulado> = {};
   items.forEach((d) => {

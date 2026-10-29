@@ -103,6 +103,7 @@ export function detectar(lectura: Lectura): Deteccion {
   const conFecha = lista.filter((s) => /^\d{4}-\d{2}-\d{2}T?\d{0,2}/.test(s)).length;
   det.haySprints = lista.length > 0;
   det.sprintsComoFecha = lista.length > 0 && conFecha / lista.length > 0.5;
+  if (lectura.detalle && lectura.detalle.sprintsSoloActual === true && lista.length) det.sprintsSoloActual = true;
   if (det.sprintsComoFecha) det.avisos.push({ tipo: 'aviso', texto: Tx('Sprint names look like dates and times (', 'Los nombres de sprint parecen fechas y horas (') + lista.length.toLocaleString(regional()) + Tx(' different ones). They are not used as sprints: measures go by week.', ' distintos). No se usan como sprints: las medidas van por semanas.') });
   return det;
 }

@@ -107,6 +107,10 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     if (d.entregada && (curso + espera) > 0) {
       d.ciclo = (curso + espera) / DIA;
       d.inicio = f.empezada || new Date(f.terminada!.getTime() - curso - espera);
+    } else if (d.entregada && f.empezada && f.terminada! > f.empezada) {
+      // Sin tiempo por estado pero con fecha de inicio explícita (Azure DevOps: Activated Date): plazo de inicio a fin
+      d.ciclo = (f.terminada!.getTime() - f.empezada.getTime()) / DIA;
+      d.inicio = f.empezada;
     } else if (!f.terminada && (d.etapa === 'curso' || d.etapa === 'espera')) {
       d.inicio = f.empezada || f.cambio_estado || (f.actualizada ? new Date(f.actualizada.getTime() - curso - espera) : null);
     }
@@ -291,6 +295,7 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
+    else if (req === 'tiempos' && id === 'ciclo' && !hayTiempos && items.some((d) => d.ciclo != null)) out[id] = true;
     else if (req === 'tiempos') out[id] = hayTiempos ? true : Tx('The export has no time in each status (in Jira, the Time in Status field). Export with All fields.', 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.');
     else if (req === 'inicio') out[id] = hayInicio ? true : Tx('This export does not say when each task started.', 'No se puede saber cuándo empezó cada tarea con este export.');
     else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : Tx('Very few tasks have story points.', 'Hay muy pocas tareas con puntos de historia.');

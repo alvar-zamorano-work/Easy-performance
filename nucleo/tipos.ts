@@ -48,6 +48,8 @@ export interface Deteccion {
   equipoRecomendado: string;
   haySprints: boolean;
   sprintsComoFecha: boolean;
+  /** El export solo trae el sprint actual de cada tarea (Azure DevOps, GitLab): no se puede medir el arrastre. */
+  sprintsSoloActual?: boolean;
 }
 
 export interface ConfigCalculo {
