@@ -62,7 +62,7 @@
     },
     {
       "estado": "bloqueado",
-      "patron": "(block|bloque|imped|hold|pausa)"
+      "patron": "(block|bloq|imped|hold|pausa)"
     },
     {
       "estado": "en_revision",
@@ -70,7 +70,25 @@
     },
     {
       "estado": "en_pruebas",
-      "patron": "(\\bqa\\b|test|prueba|valid|\\buat\\b|quality assurance)"
+      "patron": "(\\bqa\\b|test|prueba|valid|\\buat\\b|quality assurance|acceptance|aceptacion)"
+    },
+    {
+      "estado": "pendiente",
+      "patron": "(clarif|aclara)",
+      "categoria": "(to do|todo|por hacer|\\bnew\\b|nuev|open|abiert|backlog)"
+    },
+    {
+      "estado": "en_espera",
+      "patron": "(clarif|aclara)"
+    },
+    {
+      "estado": "pendiente",
+      "patron": "(\\bqueued?\\b|\\bcola\\b)",
+      "categoria": "(to do|todo|por hacer|\\bnew\\b|nuev|open|abiert|backlog)"
+    },
+    {
+      "estado": "en_espera",
+      "patron": "(\\bqueued?\\b|\\bcola\\b)"
     },
     {
       "estado": "en_espera",
@@ -100,8 +118,12 @@
       "estado": "terminado"
     },
     {
-      "patron": "(progress|curso|progreso)",
+      "patron": "(progress|curso|progreso|indeterminate)",
       "estado": "en_curso"
+    },
+    {
+      "patron": "(to do|todo|por hacer|\\bnew\\b|nuev|open|abiert|backlog)",
+      "estado": "pendiente"
     }
   ],
   "porDefecto": "pendiente"
