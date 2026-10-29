@@ -1,6 +1,7 @@
 // Cálculo de medidas por equipo: series semanales, valor actual, rango habitual del propio equipo,
 // semáforo, tendencia, trabajo bloqueado, indicadores de comité, calidad del dato y casos activos.
 
+import { Tx } from './idioma.ts';
 import { DIA, cuantil, desv, inicioSemana, media, spearman, sumarDias } from './util.ts';
 import { CATALOGO, type Catalogo } from './catalogo.ts';
 import { etapaDe, etapasV0AMapeo } from './estados.ts';
@@ -290,14 +291,14 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
-    else if (req === 'tiempos') out[id] = hayTiempos ? true : 'The export has no time in each status (in Jira, the Time in Status field). Export with All fields.';
-    else if (req === 'inicio') out[id] = hayInicio ? true : 'This export does not say when each task started.';
-    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : 'Very few tasks have story points.';
-    else if (req === 'errores') out[id] = hayErrores ? true : 'The export has no task type.';
-    else if (req === 'primera') out[id] = hayPrimera ? true : 'The export has no date of first response.';
+    else if (req === 'tiempos') out[id] = hayTiempos ? true : Tx('The export has no time in each status (in Jira, the Time in Status field). Export with All fields.', 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.');
+    else if (req === 'inicio') out[id] = hayInicio ? true : Tx('This export does not say when each task started.', 'No se puede saber cuándo empezó cada tarea con este export.');
+    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : Tx('Very few tasks have story points.', 'Hay muy pocas tareas con puntos de historia.');
+    else if (req === 'errores') out[id] = hayErrores ? true : Tx('The export has no task type.', 'El export no trae el tipo de tarea.');
+    else if (req === 'primera') out[id] = hayPrimera ? true : Tx('The export has no date of first response.', 'El export no trae la fecha de primera respuesta.');
     else if (req === 'sprints') out[id] = sp.fiables ? true : (sp.motivo as string);
-    else if (req === 'descripcion') out[id] = hayDescripciones ? true : 'The export has no task descriptions.';
-    else if (req === 'api') out[id] = 'It needs to know what was in each sprint at the start: with the Jira API or weekly snapshots.';
+    else if (req === 'descripcion') out[id] = hayDescripciones ? true : Tx('The export has no task descriptions.', 'El export no trae la descripción de las tareas.');
+    else if (req === 'api') out[id] = Tx('It needs to know what was in each sprint at the start: with the Jira API or weekly snapshots.', 'Necesita saber qué había al empezar cada sprint: con la API de Jira o con fotos semanales.');
     else out[id] = true;
   });
   return out;

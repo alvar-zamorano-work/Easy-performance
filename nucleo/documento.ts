@@ -1,6 +1,7 @@
 // Documento sencillo (títulos, párrafos, listas, tablas y bloque de firma) que se escribe en markdown y en Word.
 // El .docx se arma a mano (XML de Office dentro de un zip sin comprimir) para que funcione igual en Node y en el navegador.
 
+import { Tx } from './idioma.ts';
 /** Texto con partes en negrita: ['Normal ', { b: 'negrita' }, ' normal']. */
 export type Trozo = string | { b: string };
 export type Texto = string | Trozo[];
@@ -42,7 +43,7 @@ export function aMarkdown(doc: Documento): string {
       case 'p': out.push(b.nota ? '_' + mdTexto(b.texto) + '_' : mdTexto(b.texto), ''); break;
       case 'lista': b.items.forEach((i) => out.push('- ' + mdTexto(i))); out.push(''); break;
       case 'tabla': out.push(mdTabla(b.cabecera, b.filas), ''); break;
-      case 'firma': out.push(mdTabla(['Party', 'Name', 'Role', 'Date', 'Signature'], b.partes.map((p) => [p, ' ', ' ', ' ', ' '])), ''); break;
+      case 'firma': out.push(mdTabla([Tx('Party', 'Parte'), Tx('Name', 'Nombre'), Tx('Role', 'Cargo'), Tx('Date', 'Fecha'), Tx('Signature', 'Firma')], b.partes.map((p) => [p, ' ', ' ', ' ', ' '])), ''); break;
     }
   });
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
@@ -93,7 +94,7 @@ function cuerpoXml(doc: Documento): string {
       case 'p': p.push(parrafo(b.nota ? 'Nota' : null, runs(b.texto), sigue && (sigue.tipo === 'lista' || sigue.tipo === 'tabla' || sigue.tipo === 'firma') ? '<w:keepNext/>' : '')); break;
       case 'lista': b.items.forEach((i) => p.push(parrafo('ListParagraph', runs(i), '<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr>'))); break;
       case 'tabla': p.push(tablaXml(b.cabecera, b.filas, b.anchos)); break;
-      case 'firma': p.push(tablaXml(['Party', 'Name', 'Role', 'Date', 'Signature'], b.partes.map((x) => [x, '', '', '', '']), [3, 3, 3, 2, 3], 900)); break;
+      case 'firma': p.push(tablaXml([Tx('Party', 'Parte'), Tx('Name', 'Nombre'), Tx('Role', 'Cargo'), Tx('Date', 'Fecha'), Tx('Signature', 'Firma')], b.partes.map((x) => [x, '', '', '', '']), [3, 3, 3, 2, 3], 900)); break;
     }
   });
   const sect = '<w:sectPr><w:footerReference w:type="default" r:id="rId4"/><w:pgSz w:w="11906" w:h="16838"/>' +
@@ -134,7 +135,7 @@ function pieXml(texto: string): string {
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
     '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<w:p><w:pPr><w:pStyle w:val="Footer"/><w:tabs><w:tab w:val="right" w:pos="' + ANCHO_TEXTO + '"/></w:tabs></w:pPr>' + run(texto) +
-    '<w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">Page </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>' +
+    Tx('<w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">Page </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>', '<w:r><w:tab/></w:r><w:r><w:t xml:space="preserve">Página </w:t></w:r><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>') +
     '<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>';
 }
 
@@ -155,7 +156,7 @@ export function aDocx(doc: Documento, fecha: Date = new Date()): Uint8Array {
       '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
       '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>'],
     ['docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-      '<dc:title>' + xmlEsc(doc.titulo + ' · ' + doc.subtitulo) + '</dc:title><dc:creator>Easy Performance</dc:creator><dc:language>en-GB</dc:language>' +
+      '<dc:title>' + xmlEsc(doc.titulo + ' · ' + doc.subtitulo) + Tx('</dc:title><dc:creator>Easy Performance</dc:creator><dc:language>en-GB</dc:language>', '</dc:title><dc:creator>Easy Performance</dc:creator><dc:language>es-ES</dc:language>') +
       '<dcterms:created xsi:type="dcterms:W3CDTF">' + iso + '</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">' + iso + '</dcterms:modified></cp:coreProperties>'],
     ['docProps/app.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Easy Performance</Application></Properties>'],
     ['word/_rels/document.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +

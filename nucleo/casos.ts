@@ -1,6 +1,7 @@
 // Casos activos: reglas sobre las medidas que disparan un caso del banco (catalogo/casos.json).
 // Los identificadores son los de la v0 ("atascado" se muestra como "Blocked work").
 
+import { Tx } from './idioma.ts';
 import { cuantil, media } from './util.ts';
 import { formatear as f } from './formato.ts';
 import type { CasoActivo, Confianza, ContextoCalculo, Derivada, ResultadoEquipo } from './tipos.ts';
@@ -18,7 +19,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   if (eq.umbralEdad != null && eq.atascadas.length) {
     const n = eq.atascadas.length, maxR = eq.atascadas[0].edad / eq.umbralEdad;
     if (n >= 2 || maxR >= 2) add('atascado', n >= 4 || maxR >= 2.5,
-      n + (n === 1 ? ' task in progress is over' : ' tasks in progress are over') + ' the ' + f(eq.umbralEdad, 'dias') + ' in which the team finishes almost everything it starts. The oldest, ' + eq.atascadas[0].clave + ', has been open for ' + f(eq.atascadas[0].edad, 'dias') + '.',
+      n + (n === 1 ? Tx(' task in progress is over', ' tarea en curso supera') : Tx(' tasks in progress are over', ' tareas en curso superan')) + Tx(' the ', ' los ') + f(eq.umbralEdad, 'dias') + Tx(' in which the team finishes almost everything it starts. The oldest, ', ' en los que el equipo termina casi todo lo que empieza. La más antigua, ') + eq.atascadas[0].clave + Tx(', has been open for ', ', lleva ') + f(eq.atascadas[0].edad, 'dias') + '.',
       { n, umbral: eq.umbralEdad, maxEdad: eq.atascadas[0].edad, clave: eq.atascadas[0].clave });
   }
   // 2 demasiado a la vez
@@ -26,13 +27,13 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   const cicloRef = M.ciclo && M.ciclo.ref, entRef = M.entregas && M.entregas.ref;
   if (wipRef && cicloRef && entRef && M.ciclo.valor != null && wipAct > wipRef.hi * 1.2 && M.ciclo.valor > cicloRef.med * 1.2 && M.entregas.valor! <= entRef.med * 1.25)
     add('demasiado_a_la_vez', wipAct > wipRef.hi * 1.6,
-      'Work in progress is at ' + f(wipAct, 'num') + ' tasks (the usual was ' + f(wipRef.med, 'num') + ') and lead time has gone from ' + f(cicloRef.med, 'dias') + ' to ' + f(M.ciclo.valor, 'dias') + ', with the same deliveries.',
+      Tx('Work in progress is at ', 'El trabajo en curso está en ') + f(wipAct, 'num') + Tx(' tasks (the usual was ', ' tareas (lo habitual era ') + f(wipRef.med, 'num') + Tx(') and lead time has gone from ', ') y el tiempo de ciclo ha pasado de ') + f(cicloRef.med, 'dias') + Tx(' to ', ' a ') + f(M.ciclo.valor, 'dias') + Tx(', with the same deliveries.', ', con las mismas entregas.'),
       { wip: wipAct, wipRef: wipRef.med, cicloAntes: cicloRef.med, cicloAhora: M.ciclo.valor });
   // 3 el sprint no se cumple
   const ult = eq.sprints.ultimos;
   const am = ult.length >= 3 ? media(ult.map((x) => x.arrastre)) : null;
   if (eq.sprints.fiables && am != null && am > 0.3 && ult.every((x) => x.arrastre! > 0.2)) {
-    add('sprint_no_cumple', am > 0.45, 'In the last three sprints an average of ' + f(am, 'pct') + ' of the work was carried over (' + ult.map((x) => x.nombre + ': ' + f(x.arrastre, 'pct')).join('; ') + ').', { media: am });
+    add('sprint_no_cumple', am > 0.45, Tx('In the last three sprints an average of ', 'En los tres últimos sprints se arrastró de media el ') + f(am, 'pct') + Tx(' of the work was carried over (', ' del trabajo (') + ult.map((x) => x.nombre + ': ' + f(x.arrastre, 'pct')).join('; ') + ').', { media: am });
   }
   // 4 el pendiente crece
   if (L >= 8) {
@@ -40,7 +41,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
     for (let w = L - 5; w <= L; w++) if (s.entradas[w] > s.salidas[w]) semMas++;
     const p0 = s.pendiente[L - 8], p1 = s.pendiente[L];
     if (semMas >= 4 && p1 - p0 >= 8 && p1 > p0 * 1.15)
-      add('pendiente_crece', p1 > p0 * 1.4, 'In ' + semMas + ' of the last 6 weeks more work came in than went out. The backlog has gone from ' + p0 + ' to ' + p1 + ' tasks in 8 weeks.', { desde: p0, hasta: p1, semanas: semMas });
+      add('pendiente_crece', p1 > p0 * 1.4, Tx('In ', 'En ') + semMas + Tx(' of the last 6 weeks more work came in than went out. The backlog has gone from ', ' de las últimas 6 semanas entró más de lo que salió. El pendiente ha pasado de ') + p0 + Tx(' to ', ' a ') + p1 + Tx(' tasks in 8 weeks.', ' tareas en 8 semanas.'), { desde: p0, hasta: p1, semanas: semMas });
   }
   // 5 mucha espera
   if (M.espera && M.espera.valor != null && M.espera.valor > 0.5) {
@@ -50,27 +51,27 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
       if (d.entregada && d.t.fechas.terminada! >= desde && d.ciclo != null) Object.keys(d.porEstado).forEach((k) => { acum[k] = (acum[k] || 0) + d.porEstado[k]; });
     });
     const top = Object.keys(acum).sort((a, b) => acum[b] - acum[a])[0];
-    add('mucha_espera', M.espera.valor > 0.65, f(M.espera.valor, 'pct') + ' of lead time is waiting.' + (top ? ' Work stops most in "' + top + '".' : ''), { parte: M.espera.valor, estado: top });
+    add('mucha_espera', M.espera.valor > 0.65, f(M.espera.valor, 'pct') + Tx(' of lead time is waiting.', ' del tiempo de ciclo es espera.') + (top ? Tx(' Work stops most in "', ' Donde más se para el trabajo es en "') + top + '".' : ''), { parte: M.espera.valor, estado: top });
   }
   // 6 retrabajo
   const rt = M.retrabajo;
   if (rt && rt.valor != null && (rt.valor >= 0.2 || (rt.ref && rt.valor > rt.ref.hi && rt.valor >= 0.12)))
-    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + ' of the work done in the last 8 weeks went back at least once' + (rt.ref ? ' (the usual was ' + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
+    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (the usual was ', ' (lo habitual era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
   // 7 los errores se comen la capacidad
   const er = M.errores;
   if (er && er.valor != null && er.valor >= 0.3 && (!er.ref || er.valor > er.ref.med))
-    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + ' of the work done in the last 8 weeks is bugs' + (er.ref ? ' (the usual was ' + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
+    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + Tx(' of the work done in the last 8 weeks is bugs', ' de lo terminado en las últimas 8 semanas son errores') + (er.ref ? Tx(' (the usual was ', ' (lo habitual era ') + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
   // 8 todo llega al final del sprint
   if (eq.sprints.fiables && ult.length >= 3) {
     const fm = media(ult.map((x) => x.alFinal))!;
-    if (fm > 0.5) add('todo_al_final', fm > 0.65, 'In the last three sprints, ' + f(fm, 'pct') + ' of tasks were closed in the last two days.', { parte: fm });
+    if (fm > 0.5) add('todo_al_final', fm > 0.65, Tx('In the last three sprints, ', 'En los tres últimos sprints, el ') + f(fm, 'pct') + Tx(' of tasks were closed in the last two days.', ' de las tareas se cerró en los dos últimos días.'), { parte: fm });
   }
   // 9 entregas irregulares
   const rg = M.regularidad;
   if (rg && rg.valor != null && rg.valor > 0.6 && M.entregas.valor! >= 2) {
     const ventana = s.entregas.slice(L - 7, L + 1);
     const emin = Math.min(...ventana), emax = Math.max(...ventana);
-    add('entregas_irregulares', rg.valor > 0.9, 'In the last 8 weeks deliveries have ranged from ' + emin + ' to ' + emax + ' tasks per week.', { min: emin, max: emax });
+    add('entregas_irregulares', rg.valor > 0.9, Tx('In the last 8 weeks deliveries have ranged from ', 'En las últimas 8 semanas las entregas han ido de ') + emin + Tx(' to ', ' a ') + emax + Tx(' tasks per week.', ' tareas por semana.'), { min: emin, max: emax });
   }
   // 10 las estimaciones no predicen
   const es = M.estimacion;
@@ -78,9 +79,9 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
     const grupos: Record<string, number[]> = {};
     eq.ciclos.forEach((x) => { if (x.puntos != null) (grupos[x.puntos] = grupos[x.puntos] || []).push(x.dias); });
     const ks = Object.keys(grupos).filter((k) => grupos[k].length >= 5).map(Number).sort((a, b) => a - b);
-    let txt = 'The relation between points and duration is ' + f(es.valor, 'dec') + ' out of 1.';
-    const pts = (k: number) => k + (k === 1 ? ' point' : ' points');
-    if (ks.length >= 2) txt += ' Tasks of ' + pts(ks[0]) + ' take a median of ' + f(cuantil(grupos[ks[0]], 0.5), 'dias') + '; tasks of ' + pts(ks[ks.length - 1]) + ', ' + f(cuantil(grupos[ks[ks.length - 1]], 0.5), 'dias') + '.';
+    let txt = Tx('The relation between points and duration is ', 'La relación entre puntos y duración es de ') + f(es.valor, 'dec') + Tx(' out of 1.', ' sobre 1.');
+    const pts = (k: number) => k + (k === 1 ? Tx(' point', ' punto') : Tx(' points', ' puntos'));
+    if (ks.length >= 2) txt += Tx(' Tasks of ', ' Las tareas de ') + pts(ks[0]) + Tx(' take a median of ', ' tardan ') + f(cuantil(grupos[ks[0]], 0.5), 'dias') + Tx('; tasks of ', ' de mediana; las de ') + pts(ks[ks.length - 1]) + ', ' + f(cuantil(grupos[ks[ks.length - 1]], 0.5), 'dias') + '.';
     add('estimaciones_no_predicen', false, txt, { rho: es.valor });
   }
   // 11 todo es urgente
@@ -88,12 +89,12 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   const creadas12 = items.filter((d) => d.t.fechas.creada >= desde12 && d.t.fechas.creada < c.semanaFin);
   if (creadas12.length >= 20) {
     const u = creadas12.filter((d) => d.t.prioridad === 'urgente').length / creadas12.length;
-    if (u > 0.25) add('todo_urgente', u > 0.4, f(u, 'pct') + ' of what came in during the last 12 weeks has the highest priority.', { parte: u });
+    if (u > 0.25) add('todo_urgente', u > 0.4, f(u, 'pct') + Tx(' of what came in during the last 12 weeks has the highest priority.', ' de lo que entró en las últimas 12 semanas tiene la prioridad máxima.'), { parte: u });
   }
   // 12 lo urgente no va más rápido
   const ng = eq.negocio;
   if (ng.urgente.n >= 8 && ng.resto.n >= 8 && ng.urgente.mediana! >= ng.resto.mediana! * 0.9)
-    add('urgente_no_rapido', ng.urgente.mediana! >= ng.resto.mediana! * 1.1, 'Urgent work takes a median of ' + f(ng.urgente.mediana, 'dias') + ' from request; the rest, ' + f(ng.resto.mediana, 'dias') + '.', { urgente: ng.urgente.mediana, resto: ng.resto.mediana });
+    add('urgente_no_rapido', ng.urgente.mediana! >= ng.resto.mediana! * 1.1, Tx('Urgent work takes a median of ', 'Lo urgente tarda ') + f(ng.urgente.mediana, 'dias') + Tx(' from request; the rest, ', ' de mediana desde que se pide; el resto, ') + f(ng.resto.mediana, 'dias') + '.', { urgente: ng.urgente.mediana, resto: ng.resto.mediana });
   // 13 datos poco fiables
   if (eq.calidad.avisos.length) add('datos_poco_fiables', eq.calidad.avisos.length >= 2, eq.calidad.avisos.join(' '), { avisos: eq.calidad.avisos.length });
 

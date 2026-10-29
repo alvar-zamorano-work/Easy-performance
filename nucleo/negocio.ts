@@ -1,5 +1,6 @@
 // Vista de negocio: plazos de las últimas 12 semanas, reparto por épica y urgente frente al resto.
 
+import { Tx } from './idioma.ts';
 import { cuantil, sumarDias } from './util.ts';
 import type { ContextoCalculo, Derivada, Negocio } from './tipos.ts';
 
@@ -9,12 +10,12 @@ export function negocio(items: Derivada[], c: ContextoCalculo): Negocio {
   const ciclos = v.filter((d) => d.ciclo != null).map((d) => d.ciclo!);
   const totales = v.map((d) => d.total);
   const porEpica: Record<string, number> = {};
-  v.forEach((d) => { const k = d.t.padre_titulo || 'No epic'; porEpica[k] = (porEpica[k] || 0) + 1; });
+  v.forEach((d) => { const k = d.t.padre_titulo || Tx('No epic', 'Sin épica'); porEpica[k] = (porEpica[k] || 0) + 1; });
   let epicas = Object.keys(porEpica).map((k) => ({ nombre: k, n: porEpica[k], parte: porEpica[k] / v.length }))
     .sort((a, b) => b.n - a.n);
   if (epicas.length > 6) {
     const resto = epicas.slice(5).reduce((s, e) => s + e.n, 0);
-    epicas = epicas.slice(0, 5).concat([{ nombre: 'Other', n: resto, parte: resto / v.length }]);
+    epicas = epicas.slice(0, 5).concat([{ nombre: Tx('Other', 'Otras'), n: resto, parte: resto / v.length }]);
   }
   const urg = v.filter((d) => d.t.prioridad === 'urgente').map((d) => d.total);
   const resto2 = v.filter((d) => d.t.prioridad !== 'urgente').map((d) => d.total);

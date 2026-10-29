@@ -1,0 +1,40 @@
+{
+  "estados": {
+    "nuevo": {
+      "nombre": "Nuevo",
+      "descripcion": "Recién creado, aún sin revisar ni priorizar."
+    },
+    "pendiente": {
+      "nombre": "Pendiente",
+      "descripcion": "Listo o priorizado, sin empezar."
+    },
+    "en_curso": {
+      "nombre": "En curso",
+      "descripcion": "Alguien está trabajando en ello."
+    },
+    "bloqueado": {
+      "nombre": "Bloqueado",
+      "descripcion": "Parado por algo que el equipo no controla. Las vueltas tras un bloqueo no cuentan como retrabajo."
+    },
+    "en_revision": {
+      "nombre": "En revisión",
+      "descripcion": "Esperando revisión o aprobación."
+    },
+    "en_pruebas": {
+      "nombre": "En pruebas",
+      "descripcion": "Esperando o pasando pruebas y validación."
+    },
+    "en_espera": {
+      "nombre": "En espera",
+      "descripcion": "Esperando a algo o a alguien: despliegue, respuesta, otro equipo."
+    },
+    "terminado": {
+      "nombre": "Terminado",
+      "descripcion": "Entregado."
+    },
+    "descartado": {
+      "nombre": "Descartado",
+      "descripcion": "Cerrado sin hacer: duplicado, no se hará, obsoleto. No cuenta como entrega."
+    }
+  }
+}

@@ -2,6 +2,7 @@
 // y devuelve las tareas en el modelo neutro. Quita épicas y subtareas del cálculo.
 // No lee responsables, creadores, observadores ni comentarios.
 
+import { Tx, regional } from '../../nucleo/idioma.ts';
 import { leerCSV } from '../comun/csv.ts';
 import { mapearColumnas, columnasDeEnlaces } from './columnas.ts';
 import { leerFecha } from './fechas.ts';
@@ -85,15 +86,15 @@ export function leerJira(ficheros: FicheroEntrada[]): Lectura {
   const porClave = new Map<string, FilaJira>();
   ficheros.forEach((f) => {
     let filas: string[][];
-    try { filas = leerCSV(f.texto || ''); } catch { informe.avisos.push({ tipo: 'error', texto: 'Could not read ' + f.nombre + '.' }); return; }
-    if (filas.length === 1) { informe.avisos.push({ tipo: 'aviso', texto: f.nombre + ' only has the header row: it has no tasks.' }); return; }
-    if (filas.length < 1) { informe.avisos.push({ tipo: 'error', texto: f.nombre + ' is empty or is not a CSV.' }); return; }
+    try { filas = leerCSV(f.texto || ''); } catch { informe.avisos.push({ tipo: 'error', texto: Tx('Could not read ', 'No se pudo leer ') + f.nombre + '.' }); return; }
+    if (filas.length === 1) { informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' only has the header row: it has no tasks.', ' solo tiene la fila de títulos: no trae tareas.') }); return; }
+    if (filas.length < 1) { informe.avisos.push({ tipo: 'error', texto: f.nombre + Tx(' is empty or is not a CSV.', ' está vacío o no es un CSV.') }); return; }
     const cab = filas[0], mapa = mapearColumnas(cab), enlacesIdx = columnasDeEnlaces(cab), n = filas.length - 1;
     const conDatos = cab.map(() => false);
     for (let r = 1; r < filas.length; r++) for (let c = 0; c < cab.length; c++) if (!conDatos[c] && filas[r][c]) conDatos[c] = true;
     informe.ficheros.push({ nombre: f.nombre, filas: n, columnas: cab.length, columnasConDatos: conDatos.filter(Boolean).length });
-    if (n === 10000 || n === 1000) informe.avisos.push({ tipo: 'aviso', texto: f.nombre + ' has exactly ' + n.toLocaleString('en-GB') + ' rows: it may be cut off by the Jira export limit. Export by date ranges.' });
-    if (mapa.clave == null) { informe.avisos.push({ tipo: 'error', texto: f.nombre + ' has no key column (Issue key). It does not look like a Jira export.' }); return; }
+    if (n === 10000 || n === 1000) informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' has exactly ', ' tiene justo ') + n.toLocaleString(regional()) + Tx(' rows: it may be cut off by the Jira export limit. Export by date ranges.', ' filas: puede estar cortado por el límite de exportación de Jira. Exporta por tramos de fechas.') });
+    if (mapa.clave == null) { informe.avisos.push({ tipo: 'error', texto: f.nombre + Tx(' has no key column (Issue key). It does not look like a Jira export.', ' no tiene columna de clave (Issue key). No parece un export de Jira.') }); return; }
     Object.keys(mapa).forEach((k) => {
       const idx = ([] as number[]).concat(mapa[k]);
       if (idx.some((i) => conDatos[i])) informe.campos[k] = true;

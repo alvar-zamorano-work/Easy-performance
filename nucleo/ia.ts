@@ -86,13 +86,13 @@ Rules:
 1. Cite only numbers that are in the package. Each evidence item must name the team (or null for the whole area), the measure id and the exact value from the package.
 2. Do not give opinions on a context category that is empty. If a recommendation would need it, set "contexto_necesario" to that category and keep the action within what the data supports.
 3. At most ${MAX_RECS} recommendations. First what repeats across teams or a whole group, then single teams. Compare teams only on normalised measures and never rank them.
-4. Plain English. Short sentences. No dashes as punctuation. Never mention people.
+4. Plain language, in the language the message asks for. Short sentences. No dashes as punctuation. Never mention people.
 5. Answer with JSON only, no prose around it.`;
 
-export function peticionRecomendaciones(paquete: Paquete, catalogo: Catalogo = CATALOGO): PeticionIA {
+export function peticionRecomendaciones(paquete: Paquete, catalogo: Catalogo = CATALOGO, idioma: Idioma = 'en'): PeticionIA {
   const vacias = categoriasVacias(paquete).map((c) => NOMBRES_CONTEXTO[c]);
   const esquema = `[{"titulo": string, "destinatario": {"tipo": "equipo"|"grupo"|"area", "id": string}, "equipos": string[], "evidencia": [{"equipo": string|null, "medida": string, "valor": number, "texto": string}], "causa": {"caso": string|null, "texto": string}, "accion": string, "primer_paso": string, "comprobar": string, "confianza": "low"|"medium"|"high", "pregunta": string, "contexto_necesario": "metodo"|"organizacion"|"stack"|"contratos"|"otro"|null, "medida": string|null}]`;
-  const user = `Diagnostic package (JSON):\n${JSON.stringify(paqueteParaPrompt(paquete))}\n\n${resumenCatalogo(catalogo)}\n\nEmpty context categories (do not give opinions on them): ${vacias.length ? vacias.join(', ') : 'none'}.\n\nTeam ids you may use: ${paquete.equipos.map((e) => e.id).join(', ')}. Group ids: ${paquete.comparaciones.flatMap((c) => c.grupos.map((g) => g.id)).join(', ') || 'none'}. Use "area" for the whole area.\n"medida" is the measure id to track if this recommendation becomes an initiative (one of the measure ids above) or null.\n"causa.caso" is the id of the case from the case bank that explains it, or null if it is a new cause.\n\nReturn a JSON array with this shape:\n${esquema}`;
+  const user = `Diagnostic package (JSON):\n${JSON.stringify(paqueteParaPrompt(paquete))}\n\n${resumenCatalogo(catalogo)}\n\nEmpty context categories (do not give opinions on them): ${vacias.length ? vacias.join(', ') : 'none'}.\n\nTeam ids you may use: ${paquete.equipos.map((e) => e.id).join(', ')}. Group ids: ${paquete.comparaciones.flatMap((c) => c.grupos.map((g) => g.id)).join(', ') || 'none'}. Use "area" for the whole area.\n"medida" is the measure id to track if this recommendation becomes an initiative (one of the measure ids above) or null.\n"causa.caso" is the id of the case from the case bank that explains it, or null if it is a new cause.\n\nReturn a JSON array with this shape:\n${esquema}\n\n${ESCRITURA[idioma]}`;
   return { system: SISTEMA_RECS, user, maxTokens: 4000 };
 }
 
@@ -220,10 +220,10 @@ export function validarMapeo(texto: string, estados: EstadoParaMapear[], catalog
 }
 
 // ---------- lectura del impacto de las iniciativas ----------
-const SISTEMA_IMPACTO = `You read the evaluation of improvement initiatives for software delivery teams and write a short, plain reading of each one for the team lead. You only see aggregated figures. Every number you write must appear in the evaluation. No dashes as punctuation. Answer with JSON only.`;
+const SISTEMA_IMPACTO = `You read the evaluation of improvement initiatives for software delivery teams and write a short, plain reading of each one for the team lead, in the language the message asks for. You only see aggregated figures. Every number you write must appear in the evaluation. No dashes as punctuation. Answer with JSON only.`;
 
-export function peticionImpacto(paquete: Paquete): PeticionIA {
-  const user = `Initiatives and their evaluation (JSON):\n${JSON.stringify(paquete.iniciativas)}\n\nMeasures: ${paquete.definiciones.map((d) => `${d.id} = ${d.nombre} (${d.unidad})`).join('; ')}.\nPercentages are stored as fractions (0.12 = 12%).\n\nFor each initiative return: {"id": string, "veredicto": "works"|"no clear effect"|"getting worse"|"too early", "lectura": string (at most 60 words: what changed, what the other teams did in the same weeks, and what to do next), "cifras": number[] (every number you used, as stored)}.\nReturn a JSON array.`;
+export function peticionImpacto(paquete: Paquete, idioma: Idioma = 'en'): PeticionIA {
+  const user = `Initiatives and their evaluation (JSON):\n${JSON.stringify(paquete.iniciativas)}\n\nMeasures: ${paquete.definiciones.map((d) => `${d.id} = ${d.nombre} (${d.unidad})`).join('; ')}.\nPercentages are stored as fractions (0.12 = 12%).\n\nFor each initiative return: {"id": string, "veredicto": "works"|"no clear effect"|"getting worse"|"too early", "lectura": string (at most 60 words: what changed, what the other teams did in the same weeks, and what to do next), "cifras": number[] (every number you used, as stored)}.\nReturn a JSON array. Keep "veredicto" in English as listed; write "lectura" following this rule: ${ESCRITURA[idioma]}`;
   return { system: SISTEMA_IMPACTO, user, maxTokens: 2000 };
 }
 

@@ -1,6 +1,7 @@
 // Detección sobre el modelo neutro: fecha de referencia, estados con su etapa, campo que reconoce
 // a los equipos y si los sprints son fiables. No sabe de qué plataforma vienen los datos.
 
+import { Tx, regional } from './idioma.ts';
 import { DIA, cuantil, inicioSemana, media } from './util.ts';
 import { fechaCorta } from './formato.ts';
 import { etapaDe, explicarEstado } from './estados.ts';
@@ -44,7 +45,7 @@ export function detectar(lectura: Lectura): Deteccion {
     const ultima = ks[ks.length - 1];
     if (ultimaActiva != null && ultima - ultimaActiva >= 2) {
       det.fechaRef = new Date(s0 + (ultimaActiva + 1) * 7 * DIA + 9 * 36e5);
-      det.avisos.push({ tipo: 'aviso', texto: 'The last weeks of the export have almost no activity. Measures run up to the week of ' + fechaCorta(new Date(s0 + ultimaActiva * 7 * DIA)) + '.' });
+      det.avisos.push({ tipo: 'aviso', texto: Tx('The last weeks of the export have almost no activity. Measures run up to the week of ', 'Las últimas semanas del export casi no tienen actividad. Las medidas llegan hasta la semana del ') + fechaCorta(new Date(s0 + ultimaActiva * 7 * DIA)) + '.' });
     }
   }
   det.hayTiempos = tareas.some((t) => t.tiempos_estado.length);
@@ -102,6 +103,6 @@ export function detectar(lectura: Lectura): Deteccion {
   const conFecha = lista.filter((s) => /^\d{4}-\d{2}-\d{2}T?\d{0,2}/.test(s)).length;
   det.haySprints = lista.length > 0;
   det.sprintsComoFecha = lista.length > 0 && conFecha / lista.length > 0.5;
-  if (det.sprintsComoFecha) det.avisos.push({ tipo: 'aviso', texto: 'Sprint names look like dates and times (' + lista.length.toLocaleString('en-GB') + ' different ones). They are not used as sprints: measures go by week.' });
+  if (det.sprintsComoFecha) det.avisos.push({ tipo: 'aviso', texto: Tx('Sprint names look like dates and times (', 'Los nombres de sprint parecen fechas y horas (') + lista.length.toLocaleString(regional()) + Tx(' different ones). They are not used as sprints: measures go by week.', ' distintos). No se usan como sprints: las medidas van por semanas.') });
   return det;
 }

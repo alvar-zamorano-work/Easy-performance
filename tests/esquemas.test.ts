@@ -41,7 +41,10 @@ test('referencias cruzadas del catálogo', () => {
 });
 
 test('textos del catálogo sin rayas', () => {
-  const texto = readdirSync(join(RAIZ, 'catalogo')).map((f) => readFileSync(join(RAIZ, 'catalogo', f), 'utf8')).join('\n');
+  // También los textos en castellano de catalogo/es/
+  const ficheros = [...readdirSync(join(RAIZ, 'catalogo')).filter((f) => f.endsWith('.json')).map((f) => join(RAIZ, 'catalogo', f)),
+    ...readdirSync(join(RAIZ, 'catalogo', 'es')).filter((f) => f.endsWith('.json')).map((f) => join(RAIZ, 'catalogo', 'es', f))];
+  const texto = ficheros.map((f) => readFileSync(f, 'utf8')).join('\n');
   assert.ok(!/[\u2014\u2013]/.test(texto), 'hay rayas en el catálogo');
 });
 

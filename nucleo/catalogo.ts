@@ -89,3 +89,46 @@ export const CATALOGO: Catalogo = {
   kpis: vistasJson.kpis,
   estados: estadosJson as CatalogoEstados,
 };
+
+// ---------- idioma del catálogo (v3) ----------
+// Los ficheros de catalogo/ están en inglés. catalogo/es/ tiene los mismos ficheros con solo los textos en castellano.
+// aplicarIdiomaCatalogo cambia los textos en el sitio: CATALOGO y RUBRICA siguen siendo los mismos objetos.
+import medidasEs from '../catalogo/es/medidas.json' with { type: 'json' };
+import casosEs from '../catalogo/es/casos.json' with { type: 'json' };
+import objetivosEs from '../catalogo/es/objetivos.json' with { type: 'json' };
+import textosEs from '../catalogo/es/textos.json' with { type: 'json' };
+import vistasEs from '../catalogo/es/vistas.json' with { type: 'json' };
+import estadosEs from '../catalogo/es/estados.json' with { type: 'json' };
+import rubricaJson from '../catalogo/rubrica_agent_ready.json' with { type: 'json' };
+import rubricaEs from '../catalogo/es/rubrica_agent_ready.json' with { type: 'json' };
+
+const FUENTES: [unknown, unknown][] = [
+  [medidasJson, medidasEs], [casosJson, casosEs], [objetivosJson, objetivosEs], [textosJson, textosEs],
+  [vistasJson, vistasEs], [estadosJson, estadosEs], [rubricaJson, rubricaEs],
+];
+const INGLES = FUENTES.map(([en]) => structuredClone(en));
+
+/** Copia en destino los textos de base y, encima, los de traduccion. Solo toca cadenas; nunca cambia la estructura. */
+function fusionar(destino: any, base: any, traduccion: any): void {
+  if (Array.isArray(base)) {
+    base.forEach((v, i) => {
+      const t = Array.isArray(traduccion) ? traduccion[i] : undefined;
+      if (typeof v === 'string') destino[i] = typeof t === 'string' ? t : v;
+      else if (v && typeof v === 'object') fusionar(destino[i], v, t);
+    });
+    return;
+  }
+  for (const k of Object.keys(base)) {
+    const v = base[k], t = traduccion && typeof traduccion === 'object' ? traduccion[k] : undefined;
+    if (typeof v === 'string') destino[k] = typeof t === 'string' ? t : v;
+    else if (v && typeof v === 'object') fusionar(destino[k], v, t);
+  }
+}
+
+export function aplicarIdiomaCatalogo(idioma: 'es' | 'en'): void {
+  FUENTES.forEach(([destino, es], i) => fusionar(destino, INGLES[i], idioma === 'es' ? es : null));
+}
+
+/** Textos del catálogo en castellano, tal cual (para comprobar que no falta ninguno). */
+export const CATALOGO_ES = { medidas: medidasEs, casos: casosEs, objetivos: objetivosEs, textos: textosEs, vistas: vistasEs, estados: estadosEs, rubrica: rubricaEs };
+export const CATALOGO_EN = { medidas: INGLES[0], casos: INGLES[1], objetivos: INGLES[2], textos: INGLES[3], vistas: INGLES[4], estados: INGLES[5], rubrica: INGLES[6] };

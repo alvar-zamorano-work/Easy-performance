@@ -1,0 +1,40 @@
+{
+  "objetivos": [
+    {
+      "titulo": "Cumplir lo que prometemos",
+      "frase": "Queremos entregar lo comprometido y cuando lo dijimos."
+    },
+    {
+      "titulo": "Tardamos demasiado",
+      "frase": "Queremos saber cuánto tarda una tarea y dónde se para."
+    },
+    {
+      "titulo": "Hacemos demasiadas cosas a la vez",
+      "frase": "Queremos terminar antes de empezar."
+    },
+    {
+      "titulo": "Arreglamos más que construimos",
+      "frase": "Queremos saber cuánto esfuerzo se va en errores y en repetir."
+    },
+    {
+      "titulo": "El pendiente no para de crecer",
+      "frase": "Queremos que no entre más de lo que sale."
+    },
+    {
+      "titulo": "¿En qué se nos va el tiempo?",
+      "frase": "Queremos que el esfuerzo vaya a lo que prioriza el negocio."
+    },
+    {
+      "titulo": "Medir igual a internos y proveedores",
+      "frase": "Queremos comparar equipos y proveedores con las mismas reglas, sin rankings."
+    },
+    {
+      "titulo": "Preparar el backlog para agentes",
+      "frase": "Queremos que el trabajo esté descrito para que lo pueda hacer un agente de IA."
+    },
+    {
+      "titulo": "Fiarnos de los datos",
+      "frase": "Queremos que Jira refleje lo que pasa de verdad."
+    }
+  ]
+}
