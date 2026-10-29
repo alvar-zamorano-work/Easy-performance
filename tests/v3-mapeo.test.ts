@@ -139,3 +139,37 @@ test('una lectura con historial y sin tiempos da los mismos tiempos que el expor
 test('sin historial, la lectura es la misma', () => {
   assert.equal(completarDesdeHistorial(lectura), lectura);
 });
+
+test('historial con fechas nulas o inválidas: se ignoran sin romper', () => {
+  const t0 = lectura.tareas[0];
+  const malo = [{ estado: 'To Do', fecha: null }, { estado: 'In Progress', fecha: new Date('x') }, { estado: 'Done', fecha: f(3) }, { estado: 'In Progress', fecha: f(1) }] as unknown as CambioEstado[];
+  const l2: Lectura = { ...lectura, tareas: [{ ...t0, estado_origen: '', tiempos_estado: [], historial_estados: malo, fechas: { ...t0.fechas, cambio_estado: null } }] };
+  const c = completarDesdeHistorial(l2, f(5)).tareas[0];
+  assert.equal(c.estado_origen, 'Done');
+  assert.equal(c.fechas.cambio_estado!.getTime(), f(3).getTime());
+  assert.deepEqual(c.tiempos_estado.map((x) => [x.estado, x.ms]).sort(), [['Done', 2 * D], ['In Progress', 2 * D]]);
+});
+
+test('varios ficheros: si uno no tiene la columna de estimación elegida, se avisa', () => {
+  const sinColumna = texto.replace('Custom field (Story Points)', 'Otra columna');
+  const l = leerJira([{ nombre: 'a.csv', texto }, { nombre: 'b.csv', texto: sinColumna }], { columnaEstimacion: 'Custom field (Story Points)' });
+  assert.ok(l.informe.avisos.some((a) => a.texto.includes('b.csv') && a.texto.includes('Custom field (Story Points)')), JSON.stringify(l.informe.avisos));
+  assert.ok(!l.informe.avisos.some((a) => a.texto.includes('a.csv') && a.texto.includes('Custom field (Story Points)')));
+});
+
+test('fiabilidad: estados por revisar que da la página y estimación que no se usa', async () => {
+  const { diagnosticar } = await import('../nucleo/diagnostico.ts');
+  const { fiabilidad } = await import('../nucleo/fiabilidad.ts');
+  const det = detectar(lectura);
+  const nombre = det.estados[0].nombre;
+  const cliente = { version: 2, nombre: '', sector: '', plataforma: 'jira', mapeoEstados: det.mapeoEstados, equipos: { campo: 'todos', lista: [{ id: 'All work', nombre: 'All work', tipo: 'interno', proveedor: null, area: null, usa_sprints: true, fte: [], limites: {} }] }, objetivos: [], medidas: ['ciclo'] };
+  const base = { campoEquipo: 'todos', equipos: [], mapeoEstados: det.mapeoEstados, fte: {}, limites: {} };
+  const fia = (cfg: object) => { const r = diagnosticar(lectura, cliente as never, [], null, { config: cfg as never, generado: new Date(2026, 9, 15) }); return fiabilidad(lectura, det, r.preparacion, r.modelo, cfg as never); };
+  const est = (cfg: object) => fia(cfg).comprobaciones.find((x) => x.id === 'estados')!;
+  assert.equal(est(base).estado, 'bien', 'con el mapeo completo, nada por revisar (comportamiento anterior)');
+  const conLista = est({ ...base, estadosPorRevisar: [nombre] });
+  assert.equal(conLista.estado, 'revisar');
+  assert.ok(conLista.detalle.includes(nombre));
+  const estim = (cfg: object) => fia(cfg).comprobaciones.find((x) => x.id === 'estimacion')!;
+  assert.equal(estim({ ...base, sinEstimacion: true }).estado, 'sin');
+});

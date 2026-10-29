@@ -8,10 +8,15 @@
 
 import type { CambioEstado, Lectura, Tarea, TiempoEnEstado } from '../../nucleo/modelo.ts';
 
+/** Entradas con estado y fecha válidos, por orden de fecha. */
+export function historialValido(historial: CambioEstado[]): CambioEstado[] {
+  return historial.filter((c) => c && c.estado && c.fecha instanceof Date && !isNaN(c.fecha.getTime()))
+    .slice().sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+}
+
 /** Tiempo y entradas en cada estado de origen. El último estado cuenta hasta `fin`. */
 export function tiemposDesdeHistorial(historial: CambioEstado[], fin: Date): TiempoEnEstado[] {
-  const orden = historial.filter((c) => c && c.estado && c.fecha instanceof Date && !isNaN(c.fecha.getTime()))
-    .slice().sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+  const orden = historialValido(historial);
   const porEstado = new Map<string, TiempoEnEstado>();
   orden.forEach((c, i) => {
     // Un "cambio" al mismo estado en el que ya estaba no es una entrada nueva
@@ -31,7 +36,7 @@ function ultimaActividad(tareas: Tarea[]): Date {
   let max = 0;
   tareas.forEach((t) => {
     [t.fechas.creada, t.fechas.terminada, t.fechas.cambio_estado].forEach((d) => { if (d && d.getTime() > max) max = d.getTime(); });
-    t.historial_estados.forEach((c) => { if (c.fecha && c.fecha.getTime() > max) max = c.fecha.getTime(); });
+    historialValido(t.historial_estados).forEach((c) => { if (c.fecha.getTime() > max) max = c.fecha.getTime(); });
   });
   return new Date(max || Date.now());
 }
@@ -47,7 +52,7 @@ export function completarDesdeHistorial(lectura: Lectura, fin: Date = ultimaActi
     const tiempos = tiemposDesdeHistorial(t.historial_estados, fin);
     if (!tiempos.length) return t;
     cambios++;
-    const ultimo = t.historial_estados.reduce((a, b) => (b.fecha.getTime() >= a.fecha.getTime() ? b : a));
+    const validos = historialValido(t.historial_estados), ultimo = validos[validos.length - 1];
     return {
       ...t,
       tiempos_estado: tiempos,

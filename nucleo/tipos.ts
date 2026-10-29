@@ -58,6 +58,14 @@ export interface ConfigCalculo {
   semanasReferencia?: number;
   /** Mapeo del cliente: estado de origen -> estado normalizado. Manda sobre la propuesta. */
   mapeoEstados?: Record<string, EstadoNormalizado>;
+  /**
+   * Estados de origen que nadie ha revisado, si la página los sabe (confirmados, propuestos por IA...).
+   * Manda sobre la regla por defecto (no reconocido por nombre y sin mapeo del cliente), que no distingue
+   * un mapeo confirmado de uno solo propuesto.
+   */
+  estadosPorRevisar?: string[];
+  /** El cliente ha decidido no usar estimación: la comprobación de historias estimadas no aplica. */
+  sinEstimacion?: boolean;
   /** Mapeo de la v0 (estado -> etapa). Solo para leer cliente.json antiguos; se convierte a mapeoEstados. */
   etapas?: Record<string, Etapa>;
   campoEquipo?: string;

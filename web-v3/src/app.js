@@ -96,6 +96,7 @@
     S.colPend = pendientes.length ? { ficheros, pendientes, abierto: false } : null;
     if (pendientes.length) toast(tn('carga.pendientes', pendientes.length), 'bad');
     S.lectura = lectura; S.det = N.detectar(lectura); S.ficheros = ficheros; S.cargadoEn = new Date();
+    if (P.migrarMapeo(S.cfg, S.det)) guardarCfg();
     S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; S.recFilter = 'todos'; S.recLevel = null;
     recalcular();
     return true;

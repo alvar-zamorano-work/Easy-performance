@@ -42,7 +42,7 @@ const pct = (x: number) => (x < 1 && Math.round(x * 100) === 100 ? (Math.floor(x
 interface Parcial { valor: string; estado: EstadoComprobacion; detalle: string }
 
 // Comprobaciones que se calculan igual para un equipo y para el área (con todas sus tareas)
-function deItems(items: Derivada[], p: Preparacion, det: Deteccion): Record<string, Parcial> {
+function deItems(items: Derivada[], p: Preparacion, det: Deteccion, cfg: ConfigCalculo = {}): Record<string, Parcial> {
   const desde = sumarDias(p.ctx.semanaFin, -7 * SEMANAS_FIABILIDAD);
   const ent = items.filter((d) => d.entregada && d.t.fechas.terminada! >= desde && d.t.fechas.terminada! < p.ctx.semanaFin);
   const out: Record<string, Parcial> = {};
@@ -68,7 +68,8 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion): Record<stri
   }
   // Historias estimadas
   const historias = items.filter((d) => d.t.tipo === 'historia');
-  if (historias.length < 10) out.estimacion = { valor: Tx('Few stories', 'Pocas historias'), estado: 'sin', detalle: Tx('There are fewer than 10 stories.', 'Hay menos de 10 historias.') };
+  if (cfg.sinEstimacion) out.estimacion = { valor: Tx('Not used', 'No se usa'), estado: 'sin', detalle: Tx('The client chose not to use estimates.', 'Se ha elegido no usar estimación.') };
+  else if (historias.length < 10) out.estimacion = { valor: Tx('Few stories', 'Pocas historias'), estado: 'sin', detalle: Tx('There are fewer than 10 stories.', 'Hay menos de 10 historias.') };
   else {
     const x = historias.filter((d) => d.t.estimacion != null).length / historias.length;
     out.estimacion = { valor: pct(x), estado: x >= 0.7 ? 'bien' : 'revisar', detalle: pct(x) + Tx(' of stories have an estimate.', ' de las historias tiene estimación.') };
@@ -78,11 +79,11 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion): Record<stri
 
 export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, modelo: Modelo, cfg: ConfigCalculo = {}): Fiabilidad {
   const todas = Object.keys(p.porEquipo).flatMap((e) => p.porEquipo[e]);
-  const area = deItems(todas, p, det);
+  const area = deItems(todas, p, det, cfg);
   const usaSprints = (nombre: string) => (p.porEquipo[nombre] || []).some((d) => d.t.sprints.length > 0);
   // Por equipo
   const porEquipo: FiabilidadEquipo[] = modelo.equipos.map((eq) => {
-    const x = deItems(p.porEquipo[eq.nombre] || [], p, det);
+    const x = deItems(p.porEquipo[eq.nombre] || [], p, det, cfg);
     const sp: Parcial = !det.haySprints || det.sprintsComoFecha || !usaSprints(eq.nombre) ? { valor: Tx('Not applicable', 'No aplica'), estado: 'sin', detalle: '' }
       : { valor: eq.sprints.fiables ? Tx('Yes', 'Sí') : Tx('No', 'No'), estado: eq.sprints.fiables ? 'bien' : 'revisar', detalle: eq.sprints.motivo || '' };
     const hi: Parcial = { valor: eq.semanasConDatos + Tx(' weeks', ' semanas'), estado: eq.semanasConDatos >= SEMANAS_MINIMAS ? 'bien' : 'revisar', detalle: '' };
@@ -109,7 +110,8 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
 
   // Estados reconocidos
   const confirmados = Object.assign({}, cfg.mapeoEstados || {});
-  const porRevisar = det.estados.filter((e) => e.propuestaPor !== 'nombre' && !confirmados[e.nombre]);
+  const porRevisar = cfg.estadosPorRevisar ? det.estados.filter((e) => cfg.estadosPorRevisar!.includes(e.nombre))
+    : det.estados.filter((e) => e.propuestaPor !== 'nombre' && !confirmados[e.nombre]);
   nuevo('estados', Tx('Recognised statuses', 'Estados reconocidos'), Tx('Statuses from the tool that map with confidence to a common status.', 'Estados de la herramienta que se han traducido con seguridad a un estado común.'), Tx('All', 'Todos'),
     Tx('Confirm in Settings the common status of those still to review.', 'Confirmar el estado común de los que están por revisar, en el mapeo de estados.'),
     { valor: (det.estados.length - porRevisar.length) + Tx(' of ', ' de ') + det.estados.length, estado: porRevisar.length ? 'revisar' : 'bien',

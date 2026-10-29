@@ -15,7 +15,9 @@
   function huella() {
     const inf = S.vm.informe;
     // Misma configuración: el mapeo, los indicadores y los equipos medidos también cambian las cifras
-    const conf = JSON.stringify([S.vm.mapeo, S.vm.kpis, S.vm.equiposMedidos]);
+    // y las reglas de tipo y la estimación, solo si hay alguna (así los cortes guardados antes conservan su huella)
+    const reglas = [S.cfg.mapeoTipos && Object.keys(S.cfg.mapeoTipos).length ? S.cfg.mapeoTipos : null, S.cfg.etiquetaBug || null, S.cfg.columnaEstimacion == null ? null : S.cfg.columnaEstimacion];
+    const conf = JSON.stringify([S.vm.mapeo, S.vm.kpis, S.vm.equiposMedidos].concat(reglas.some((x) => x != null) ? [reglas] : []));
     let h = 0; for (let i = 0; i < conf.length; i++) h = (h * 31 + conf.charCodeAt(i)) | 0;
     return [new Date(S.vm.fechaDatos).toISOString().slice(0, 10), inf.tareas, inf.ficheros.map((f) => f.nombre + ':' + f.filas).join('|'), S.vm.campoEquipo, h].join('@');
   }

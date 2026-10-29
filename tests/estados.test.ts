@@ -59,6 +59,9 @@ test('estados de exports reales que antes quedaban por defecto o mal', () => {
     ['Bloq.', 'In Progress', 'bloqueado', 'nombre'],
     ['Fase 3', 'To Do', 'pendiente', 'categoria'], ['Fase 3', 'indeterminate', 'en_curso', 'categoria'], ['Fase 3', 'new', 'pendiente', 'categoria'],
     ['Fase 3', '', 'pendiente', 'defecto'],
+    // Con categoría Hecho las reglas nuevas no mandan: siguen terminadas
+    ['Clarified', 'Done', 'terminado', 'categoria'], ['Aclarado', 'Listo', 'terminado', 'categoria'],
+    ['Acceptance', 'Done', 'terminado', 'categoria'], ['Deploy queue', 'Done', 'terminado', 'categoria'],
   ];
   for (const [n, c, e, por] of casos) assert.deepEqual(explicarEstado(n, c), { estado: e, por }, n + ' (' + c + ')');
 });

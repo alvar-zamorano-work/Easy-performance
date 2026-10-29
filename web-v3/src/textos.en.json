@@ -194,7 +194,7 @@
  "calidad.tile.revisarPie": "things to fix in how data is captured",
  "calidad.tile.revisarNada": "nothing to fix",
  "calidad.tile.estados": "Statuses to confirm",
- "calidad.tile.estadosPie": "mapped by category or by default",
+ "calidad.tile.estadosPie": "not recognised by name or proposed by AI",
  "calidad.revisarMapeo": "Review the mapping",
  "calidad.porEquipo": "By team",
  "calidad.fichaPie": "{n} tasks · {s} weeks with data",
@@ -720,7 +720,7 @@
  "mapeo.confirmarUno": "It is right",
  "ob.mapeo.seguirSinRevisar": "Continue and review them later",
  "mapeo.por.ia": "Proposed by AI",
- "mapeo.col.pasos": "Entries",
+ "mapeo.col.pasos": "Tasks through it",
  "tipos.titular": "{n} Jira types · {b} bugs in the calculation",
  "tipos.etiqueta": "Label that marks a bug",
  "tipos.items1": "new bugs and rework depend on what counts as a bug",
@@ -740,5 +740,6 @@
  "tipos.col.origen": "Jira type",
  "tipos.etiquetaAyuda": "Tasks with this label count as bugs whatever their type says.",
  "tipos.col.tareas": "Tasks",
- "tipos.col.comun": "Common type"
+ "tipos.col.comun": "Common type",
+ "mapeo.iaNada": "The AI returned no valid proposal. The previous mapping stays."
 }

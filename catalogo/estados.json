@@ -70,7 +70,12 @@
     },
     {
       "estado": "en_pruebas",
-      "patron": "(\\bqa\\b|test|prueba|valid|\\buat\\b|quality assurance|acceptance|aceptacion)"
+      "patron": "(acceptance|aceptacion)",
+      "categoria": "^(?!.*(done|hecho|finaliz|complet|\\blisto\\b))"
+    },
+    {
+      "estado": "en_pruebas",
+      "patron": "(\\bqa\\b|test|prueba|valid|\\buat\\b|quality assurance)"
     },
     {
       "estado": "pendiente",
@@ -79,7 +84,8 @@
     },
     {
       "estado": "en_espera",
-      "patron": "(clarif|aclara)"
+      "patron": "(clarif|aclara)",
+      "categoria": "^(?!.*(done|hecho|finaliz|complet|\\blisto\\b))"
     },
     {
       "estado": "pendiente",
@@ -88,7 +94,8 @@
     },
     {
       "estado": "en_espera",
-      "patron": "(\\bqueued?\\b|\\bcola\\b)"
+      "patron": "(\\bqueued?\\b|\\bcola\\b)",
+      "categoria": "^(?!.*(done|hecho|finaliz|complet|\\blisto\\b))"
     },
     {
       "estado": "en_espera",

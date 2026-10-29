@@ -70,34 +70,56 @@
   }
   // El mapeo de estados tiene tres capas: la propuesta del adaptador, la propuesta de la IA (cfg.mapeoIA, sin confirmar)
   // y lo que el usuario ha confirmado (cfg.mapeoEstados). Solo lo confirmado cuenta como revisado.
-  function mapeo(cfg, det) {
-    const m = Object.assign({}, det.mapeoEstados);
-    if (!cfg.mapeoEstados && cfg.etapas) Object.assign(m, N.etapasV0AMapeo(cfg.etapas, det.mapeoEstados));
-    // Solo estados comunes que existen: un mapeo escrito a mano con un estado desconocido no rompe el cálculo
-    const comunes = C().estados.estados;
-    [cfg.mapeoIA || {}, cfg.mapeoEstados || {}].forEach((capa) => {
-      Object.keys(capa).forEach((k) => { if (comunes[capa[k]]) m[k] = capa[k]; });
-    });
-    return m;
-  }
-  /** Cómo se ha decidido cada estado: confirmado por el usuario, propuesto por la IA, por nombre, por categoría o por defecto. */
-  function porMapeo(cfg, e) {
-    if ((cfg.mapeoEstados || {})[e.nombre] != null) return 'confirmado';
-    if ((cfg.mapeoIA || {})[e.nombre] != null) return 'ia';
-    return e.propuestaPor;
-  }
-  /** Estados que nadie ha revisado: no se reconocen por su nombre (o los ha cambiado la IA) y el usuario no los ha confirmado. */
-  function porRevisar(cfg, det) {
-    return det.estados.filter((e) => { const p = porMapeo(cfg, e); return p !== 'confirmado' && p !== 'nombre'; });
-  }
-  /** Lo que se guarda al seguir sin revisar: los estados reconocidos por nombre y lo ya confirmado. Los dudosos no. */
-  function confirmarReconocidos(cfg, det) {
-    const m = mapeo(cfg, det), out = Object.assign({}, cfg.mapeoEstados || {});
-    det.estados.forEach((e) => { if (porMapeo(cfg, e) === 'nombre') out[e.nombre] = m[e.nombre]; });
+  // Un cliente de la v0 trae etapas (cfg.etapas) revisadas en su día: cuentan como confirmadas.
+  const comunValido = (v) => !!(v && C().estados.estados[v]);
+  function confirmados(cfg, det) {
+    const src = cfg.mapeoEstados || (cfg.etapas ? N.etapasV0AMapeo(cfg.etapas, det.mapeoEstados) : {}), out = {};
+    // Solo estados comunes que existen: un valor escrito a mano con un estado desconocido ni cuenta ni rompe el cálculo
+    Object.keys(src).forEach((k) => { if (comunValido(src[k])) out[k] = src[k]; });
     return out;
   }
+  /** Mapeo sin la capa de la IA: propuesta del adaptador y lo confirmado. */
+  function mapeoSinIA(cfg, det) { return Object.assign({}, det.mapeoEstados, confirmados(cfg, det)); }
+  function mapeo(cfg, det) {
+    const m = Object.assign({}, det.mapeoEstados), ia = cfg.mapeoIA || {};
+    Object.keys(ia).forEach((k) => { if (comunValido(ia[k])) m[k] = ia[k]; });
+    return Object.assign(m, confirmados(cfg, det));
+  }
+  /** Cómo se ha decidido cada estado: confirmado, propuesto por la IA, por nombre, por categoría o por defecto. */
+  function porMapeoCon(conf, cfg, e) {
+    if (conf[e.nombre] != null) return 'confirmado';
+    if (comunValido((cfg.mapeoIA || {})[e.nombre])) return 'ia';
+    return e.propuestaPor;
+  }
+  function porMapeo(cfg, det, e) { return porMapeoCon(confirmados(cfg, det), cfg, e); }
+  /** Estados que nadie ha revisado: no se reconocen por su nombre (o los ha tocado la IA) y nadie los ha confirmado. */
+  function porRevisar(cfg, det) {
+    const conf = confirmados(cfg, det);
+    return det.estados.filter((e) => { const p = porMapeoCon(conf, cfg, e); return p !== 'confirmado' && p !== 'nombre'; });
+  }
+  /** Guarda lo confirmado con la marca de que ya se distingue confirmado de propuesto. */
+  function fijarConfirmados(cfg, m) { cfg.mapeoEstados = m; cfg.mapeoRevision = 2; }
+  /** Lo que se guarda al seguir sin revisar: lo ya confirmado y los estados reconocidos por nombre. Los dudosos no. */
+  function confirmarReconocidos(cfg, det) {
+    const conf = confirmados(cfg, det), m = mapeo(cfg, det), out = Object.assign({}, conf);
+    det.estados.forEach((e) => { if (porMapeoCon(conf, cfg, e) === 'nombre') out[e.nombre] = m[e.nombre]; });
+    return out;
+  }
+  /**
+   * Configuraciones de antes de este cambio: "Confirmar todos" y el arranque guardaban todos los estados, también
+   * los dudosos que nadie miró. Los dudosos que siguen igual que la propuesta vuelven a quedar por revisar;
+   * los que el usuario cambió se respetan. Devuelve true si ha cambiado algo.
+   */
+  function migrarMapeo(cfg, det) {
+    if (!cfg.mapeoEstados || cfg.mapeoRevision >= 2) return false;
+    const m = Object.assign({}, cfg.mapeoEstados);
+    det.estados.forEach((e) => { if (e.propuestaPor !== 'nombre' && m[e.nombre] === det.mapeoEstados[e.nombre]) delete m[e.nombre]; });
+    fijarConfirmados(cfg, m);
+    return true;
+  }
   function cfgCalculo(cfg, det) {
-    const c = { campoEquipo: campo(cfg, det), equipos: equipos(cfg, det), mapeoEstados: mapeo(cfg, det), fte: cfg.fte || {}, limites: {} };
+    const c = { campoEquipo: campo(cfg, det), equipos: equipos(cfg, det), mapeoEstados: mapeo(cfg, det), fte: cfg.fte || {}, limites: {},
+      estadosPorRevisar: porRevisar(cfg, det).map((e) => e.nombre), sinEstimacion: cfg.columnaEstimacion === '' };
     if (hayCoste(cfg)) c.coste = cfg.coste;
     return c;
   }
@@ -239,5 +261,5 @@
     };
   }
 
-  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, porMapeo, porRevisar, confirmarReconocidos, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
 })();

@@ -194,7 +194,7 @@
  "calidad.tile.revisarPie": "cosas que arreglar en la captura",
  "calidad.tile.revisarNada": "nada que arreglar",
  "calidad.tile.estados": "Estados por confirmar",
- "calidad.tile.estadosPie": "traducidos por categoría o por defecto",
+ "calidad.tile.estadosPie": "sin reconocer por nombre o propuestos por la IA",
  "calidad.revisarMapeo": "Revisar el mapeo",
  "calidad.porEquipo": "Por equipo",
  "calidad.fichaPie": "{n} tareas · {s} semanas con datos",
@@ -720,7 +720,7 @@
  "mapeo.confirmarUno": "Es correcto",
  "ob.mapeo.seguirSinRevisar": "Seguir y revisarlos después",
  "mapeo.por.ia": "Propuesto por IA",
- "mapeo.col.pasos": "Entradas",
+ "mapeo.col.pasos": "Tareas que pasan",
  "tipos.titular": "{n} tipos de Jira · {b} bugs en el cálculo",
  "tipos.etiqueta": "Etiqueta que marca un bug",
  "tipos.items1": "los bugs nuevos y el retrabajo dependen de qué es un bug",
@@ -740,5 +740,6 @@
  "tipos.col.origen": "Tipo en Jira",
  "tipos.etiquetaAyuda": "Las tareas con esta etiqueta cuentan como bug aunque su tipo diga otra cosa.",
  "tipos.col.tareas": "Tareas",
- "tipos.col.comun": "Tipo común"
+ "tipos.col.comun": "Tipo común",
+ "mapeo.iaNada": "La IA no ha devuelto ninguna propuesta válida. Se mantiene el mapeo que había."
 }

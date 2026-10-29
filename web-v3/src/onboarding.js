@@ -103,7 +103,7 @@
   function trasOnboarding() { /* el arrastre de ficheros lo recoge app.js en cualquier .drop */ }
 
   EP.accion('ob-go', (el) => { S.ob.step = el.dataset.step; S.drill = null; EP.render(); window.scrollTo(0, 0); });
-  EP.accion('ob-mapeo-ok', () => { S.cfg.mapeoEstados = P.confirmarReconocidos(S.cfg, S.det); EP.guardarCfg(); S.ob.step = 'context'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); }); });
+  EP.accion('ob-mapeo-ok', () => { P.fijarConfirmados(S.cfg, P.confirmarReconocidos(S.cfg, S.det)); EP.guardarCfg(); S.ob.step = 'context'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); }); });
   EP.accion('ob-context-ok', () => {
     if (!S.cfg.contexto || !S.cfg.contexto.hecho) { S.cfg.contexto = Object.assign({}, P.contexto(S.cfg, S.det), { hecho: true }); EP.guardarCfg(); }
     S.ob.step = 'datacheck'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); });

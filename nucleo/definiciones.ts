@@ -116,7 +116,8 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
     return [k, e.categoria || Tx('No category', 'Sin categoría'), cat.estados.estados[comun].nombre, NOMBRE_ETAPA()[etapaDe(comun, cat.estados)] + (comun === 'descartado' ? Tx(' (not a delivery)', ' (no es entrega)') : ''), n(e.actuales)];
   }), [3, 2.5, 2.2, 2.3, 1.5]);
   // Estados que nadie ha confirmado y que no se reconocieron por su nombre
-  const sinRegla = nombres.filter((k) => actuales.get(k)!.propuestaPor !== 'nombre' && !(cliente.mapeoEstados && cliente.mapeoEstados[k]) && !(cfg.mapeoEstados && cfg.mapeoEstados[k]));
+  const sinRegla = cfg.estadosPorRevisar ? nombres.filter((k) => cfg.estadosPorRevisar!.includes(k))
+    : nombres.filter((k) => actuales.get(k)!.propuestaPor !== 'nombre' && !(cliente.mapeoEstados && cliente.mapeoEstados[k]) && !(cfg.mapeoEstados && cfg.mapeoEstados[k]));
   if (sinRegla.length) p([{ b: Tx('To confirm. ', 'Por confirmar. ') }, Tx('These statuses were not recognised by name and were assigned by category or by default: ', 'Estos estados no se reconocieron por su nombre y se asignaron por categoría o por defecto: ') + sinRegla.join(', ') + '.']);
   const usados = new Set(nombres.map((k) => mapeo[k]));
   h2(Tx('What each common status means', 'Qué significa cada estado común'));

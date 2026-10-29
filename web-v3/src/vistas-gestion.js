@@ -204,7 +204,7 @@
     const det = S.vm.det, mp = S.vm.mapeo, comunes = Object.keys(cat().estados.estados);
     const conTiempos = det.hayTiempos;
     const filas = det.estados.map((e) => {
-      const por = EP.P.porMapeo(S.cfg, e), dudoso = por !== 'confirmado' && por !== 'nombre';
+      const por = EP.P.porMapeo(S.cfg, det, e), dudoso = por !== 'confirmado' && por !== 'nombre';
       const tiempo = conTiempos ? `<td class="num">${esc(N.formatear(e.horasMedias != null ? e.horasMedias / 24 : null, 'dias'))}</td><td class="num">${e.visitas}</td>` : '';
       const confirmar = dudoso ? ` <button class="link small" data-action="map-uno" data-estado="${esc(e.nombre)}">${esc(t('mapeo.confirmarUno'))}</button>` : '';
       return `<tr${dudoso ? ' class="dudoso"' : ''}><td><b>${esc(e.nombre)}</b>${e.categoria ? `<div class="tiny muted">${esc(e.categoria)}</div>` : ''}</td><td class="num">${e.actuales}</td>${tiempo}<td><select class="sm" data-change="map-estado" data-estado="${esc(e.nombre)}">${comunes.map((c) => `<option value="${c}" ${mp[e.nombre] === c ? 'selected' : ''}>${esc(cat().estados.estados[c].nombre)}</option>`).join('')}</select></td><td>${K.chip(dudoso ? 'warn' : 'good', t('mapeo.por.' + por))}${confirmar}</td></tr>`;
@@ -218,22 +218,29 @@
   }
   const aplicarCfg = (fn) => { fn(); EP.guardarCfg(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); };
   // Cambiar un estado a mano o pulsar "Es correcto" lo confirma. No hay "confirmar todos": un dudoso se mira uno a uno.
-  EP.cambio('map-estado', (el) => aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.cfg.mapeoEstados || {}, { [el.dataset.estado]: el.value }); }));
-  EP.accion('map-uno', (el) => aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.cfg.mapeoEstados || {}, { [el.dataset.estado]: S.vm.mapeo[el.dataset.estado] }); }));
-  EP.accion('map-reset', () => aplicarCfg(() => { delete S.cfg.mapeoEstados; delete S.cfg.mapeoIA; }));
+  // Se parte de lo confirmado (con las etapas de la v0 si las hay) para no perderlo al confirmar uno más
+  const confirmarUno = (nombre, valor) => { const P = EP.P, m = Object.assign({}, P.confirmarReconocidos(S.cfg, S.det)); m[nombre] = valor; P.fijarConfirmados(S.cfg, m); };
+  EP.cambio('map-estado', (el) => aplicarCfg(() => confirmarUno(el.dataset.estado, el.value)));
+  EP.accion('map-uno', (el) => aplicarCfg(() => confirmarUno(el.dataset.estado, S.vm.mapeo[el.dataset.estado])));
+  EP.accion('map-reset', () => aplicarCfg(() => { delete S.cfg.mapeoEstados; delete S.cfg.mapeoIA; delete S.cfg.etapas; }));
   EP.accion('ia-mapeo', () => {
     const estados = S.vm.det.estados.map((e) => ({ nombre: e.nombre, actuales: e.actuales, categoria: e.categoria, propuesta: S.vm.mapeo[e.nombre] }));
     S.iaEstado.mapeo = 'trabajando'; EP.render();
     proveedor()(IA.peticionMapeoEstados(estados, cat())).then((texto) => {
       const v = IA.validarMapeo(texto, estados, cat());
-      S.iaEstado.mapeo = 'hecho'; S.iaMapeoAviso = tn('mapeo.iaCambios', v.cambios);
-      // La propuesta de la IA se aplica al cálculo pero queda por revisar: solo los estados sin confirmar y los que cambia.
-      const conf = S.cfg.mapeoEstados || {}, ia = {};
+      // Una respuesta sin nada válido no borra la propuesta anterior
+      if (!Object.keys(v.mapeo).length) { S.iaEstado.mapeo = 'error'; S.iaMapeoAviso = t('mapeo.iaNada'); EP.render(); return; }
+      S.iaEstado.mapeo = 'hecho';
+      // La propuesta de la IA se aplica al cálculo pero queda por revisar. Se compara con el mapeo sin IA, así repetir
+      // la petición no borra lo que ya había propuesto; un estado por nombre en el que la IA está de acuerdo sale de la capa.
+      const base = EP.P.mapeoSinIA(S.cfg, S.det), conf = S.cfg.mapeoEstados || {}, ia = Object.assign({}, S.cfg.mapeoIA || {});
+      let cambios = 0;
       S.vm.det.estados.forEach((e) => {
         const p = v.mapeo[e.nombre];
         if (!p || conf[e.nombre] != null) return;
-        if (p !== S.vm.mapeo[e.nombre] || e.propuestaPor !== 'nombre') ia[e.nombre] = p;
+        if (p !== base[e.nombre] || e.propuestaPor !== 'nombre') { ia[e.nombre] = p; if (p !== base[e.nombre]) cambios++; } else delete ia[e.nombre];
       });
+      S.iaMapeoAviso = tn('mapeo.iaCambios', cambios);
       aplicarCfg(() => { S.cfg.mapeoIA = ia; });
     }).catch((e) => { S.iaEstado.mapeo = 'error'; S.iaMapeoAviso = t('ia.error', { e: e.message }); EP.render(); });
   });
@@ -243,8 +250,9 @@
     const tipos = N.tiposDeOrigen(S.lectura, reglas), elegibles = N.TIPOS_ELEGIBLES;
     const bugs = EP.P.lecturaCalculo(S.lectura, S.cfg).tareas.filter((x) => x.tipo === 'error').length;
     const filas = tipos.map((x) => `<tr><td><b>${esc(x.tipo_origen || t('tipos.sinTipo'))}</b></td><td class="num">${x.n}</td><td><select class="sm" data-change="tipo-origen" data-tipo="${esc(x.tipo_origen)}">${elegibles.map((c) => `<option value="${c}" ${x.tipo === c ? 'selected' : ''}>${esc(t('tipo.' + c))}</option>`).join('')}</select></td><td>${K.chip(x.cambiado ? 'info' : 'good', t(x.cambiado ? 'tipos.cambiado' : 'mapeo.por.nombre'))}</td></tr>`).join('');
-    const etiquetas = N.etiquetasDe(S.lectura);
-    const etqSel = `<select data-change="tipo-etiqueta"><option value="">${esc(t('tipos.etiquetaNinguna'))}</option>${etiquetas.slice(0, 60).map((e) => `<option value="${esc(e.etiqueta)}" ${S.cfg.etiquetaBug === e.etiqueta ? 'selected' : ''}>${esc(e.etiqueta)} · ${e.n}</option>`).join('')}</select>`;
+    const todas = N.etiquetasDe(S.lectura), guardada = S.cfg.etiquetaBug;
+    const etiquetas = todas.slice(0, 60).concat(guardada && !todas.slice(0, 60).some((e) => e.etiqueta === guardada) ? todas.filter((e) => e.etiqueta === guardada).concat(todas.some((e) => e.etiqueta === guardada) ? [] : [{ etiqueta: guardada, n: 0 }]) : []);
+    const etqSel = `<select data-change="tipo-etiqueta"><option value="">${esc(t('tipos.etiquetaNinguna'))}</option>${etiquetas.map((e) => `<option value="${esc(e.etiqueta)}" ${S.cfg.etiquetaBug === e.etiqueta ? 'selected' : ''}>${esc(e.etiqueta)} · ${e.n}</option>`).join('')}</select>`;
     // Estimación: automática (por nombre), ninguna o una columna numérica del export
     const numericas = S.ficheros && S.ficheros[0] ? N.columnasNumericas(S.ficheros[0].texto) : [];
     const leidas = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
@@ -257,7 +265,7 @@
     const conEst = S.lectura.tareas.filter((x) => x.estimacion != null).length;
     return K.statusBar('neutral', esc(t('tipos.titular', { n: tipos.length, b: bugs })), [esc(t('tipos.items1')), esc(t('tipos.items2'))])
       + `<div class="ficha"><p class="small muted" style="margin:0 0 8px">${esc(t('tipos.texto'))}</p><div class="table-wrap"><table><tr><th>${esc(t('tipos.col.origen'))}</th><th class="num">${esc(t('tipos.col.tareas'))}</th><th>${esc(t('tipos.col.comun'))}</th><th>${esc(t('mapeo.col.como'))}</th></tr>${filas}</table></div></div>`
-      + `<div class="fichas cols-2 sp"><div class="ficha"><div class="field"><label>${esc(t('tipos.etiqueta'))}</label>${etqSel}</div><p class="tiny muted">${esc(etiquetas.length ? t('tipos.etiquetaAyuda') : t('tipos.sinEtiquetas'))}</p></div>`
+      + `<div class="fichas cols-2 sp"><div class="ficha"><div class="field"><label>${esc(t('tipos.etiqueta'))}</label>${etqSel}</div><p class="tiny muted">${esc(todas.length ? t('tipos.etiquetaAyuda') : t('tipos.sinEtiquetas'))}</p></div>`
       + `<div class="ficha"><div class="field"><label>${esc(t('tipos.estimacion'))}</label>${estSel}</div><p class="tiny muted">${esc(t('tipos.estAyuda', { n: conEst, de: S.lectura.tareas.length }))}</p></div></div>`;
   }
   EP.cambio('tipo-origen', (el) => aplicarCfg(() => {

@@ -290,11 +290,22 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const dudoso = 'Pre-production window';
     const antes = await A(p, (d) => ({ guardado: (window.EP.S.cfg.mapeoEstados || {})[d] != null, revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).map((e) => e.nombre) }), dudoso);
     ok('seguir en el arranque no confirma los estados dudosos', !antes.guardado && antes.revisar.includes(dudoso), JSON.stringify(antes));
+    // La misma cifra de por revisar en el arranque, la tarjeta de Calidad, la comprobación de fiabilidad y el documento
+    const cuadra = () => A(p, (d) => {
+      const S = window.EP.S, comp = S.vm.fiabilidad.comprobaciones.filter((x) => x.id === 'estados')[0];
+      const cfgC = window.EP.P.cfgCalculo(S.cfg, S.det);
+      const doc = window.Nucleo.aMarkdown(window.Nucleo.definiciones(window.EP.P.lecturaCalculo(S.lectura, S.cfg), window.EP.P.clienteDe(S.cfg, S.det), { config: cfgC, det: S.det, modelo: S.r.modelo, generado: new Date() }));
+      return { revisar: window.EP.P.porRevisar(S.cfg, S.vm.det).length, comp: comp.estado, enComp: comp.detalle.includes(d), enDoc: doc.includes(d) && /(Por confirmar|To confirm)/.test(doc) };
+    }, dudoso);
+    const c1 = await cuadra();
+    ok('por revisar cuadra entre arranque, Calidad del dato y documento', c1.revisar === 1 && c1.comp === 'revisar' && c1.enComp && c1.enDoc, JSON.stringify(c1));
     await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="mapeo"]').click()); await quieto(p);
     ok('sin botón de confirmar todos', !(await p.$('[data-action="map-confirmar"]')));
     await clic(p, `[data-action="map-uno"][data-estado="${dudoso}"]`);
     const despues = await A(p, (d) => ({ guardado: (window.EP.S.cfg.mapeoEstados || {})[d], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).length }), dudoso);
     ok('"Es correcto" confirma solo ese estado', despues.guardado === 'en_curso' && despues.revisar === antes.revisar.length - 1, JSON.stringify(despues));
+    const c2 = await cuadra();
+    ok('tras confirmarlo, Calidad del dato ya no lo cuenta', c2.revisar === 0 && c2.comp === 'bien' && !c2.enComp, JSON.stringify(c2));
     await p.screenshot({ path: join(SALIDA, '41-mapeo-confirmado.png'), fullPage: true });
     // Tipos: pasar Task a bug sube los bugs del cálculo; la estimación se puede quitar y volver a la automática
     await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="tipos"]').click()); await quieto(p);
@@ -312,6 +323,59 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const e2 = await est();
     ok('campo de estimación: ninguno y otra vez automático', e0 > 0 && e1 === 0 && e2 === e0 && !p.errores.length, `${e0} -> ${e1} -> ${e2}`);
   }
+  await p.context().close();
+}
+
+// ---------- 5. Configuraciones guardadas antes: etapas de la v0 y mapeo de antes de este cambio ----------
+{
+  const ruta = join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv'), dudoso = 'Pre-production window';
+  const conCfg = async (cfg) => {
+    const ctx = await navegador.newContext({ viewport: { width: 1280, height: 800 }, locale: 'es-ES', reducedMotion: 'reduce' });
+    await ctx.addInitScript((c) => { try { if (!sessionStorage.getItem('__cfg')) { localStorage.setItem('easyperformance.config.v2', JSON.stringify(c)); sessionStorage.setItem('__cfg', '1'); } } catch (e) {} }, cfg);
+    const p = await pagina(1280, 800, { ctx });
+    await p.setInputFiles('#file-input', ruta); await p.waitForTimeout(500); await quieto(p);
+    return p;
+  };
+  const estadoDe = (p) => A(p, (d) => ({ valor: window.EP.S.vm.mapeo[d], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).map((e) => e.nombre), cfg: window.EP.S.cfg }), dudoso);
+  // Etapas de la v0: el estado revisado entonces como hecho sigue terminado, también después de seguir en el arranque
+  let p = await conCfg({ etapas: { [dudoso]: 'hecho' } });
+  const e0 = await estadoDe(p);
+  await clic(p, '[data-action="ob-go"][data-step="mapeo"]'); await clic(p, '[data-action="ob-mapeo-ok"]');
+  const e1 = await estadoDe(p);
+  ok('etapas de la v0: se respetan y cuentan como revisadas', e0.valor === 'terminado' && !e0.revisar.includes(dudoso) && e1.valor === 'terminado' && !e1.revisar.includes(dudoso), JSON.stringify({ antes: e0.valor, despues: e1.valor, revisar: e1.revisar }));
+  await p.context().close();
+  // Mapeo de antes: un dudoso guardado igual que la propuesta vuelve a por revisar; uno cambiado a mano se respeta
+  p = await conCfg({ mapeoEstados: { 'To Do': 'pendiente', 'In Progress': 'en_curso', [dudoso]: 'en_curso', 'In Review': 'en_revision', 'Blocked': 'bloqueado', 'Done': 'terminado' } });
+  const m1 = await estadoDe(p);
+  await p.context().close();
+  p = await conCfg({ mapeoEstados: { [dudoso]: 'en_espera' } });
+  const m2 = await estadoDe(p);
+  await p.context().close();
+  ok('mapeo de antes: los dudosos sin tocar vuelven a por revisar, los cambiados se respetan',
+    m1.revisar.includes(dudoso) && m1.cfg.mapeoRevision === 2 && m2.valor === 'en_espera' && !m2.revisar.includes(dudoso), JSON.stringify({ m1: m1.revisar, m2: [m2.valor, m2.revisar] }));
+}
+
+// ---------- 6. Propuesta de estados con IA: repetirla no la borra y una respuesta vacía no toca nada ----------
+{
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="ob-go"][data-step="mapeo"]'); await clic(p, '[data-action="ob-mapeo-ok"]');
+  await clic(p, '[data-action="ob-context-ok"]'); await clic(p, '[data-step="rol"]'); await clic(p, '[data-action="ob-finish"]');
+  // Sin confirmar nada: In Review no está confirmado en esta prueba
+  await A(p, () => { delete window.EP.S.cfg.mapeoEstados; });
+  let respuesta = JSON.stringify({ 'In Review': 'en_pruebas' });
+  await p.route('https://api.anthropic.com/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: respuesta }] }) }));
+  await fijarRol(p, 'pmo');
+  await ir(p, 'ajustes'); await p.fill('#ia-clave', 'sk-ant-prueba'); await clic(p, '[data-action="ia-guardar"]');
+  await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="mapeo"]').click()); await quieto(p);
+  const pedir = async () => { await p.click('[data-action="ia-mapeo"]'); await p.waitForFunction(() => window.EP.S.iaEstado.mapeo !== 'trabajando'); await p.waitForTimeout(200); await quieto(p); };
+  const leer = () => A(p, () => ({ ia: window.EP.S.cfg.mapeoIA || {}, valor: window.EP.S.vm.mapeo['In Review'], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).map((e) => e.nombre), aviso: window.EP.S.iaMapeoAviso }));
+  await pedir(); const i1 = await leer();
+  await pedir(); const i2 = await leer();
+  respuesta = 'esto no es JSON';
+  await pedir(); const i3 = await leer();
+  ok('IA: la propuesta queda por revisar y repetirla no la borra', i1.ia['In Review'] === 'en_pruebas' && i1.revisar.includes('In Review') && i2.ia['In Review'] === 'en_pruebas' && i2.valor === 'en_pruebas' && i2.revisar.includes('In Review'), JSON.stringify([i1, i2]));
+  ok('IA: una respuesta sin nada válido mantiene la propuesta anterior', i3.ia['In Review'] === 'en_pruebas' && /(ninguna propuesta|no valid)/.test(i3.aviso || ''), JSON.stringify(i3));
   await p.context().close();
 }
 
