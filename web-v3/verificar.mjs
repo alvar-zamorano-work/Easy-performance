@@ -135,7 +135,7 @@ async function recorrer(p, etiqueta) {
       const vistas = await A(p, () => [...document.querySelectorAll('#nav button:not(.hidden)')].map((b) => b.dataset.view));
       for (const v of vistas) {
         await ir(p, v); await p.waitForTimeout(120);
-        const extra = v === 'fuentes' ? ['ficheros', 'mapeo', 'equipos', 'context'] : v === 'equipos' && rol !== 'equipo' ? ['', '__comparar'] : [''];
+        const extra = v === 'fuentes' ? ['ficheros', 'mapeo', 'tipos', 'equipos', 'context'] : v === 'equipos' && rol !== 'equipo' ? ['', '__comparar'] : [''];
         for (const x of extra) {
           if (v === 'fuentes') await A(p, (x) => document.querySelector(`[data-action="fuentes-tab"][data-tab="${x}"]`).click(), x);
           if (x === '__comparar') await A(p, () => document.querySelector('[data-team="__comparar"]').click());
@@ -296,6 +296,21 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const despues = await A(p, (d) => ({ guardado: (window.EP.S.cfg.mapeoEstados || {})[d], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).length }), dudoso);
     ok('"Es correcto" confirma solo ese estado', despues.guardado === 'en_curso' && despues.revisar === antes.revisar.length - 1, JSON.stringify(despues));
     await p.screenshot({ path: join(SALIDA, '41-mapeo-confirmado.png'), fullPage: true });
+    // Tipos: pasar Task a bug sube los bugs del cálculo; la estimación se puede quitar y volver a la automática
+    await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="tipos"]').click()); await quieto(p);
+    const bugs = () => A(p, () => window.EP.P.lecturaCalculo(window.EP.S.lectura, window.EP.S.cfg).tareas.filter((x) => x.tipo === 'error').length);
+    const b0 = await bugs();
+    await p.selectOption('select[data-change="tipo-origen"][data-tipo="Task"]', 'error'); await p.waitForTimeout(200); await quieto(p);
+    const b1 = await bugs(), guardado = await A(p, () => (window.EP.S.cfg.mapeoTipos || {}).Task);
+    ok('un tipo cambiado a bug cuenta como bug', b1 > b0 && guardado === 'error', `${b0} -> ${b1}`);
+    await p.screenshot({ path: join(SALIDA, '42-tipos.png'), fullPage: true });
+    const est = () => A(p, () => window.EP.S.lectura.tareas.filter((x) => x.estimacion != null).length);
+    const e0 = await est();
+    await p.selectOption('select[data-change="tipo-estimacion"]', ''); await p.waitForTimeout(300); await quieto(p);
+    const e1 = await est();
+    await p.selectOption('select[data-change="tipo-estimacion"]', '__auto'); await p.waitForTimeout(300); await quieto(p);
+    const e2 = await est();
+    ok('campo de estimación: ninguno y otra vez automático', e0 > 0 && e1 === 0 && e2 === e0 && !p.errores.length, `${e0} -> ${e1} -> ${e2}`);
   }
   await p.context().close();
 }

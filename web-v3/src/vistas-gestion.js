@@ -178,8 +178,8 @@
 
   // ---------- fuentes y mapeo ----------
   function fuentes() {
-    const tabs = `<div class="tabs">${['ficheros', 'mapeo', 'equipos', 'context'].map((x) => `<button class="tab ${S.fuentesTab === x ? 'on' : ''}" data-action="fuentes-tab" data-tab="${x}">${esc(t('fuentes.tab.' + x))}</button>`).join('')}</div>`;
-    const cuerpo = { ficheros: fuentesFicheros, mapeo: fuentesMapeo, equipos: fuentesEquipos, context: fuentesContext }[S.fuentesTab] || fuentesFicheros;
+    const tabs = `<div class="tabs">${['ficheros', 'mapeo', 'tipos', 'equipos', 'context'].map((x) => `<button class="tab ${S.fuentesTab === x ? 'on' : ''}" data-action="fuentes-tab" data-tab="${x}">${esc(t('fuentes.tab.' + x))}</button>`).join('')}</div>`;
+    const cuerpo = { ficheros: fuentesFicheros, mapeo: fuentesMapeo, tipos: fuentesTipos, equipos: fuentesEquipos, context: fuentesContext }[S.fuentesTab] || fuentesFicheros;
     return tabs + cuerpo();
   }
   EP.accion('fuentes-tab', (el) => { S.fuentesTab = el.dataset.tab; EP.render(); });
@@ -237,6 +237,42 @@
       aplicarCfg(() => { S.cfg.mapeoIA = ia; });
     }).catch((e) => { S.iaEstado.mapeo = 'error'; S.iaMapeoAviso = t('ia.error', { e: e.message }); EP.render(); });
   });
+  // ---------- tipos, etiqueta de bug y estimación ----------
+  function fuentesTipos() {
+    const reglas = { mapeoTipos: S.cfg.mapeoTipos || null, etiquetaBug: S.cfg.etiquetaBug || null };
+    const tipos = N.tiposDeOrigen(S.lectura, reglas), elegibles = N.TIPOS_ELEGIBLES;
+    const bugs = EP.P.lecturaCalculo(S.lectura, S.cfg).tareas.filter((x) => x.tipo === 'error').length;
+    const filas = tipos.map((x) => `<tr><td><b>${esc(x.tipo_origen || t('tipos.sinTipo'))}</b></td><td class="num">${x.n}</td><td><select class="sm" data-change="tipo-origen" data-tipo="${esc(x.tipo_origen)}">${elegibles.map((c) => `<option value="${c}" ${x.tipo === c ? 'selected' : ''}>${esc(t('tipo.' + c))}</option>`).join('')}</select></td><td>${K.chip(x.cambiado ? 'info' : 'good', t(x.cambiado ? 'tipos.cambiado' : 'mapeo.por.nombre'))}</td></tr>`).join('');
+    const etiquetas = N.etiquetasDe(S.lectura);
+    const etqSel = `<select data-change="tipo-etiqueta"><option value="">${esc(t('tipos.etiquetaNinguna'))}</option>${etiquetas.slice(0, 60).map((e) => `<option value="${esc(e.etiqueta)}" ${S.cfg.etiquetaBug === e.etiqueta ? 'selected' : ''}>${esc(e.etiqueta)} · ${e.n}</option>`).join('')}</select>`;
+    // Estimación: automática (por nombre), ninguna o una columna numérica del export
+    const numericas = S.ficheros && S.ficheros[0] ? N.columnasNumericas(S.ficheros[0].texto) : [];
+    const leidas = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
+    const descartada = (c) => leidas.some((x) => x.columna === c && (x.accion === 'descarta' || (x.campo && x.campo !== 'puntos')));
+    const candidatas = numericas.filter((c) => !descartada(c.columna));
+    const auto = (leidas.filter((x) => x.campo === 'puntos')[0] || {}).columna || null;
+    const actual = S.cfg.columnaEstimacion;
+    const opt = (v, txt) => `<option value="${esc(v)}" ${((actual == null ? '__auto' : actual) === v) ? 'selected' : ''}>${esc(txt)}</option>`;
+    const estSel = `<select data-change="tipo-estimacion">${opt('__auto', auto ? t('tipos.estAuto', { c: auto }) : t('tipos.estAutoNada'))}${candidatas.filter((c) => c.columna !== auto).map((c) => opt(c.columna, t('tipos.estColumna', { c: c.columna, n: c.conValor }))).join('')}${opt('', t('tipos.estNinguna'))}</select>`;
+    const conEst = S.lectura.tareas.filter((x) => x.estimacion != null).length;
+    return K.statusBar('neutral', esc(t('tipos.titular', { n: tipos.length, b: bugs })), [esc(t('tipos.items1')), esc(t('tipos.items2'))])
+      + `<div class="ficha"><p class="small muted" style="margin:0 0 8px">${esc(t('tipos.texto'))}</p><div class="table-wrap"><table><tr><th>${esc(t('tipos.col.origen'))}</th><th class="num">${esc(t('tipos.col.tareas'))}</th><th>${esc(t('tipos.col.comun'))}</th><th>${esc(t('mapeo.col.como'))}</th></tr>${filas}</table></div></div>`
+      + `<div class="fichas cols-2 sp"><div class="ficha"><div class="field"><label>${esc(t('tipos.etiqueta'))}</label>${etqSel}</div><p class="tiny muted">${esc(etiquetas.length ? t('tipos.etiquetaAyuda') : t('tipos.sinEtiquetas'))}</p></div>`
+      + `<div class="ficha"><div class="field"><label>${esc(t('tipos.estimacion'))}</label>${estSel}</div><p class="tiny muted">${esc(t('tipos.estAyuda', { n: conEst, de: S.lectura.tareas.length }))}</p></div></div>`;
+  }
+  EP.cambio('tipo-origen', (el) => aplicarCfg(() => {
+    const m = Object.assign({}, S.cfg.mapeoTipos || {}), propuesto = N.tiposDeOrigen(S.lectura).filter((x) => x.tipo_origen === el.dataset.tipo)[0];
+    if (propuesto && propuesto.propuesto === el.value) delete m[el.dataset.tipo]; else m[el.dataset.tipo] = el.value;
+    S.cfg.mapeoTipos = m;
+  }));
+  EP.cambio('tipo-etiqueta', (el) => aplicarCfg(() => { if (el.value) S.cfg.etiquetaBug = el.value; else delete S.cfg.etiquetaBug; }));
+  // Cambiar la columna de estimación obliga a leer otra vez los ficheros
+  EP.cambio('tipo-estimacion', (el) => {
+    if (el.value === '__auto') delete S.cfg.columnaEstimacion; else S.cfg.columnaEstimacion = el.value;
+    EP.guardarCfg();
+    EP.enSegundoPlano(() => { if (S.ficheros) EP.procesar(S.ficheros); EP.render(); });
+  });
+
   function fuentesEquipos() {
     const det = S.vm.det, campo = S.vm.campoEquipo, info = S.cfg.equiposInfo || {}, fte = S.cfg.fte || {}, coste = S.cfg.coste || {};
     const opciones = det.opcionesEquipo.filter((o) => o.valida);
@@ -306,7 +342,7 @@
   EP.cambio('equipo-propio', (el) => { S.team = el.value; EP.guardarPrefs(); EP.render(); });
   const hoy = () => new Date().toISOString().slice(0, 10);
   const slug = (s) => String(s || 'cliente').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cliente';
-  function documentoDefiniciones() { return N.definiciones(S.lectura, EP.P.clienteDe(S.cfg, S.det), { config: EP.P.cfgCalculo(S.cfg, S.det), det: S.det, modelo: S.r.modelo, generado: new Date() }); }
+  function documentoDefiniciones() { return N.definiciones(EP.P.lecturaCalculo(S.lectura, S.cfg), EP.P.clienteDe(S.cfg, S.det), { config: EP.P.cfgCalculo(S.cfg, S.det), det: S.det, modelo: S.r.modelo, generado: new Date() }); }
   EP.accion('exp-docx', () => EP.descargar(`${t('ajustes.ficheroCatalogo')}-${slug(S.cfg.nombre)}-${hoy()}.docx`, N.aDocx(documentoDefiniciones(), new Date()), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
   EP.accion('exp-md', () => EP.descargar(`${t('ajustes.ficheroCatalogo')}-${slug(S.cfg.nombre)}-${hoy()}.md`, N.aMarkdown(documentoDefiniciones()), 'text/markdown'));
   EP.accion('exp-modelo', () => EP.descargar(`${t('ajustes.ficheroModelo')}.json`, JSON.stringify(N.modeloDeMedida({ generado: new Date() }), null, 2)));

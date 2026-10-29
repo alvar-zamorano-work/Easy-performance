@@ -22,11 +22,15 @@ import { seguimiento } from '../../nucleo/seguimiento.ts';
 import { detalleMedida, tiempoPorEtapa } from '../../nucleo/detalle.ts';
 import { fijarIdioma, idioma } from '../../nucleo/idioma.ts';
 import * as IA from '../../nucleo/ia.ts';
+import { aplicarReglasTipo, tiposDeOrigen, etiquetasDe, TIPOS_ELEGIBLES } from '../../nucleo/reglas-tipo.ts';
+import { columnasNumericas } from '../../adaptadores/comun/numericas.ts';
+import { completarDesdeHistorial } from '../../adaptadores/comun/historial.ts';
 
 const Nucleo = {
   leerJira, OBLIGATORIOS, RECOMENDADOS, leerHoja, aCsv, detectarFormato, mapearColumnas, describirColumnas, detectar, diagnosticar, NOMBRE_AREA, comprobarPaquete, conEfecto, MEDIDAS_INICIATIVA, LATENCIA_DIAS,
   RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA, etapasV0AMapeo, etapaDe, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida,
   fiabilidad, COMPROBACIONES_EQUIPO, seguimiento, detalleMedida, tiempoPorEtapa, fijarIdioma, idioma, formatear, fechaCorta, conPorcentaje, IA,
+  aplicarReglasTipo, tiposDeOrigen, etiquetasDe, TIPOS_ELEGIBLES, columnasNumericas, completarDesdeHistorial,
 };
 
 const w = globalThis as unknown as Record<string, unknown>;

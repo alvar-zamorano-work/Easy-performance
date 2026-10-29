@@ -81,7 +81,11 @@ interface FilaJira {
 }
 
 /** Opciones de lectura: columnas elegidas a mano (campo -> nombre de la columna) cuando la detección no basta. */
-export interface OpcionesLectura { columnas?: Record<string, string> }
+export interface OpcionesLectura {
+  columnas?: Record<string, string>;
+  /** Estimación: sin definir, la que se reconozca (o la elegida en columnas); '' no se usa ninguna; un nombre, esa columna. */
+  columnaEstimacion?: string | null;
+}
 
 /** Campos sin los que un fichero no se puede medir. */
 export const OBLIGATORIOS = ['clave', 'creada'];
@@ -107,6 +111,12 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
       filas = filas.slice(ic);
     }
     const cab = filas[0], mapa = aplicarColumnas(mapearColumnas(cab), cab, opciones.columnas), enlacesIdx = columnasDeEnlaces(cab);
+    if (opciones.columnaEstimacion === '') delete mapa.puntos;
+    else if (opciones.columnaEstimacion) {
+      const i = cab.findIndex((h) => String(h).trim() === opciones.columnaEstimacion);
+      if (i >= 0) mapa.puntos = i;
+      else informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' has no column "', ' no tiene la columna «') + opciones.columnaEstimacion + Tx('": the estimate is detected by name in this file.', '»: en este fichero la estimación se reconoce por su nombre.') });
+    }
     // Filas vacías del final (Excel suele dejarlas) no cuentan
     while (filas.length > 1 && filas[filas.length - 1].every((x) => !String(x || '').trim())) filas.pop();
     const n = filas.length - 1;

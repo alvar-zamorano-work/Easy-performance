@@ -111,7 +111,7 @@
       return { id: n, nombre: n, tipo: prov ? 'proveedor' : 'interno', proveedor: prov ? (i.proveedor || 'Vendor') : null, area: i.area || null,
         usa_sprints: true, fte: fte[n] ? [{ periodo, valor: fte[n], origen: orig[n] || 'declarado' }] : [], limites: {} };
     });
-    return { version: 2, nombre: cfg.nombre || '', sector: cfg.sector || '', plataforma: 'jira', mapeoEstados: mapeo(cfg, det), equipos: { campo: campo(cfg, det), lista },
+    return { version: 2, nombre: cfg.nombre || '', sector: cfg.sector || '', plataforma: det.plataforma || 'jira', mapeoEstados: mapeo(cfg, det), equipos: { campo: campo(cfg, det), lista },
       objetivos: [], medidas: columnas(cfg, det).slice() };
   }
   /** Iniciativa con la forma que necesita el núcleo; las mal formadas (de la carpeta o de datos.js) se ignoran. */
@@ -124,9 +124,18 @@
     return Object.keys(porId).map((k) => porId[k]);
   }
 
+  /** Lectura con los tipos que decide el cliente (mapeo de tipos y etiqueta de bug). Se reutiliza mientras no cambien. */
+  let cacheTipos = { lectura: null, clave: null, salida: null };
+  function lecturaCalculo(lectura, cfg) {
+    const reglas = { mapeoTipos: cfg.mapeoTipos || null, etiquetaBug: cfg.etiquetaBug || null };
+    const clave = JSON.stringify(reglas);
+    if (cacheTipos.lectura !== lectura || cacheTipos.clave !== clave) cacheTipos = { lectura, clave, salida: N.aplicarReglasTipo(lectura, reglas) };
+    return cacheTipos.salida;
+  }
+
   /** Recorrido completo: diagnóstico del núcleo con la configuración del cliente. */
   function diagnosticar(lectura, det, cfg, extraIni, contextoDocs) {
-    return N.diagnosticar(lectura, clienteDe(cfg, det), iniciativas(cfg, extraIni), contextoDocs || null, { config: cfgCalculo(cfg, det), generado: new Date() });
+    return N.diagnosticar(lecturaCalculo(lectura, cfg), clienteDe(cfg, det), iniciativas(cfg, extraIni), contextoDocs || null, { config: cfgCalculo(cfg, det), generado: new Date() });
   }
 
   // ---------- piezas de la VM ----------
@@ -214,7 +223,7 @@
 
   /** La vista-modelo completa. */
   function construirVM(r, entrada) {
-    const { lectura, det, cfg } = entrada;
+    const { det, cfg } = entrada, lectura = lecturaCalculo(entrada.lectura, cfg);
     const cols = columnas(cfg, det);
     const fiab = N.fiabilidad(lectura, det, r.preparacion, r.modelo, cfgCalculo(cfg, det));
     const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg));
@@ -230,5 +239,5 @@
     };
   }
 
-  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, porMapeo, porRevisar, confirmarReconocidos, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, porMapeo, porRevisar, confirmarReconocidos, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
 })();
