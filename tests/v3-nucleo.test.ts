@@ -158,3 +158,14 @@ test('asistente: el paquete de un equipo no trae datos de otros equipos', () => 
   assert.deepEqual(Object.keys(p.medidas.equipos), ['Risk']);
   assert.ok(p.casos_activos.every((c) => c.equipo === 'Risk'));
 });
+
+test('dónde se va el tiempo: curso más espera da el tiempo de ciclo medio, y la espera se reparte por estado', async () => {
+  const { tiempoPorEtapa } = await import('../nucleo/detalle.ts');
+  const e = eq('Payments');
+  const t = tiempoPorEtapa(r.preparacion, e.nombre)!;
+  const d = detalleMedida(r.preparacion, e.nombre, 'ciclo')!;
+  assert.equal(t.n, d.filas.length);
+  const medio = d.filas.reduce((s, f) => s + (f.dias as number), 0) / d.filas.length;
+  assert.ok(Math.abs((t.cursoDias! + t.esperaDias!) - medio) < 1e-6);
+  assert.ok(Math.abs(t.porEstado.reduce((s, x) => s + x.dias, 0) - t.esperaDias!) < 1e-6);
+});

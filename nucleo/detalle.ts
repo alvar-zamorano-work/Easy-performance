@@ -103,3 +103,28 @@ export function detalleMedida(p: Preparacion, equipo: string, medida: string, op
   }
   return { medida, equipo, desde, hasta, criterio, filas };
 }
+
+export interface TiempoEtapas {
+  /** Tareas terminadas en la ventana actual que tienen tiempo en cada estado. */
+  n: number;
+  /** Días medios por tarea en curso y en espera. */
+  cursoDias: number | null;
+  esperaDias: number | null;
+  /** Espera por estado de origen, en días medios por tarea, de más a menos. */
+  porEstado: { estado: string; dias: number }[];
+}
+
+/** Dónde se va el tiempo de un equipo: en curso frente a espera, y la espera por estado. Últimas semanas de la medida (4). */
+export function tiempoPorEtapa(p: Preparacion, equipo: string): TiempoEtapas | null {
+  const items = p.porEquipo[equipo];
+  if (!items) return null;
+  const hasta = p.ctx.semanaFin, desde = new Date(hasta.getTime() - p.ctx.K * 7 * DIA);
+  const t = items.filter((d) => d.entregada && d.ciclo != null && d.t.fechas.terminada! >= desde && d.t.fechas.terminada! < hasta);
+  if (!t.length) return { n: 0, cursoDias: null, esperaDias: null, porEstado: [] };
+  const suma: Record<string, number> = {};
+  let curso = 0, espera = 0;
+  t.forEach((d) => { curso += d.cursoMs; espera += d.esperaMs; Object.entries(d.porEstado).forEach(([e, ms]) => { suma[e] = (suma[e] || 0) + ms; }); });
+  const porTarea = (ms: number) => ms / t.length / DIA;
+  return { n: t.length, cursoDias: porTarea(curso), esperaDias: porTarea(espera),
+    porEstado: Object.entries(suma).map(([estado, ms]) => ({ estado, dias: porTarea(ms) })).sort((a, b) => b.dias - a.dias) };
+}

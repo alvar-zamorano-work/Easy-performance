@@ -1,0 +1,33 @@
+// Núcleo para la página de la v3: se expone en window.Nucleo y window.CATALOGO.
+// La página no calcula cifras: todo sale de aquí.
+
+import { leerJira } from '../../adaptadores/jira/ingerir.ts';
+import { describirColumnas } from '../../adaptadores/jira/columnas.ts';
+import { detectar } from '../../nucleo/detectar.ts';
+import { formatear, fechaCorta, conPorcentaje } from '../../nucleo/formato.ts';
+import { CATALOGO } from '../../nucleo/catalogo.ts';
+import { diagnosticar, NOMBRE_AREA } from '../../nucleo/diagnostico.ts';
+import { comprobarPaquete } from '../../nucleo/paquete.ts';
+import { conEfecto, MEDIDAS_INICIATIVA, LATENCIA_DIAS } from '../../nucleo/iniciativas.ts';
+import { RUBRICA, CRITERIOS_AR } from '../../nucleo/agent-readiness.ts';
+import { MUESTRA_MINIMA } from '../../nucleo/grupos.ts';
+import { etapasV0AMapeo, etapaDe } from '../../nucleo/estados.ts';
+import { definiciones } from '../../nucleo/definiciones.ts';
+import { aDocx, aMarkdown } from '../../nucleo/documento.ts';
+import { capacidadArea, costeDeGrupos } from '../../nucleo/coste.ts';
+import { modeloDeMedida } from '../../nucleo/modelo-medida.ts';
+import { fiabilidad, COMPROBACIONES_EQUIPO } from '../../nucleo/fiabilidad.ts';
+import { seguimiento } from '../../nucleo/seguimiento.ts';
+import { detalleMedida, tiempoPorEtapa } from '../../nucleo/detalle.ts';
+import { fijarIdioma, idioma } from '../../nucleo/idioma.ts';
+import * as IA from '../../nucleo/ia.ts';
+
+const Nucleo = {
+  leerJira, describirColumnas, detectar, diagnosticar, NOMBRE_AREA, comprobarPaquete, conEfecto, MEDIDAS_INICIATIVA, LATENCIA_DIAS,
+  RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA, etapasV0AMapeo, etapaDe, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida,
+  fiabilidad, COMPROBACIONES_EQUIPO, seguimiento, detalleMedida, tiempoPorEtapa, fijarIdioma, idioma, formatear, fechaCorta, conPorcentaje, IA,
+};
+
+const w = globalThis as unknown as Record<string, unknown>;
+w.CATALOGO = CATALOGO;
+w.Nucleo = Nucleo;
