@@ -68,13 +68,33 @@
     const total = o.valores.reduce((s, v) => s + v.n, 0);
     return o.valores.filter((v) => v.n / total >= 0.02).map((v) => v.valor);
   }
+  // El mapeo de estados tiene tres capas: la propuesta del adaptador, la propuesta de la IA (cfg.mapeoIA, sin confirmar)
+  // y lo que el usuario ha confirmado (cfg.mapeoEstados). Solo lo confirmado cuenta como revisado.
   function mapeo(cfg, det) {
     const m = Object.assign({}, det.mapeoEstados);
     if (!cfg.mapeoEstados && cfg.etapas) Object.assign(m, N.etapasV0AMapeo(cfg.etapas, det.mapeoEstados));
     // Solo estados comunes que existen: un mapeo escrito a mano con un estado desconocido no rompe el cálculo
-    const comunes = C().estados.estados, propio = cfg.mapeoEstados || {};
-    Object.keys(propio).forEach((k) => { if (comunes[propio[k]]) m[k] = propio[k]; });
+    const comunes = C().estados.estados;
+    [cfg.mapeoIA || {}, cfg.mapeoEstados || {}].forEach((capa) => {
+      Object.keys(capa).forEach((k) => { if (comunes[capa[k]]) m[k] = capa[k]; });
+    });
     return m;
+  }
+  /** Cómo se ha decidido cada estado: confirmado por el usuario, propuesto por la IA, por nombre, por categoría o por defecto. */
+  function porMapeo(cfg, e) {
+    if ((cfg.mapeoEstados || {})[e.nombre] != null) return 'confirmado';
+    if ((cfg.mapeoIA || {})[e.nombre] != null) return 'ia';
+    return e.propuestaPor;
+  }
+  /** Estados que nadie ha revisado: no se reconocen por su nombre (o los ha cambiado la IA) y el usuario no los ha confirmado. */
+  function porRevisar(cfg, det) {
+    return det.estados.filter((e) => { const p = porMapeo(cfg, e); return p !== 'confirmado' && p !== 'nombre'; });
+  }
+  /** Lo que se guarda al seguir sin revisar: los estados reconocidos por nombre y lo ya confirmado. Los dudosos no. */
+  function confirmarReconocidos(cfg, det) {
+    const m = mapeo(cfg, det), out = Object.assign({}, cfg.mapeoEstados || {});
+    det.estados.forEach((e) => { if (porMapeo(cfg, e) === 'nombre') out[e.nombre] = m[e.nombre]; });
+    return out;
   }
   function cfgCalculo(cfg, det) {
     const c = { campoEquipo: campo(cfg, det), equipos: equipos(cfg, det), mapeoEstados: mapeo(cfg, det), fte: cfg.fte || {}, limites: {} };
@@ -210,5 +230,5 @@
     };
   }
 
-  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, porMapeo, porRevisar, confirmarReconocidos, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
 })();

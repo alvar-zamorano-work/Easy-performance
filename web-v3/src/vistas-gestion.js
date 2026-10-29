@@ -202,28 +202,39 @@
   }
   function fuentesMapeo() {
     const det = S.vm.det, mp = S.vm.mapeo, comunes = Object.keys(cat().estados.estados);
-    const conf = S.cfg.mapeoEstados || {};
+    const conTiempos = det.hayTiempos;
     const filas = det.estados.map((e) => {
-      const propio = conf[e.nombre] != null, por = propio ? 'confirmado' : e.propuestaPor;
-      return `<tr><td><b>${esc(e.nombre)}</b>${e.categoria ? `<div class="tiny muted">${esc(e.categoria)}</div>` : ''}</td><td class="num">${e.actuales}</td><td><select class="sm" data-change="map-estado" data-estado="${esc(e.nombre)}">${comunes.map((c) => `<option value="${c}" ${mp[e.nombre] === c ? 'selected' : ''}>${esc(cat().estados.estados[c].nombre)}</option>`).join('')}</select></td><td>${K.chip(por === 'confirmado' || por === 'nombre' ? 'good' : 'warn', t('mapeo.por.' + por))}</td></tr>`;
+      const por = EP.P.porMapeo(S.cfg, e), dudoso = por !== 'confirmado' && por !== 'nombre';
+      const tiempo = conTiempos ? `<td class="num">${esc(N.formatear(e.horasMedias != null ? e.horasMedias / 24 : null, 'dias'))}</td><td class="num">${e.visitas}</td>` : '';
+      const confirmar = dudoso ? ` <button class="link small" data-action="map-uno" data-estado="${esc(e.nombre)}">${esc(t('mapeo.confirmarUno'))}</button>` : '';
+      return `<tr${dudoso ? ' class="dudoso"' : ''}><td><b>${esc(e.nombre)}</b>${e.categoria ? `<div class="tiny muted">${esc(e.categoria)}</div>` : ''}</td><td class="num">${e.actuales}</td>${tiempo}<td><select class="sm" data-change="map-estado" data-estado="${esc(e.nombre)}">${comunes.map((c) => `<option value="${c}" ${mp[e.nombre] === c ? 'selected' : ''}>${esc(cat().estados.estados[c].nombre)}</option>`).join('')}</select></td><td>${K.chip(dudoso ? 'warn' : 'good', t('mapeo.por.' + por))}${confirmar}</td></tr>`;
     }).join('');
-    const porRevisar = det.estados.filter((e) => e.propuestaPor !== 'nombre' && conf[e.nombre] == null).length;
+    const porRevisar = EP.P.porRevisar(S.cfg, det).length;
     const iaEst = S.iaEstado.mapeo;
-    const acciones = `<div class="row">${hayIa() ? `<button class="btn sm" data-action="ia-mapeo" ${iaEst === 'trabajando' ? 'disabled' : ''}>${esc(iaEst === 'trabajando' ? t('ia.trabajando') : t('mapeo.ia'))}</button>` : ''}<button class="btn sm" data-action="map-confirmar">${esc(t('mapeo.confirmarTodos'))}</button><button class="btn sm" data-action="map-reset">${esc(t('mapeo.reset'))}</button></div>`;
+    const acciones = `<div class="row">${hayIa() ? `<button class="btn sm" data-action="ia-mapeo" ${iaEst === 'trabajando' ? 'disabled' : ''}>${esc(iaEst === 'trabajando' ? t('ia.trabajando') : t('mapeo.ia'))}</button>` : ''}<button class="btn sm" data-action="map-reset">${esc(t('mapeo.reset'))}</button></div>`;
+    const cabTiempo = conTiempos ? `<th class="num">${esc(t('mapeo.col.tiempo'))}</th><th class="num">${esc(t('mapeo.col.pasos'))}</th>` : '';
     return K.statusBar(porRevisar ? 'warn' : 'good', esc(porRevisar ? tn('mapeo.porRevisar', porRevisar) : t('mapeo.todoBien')), [esc(t('mapeo.items1')), esc(t('mapeo.items2'))])
-      + `<div class="ficha"><div class="row between" style="margin-bottom:8px"><span class="small muted">${esc(t('mapeo.texto'))}</span>${acciones}</div><div class="table-wrap"><table><tr><th>${esc(t('mapeo.col.estado'))}</th><th class="num">${esc(t('mapeo.col.ahora'))}</th><th>${esc(t('mapeo.col.comun'))}</th><th>${esc(t('mapeo.col.como'))}</th></tr>${filas}</table></div>${S.iaMapeoAviso ? `<div class="notice info small" style="margin-top:8px">${esc(S.iaMapeoAviso)}</div>` : ''}</div>`;
+      + `<div class="ficha"><div class="row between" style="margin-bottom:8px"><span class="small muted">${esc(t('mapeo.texto'))}</span>${acciones}</div><div class="table-wrap"><table><tr><th>${esc(t('mapeo.col.estado'))}</th><th class="num">${esc(t('mapeo.col.ahora'))}</th>${cabTiempo}<th>${esc(t('mapeo.col.comun'))}</th><th>${esc(t('mapeo.col.como'))}</th></tr>${filas}</table></div>${conTiempos ? '' : `<p class="tiny muted" style="margin-top:8px">${esc(t('mapeo.sinTiempos'))}</p>`}${S.iaMapeoAviso ? `<div class="notice info small" style="margin-top:8px">${esc(S.iaMapeoAviso)}</div>` : ''}</div>`;
   }
   const aplicarCfg = (fn) => { fn(); EP.guardarCfg(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); };
+  // Cambiar un estado a mano o pulsar "Es correcto" lo confirma. No hay "confirmar todos": un dudoso se mira uno a uno.
   EP.cambio('map-estado', (el) => aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.cfg.mapeoEstados || {}, { [el.dataset.estado]: el.value }); }));
-  EP.accion('map-confirmar', () => aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.vm.mapeo); }));
-  EP.accion('map-reset', () => aplicarCfg(() => { delete S.cfg.mapeoEstados; }));
+  EP.accion('map-uno', (el) => aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.cfg.mapeoEstados || {}, { [el.dataset.estado]: S.vm.mapeo[el.dataset.estado] }); }));
+  EP.accion('map-reset', () => aplicarCfg(() => { delete S.cfg.mapeoEstados; delete S.cfg.mapeoIA; }));
   EP.accion('ia-mapeo', () => {
     const estados = S.vm.det.estados.map((e) => ({ nombre: e.nombre, actuales: e.actuales, categoria: e.categoria, propuesta: S.vm.mapeo[e.nombre] }));
     S.iaEstado.mapeo = 'trabajando'; EP.render();
     proveedor()(IA.peticionMapeoEstados(estados, cat())).then((texto) => {
       const v = IA.validarMapeo(texto, estados, cat());
       S.iaEstado.mapeo = 'hecho'; S.iaMapeoAviso = tn('mapeo.iaCambios', v.cambios);
-      aplicarCfg(() => { S.cfg.mapeoEstados = Object.assign({}, S.vm.mapeo, v.mapeo); });
+      // La propuesta de la IA se aplica al cálculo pero queda por revisar: solo los estados sin confirmar y los que cambia.
+      const conf = S.cfg.mapeoEstados || {}, ia = {};
+      S.vm.det.estados.forEach((e) => {
+        const p = v.mapeo[e.nombre];
+        if (!p || conf[e.nombre] != null) return;
+        if (p !== S.vm.mapeo[e.nombre] || e.propuestaPor !== 'nombre') ia[e.nombre] = p;
+      });
+      aplicarCfg(() => { S.cfg.mapeoIA = ia; });
     }).catch((e) => { S.iaEstado.mapeo = 'error'; S.iaMapeoAviso = t('ia.error', { e: e.message }); EP.render(); });
   });
   function fuentesEquipos() {

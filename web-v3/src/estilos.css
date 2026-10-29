@@ -638,3 +638,6 @@ details.mas > summary { cursor: pointer; color: var(--accent); font-size: 14px; 
 @media (max-width: 1100px) { .bls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .fb { grid-template-columns: 1fr auto; } .fb .bala { grid-column: 1 / -1; } .fb-r { grid-column: 1 / -1; } }
 .filtros { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin: 4px 0 16px; } .seg-f { display: flex; gap: 6px; } .pill b { font-weight: 600; margin-left: 2px; }
+
+/* Estados de origen sin revisar en la tabla de mapeo */
+tr.dudoso td:first-child { box-shadow: inset 3px 0 0 var(--warn); }

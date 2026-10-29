@@ -59,14 +59,14 @@
   function revision() {
     const inf = S.vm.informe, det = S.vm.det;
     const campo = det.opcionesEquipo.filter((o) => o.id === S.vm.campoEquipo)[0];
-    const resumen = `<div class="tiles">${K.stat(t('fuentes.tile.tareas'), String(inf.tareas), esc(t('fuentes.tile.tareasPie', { f: inf.filasLeidas })), '')}${K.stat(t('ob.rev.equipos'), String(S.vm.equipos.length), esc(campo && campo.id !== 'todos' ? t('ob.rev.campo', { c: t('campo.' + campo.id) }) : t('ob.rev.sinCampo')), '')}${K.stat(t('ob.rev.semanas'), String(S.vm.semanas.N), esc(t('ob.rev.hasta', { f: fecha(S.vm.fechaDatos) })), '')}${K.stat(t('ob.rev.estados'), String(det.estados.length), esc(tn('mapeo.porRevisar', det.estados.filter((e) => e.propuestaPor !== 'nombre').length)), '')}</div>`;
+    const resumen = `<div class="tiles">${K.stat(t('fuentes.tile.tareas'), String(inf.tareas), esc(t('fuentes.tile.tareasPie', { f: inf.filasLeidas })), '')}${K.stat(t('ob.rev.equipos'), String(S.vm.equipos.length), esc(campo && campo.id !== 'todos' ? t('ob.rev.campo', { c: t('campo.' + campo.id) }) : t('ob.rev.sinCampo')), '')}${K.stat(t('ob.rev.semanas'), String(S.vm.semanas.N), esc(t('ob.rev.hasta', { f: fecha(S.vm.fechaDatos) })), '')}${K.stat(t('ob.rev.estados'), String(det.estados.length), esc(tn('mapeo.porRevisar', P.porRevisar(S.cfg, det).length)), '')}</div>`;
     return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p><div class="panel">${resumen}
       ${EP.vistas.fuentesEquipos()}
       ${pie('data', continuar('mapeo'), `<button class="btn" data-action="import">${esc(t('fuentes.anadir'))}</button>`)}</div></div>`;
   }
   function mapeo() {
     return `<div class="ob wide">${cabeza('mapeo')}<h1>${esc(t('ob.mapeo.titulo'))}</h1><p class="lead">${esc(t('ob.mapeo.lead'))}</p><div class="panel">${EP.vistas.fuentesMapeo()}
-      ${pie('revision', `<button class="btn primary" data-action="ob-mapeo-ok">${esc(t('ob.mapeo.confirmar'))}</button>`)}</div></div>`;
+      ${pie('revision', `<button class="btn primary" data-action="ob-mapeo-ok">${esc(P.porRevisar(S.cfg, S.det).length ? t('ob.mapeo.seguirSinRevisar') : t('ob.mapeo.confirmar'))}</button>`)}</div></div>`;
   }
   function contexto() {
     return `<div class="ob wide">${cabeza('context')}<h1>${esc(t('ob.context.titulo'))}</h1><p class="lead">${esc(t('ob.context.lead'))}</p><div class="panel">${formularioContexto(false)}
@@ -103,7 +103,7 @@
   function trasOnboarding() { /* el arrastre de ficheros lo recoge app.js en cualquier .drop */ }
 
   EP.accion('ob-go', (el) => { S.ob.step = el.dataset.step; S.drill = null; EP.render(); window.scrollTo(0, 0); });
-  EP.accion('ob-mapeo-ok', () => { S.cfg.mapeoEstados = Object.assign({}, S.vm.mapeo); EP.guardarCfg(); S.ob.step = 'context'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); }); });
+  EP.accion('ob-mapeo-ok', () => { S.cfg.mapeoEstados = P.confirmarReconocidos(S.cfg, S.det); EP.guardarCfg(); S.ob.step = 'context'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); }); });
   EP.accion('ob-context-ok', () => {
     if (!S.cfg.contexto || !S.cfg.contexto.hecho) { S.cfg.contexto = Object.assign({}, P.contexto(S.cfg, S.det), { hecho: true }); EP.guardarCfg(); }
     S.ob.step = 'datacheck'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); });

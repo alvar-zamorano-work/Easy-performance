@@ -416,9 +416,8 @@
  "csv.excel2": "Rows above the column titles are skipped. Dates are read in the format of the file.",
  "csv.excel3": "If a needed column is missing, the page asks you to choose it once.",
  "csv.nota": "The files never leave this browser.",
- "mapeo.texto": "Each Jira status is mapped to a common one. Those mapped by name are usually right; check the rest.",
+ "mapeo.texto": "Each Jira status is mapped to a common one. Those mapped by name are usually right. The rest are confirmed one by one: change the common status or press It is right.",
  "mapeo.ia": "Propose with AI",
- "mapeo.confirmarTodos": "Confirm all",
  "mapeo.reset": "Back to the proposal",
  "mapeo.col.estado": "Jira status",
  "mapeo.col.ahora": "Tasks now",
@@ -715,5 +714,11 @@
  "columnas.ayuda.resuelta": "Without it deliveries are not counted.",
  "columnas.ayuda.equipo": "Without it all work counts as one team.",
  "columnas.ayuda.actualizada": "Helps date the export and stalled work.",
- "columnas.ayuda.sprint": "To measure carry-over between sprints."
+ "columnas.ayuda.sprint": "To measure carry-over between sprints.",
+ "mapeo.sinTiempos": "This export has no time in each status. With it, this table shows how long tasks spend in each status, which helps decide the doubtful ones.",
+ "mapeo.col.tiempo": "Average time",
+ "mapeo.confirmarUno": "It is right",
+ "ob.mapeo.seguirSinRevisar": "Continue and review them later",
+ "mapeo.por.ia": "Proposed by AI",
+ "mapeo.col.pasos": "Entries"
 }

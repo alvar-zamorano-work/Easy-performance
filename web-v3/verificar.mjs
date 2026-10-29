@@ -285,6 +285,18 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   const info = await A(p, () => ({ equipos: window.EP.S.vm.equipos.length, veredicto: window.EP.S.vm.dataCheck.veredicto, fiab: window.EP.S.vm.fiabilidad.nivel }));
   ok(`export ${nombre} de principio a fin`, !fallos.length && !p.errores.length, fallos.concat(p.errores).slice(0, 3).join(' | ') || `${info.equipos} equipos · ${info.veredicto} · fiabilidad ${info.fiab}`);
   if (nombre !== 'CSV_EXTRA') await p.screenshot({ path: join(SALIDA, `40-${nombre.replace(/\s+/g, '-')}.png`), fullPage: true });
+  if (nombre === 'con fallos') {
+    // Seguir en el arranque no confirma los estados dudosos: siguen por revisar hasta que alguien los mira uno a uno
+    const dudoso = 'Pre-production window';
+    const antes = await A(p, (d) => ({ guardado: (window.EP.S.cfg.mapeoEstados || {})[d] != null, revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).map((e) => e.nombre) }), dudoso);
+    ok('seguir en el arranque no confirma los estados dudosos', !antes.guardado && antes.revisar.includes(dudoso), JSON.stringify(antes));
+    await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="mapeo"]').click()); await quieto(p);
+    ok('sin botón de confirmar todos', !(await p.$('[data-action="map-confirmar"]')));
+    await clic(p, `[data-action="map-uno"][data-estado="${dudoso}"]`);
+    const despues = await A(p, (d) => ({ guardado: (window.EP.S.cfg.mapeoEstados || {})[d], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).length }), dudoso);
+    ok('"Es correcto" confirma solo ese estado', despues.guardado === 'en_curso' && despues.revisar === antes.revisar.length - 1, JSON.stringify(despues));
+    await p.screenshot({ path: join(SALIDA, '41-mapeo-confirmado.png'), fullPage: true });
+  }
   await p.context().close();
 }
 

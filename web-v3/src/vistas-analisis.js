@@ -133,7 +133,7 @@
   // ---------- Calidad del dato ----------
   function calidad() {
     const vm = S.vm, f = vm.fiabilidad, dc = vm.dataCheck, eqs = EP.visibles();
-    const porConfirmar = vm.det.estados.filter((e) => e.propuestaPor !== 'nombre' && !(S.cfg.mapeoEstados || {})[e.nombre]);
+    const porConfirmar = EP.P.porRevisar(S.cfg, vm.det);
     const tonoNivel = f.nivel === 'alta' ? 'good' : f.nivel === 'media' ? 'warn' : 'bad';
     const tiles = `<div class="tiles">
       ${K.stat(t('calidad.tile.nivel'), esc(t('fiab.nivel.' + f.nivel)), esc(t('calidad.tile.nivelPie')), '', { tone: tonoNivel })}

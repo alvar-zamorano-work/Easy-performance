@@ -416,9 +416,8 @@
  "csv.excel2": "Si hay filas encima de los títulos, se saltan solas. Las fechas se leen con el formato del fichero.",
  "csv.excel3": "Si falta una columna que hace falta, la página te pide que la elijas una vez.",
  "csv.nota": "Los ficheros nunca salen de este navegador.",
- "mapeo.texto": "Cada estado de Jira se traduce a uno común. Los que se han traducido por nombre suelen estar bien; revisa los demás.",
+ "mapeo.texto": "Cada estado de Jira se traduce a uno común. Los que se han traducido por nombre suelen estar bien. Los demás se confirman uno a uno: cambia el estado común o pulsa Es correcto.",
  "mapeo.ia": "Proponer con IA",
- "mapeo.confirmarTodos": "Confirmar todos",
  "mapeo.reset": "Volver a lo propuesto",
  "mapeo.col.estado": "Estado en Jira",
  "mapeo.col.ahora": "Tareas ahora",
@@ -715,5 +714,11 @@
  "columnas.ayuda.resuelta": "Sin ella no se cuentan las entregas.",
  "columnas.ayuda.equipo": "Sin él todo cuenta como un solo equipo.",
  "columnas.ayuda.actualizada": "Ayuda a fechar el export y lo que está parado.",
- "columnas.ayuda.sprint": "Para medir lo que pasa de un sprint a otro."
+ "columnas.ayuda.sprint": "Para medir lo que pasa de un sprint a otro.",
+ "mapeo.sinTiempos": "Este export no trae el tiempo en cada estado. Con él, esta tabla enseña cuánto tiempo pasan las tareas en cada estado, lo que ayuda a decidir los dudosos.",
+ "mapeo.col.tiempo": "Tiempo medio",
+ "mapeo.confirmarUno": "Es correcto",
+ "ob.mapeo.seguirSinRevisar": "Seguir y revisarlos después",
+ "mapeo.por.ia": "Propuesto por IA",
+ "mapeo.col.pasos": "Entradas"
 }
