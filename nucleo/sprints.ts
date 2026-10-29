@@ -28,7 +28,11 @@ export function analizarSprints(items: Derivada[], c: ContextoCalculo): InfoSpri
   const conSprint = recientes.filter((d) => d.t.sprints.length).length;
   if (!recientes.length || conSprint / recientes.length < 0.5) { out.motivo = 'Less than half of recent work is in sprints.'; return out; }
   const semanasSpan = Math.max(1, (c.fechaRef.getTime() - c.det.fechaMin.getTime()) / (7 * DIA));
-  if (lista.length > semanasSpan + 2) { out.motivo = 'There are more sprints than weeks: they do not look like real sprints.'; return out; }
+  // Sprints por equipo de origen: en la visión del área cada equipo tiene los suyos y no se suman
+  const porOrigen: Record<string, Set<string>> = {};
+  lista.forEach((x) => x.tareas.forEach((y) => { (porOrigen[y.d.equipoOrigen] = porOrigen[y.d.equipoOrigen] || new Set()).add(x.nombre); }));
+  const maxPorEquipo = Math.max(0, ...Object.values(porOrigen).map((st) => st.size));
+  if (maxPorEquipo > semanasSpan + 2) { out.motivo = 'There are more sprints than weeks: they do not look like real sprints.'; return out; }
   out.fiables = true;
   out.motivo = null;
   lista.forEach((x) => {

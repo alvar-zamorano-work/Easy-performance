@@ -7,6 +7,7 @@
     "espera",
     "pendiente",
     "errores",
+    "bugs",
     "retrabajo",
     "regularidad",
     "arrastradas",
@@ -122,6 +123,15 @@
         "atencion": 0.3,
         "critico": 0.4
       }
+    },
+    "bugs": {
+      "nombre": "New bugs",
+      "pregunta": "How many bugs come in?",
+      "unidad": "bugs per week",
+      "dir": "menos",
+      "formato": "num",
+      "requiere": "errores",
+      "como": "Bugs created each week, average of the last 4 weeks. Discarded bugs (duplicates, will not do) do not count."
     },
     "retrabajo": {
       "nombre": "Rework",

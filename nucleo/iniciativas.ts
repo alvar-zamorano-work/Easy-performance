@@ -9,7 +9,7 @@ import type { Iniciativa, MedidaObjetivo } from './modelo.ts';
 export const LATENCIA_DIAS = 14;
 /** Medidas que se pueden evaluar en una iniciativa y semanas de su ventana. */
 export const MEDIDAS_INICIATIVA: Record<string, { semanas: number; formato: 'dias' | 'pct' | 'num' }> = {
-  ciclo: { semanas: 4, formato: 'dias' }, total: { semanas: 4, formato: 'dias' }, entregas: { semanas: 4, formato: 'num' },
+  ciclo: { semanas: 4, formato: 'dias' }, total: { semanas: 4, formato: 'dias' }, entregas: { semanas: 4, formato: 'num' }, bugs: { semanas: 4, formato: 'num' },
   espera: { semanas: 8, formato: 'pct' }, retrabajo: { semanas: 8, formato: 'pct' }, errores: { semanas: 8, formato: 'pct' },
   reabiertas: { semanas: 8, formato: 'pct' }, bloqueo: { semanas: 8, formato: 'pct' }, agent_readiness: { semanas: 8, formato: 'pct' },
 };
@@ -44,6 +44,7 @@ export function medidaEnVentana(medida: string, items: Derivada[], v: Ventana, l
     case 'ciclo': { const c = terminadas.filter((d) => d.ciclo != null).map((d) => d.ciclo!); return { valor: c.length >= 5 ? cuantil(c, 0.85) : null, n: c.length }; }
     case 'total': { const c = terminadas.map((d) => d.total!); return { valor: c.length >= 5 ? cuantil(c, 0.85) : null, n: c.length }; }
     case 'entregas': return { valor: semanas > 0 ? terminadas.length / semanas : null, n: terminadas.length };
+    case 'bugs': { const b = items.filter((d) => d.t.tipo === 'error' && !d.descartada && enVentana(d.t.fechas.creada, v)); return { valor: semanas > 0 ? b.length / semanas : null, n: b.length }; }
     case 'espera': {
       const c = terminadas.filter((d) => d.ciclo != null);
       let e = 0, t = 0;

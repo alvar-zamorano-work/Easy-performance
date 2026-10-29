@@ -20,12 +20,12 @@ export const ALIAS: Record<string, string[]> = {
   etiquetas: ['labels', 'etiquetas'],
   sprint: ['sprint', 'sprints'],
   puntos: ['story points', 'story point estimate', 'puntos de historia', 'estimacion de puntos de historia', 'story points estimate', 'estimacion de story points'],
-  equipo: ['team', 'equipo', 'team name', 'nombre del equipo'],
+  equipo: ['team', 'equipo', 'team name', 'nombre del equipo', 'assigned team', 'equipo asignado', 'squad', 'delivery team', 'scrum team'],
   tis: ['[chart] time in status', 'time in status', 'tiempo en estado', '[chart] tiempo en estado'],
   primera: ['[chart] date of first response', 'date of first response', 'fecha de primera respuesta', '[chart] fecha de primera respuesta'],
   padre: ['parent summary', 'resumen del principal', 'resumen principal', 'resumen del elemento principal'],
   padreClave: ['parent key', 'clave del principal', 'clave principal', 'clave del elemento principal'],
-  proyecto: ['project name', 'nombre del proyecto', 'proyecto'],
+  proyecto: ['project name', 'nombre del proyecto', 'proyecto', 'project'],
 };
 
 /** Campos que pueden venir en varias columnas con el mismo nombre (por ejemplo, Sprint). */

@@ -5,7 +5,7 @@ import { DIA, cuantil, desv, inicioSemana, media, spearman, sumarDias } from './
 import { CATALOGO, type Catalogo } from './catalogo.ts';
 import { etapaDe, etapasV0AMapeo } from './estados.ts';
 import { valorEquipo } from './detectar.ts';
-import { estadoMedida, rangoDe, tendencia } from './semaforo.ts';
+import { estadoMedida, estadoReferencia, rangoDe, tendencia } from './semaforo.ts';
 import { analizarSprints } from './sprints.ts';
 import { negocio } from './negocio.ts';
 import { calidadEquipo, cierresEnBloque } from './calidad.ts';
@@ -71,6 +71,7 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
   tareas.forEach((t) => {
     let eq = valor(t) || 'No team';
     if (incluidos && incluidos.indexOf(eq) < 0) return;
+    const equipoOrigen = eq;
     if (cfg.unirComo) eq = cfg.unirComo; // visión del área: los equipos incluidos, juntos como uno solo
     const f = t.fechas;
     const estado = mapeo[t.estado_origen] || t.estado_normalizado;
@@ -91,7 +92,7 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     });
     const descartada = !!(f.terminada && (t.descartada || estado === 'descartado'));
     const d: Derivada = {
-      t, equipo: eq, estado, etapa, cursoMs: curso, esperaMs: espera, porEstado,
+      t, equipo: eq, equipoOrigen, estado, etapa, cursoMs: curso, esperaMs: espera, porEstado,
       entregada: !!(f.terminada && !descartada && (etapa === 'hecho' || !t.estado_origen)),
       descartada,
       conTiempos: t.tiempos_estado.length > 0,
@@ -128,7 +129,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   const s: Series = {
     entregas: vacia(), entradas: vacia(), salidas: vacia(), pendiente: vacia(), wip: vacia(), velocidad: vacia(),
     pendienteEdad: nula(), // antigüedad típica (mediana, días) de lo que espera sin empezar
-    entregasMedia: nula(), ciclo85: nula(), ciclo50: nula(), total85: nula(), espera: nula(), errores: nula(), retrabajo: nula(),
+    entregasMedia: nula(), bugsEntrada: vacia(), bugsMedia: nula(), ciclo85: nula(), ciclo50: nula(), total85: nula(), espera: nula(), errores: nula(), retrabajo: nula(),
     arrastradas: nula(), regularidad: nula(), estimacion: nula(), primera85: nula(), velocidadMedia: nula(),
     reparto: nula<Record<string, number>>(),
     agentReady: nula(),
@@ -138,7 +139,10 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   items.forEach((d) => {
     const t = d.t;
     const wc = c.semanaDe(t.fechas.creada);
-    if (wc >= 0) s.entradas[wc]++;
+    if (wc >= 0) {
+      s.entradas[wc]++;
+      if (t.tipo === 'error' && !d.descartada) s.bugsEntrada[wc]++;
+    }
     if (t.fechas.terminada) {
       const wr = c.semanaDe(t.fechas.terminada);
       if (wr >= 0) {
@@ -172,6 +176,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   for (let w = 0; w < N; w++) {
     if (w >= K - 1) {
       s.entregasMedia[w] = media(s.entregas.slice(w - K + 1, w + 1));
+      s.bugsMedia[w] = media(s.bugsEntrada.slice(w - K + 1, w + 1));
       s.velocidadMedia[w] = media(s.velocidad.slice(w - K + 1, w + 1));
     }
     const v = ventana(w, K);
@@ -225,7 +230,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   const L = N - 1;
   const series: Record<string, (number | null)[]> = {
     entregas: s.entregasMedia, regularidad: s.regularidad, ciclo: s.ciclo85, total: s.total85, espera: s.espera,
-    wip: s.wip, arrastradas: s.arrastradas, errores: s.errores, retrabajo: s.retrabajo, pendiente: s.pendiente,
+    wip: s.wip, arrastradas: s.arrastradas, errores: s.errores, bugs: s.bugsMedia, retrabajo: s.retrabajo, pendiente: s.pendiente,
     estimacion: s.estimacion, velocidad: s.velocidadMedia, primera: s.primera85,
     reparto: s.reparto.map((r) => (r ? r.historia : null)),
     agent_readiness: s.agentReady,
@@ -248,6 +253,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       const refVals = (m.serie || []).slice(Math.max(0, L - win - R + 1), Math.max(0, L - win + 1)).filter((x): x is number => x != null);
       const ref = rangoDe(refVals);
       if (ref) m.ref = ref;
+      m.referencia = estadoReferencia(ref, R);
       const previo = m.serie && L - win >= 0 ? m.serie[L - win] : null;
       m.tendencia = tendencia(m.valor, previo, def.dir);
     }
@@ -255,6 +261,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     const est = estadoMedida(id, m.valor, m.ref, lim, def);
     m.estado = est.estado;
     m.estadoTexto = est.texto;
+    if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
     medidas[id] = m;
   });
 

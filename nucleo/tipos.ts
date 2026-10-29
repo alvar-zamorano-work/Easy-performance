@@ -72,6 +72,8 @@ export interface ConfigCalculo {
 export interface Derivada {
   t: Tarea;
   equipo: string;
+  /** Equipo de la tarea antes de unir el área como un solo equipo (igual a "equipo" fuera de la visión del área). */
+  equipoOrigen: string;
   estado: EstadoNormalizado;
   etapa: Etapa;
   cursoMs: number;
@@ -110,7 +112,16 @@ export interface MedidaCalculada {
   tendencia?: Tendencia | null;
   estado?: Semaforo;
   estadoTexto?: string;
+  /** Qué decide el estado: la banda de lo normal del equipo, un límite del catálogo o uno fijado para el equipo. */
+  estadoPor?: EstadoPor;
+  /** El límite que manda cuando estadoPor es "limite" o "limite_equipo". */
+  limite?: number | null;
+  /** Referencia con 12 semanas (establecida), con 6 a 11 (provisional) o sin banda todavía. */
+  referencia?: EstadoReferencia;
 }
+
+export type EstadoPor = 'banda' | 'limite' | 'limite_equipo';
+export type EstadoReferencia = 'establecida' | 'provisional' | 'sin';
 
 export interface Series {
   entregas: number[];
@@ -121,6 +132,9 @@ export interface Series {
   velocidad: number[];
   pendienteEdad: (number | null)[];
   entregasMedia: (number | null)[];
+  /** Bugs creados cada semana (sin descartados) y su media de 4 semanas. */
+  bugsEntrada: number[];
+  bugsMedia: (number | null)[];
   ciclo85: (number | null)[];
   ciclo50: (number | null)[];
   total85: (number | null)[];

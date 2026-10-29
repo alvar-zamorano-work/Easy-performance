@@ -45,10 +45,24 @@ function sinTextos<T>(x: T): T {
   return recorrer(json(x)) as T;
 }
 
-/** Lo que el núcleo añade después de la v0 (B3: agent readiness) no existe en la v0: se quita antes de comparar. */
+/** Lo que el núcleo añade después de la v0 no existe en la v0: se quita antes de comparar.
+ *  B3: agent readiness. v3: medida de bugs nuevos, y qué decide el estado y el estado de la referencia en cada medida. */
 function sinNovedades(m: unknown): unknown {
-  const x = json(m) as { equipos: { medidas: Record<string, unknown>; series: Record<string, unknown> }[] };
-  x.equipos.forEach((e) => { delete e.medidas.agent_readiness; delete e.series.agentReady; });
+  type M = Record<string, Record<string, unknown>>;
+  const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown> }[] };
+  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; });
+  x.equipos.forEach((e) => {
+    delete e.medidas.agent_readiness; delete e.series.agentReady;
+    delete e.medidas.bugs; delete e.series.bugsEntrada; delete e.series.bugsMedia;
+    limpiar(e.medidas); limpiar(e.kpis);
+  });
+  return x;
+}
+
+function sinSprintsDelArea(m: unknown, area: boolean): unknown {
+  if (!area) return m;
+  const x = m as { equipos: { medidas: Record<string, unknown>; series: Record<string, unknown>; sprints?: unknown; casos?: unknown }[] };
+  x.equipos.forEach((e) => { delete e.medidas.arrastradas; delete e.series.arrastradas; delete e.sprints; delete e.casos; });
   return x;
 }
 
@@ -112,7 +126,10 @@ for (const esc of escenarios()) {
         const mN = recorrido(ficheros, structuredClone(cfg)).modelo;
         const mV = motorV0.calcular(viejo.tareas, detV, structuredClone(cfg));
         assert.ok(mN.equipos.length > 0, 'hay equipos');
-        assert.deepEqual(sinTextos(sinNovedades(mN)), sinTextos(mV));
+        // v3: en la visión del área los sprints se cuentan por equipo de origen. La v0 los sumaba y daba los sprints
+        // del área por no creíbles. Lo que depende de eso (arrastradas, sprints y casos) se comprueba en v3-nucleo.test.ts.
+        const area = nombre === 'área unida con FTE';
+        assert.deepEqual(sinTextos(sinSprintsDelArea(sinNovedades(mN), area)), sinTextos(sinSprintsDelArea(json(mV), area)));
       });
     }
   });

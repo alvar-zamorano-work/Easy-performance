@@ -85,8 +85,11 @@ export function detectar(lectura: Lectura): Deteccion {
     tareas.forEach((t) => { const v = valor(t); if (v) { conValor++; cuenta[v] = (cuenta[v] || 0) + 1; } });
     const valores = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]);
     const cobertura = tareas.length ? conValor / tareas.length : 0;
-    const valida = o.id === TODOS || (valores.length >= 2 && valores.length <= 25 && cobertura >= 0.6);
-    const puntuacion = o.id === TODOS ? 0.1 : (valida ? cobertura + o.peso - (valores.length > 12 ? 0.3 : 0) : -1);
+    // Un campo que dice "equipo" se acepta con más valores: hay áreas de 30 o 40 equipos. El resto, como mucho 25.
+    const esCampoEquipo = o.id === 'equipo';
+    const maxValores = esCampoEquipo ? 60 : 25;
+    const valida = o.id === TODOS || (valores.length >= 2 && valores.length <= maxValores && cobertura >= 0.6);
+    const puntuacion = o.id === TODOS ? 0.1 : (valida ? cobertura + o.peso - (!esCampoEquipo && valores.length > 12 ? 0.3 : 0) : -1);
     return { id: o.id, nombre: o.nombre, valores: valores.map((v) => ({ valor: v, n: cuenta[v] })), cobertura, valida, puntuacion };
   });
   const mejorOpcion = det.opcionesEquipo.slice().sort((a, b) => b.puntuacion - a.puntuacion)[0];

@@ -11,7 +11,7 @@ Este documento fija qué pinta cada pantalla y de qué campo del núcleo sale. L
 3. **Dos idiomas, castellano e inglés.** Toda cadena visible sale de un diccionario o del catálogo. Un test exige cada clave en los dos idiomas y ninguna raya, ni larga ni media.
 4. **Nada de datos de cliente en el repositorio.** Los exports de cliente se prueban fuera, en una carpeta que no se versiona.
 5. **La IA solo ve el paquete de diagnóstico.** Todo lo que devuelve (recomendaciones, lectura de iniciativas, resumen redactado y respuestas del asistente) se valida cifra a cifra antes de enseñarse.
-6. **La v2 sigue intacta.** `web/` no se toca. La v3 vive en `web-v3/` y se construye aparte.
+6. **La v2 sigue intacta.** `web/` no se toca y la rama `feat/pasos` tampoco. La v3 vive en `web-v3/` y se construye aparte. Los cambios del núcleo son compatibles: la página de la v2 sigue pasando su verificación.
 
 ## Arquitectura
 
@@ -262,7 +262,7 @@ No entran en esta versión: los conectores de demostración (enseñaban datos de
 ## Verificación (B5)
 
 - `npm run comprobar`: los 147 tests de la v2 más los nuevos.
-- `npm run verificar-web`: la v2 sigue dando 83 de 83 y su HTML el mismo MD5.
+- `npm run verificar-web`: la página de la v2, construida con el núcleo de la v3, sigue dando 83 de 83. El HTML de la v2 del Escritorio y la rama `feat/pasos` no se tocan.
 - `npm run verificar-web-v3`: onboarding, cada pantalla, panel lateral, presentación, asistente con proveedor falso (respuesta válida y respuesta rechazada) y móvil a 390 px, en castellano y en inglés, sin errores de consola y sin scroll lateral.
 - Prueba con un export real de cliente, fuera del repositorio.
 - Revisión final por un agente que no ha visto el trabajo.

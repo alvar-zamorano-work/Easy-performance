@@ -282,9 +282,10 @@ export function proveedorAnthropic(cfg: ConfigAnthropic): ProveedorIA {
 }
 
 /** Proveedor falso para tests y demos sin red: devuelve lo que se le da, por tipo de petición. */
-export function proveedorFalso(respuestas: { recomendaciones?: unknown; mapeo?: unknown; impacto?: unknown }): ProveedorIA {
+export function proveedorFalso(respuestas: { recomendaciones?: unknown; mapeo?: unknown; impacto?: unknown; chat?: unknown }): ProveedorIA {
   return async (p) => {
-    const cual = p.system === SISTEMA_MAPEO ? respuestas.mapeo : p.system === SISTEMA_IMPACTO ? respuestas.impacto : respuestas.recomendaciones;
+    const cual = p.system === SISTEMA_MAPEO ? respuestas.mapeo : p.system === SISTEMA_IMPACTO ? respuestas.impacto
+      : p.system.startsWith('You answer questions') ? respuestas.chat : respuestas.recomendaciones;
     return typeof cual === 'string' ? cual : JSON.stringify(cual ?? []);
   };
 }
@@ -322,4 +323,155 @@ export async function evaluarPaquete(proveedor: ProveedorIA, paquete: Paquete, c
   const citados = new Set(r.recomendaciones.map((x) => x.causa.caso).filter(Boolean));
   const encontrados = casosEsperados.filter((c) => citados.has(c));
   return { ...r, esperados: casosEsperados, encontrados, faltan: casosEsperados.filter((c) => !citados.has(c)), bruto: texto };
+}
+
+// ---------- asistente de conversación y resumen redactado (v3) ----------
+// El asistente responde sobre el paquete de diagnóstico y devuelve, además del texto, las cifras que usa.
+// validarChat comprueba cada cifra contra el paquete y cada número del texto contra esas cifras: lo que no cuadra no se enseña.
+
+export type Idioma = 'es' | 'en';
+export type RolIA = 'direccion' | 'pmo' | 'equipo';
+export interface CifraIA { equipo: string | null; medida: string; valor: number }
+export interface RespuestaIA { respuesta: string; cifras: CifraIA[] }
+export interface MensajeIA { rol: 'usuario' | 'asistente'; texto: string }
+export interface ResultadoChat { ok: boolean; respuesta: RespuestaIA | null; problemas: string[] }
+
+const ESCRITURA: Record<Idioma, string> = {
+  en: 'Write in plain English. Short sentences, one idea per sentence. No dashes as punctuation. No emojis.',
+  es: 'Escribe en castellano llano de España. Frases cortas, una idea por frase. Sin rayas como puntuación: usa comas, dos puntos o puntos. Escribe "IA", nunca "AI". Sin emojis.',
+};
+const LECTOR: Record<RolIA, string> = {
+  direccion: 'The reader is management: overall state, where there is a real problem with evidence, what to decide. No tool jargon.',
+  pmo: 'The reader is the PMO or delivery lead: data reliability, what to fix in how data is captured, which comparisons are valid.',
+  equipo: 'The reader is the team itself: its flow against its own normal and what to do this week. No comparison with other teams.',
+};
+
+const sistemaChat = (idioma: Idioma) => `You answer questions about the delivery performance of software teams. You receive a diagnostic package with aggregated figures per team and for the whole area, plus data reliability notes. You never see tickets, people or raw data.
+
+Rules:
+1. Use only what is in the package. If it does not have the answer, say so and say where on the page to look.
+2. Every number you write in "respuesta" must also be in "cifras", with the team (null for the whole area), the measure id and the value exactly as stored in the package. Percentages are stored as fractions (0.25): write them as percentages in the text and as stored in "cifras".
+3. Each team is compared only against its own normal range. Never rank teams. Never mention people.
+4. If a figure has low reliability, say so before drawing conclusions from it.
+5. ${ESCRITURA[idioma]}
+6. Answer with JSON only: {"respuesta": string, "cifras": [{"equipo": string|null, "medida": string, "valor": number}]}.`;
+
+/** El paquete recortado a un equipo: sus medidas, sus casos y el área como contexto. */
+export function paqueteDeEquipo(p: Paquete, equipo: string): Paquete {
+  const x = JSON.parse(JSON.stringify(p)) as any;
+  x.equipos = x.equipos.filter((e: any) => e.id === equipo);
+  x.medidas.equipos = equipo in x.medidas.equipos ? { [equipo]: x.medidas.equipos[equipo] } : {};
+  x.casos_activos = x.casos_activos.filter((c: any) => c.equipo === equipo);
+  x.casos_grupo = []; x.comparaciones = [];
+  x.iniciativas = x.iniciativas.filter((i: any) => i.equipos.includes(equipo));
+  x.agent_readiness.equipos = equipo in x.agent_readiness.equipos ? { [equipo]: x.agent_readiness.equipos[equipo] } : {};
+  x.datos.porEquipo = equipo in x.datos.porEquipo ? { [equipo]: x.datos.porEquipo[equipo] } : {};
+  return x as Paquete;
+}
+
+export interface OpcionesChat {
+  idioma: Idioma;
+  rol: RolIA;
+  /** Pantalla desde la que se pregunta, para dar contexto ("Resumen", "Equipo Pagos"...). */
+  pantalla?: string;
+  /** Si se pregunta desde la ficha de un equipo, el paquete se recorta a ese equipo. */
+  equipo?: string | null;
+  historial?: MensajeIA[];
+  /** Agregados que no están en el paquete y la pantalla enseña (fiabilidad, data check). Solo cifras y textos cortos. */
+  extra?: Record<string, unknown>;
+}
+
+function cuerpoChat(paquete: Paquete, o: OpcionesChat, catalogo: Catalogo): string {
+  const p = o.equipo ? paqueteDeEquipo(paquete, o.equipo) : paquete;
+  const medidas = Object.entries(catalogo.medidas).map(([id, m]) => `- ${id}: ${m.nombre} (${m.unidad})`).join('\n');
+  return `Diagnostic package (JSON):\n${JSON.stringify(paqueteParaPrompt(p))}\n\n${o.extra ? `Other figures shown on the page (JSON):\n${JSON.stringify(o.extra)}\n\n` : ''}Measures (id: name):\n${medidas}\n\nTeam ids: ${p.equipos.map((e) => e.id).join(', ')}.\n${LECTOR[o.rol]}${o.pantalla ? `\nThe user is on this screen: ${o.pantalla}.` : ''}`;
+}
+
+export function peticionChat(paquete: Paquete, pregunta: string, o: OpcionesChat, catalogo: Catalogo = CATALOGO): PeticionIA {
+  const hist = (o.historial || []).slice(-6).map((m) => `${m.rol === 'usuario' ? 'User' : 'Assistant'}: ${m.texto}`).join('\n');
+  const user = `${cuerpoChat(paquete, o, catalogo)}\n\n${hist ? `Conversation so far:\n${hist}\n\n` : ''}Question: ${pregunta}\n\nAnswer in at most 150 words.`;
+  return { system: sistemaChat(o.idioma), user, maxTokens: 1500 };
+}
+
+export function peticionResumen(paquete: Paquete, o: OpcionesChat, catalogo: Catalogo = CATALOGO): PeticionIA {
+  const user = `${cuerpoChat(paquete, o, catalogo)}\n\nWrite the summary for this reader in three short blocks separated by a blank line: what is happening, how far the data can be trusted, and what to do first. At most 180 words. Use "- " for list items.`;
+  return { system: sistemaChat(o.idioma), user, maxTokens: 1500 };
+}
+
+/** Todos los números de un valor cualquiera (incluidos los que van dentro de textos como "92%" o "5 of 6"). */
+function numerosDe(x: unknown, out: number[] = []): number[] {
+  if (typeof x === 'number' && isFinite(x)) out.push(x);
+  else if (typeof x === 'string') (x.match(/\d+(?:[.,]\d+)?/g) || []).forEach((s) => out.push(parseFloat(s.replace(',', '.'))));
+  else if (Array.isArray(x)) x.forEach((v) => numerosDe(v, out));
+  else if (x && typeof x === 'object') Object.values(x).forEach((v) => numerosDe(v, out));
+  return out;
+}
+
+/** Quita del texto lo que lleva números pero no son cifras: fechas, nombres de equipo y semanas de las ventanas. */
+function sinNumerosNeutros(texto: string, equipos: string[]): string {
+  let t = texto;
+  equipos.slice().sort((a, b) => b.length - a.length).forEach((e) => { t = t.split(e).join(' '); });
+  return t
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' ')
+    .replace(/\b\d{1,2}[/.]\d{1,2}[/.]\d{2,4}\b/g, ' ')
+    .replace(/\b\d{1,2}\s+(de\s+)?(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic|jan|apr|aug|dec)[a-z]*\.?(\s+(de\s+)?\d{4})?/gi, ' ')
+    .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(,?\s+\d{4})?/gi, ' ')
+    .replace(/\b20[2-3]\d\b/g, ' ');
+}
+
+/** Valores donde puede estar una cifra del asistente: la medida de ese equipo (o del área) con su rango y su serie reciente,
+ *  los datos de los casos de ese equipo, su agent readiness, las comparaciones de esa medida y las iniciativas que la miden.
+ *  Más estricto que la validación de recomendaciones: una cifra tiene que estar donde dice que está. */
+function coincideEstricto(p: Paquete, equipo: string | null, medida: string, valor: number): boolean {
+  const out: number[] = [];
+  const m = equipo ? (p.medidas.equipos as any)[equipo]?.[medida] : (p.medidas.area as any)?.[medida];
+  if (m && m.disponible) {
+    out.push(m.valor);
+    if (m.rango) out.push(m.rango.lo, m.rango.hi, m.rango.mediana);
+    if (Array.isArray(m.serie)) out.push(...m.serie.slice(-8));
+  }
+  for (const c of p.casos_activos) if (c.equipo === equipo) out.push(...Object.values(c.datos).filter((v): v is number => typeof v === 'number'));
+  if (medida === 'agent_readiness') { const ar = (p.agent_readiness.equipos as any)[equipo || '']; if (ar) out.push(ar.listos, ar.indiceMedio); }
+  for (const c of p.comparaciones) { const cm = (c.medidas as any)[medida]; if (cm) for (const sg of cm.segmentos) for (const x of Object.values(sg.porGrupo) as any[]) if (x.valor != null) out.push(x.valor); }
+  for (const i of p.iniciativas) if (!equipo || i.equipos.includes(equipo)) for (const x of i.evaluacion.resultados) if (x.medida === medida) out.push(...[x.antes, x.despues, x.efecto, x.control?.antes, x.control?.despues].filter((v): v is number => typeof v === 'number'));
+  return out.filter((v) => v != null && isFinite(v)).some((v) => cerca(valor, v) || cerca(valor, v * 100) || cerca(valor / 100, v));
+}
+
+const limpiarRayas = (t: string) => t.replace(/\s*[—–]\s*/g, ', ');
+
+/** Valida una respuesta del asistente o un resumen redactado. Sirve para los dos idiomas. */
+export function validarChat(texto: string, paquete: Paquete, o: { equipo?: string | null; extra?: Record<string, unknown> } = {}): ResultadoChat {
+  const problemas: string[] = [];
+  let bruto: any;
+  try { bruto = extraerJson(texto); } catch (e) { return { ok: false, respuesta: null, problemas: ['The answer is not valid JSON: ' + (e as Error).message] }; }
+  const respuesta = bruto && typeof bruto.respuesta === 'string' ? limpiarRayas(bruto.respuesta.trim()) : '';
+  if (!respuesta) return { ok: false, respuesta: null, problemas: ['Empty answer.'] };
+  const p = o.equipo ? paqueteDeEquipo(paquete, o.equipo) : paquete;
+  const equipos = new Set(p.equipos.map((e) => e.id));
+  const lista = Array.isArray(bruto.cifras) ? bruto.cifras : [];
+  const extra = o.extra ? numerosDe(o.extra) : [];
+  const cifras: CifraIA[] = [];
+  for (const c of lista) {
+    const eq = c && c.equipo != null && c.equipo !== 'area' ? String(c.equipo) : null;
+    const med = c && typeof c.medida === 'string' ? c.medida.trim() : '';
+    const val = numero(c && c.valor);
+    if (val == null) { problemas.push('Figure without a number.'); continue; }
+    if (eq && !equipos.has(eq)) { problemas.push('Unknown team in a figure: ' + eq); continue; }
+    const enPaquete = /^[a-z_]+$/.test(med) && coincideEstricto(p, eq, med, val);
+    const enExtra = extra.some((v) => cerca(val, v) || cerca(val * 100, v) || cerca(val, v * 100));
+    if (!enPaquete && !enExtra) { problemas.push(`Figure not in the package: ${eq || 'area'} ${med} ${val}`); continue; }
+    cifras.push({ equipo: eq, medida: med, valor: val });
+  }
+  // Cada número del texto tiene que salir de una cifra validada (tal cual, en porcentaje o redondeado),
+  // o ser un recuento pequeño de equipos o una de las ventanas de semanas.
+  const validos = cifras.map((c) => c.valor).concat(extra);
+  const neutros = new Set([4, 8, 12, 16, 26, 52]);
+  const nEquipos = paquete.equipos.length;
+  const apoyado = (n: number) => validos.some((v) => cerca(n, v) || cerca(n, v * 100) || Math.abs(n - Math.round(v * 10) / 10) < 0.051 || Math.abs(n - Math.round(v)) < 0.51 || Math.abs(n - Math.round(v * 100)) < 0.51 || Math.abs(n - Math.round(v * 1000) / 10) < 0.051)
+    || neutros.has(n) || (Number.isInteger(n) && n >= 0 && n <= nEquipos);
+  const enTexto = (sinNumerosNeutros(respuesta, [...paquete.equipos.map((e) => e.id)]).match(/\d+(?:[.,]\d+)?/g) || []).map((s) => parseFloat(s.replace(',', '.')));
+  const sinApoyo = enTexto.filter((n) => !apoyado(n));
+  if (sinApoyo.length) problemas.push('Numbers in the text that are not in the package: ' + [...new Set(sinApoyo)].join(', '));
+  const ok = problemas.length === 0;
+  return { ok, respuesta: ok ? { respuesta, cifras } : null, problemas };
 }

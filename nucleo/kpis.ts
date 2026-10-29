@@ -1,6 +1,6 @@
 // Indicadores de comité: cinco cifras por equipo y por área, cada una frente a su propia historia.
 
-import { estadoMedida, rangoDe } from './semaforo.ts';
+import { estadoMedida, estadoReferencia, rangoDe } from './semaforo.ts';
 import type { DefSemaforo } from './catalogo.ts';
 import type { ContextoCalculo, MedidaCalculada, ResultadoEquipo } from './tipos.ts';
 
@@ -16,15 +16,17 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
     const refVals = serie.slice(Math.max(0, L - win - R + 1), Math.max(0, L - win + 1)).filter((x): x is number => x != null);
     const ref = rangoDe(refVals);
     if (ref) m.ref = ref;
+    m.referencia = estadoReferencia(ref, R);
     const est = estadoMedida(id, m.valor, m.ref, null, def);
     m.estado = est.estado;
     m.estadoTexto = est.texto;
+    if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
     return m;
   }
   function copia(id: string, base: string): MedidaCalculada {
     const b = M[base];
     if (!b || !b.disponible) return { id, disponible: false, motivo: b ? b.motivo : 'Not available with this data.' };
-    return { id, disponible: true, serie: b.serie, valor: b.valor, ref: b.ref, ventana: b.ventana, estado: b.estado, estadoTexto: b.estadoTexto };
+    return { id, disponible: true, serie: b.serie, valor: b.valor, ref: b.ref, ventana: b.ventana, estado: b.estado, estadoTexto: b.estadoTexto, estadoPor: b.estadoPor, limite: b.limite, referencia: b.referencia };
   }
 
   // Throughput / FTE: tareas terminadas al mes (media de 4 semanas) entre las personas equivalentes del equipo.
