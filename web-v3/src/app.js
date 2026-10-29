@@ -88,7 +88,7 @@
     const lectura = N.leerJira(ficheros);
     if (!lectura.tareas.length) { toast(t('carga.sinTareas') + ' ' + ((lectura.informe.avisos[0] || {}).texto || ''), 'bad'); return false; }
     S.lectura = lectura; S.det = N.detectar(lectura); S.ficheros = ficheros; S.cargadoEn = new Date();
-    S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null;
+    S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; S.recFilter = 'todos'; S.recLevel = null;
     recalcular();
     return true;
   }
@@ -104,7 +104,8 @@
         try {
           if (!procesar(fs)) return;
           idbSet('ficheros', fs);
-          if (EP.cortes) EP.cortes.capturar();
+          // El corte se guarda con la configuración ya confirmada: al terminar la primera vez, o ahora si ya estaba hecha
+          if (EP.cortes && S.onboarded) EP.cortes.capturar();
           if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; toast(tn('carga.hecho', fs.length)); }
           else S.ob.step = 'revision';
           render(); window.scrollTo(0, 0);
@@ -118,7 +119,7 @@
     const csv = (byId('demo-csv') || {}).textContent || '';
     if (!csv.trim()) { toast(t('demo.noHay'), 'bad'); return false; }
     let dc = {}; try { dc = JSON.parse(byId('demo-cliente').textContent || '{}'); } catch (e) { dc = {}; }
-    if (!S.demo) S.real = { lectura: S.lectura, det: S.det, ficheros: S.ficheros, cfg: S.cfg, r: S.r, vm: S.vm, contextoDocs: S.contextoDocs, extraIni: S.extraIni, onboarded: S.onboarded, view: S.view };
+    if (!S.demo) S.real = { team: S.team, lectura: S.lectura, det: S.det, ficheros: S.ficheros, cfg: S.cfg, r: S.r, vm: S.vm, contextoDocs: S.contextoDocs, extraIni: S.extraIni, onboarded: S.onboarded, view: S.view };
     S.demo = true;
     S.cfg = { nombre: dc.nombre, sector: dc.sector, equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {}, contexto: dc.preguntas };
     S.extraIni = dc.iniciativas || []; S.contextoDocs = dc.contexto || null;
@@ -130,6 +131,9 @@
     S.demo = false;
     Object.assign(S, { lectura: r.lectura || null, det: r.det || null, ficheros: r.ficheros || null, cfg: r.cfg || leerLocal(CLAVE_CFG) || {}, r: r.r || null, vm: r.vm || null, contextoDocs: r.contextoDocs || null, extraIni: r.extraIni || [] });
     S.onboarded = !!(r.onboarded && S.vm); S.view = r.view || 'resumen'; S.real = null;
+    // Nada de la demo se queda: equipo elegido, filtros, textos de IA y panel abierto
+    Object.assign(S, { team: r.team || null, recFilter: 'todos', recLevel: null, narrativas: {}, iaRecs: null, iaRecsDe: null, iaImpacto: null, drill: null, iniForm: null });
+    if (S.vm && (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team))) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
     if (!S.vm) S.ob.step = 'welcome';
     if (pintar !== false) render();
   }
@@ -210,7 +214,7 @@
   accion('go', (el) => go(el.dataset.view));
   accion('open-team', (el) => openTeam(el.dataset.team));
   accion('team-tab', (el) => { if (el.dataset.team === '__comparar') { S.teamCompare = true; } else { S.team = el.dataset.team; S.teamCompare = false; } S.drill = null; render(); });
-  accion('set-role', (el) => { S.role = el.dataset.role; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
+  accion('set-role', (el) => { S.role = el.dataset.role; S.recFilter = 'todos'; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
   accion('set-lang', (el) => { I.fijar(el.dataset.lang); guardarPrefs(); if (S.vm) enSegundoPlano(() => { recalcular(); render(); }); else render(); });
   accion('toast-close', () => document.querySelector('.toast').classList.add('hidden'));
   accion('retry', () => { S.error = null; try { if (S.lectura) recalcular(); } catch (e) { S.error = { message: e.message, stack: e.stack }; } render(); });
@@ -225,9 +229,11 @@
   accion('print', () => window.print());
   accion('clear-all', () => {
     if (!window.confirm(t('ajustes.borrarConfirma'))) return;
-    try { localStorage.removeItem(CLAVE_CFG); localStorage.removeItem(CLAVE_PREFS); sessionStorage.removeItem(CLAVE_IA); } catch (e) { }
-    idbSet('ficheros', null); if (EP.cortes) EP.cortes.borrarTodo();
-    Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'welcome' }, error: null, dismissed: {}, iaRecs: null, narrativas: {} });
+    try { localStorage.removeItem(CLAVE_CFG); localStorage.removeItem(CLAVE_PREFS); sessionStorage.removeItem(CLAVE_IA); sessionStorage.removeItem('easyperformance.v3.chat'); } catch (e) { }
+    idbSet('ficheros', null); idbSet('carpeta', null); if (EP.cortes) EP.cortes.borrarTodo();
+    if (S.chat) S.chat = { open: false, msgs: [], busy: false, draft: '' };
+    Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'welcome' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
+      extraIni: [], contextoDocs: null, carpeta: null, team: null, recFilter: 'todos', recLevel: null, iniForm: null, drill: null });
     guardarClave(''); render();
   });
 
@@ -277,8 +283,10 @@
       if (window.EASY_PERFORMANCE_CONTEXTO && window.EASY_PERFORMANCE_CONTEXTO.documentos) S.contextoDocs = window.EASY_PERFORMANCE_CONTEXTO;
     }
     if (!fs) fs = await idbGet('ficheros');
-    if (fs && fs.length) { try { if (procesar(fs) && EP.cortes) EP.cortes.capturar(false, !deCarpeta); } catch (e) { S.error = { message: e.message, stack: e.stack }; } }
+    if (fs && fs.length) { try { if (procesar(fs) && EP.cortes && S.onboarded) EP.cortes.capturar(false, !deCarpeta); } catch (e) { S.error = { message: e.message, stack: e.stack }; } }
     if (!S.vm) S.onboarded = false;
+    // Datos cargados pero primera vez sin terminar: se sigue por la revisión
+    if (S.vm && !S.onboarded) S.ob.step = 'revision';
     if (S.onboarded && S.vm) S.view = INICIO_ROL[S.role];
     render();
   }

@@ -45,7 +45,7 @@
 
   function bienvenida() {
     return `<div class="ob">${cabeza('welcome')}<h1>${esc(t('ob.welcome.titulo'))}</h1><p class="lead">${esc(t('ob.welcome.lead'))}</p>
-      <div class="row"><button class="btn primary" data-action="ob-go" data-step="data">${esc(t('ob.empezar'))}</button><button class="btn" data-action="demo">${esc(t('ob.demo'))}</button></div>
+      <div class="row"><button class="btn primary" data-action="ob-go" data-step="${S.vm && !S.demo ? 'revision' : 'data'}">${esc(S.vm && !S.demo ? t('ob.data.seguir', { n: S.vm.informe.tareas }) : t('ob.empezar'))}</button><button class="btn" data-action="demo">${esc(t('ob.demo'))}</button></div>
       <div class="what">${[1, 2, 3, 4, 5].map((i) => `<div><b>${i}. ${esc(t('ob.what' + i + '.t'))}</b>${esc(t('ob.what' + i + '.d'))}</div>`).join('')}</div>
       <p class="small muted" style="margin-top:22px">${esc(t('ob.privacidad'))}</p></div>`;
   }
@@ -54,7 +54,7 @@
     return `<div class="ob">${cabeza('data')}<h1>${esc(t('ob.data.titulo'))}</h1><p class="lead">${esc(t('ob.data.lead'))}</p>${excel}
       <div class="drop" data-action="import" role="button" tabindex="0">${esc(t('ob.data.soltar'))}</div>
       <div class="panel">${EP.vistas.ayudaCsv()}</div>
-      ${pie('welcome', '', `<span class="small muted">${esc(t('ob.data.sinExports'))}</span><button class="btn" data-action="demo">${esc(t('ob.demo'))}</button>`)}</div>`;
+      ${pie('welcome', S.vm && !S.demo ? continuar('revision', t('ob.data.seguir', { n: S.vm.informe.tareas })) : '', `<span class="small muted">${esc(t('ob.data.sinExports'))}</span><button class="btn" data-action="demo">${esc(t('ob.demo'))}</button>`)}</div>`;
   }
   function revision() {
     const inf = S.vm.informe, det = S.vm.det;
@@ -110,7 +110,7 @@
   });
   EP.accion('ob-role', (el) => { S.role = el.dataset.role; EP.render(); });
   EP.accion('ob-team', (el) => { S.team = el.dataset.team; EP.render(); });
-  EP.accion('ob-finish', () => { S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg(); EP.render(); window.scrollTo(0, 0); });
+  EP.accion('ob-finish', () => { S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg(); if (EP.cortes) EP.cortes.capturar(S.demo); EP.render(); window.scrollTo(0, 0); });
 
   Object.assign(EP.vistas, { onboarding, trasOnboarding, formularioContexto });
 })();

@@ -42,7 +42,7 @@
         EP.toast(tn('carpeta.leidos', fs.length));
       }
     } catch (e) {
-      EP.toast(t('carpeta.sinPermiso'), 'bad');
+      EP.toast(e && e.message === 'permiso' ? t('carpeta.sinPermiso') : t('carpeta.error', { e: e && e.message ? e.message : '' }), 'bad');
     } finally { EP.ocupado(false); EP.render(); }
   }
   function elegir() {
@@ -62,9 +62,15 @@
       await w.write(datos); await w.close(); return true;
     } catch (e) { return false; }
   }
+  /** Borra un fichero de una subcarpeta (por ejemplo, la iniciativa que se quita). */
+  async function borrar(subc, nombre) {
+    const h = S.carpeta;
+    if (!h || !h.queryPermission || S.demo) return false;
+    try { if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') return false; const d = await h.getDirectoryHandle(subc); await d.removeEntry(nombre); return true; } catch (e) { return false; }
+  }
   const recordar = () => EP.idbGet('carpeta').then((h) => { if (h) S.carpeta = h; }).catch(() => { });
 
   EP.accion('carpeta-elegir', elegir);
   EP.accion('carpeta-leer', () => leer());
-  EP.carpeta = { elegir, leer, escribir, recordar };
+  EP.carpeta = { elegir, leer, escribir, borrar, recordar };
 })();

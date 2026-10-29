@@ -16,13 +16,14 @@
   // Enlaza nombres de equipo en una respuesta ya convertida a HTML
   function enlazar(html) {
     if (!S.vm) return html;
-    const nombres = S.vm.equipos.map((e) => e.nombre).sort((a, b) => b.length - a.length);
-    return String(html).split(/(<[^>]+>)/).map((p) => {
-      if (!p || p.charAt(0) === '<') return p;
-      let x = p;
-      nombres.forEach((n) => { const re = new RegExp('(^|[^\\w])(' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')(?![\\w])', 'g'); x = x.replace(re, `$1<button class="link" data-action="open-team" data-team="${esc(n)}">$2</button>`); });
-      return x;
-    }).join('');
+    // Una sola pasada con todos los nombres (los más largos primero), sobre el texto ya escapado y fuera de las etiquetas
+    const porEscapado = {};
+    S.vm.equipos.forEach((e) => { porEscapado[esc(e.nombre)] = e.nombre; });
+    const claves = Object.keys(porEscapado).sort((a, b) => b.length - a.length);
+    if (!claves.length) return html;
+    const re = new RegExp('(^|[^\\wÀ-ÿ])(' + claves.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')(?![\\wÀ-ÿ])', 'g');
+    return String(html).split(/(<[^>]+>)/).map((p) => (!p || p.charAt(0) === '<' ? p
+      : p.replace(re, (m0, antes, n) => `${antes}<button class="link" data-action="open-team" data-team="${esc(porEscapado[n])}">${n}</button>`))).join('');
   }
 
   function asistente() {

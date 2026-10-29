@@ -135,12 +135,22 @@ async function recorrer(p, etiqueta) {
   const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('[data-action="drill-csv"]')]);
   ok('CSV de la lista de tareas', /\.csv$/.test(descarga.suggestedFilename()));
   await p.keyboard.press('Escape');
+  await p.click('details.mas summary'); await p.waitForTimeout(100);
+  ok('ficha del equipo: lo que no es baseline va plegado', await p.isVisible('details.mas[open] .fila-dot'));
   for (const [sel, nombre] of [['.fila-dot[data-kind="comprobacion"]', 'comprobación'], ['.rrow[data-kind="caso"]', 'caso'], ['[data-kind="resumen"]', 'resumen redactado'], ['[data-kind="personalizar"]', 'personalizar'], ['[data-kind="ayuda"]', 'ayuda']]) {
     await p.click(sel); await p.waitForTimeout(200);
     const t = (await p.textContent('#drawer')) || '';
     ok('panel: ' + nombre, t.length > 40 && !(await estado(p)).error);
     await p.keyboard.press('Escape'); await p.waitForTimeout(100);
   }
+  // Resumen centrado en la baseline: una fila por indicador y equipo, con su barra y su rango
+  await ir(p, 'resumen'); await p.waitForTimeout(100);
+  const filasBl = await p.$$eval('#page .fb', (x) => x.length), nEq = await A(p, () => window.EP.visibles().length), nK = await A(p, () => window.EP.kit.destacados().length);
+  ok('resumen: la baseline de cada equipo', filasBl === nEq * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
+  ok('el menú dice Baseline', /Baseline/.test(await p.textContent('#nav')) && !/Referencias/.test(await p.textContent('#nav')));
+  // Gráficos con el eje desde cero: el punto más bajo nunca toca el techo por ruido
+  await ir(p, 'referencias'); await p.waitForTimeout(100);
+  ok('página Baseline con un gráfico por indicador', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nEq * nK);
   // Personalizar: cambia los indicadores destacados del rol
   await ir(p, 'resumen'); await p.click('[data-kind="personalizar"]'); await p.waitForTimeout(150);
   await p.click('input[data-change="pref-tile"][value="ciclo"]'); await p.waitForTimeout(150);

@@ -80,7 +80,7 @@ Los cuatro indicadores destacados son los cuatro primeros visibles. El usuario p
 
 ## Pantalla por pantalla
 
-La navegación no cambia: Resumen, Equipos, Referencias, Calidad del dato, Recomendaciones, Iniciativas, Cortes, Fuentes y mapeo, Ajustes. Cada pantalla mantiene la plantilla de fichas: barra de estado, cuatro indicadores y rejilla de fichas.
+La navegación no cambia: Resumen, Equipos, Baseline (antes Referencias), Calidad del dato, Recomendaciones, Iniciativas, Cortes, Fuentes y mapeo, Ajustes. Cada pantalla mantiene la plantilla de fichas: barra de estado, cuatro indicadores y rejilla de fichas.
 
 ### Onboarding
 
@@ -214,7 +214,7 @@ El asistente se queda. Responde sobre lo que se ve en pantalla, en el idioma de 
 
 1. La petición lleva el paquete de diagnóstico (si se está en un equipo, solo ese equipo), el rol, la pantalla y el historial corto.
 2. El modelo responde en JSON: la respuesta en texto y la lista de cifras que usa, cada una con equipo (o área), medida y valor.
-3. `IA.validarChat` comprueba cada cifra contra el paquete, con la misma tolerancia que las recomendaciones. También rechaza números del texto que no estén en esa lista, nombres de equipo desconocidos y menciones a personas.
+3. `IA.validarChat` comprueba cada cifra contra el paquete, con la misma tolerancia que las recomendaciones. También rechaza números del texto que no estén en esa lista y cifras atribuidas a equipos que no están en el paquete. No puede detectar en texto libre un nombre de equipo inventado ni una persona: el paquete no lleva personas, así que el modelo no tiene nombres que citar, y la instrucción le prohíbe mencionarlas.
 4. Si la respuesta no pasa, no se enseña. Sale "No he podido comprobar las cifras de esta respuesta" y un botón para preguntar de nuevo.
 5. Sin clave de IA, el asistente no responde y lo dice. El resto de la página funciona igual.
 
@@ -266,3 +266,13 @@ No entran en esta versión: los conectores de demostración (enseñaban datos de
 - `npm run verificar-web-v3`: onboarding, cada pantalla, panel lateral, presentación, asistente con proveedor falso (respuesta válida y respuesta rechazada) y móvil a 390 px, en castellano y en inglés, sin errores de consola y sin scroll lateral.
 - Prueba con un export real de cliente, fuera del repositorio.
 - Revisión final por un agente que no ha visto el trabajo.
+
+## Simplificación centrada en la baseline (29 oct 2026)
+
+Petición de Álvaro: menos contenido y todo alrededor de la baseline de cada equipo.
+
+- Resumen: barra de estado y, por equipo, una fila por indicador con el valor de ahora, una barra con la franja de lo normal y la marca de ahora, y el rango. Debajo, las tres primeras recomendaciones. Fuera los cuatro indicadores de cartera y los del área.
+- Equipos: cuatro indicadores con su gráfico de baseline, Qué ha cambiado y Qué hacer. Tiempo por etapa, fiabilidad, trabajo parado y el resto de medidas, plegados en "Más detalle".
+- Baseline (antes Referencias): el área y cada equipo con un gráfico por indicador.
+- Recomendaciones, Iniciativas y Cortes: sin la fila de cuatro indicadores que repetía la barra de estado; "Cómo funciona" plegado.
+- Gráficos: eje desde cero (el ruido de una semana a otra ya no parece un cambio), las 12 semanas de baseline con su franja y, tras una línea vertical, las últimas semanas en el color de su estado.

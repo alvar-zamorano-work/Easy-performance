@@ -44,6 +44,56 @@
   }
   const serie = (m, k) => (m && Array.isArray(m.serie) ? m.serie.slice(-(k || 16)) : null);
 
+  /** Máximo redondo del eje: el eje empieza en cero, así el ruido de una semana a otra no parece un cambio. */
+  function techo(vals) {
+    const max = Math.max(0, ...vals.filter((v) => v != null && isFinite(v)));
+    if (max <= 0) return 1;
+    const e = Math.pow(10, Math.floor(Math.log10(max)));
+    for (const k of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (k * e >= max * 1.12) return k * e;
+    return 10 * e;
+  }
+  /**
+   * Gráfico de baseline: las semanas de baseline con su banda de lo normal y, a la derecha, las últimas semanas.
+   * Eje desde cero y altura fija. El punto final es el valor de ahora, del color de su estado.
+   */
+  function grafico(id, m, opts) {
+    opts = opts || {};
+    if (!m || !Array.isArray(m.serie)) return '';
+    const R = S.vm.semanas.R, win = m.ventana || S.vm.semanas.K, L = m.serie.length - 1;
+    const desde = Math.max(0, L - win - R + 1), corte = L - win;
+    const vals = m.serie.slice(desde);
+    if (vals.filter((v) => v != null).length < 2) return `<div class="spark-empty">${esc(t('comun.sinSerie'))}</div>`;
+    const W = 300, H = opts.h || 64, n = vals.length, tope = techo(vals.concat(m.ref ? [m.ref.hi] : []));
+    const x = (i) => (n === 1 ? 0 : (i / (n - 1)) * W), y = (v) => H - (v / tope) * (H - 4) - 2;
+    const xc = x(Math.max(0, corte - desde));
+    const tramo = (a, b) => { let d = '', pen = false; for (let i = a; i <= b; i++) { const v = vals[i]; if (v == null || !isFinite(v)) { pen = false; continue; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; pen = true; } return d; };
+    const ic = Math.max(0, corte - desde), tono = tonoDe(m);
+    const banda = m.ref ? `<rect class="g-band" x="0" y="${y(m.ref.hi).toFixed(1)}" width="${xc.toFixed(1)}" height="${Math.max(1, y(m.ref.lo) - y(m.ref.hi)).toFixed(1)}"/><rect class="g-band-now" x="${xc.toFixed(1)}" y="${y(m.ref.hi).toFixed(1)}" width="${(W - xc).toFixed(1)}" height="${Math.max(1, y(m.ref.lo) - y(m.ref.hi)).toFixed(1)}"/>` : '';
+    const ultimo = vals[n - 1];
+    const punto = ultimo != null ? `<line class="g-dot tone-${tono}" x1="${x(n - 1).toFixed(1)}" x2="${x(n - 1).toFixed(1)}" y1="${y(ultimo).toFixed(1)}" y2="${y(ultimo).toFixed(1)}"/>` : '';
+    const svg = `<svg class="grafico" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px" role="img" aria-label="${esc(nombreMedida(id))}">
+      <line class="g-base" x1="0" x2="${W}" y1="${H - 2}" y2="${H - 2}"/>${banda}<line class="g-corte" x1="${xc.toFixed(1)}" x2="${xc.toFixed(1)}" y1="0" y2="${H}"/>
+      <path class="g-linea-base" d="${tramo(0, ic)}"/><path class="g-linea-ahora tone-${tono}" d="${tramo(ic, n - 1)}"/>${punto}</svg>`;
+    const eje = `<div class="g-eje"><span>${esc(t('grafico.baseline', { r: R }))}</span><span>${esc(t('grafico.ahora', { k: win }))}</span></div>`;
+    return svg + (opts.sinEje ? '' : eje);
+  }
+  /** Barra de baseline: la banda de lo normal y una marca donde está ahora. Escala desde cero. */
+  function bala(id, m) {
+    if (!m || !m.disponible || m.valor == null) return `<div class="bala vacia"></div>`;
+    const tope = techo([m.valor].concat(m.ref ? [m.ref.hi, m.ref.lo] : []));
+    const pc = (v) => Math.max(0, Math.min(100, (v / tope) * 100)).toFixed(1);
+    const banda = m.ref ? `<i class="b-band" style="left:${pc(m.ref.lo)}%;width:${Math.max(1.5, pc(m.ref.hi) - pc(m.ref.lo))}%"></i>` : '';
+    return `<div class="bala" title="${esc(rango(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
+  }
+  /** Fila de baseline de un indicador: nombre, ahora, la barra y lo normal. */
+  function filaBaseline(eq, id) {
+    const m = eq.medidas[id];
+    const ahora = m && m.disponible && m.valor != null ? valor(id, m.valor) : t('comun.sinDatos');
+    const normal = m && m.ref ? t('medida.rangoCorto', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) }) : (m && m.disponible ? t('medida.sinBanda') : '');
+    return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
+      <span class="fb-n">${esc(nombreMedida(id))}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
+  }
+
   /** Indicadores destacados del rol: los elegidos en Personalizar o los cuatro primeros del Context. */
   function destacados() {
     const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => cat().medidas[k] || k === 'coste') : null;
@@ -57,8 +107,7 @@
   /** Indicador de un equipo: etiqueta, cifra, banda, estado y línea de 16 semanas. */
   function tile(eq, id) {
     const m = eq.medidas[id], tono = tonoDe(m);
-    const vals = serie(m);
-    const viz = vals ? spark(vals, m.ref, { tone: tono, label: nombreMedida(id) }) : `<div class="spark-empty">${esc(m && m.disponible ? rango(id, m) : '')}</div>`;
+    const viz = m && m.serie ? grafico(id, m) : `<div class="spark-empty">${esc(m && m.disponible ? rango(id, m) : '')}</div>`;
     const def = cat().medidas[id];
     const ayuda = def ? def.como : t('medida.costeComo');
     return `<div class="tile clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
@@ -105,5 +154,5 @@
   }
   const barra = (pct, tono) => `<div class="bar"><i class="tone-${tono}" style="width:${Math.max(2, Math.min(100, pct * 100)).toFixed(1)}%"></i></div>`;
 
-  window.EP.kit = { TONO, tonoDe, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

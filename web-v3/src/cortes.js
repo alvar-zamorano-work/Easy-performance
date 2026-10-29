@@ -14,7 +14,10 @@
   /** Huella de unos datos: misma fecha, mismas tareas y mismos ficheros dan el mismo corte. */
   function huella() {
     const inf = S.vm.informe;
-    return [new Date(S.vm.fechaDatos).toISOString().slice(0, 10), inf.tareas, inf.ficheros.map((f) => f.nombre + ':' + f.filas).join('|'), S.vm.campoEquipo].join('@');
+    // Misma configuración: el mapeo, los indicadores y los equipos medidos también cambian las cifras
+    const conf = JSON.stringify([S.vm.mapeo, S.vm.kpis, S.vm.equiposMedidos]);
+    let h = 0; for (let i = 0; i < conf.length; i++) h = (h * 31 + conf.charCodeAt(i)) | 0;
+    return [new Date(S.vm.fechaDatos).toISOString().slice(0, 10), inf.tareas, inf.ficheros.map((f) => f.nombre + ':' + f.filas).join('|'), S.vm.campoEquipo, h].join('@');
   }
   function foto() {
     const vm = S.vm, equipos = {};
@@ -59,7 +62,9 @@
   }
   function cortes() {
     const lista = (S.demo ? S.cortesDemo : S.cortes).slice().sort((a, b) => b.fechaDatos.localeCompare(a.fechaDatos) || b.creado.localeCompare(a.creado));
-    const act = lista[0], ant = lista[1];
+    // El actual es el de los datos cargados; el anterior, el último con datos de antes
+    const h = S.vm ? huella() : null, iAct = Math.max(0, lista.findIndex((c) => c.huella === h));
+    const act = lista[iAct], ant = lista.slice(iAct + 1).filter((c) => c.fechaDatos <= act.fechaDatos && c.huella !== act.huella)[0];
     const nombres = EP.visibles().map((e) => e.nombre);
     const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('cortes.paso' + i + '.t'))}</b><div class="small muted">${esc(t('cortes.paso' + i + '.d'))}</div></div></div>`).join('')}</div>`;
     if (!act) return K.statusBar('neutral', esc(t('cortes.ninguno')), [esc(t('cortes.ningunoItems'))]) + pasos + `<div class="ficha empty">${esc(t('cortes.vacio'))} <button class="btn sm" data-action="corte-guardar">${esc(t('cortes.guardarAhora'))}</button></div>`;
@@ -67,12 +72,6 @@
     const mejora = pares.filter((x) => RANGO[x.b.estado] < RANGO[x.a.estado] || (x.b.estado === x.a.estado && x.b.alertas.length < x.a.alertas.length)).length;
     const empeora = pares.filter((x) => RANGO[x.b.estado] > RANGO[x.a.estado] || (x.b.estado === x.a.estado && x.b.alertas.length > x.a.alertas.length)).length;
     const frente = ant ? t('cortes.frente', { f: fecha(ant.fechaDatos) }) : t('cortes.sinAnterior');
-    const tiles = `<div class="tiles">
-      ${K.stat(t('cortes.tile.guardados'), String(lista.length), esc(S.demo ? t('cortes.tile.demo') : t('cortes.tile.guardadosPie')), '')}
-      ${K.stat(t('cortes.tile.ultimo'), esc(fecha(act.fechaDatos)), esc(t('cortes.tile.ultimoPie', { n: act.tareas })), '')}
-      ${K.stat(t('cortes.tile.mejoran'), String(mejora), esc(frente), '', { tone: mejora ? 'good' : undefined })}
-      ${K.stat(t('cortes.tile.empeoran'), String(empeora), esc(frente), '', { tone: empeora ? 'bad' : undefined })}
-    </div>`;
     const dest = K.destacados().filter((id) => id !== 'coste').slice(0, 3);
     const tarjetas = pares.map(({ n, a, b }) => {
       const filas = dest.map((id) => {
@@ -83,12 +82,12 @@
       return K.ficha(`<button class="f-title link-plain" data-action="open-team" data-team="${esc(n)}">${esc(nombreEquipo(n))}</button>${K.equipoChip({ estado: b.estado })}`, `<div class="f-metrics">${filas}</div>`,
         `<span class="small muted">${esc(t('cortes.antesEstado', { e: t('equipo.estado.' + a.estado).toLowerCase() }))}</span>`);
     }).join('');
-    const filas = lista.map((c, i) => `<div class="rrow corte">${K.chip(i === 0 ? 'info' : 'neutral', i === 0 ? t('cortes.actual') : t('cortes.anterior'))}<div class="rrow-t"><b>${esc(t('cortes.datosHasta', { f: fecha(c.fechaDatos) }))}</b><div class="small muted">${esc(tn('cortes.ficheros', c.ficheros.length))} · ${esc(tn('cortes.tareas', c.tareas))} · ${esc(t('cortes.fiab', { nivel: t('fiab.nivel.' + c.fiabilidad.nivel).toLowerCase() }))} · ${esc(tn('cortes.conAlerta', Object.keys(c.equipos).filter((k) => c.equipos[k].estado === 'alerta').length))}</div></div>${S.demo ? '' : `<button class="btn sm" data-action="corte-borrar" data-id="${esc(c.id)}">${esc(t('comun.borrar'))}</button>`}</div>`).join('');
+    const filas = lista.map((c, i) => `<div class="rrow corte">${K.chip(c === act ? 'info' : 'neutral', c === act ? t('cortes.actual') : t('cortes.anterior'))}<div class="rrow-t"><b>${esc(t('cortes.datosHasta', { f: fecha(c.fechaDatos) }))}</b><div class="small muted">${esc(tn('cortes.ficheros', c.ficheros.length))} · ${esc(tn('cortes.tareas', c.tareas))} · ${esc(t('cortes.fiab', { nivel: t('fiab.nivel.' + c.fiabilidad.nivel).toLowerCase() }))} · ${esc(tn('cortes.conAlerta', Object.keys(c.equipos).filter((k) => c.equipos[k].estado === 'alerta').length))}</div></div>${S.demo ? '' : `<button class="btn sm" data-action="corte-borrar" data-id="${esc(c.id)}">${esc(t('comun.borrar'))}</button>`}</div>`).join('');
     const titular = ant ? t('cortes.titular', { f: fecha(ant.fechaDatos), m: mejora, e: empeora }) : t('cortes.primero');
     return K.statusBar(empeora ? 'bad' : mejora ? 'good' : 'neutral', esc(titular), [esc(tn('cortes.cuenta', lista.length)), esc(t('cortes.soloCifras'))])
-      + tiles + K.sec(t('cortes.como')) + pasos
+
       + (ant ? K.sec(t('cortes.cambios'), `<span class="muted small">${esc(t('cortes.cambiosNota', { f: fecha(ant.fechaDatos) }))}</span>`) + `<div class="fichas">${tarjetas}</div>` : '')
-      + K.sec(t('cortes.historial'), S.demo ? '' : `<button class="btn sm" data-action="corte-guardar">${esc(t('cortes.guardarAhora'))}</button>`) + `<div class="ficha list">${filas}</div>`;
+      + K.sec(t('cortes.historial'), S.demo ? '' : `<button class="btn sm" data-action="corte-guardar">${esc(t('cortes.guardarAhora'))}</button>`) + `<div class="ficha list">${filas}</div>` + `<details class="mas"><summary>${esc(t('cortes.como'))}</summary>${pasos}</details>`;
   }
   EP.accion('corte-borrar', (el) => { borrar(el.dataset.id); EP.render(); });
   EP.accion('corte-guardar', () => { const c = capturar(false, true); EP.toast(c ? t('cortes.guardado', { f: fecha(c.fechaDatos) }) : t('cortes.yaHay')); EP.render(); });

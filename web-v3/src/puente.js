@@ -71,7 +71,10 @@
   function mapeo(cfg, det) {
     const m = Object.assign({}, det.mapeoEstados);
     if (!cfg.mapeoEstados && cfg.etapas) Object.assign(m, N.etapasV0AMapeo(cfg.etapas, det.mapeoEstados));
-    return Object.assign(m, cfg.mapeoEstados || {});
+    // Solo estados comunes que existen: un mapeo escrito a mano con un estado desconocido no rompe el cálculo
+    const comunes = C().estados.estados, propio = cfg.mapeoEstados || {};
+    Object.keys(propio).forEach((k) => { if (comunes[propio[k]]) m[k] = propio[k]; });
+    return m;
   }
   function cfgCalculo(cfg, det) {
     const c = { campoEquipo: campo(cfg, det), equipos: equipos(cfg, det), mapeoEstados: mapeo(cfg, det), fte: cfg.fte || {}, limites: {} };
@@ -91,7 +94,10 @@
     return { version: 2, nombre: cfg.nombre || '', sector: cfg.sector || '', plataforma: 'jira', mapeoEstados: mapeo(cfg, det), equipos: { campo: campo(cfg, det), lista },
       objetivos: [], medidas: columnas(cfg, det).slice() };
   }
-  const iniValida = (i) => !!(i && i.id && i.nombre && i.fecha_inicio && i.equipos && i.equipos.length && i.medidas_objetivo && i.medidas_objetivo.length);
+  /** Iniciativa con la forma que necesita el núcleo; las mal formadas (de la carpeta o de datos.js) se ignoran. */
+  const iniValida = (i) => !!(i && typeof i.id === 'string' && i.nombre && /^\d{4}-\d{2}-\d{2}$/.test(String(i.fecha_inicio || ''))
+    && Array.isArray(i.equipos) && i.equipos.length && i.equipos.every((e) => typeof e === 'string')
+    && Array.isArray(i.medidas_objetivo) && i.medidas_objetivo.length && i.medidas_objetivo.every((m) => m && typeof m.medida === 'string'));
   function iniciativas(cfg, extra) {
     const porId = {};
     (extra || []).concat(cfg.iniciativas || []).forEach((i) => { if (iniValida(i)) porId[i.id] = i; });
