@@ -164,6 +164,24 @@
   const med = (eq, id) => (id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: null, falta: 'coste' } : eq.medidas[id]);
   const malo = (m) => m && m.disponible && (m.estado === 'atencion' || m.estado === 'critico');
 
+  /**
+   * Previsión por probabilidad desde las entregas reales de las últimas 12 semanas: cuántas tareas en 4 semanas
+   * y cuándo termina lo que hay en curso. null si no hay semanas suficientes con entregas.
+   */
+  function previsionDe(eq, semanaFin) {
+    const m = N.muestraDeRitmo(eq.series.entregas);
+    if (!m) return null;
+    const enCurso = (eq.enCurso || []).length;
+    return { muestra: m, semanaFin, cuatro: N.cuantasEnSemanas(m, 4, 4), enCurso, cuandoEnCurso: enCurso ? N.cuandoTerminan(m, enCurso, 7) : null };
+  }
+  /** Reparto de lo terminado por el campo que ha elegido el cliente. */
+  function repartoDe(r, eq, cfg) {
+    if (!cfg.columnaReparto) return null;
+    const p = r.preparacion, items = p.porEquipo[eq.nombre] || [].concat(...p.nombresEquipo.map((n) => p.porEquipo[n] || []));
+    const filas = N.repartoPorCampo(items, p.ctx.semanaFin);
+    return filas.length ? { campo: cfg.columnaReparto, filas } : null;
+  }
+
   /** Ficha de un equipo (o del área). */
   function fichaEquipo(r, eq, cols, fiab, cfg) {
     const info = (cfg.equiposInfo || {})[eq.nombre] || {};
@@ -182,6 +200,7 @@
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
+      prevision: previsionDe(eq, r.preparacion.ctx.semanaFin), reparto: repartoDe(r, eq, cfg),
     };
   }
 
@@ -258,6 +277,7 @@
       comparaciones: r.comparaciones, casosGrupo: r.casosGrupo, iniciativas: inis, paquete: r.paquete, problemasPaquete: r.problemas,
       informe: lectura.informe, det, campoEquipo: campo(cfg, det), equiposMedidos: equipos(cfg, det), mapeo: mapeo(cfg, det),
       hayCoste: hayCoste(cfg), hayProveedores: hayProveedores(cfg),
+      epicas: N.vistaEpicas(r.preparacion, lectura.epicas || []),
     };
   }
 

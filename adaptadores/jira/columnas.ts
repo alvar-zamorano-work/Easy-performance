@@ -28,6 +28,7 @@ export const ALIAS: Record<string, string[]> = {
   padre: ['parent summary', 'resumen del principal', 'resumen principal', 'resumen del elemento principal'],
   padreClave: ['parent key', 'clave del principal', 'clave principal', 'clave del elemento principal'],
   proyecto: ['project name', 'nombre del proyecto', 'proyecto', 'project'],
+  vence: ['due date', 'fecha de vencimiento', 'vencimiento', 'fecha limite', 'fecha de entrega'],
 };
 
 /** Campos que pueden venir en varias columnas con el mismo nombre (por ejemplo, Sprint). */
@@ -65,6 +66,7 @@ const QUE_ES: Record<string, string> = {
   resolucion: 'Resolution: separates discarded from done', prioridad: 'Priority', componentes: 'Component', etiquetas: 'Labels',
   sprint: 'Sprints it went through: joined into a list', puntos: 'Estimate', equipo: 'Team field', tis: 'Time in each status',
   primera: 'Date of first response', padre: 'Epic it belongs to (title)', padreClave: 'Epic it belongs to (key)', proyecto: 'Project',
+  vence: 'Due date: for the epics view',
 };
 const QUE_ES_ES: Record<string, string> = {
   clave: 'Clave de la tarea', resumen: 'Título: solo en memoria, no sale en el paquete', descripcion: 'Descripción: solo para ver si el ticket está bien definido',
@@ -73,6 +75,7 @@ const QUE_ES_ES: Record<string, string> = {
   resolucion: 'Resolución: separa lo descartado de lo terminado', prioridad: 'Prioridad', componentes: 'Componente', etiquetas: 'Etiquetas',
   sprint: 'Sprints por los que pasó: se juntan en una lista', puntos: 'Estimación', equipo: 'Campo de equipo', tis: 'Tiempo en cada estado',
   primera: 'Fecha de la primera respuesta', padre: 'Épica a la que pertenece (título)', padreClave: 'Épica a la que pertenece (clave)', proyecto: 'Proyecto',
+  vence: 'Fecha de vencimiento: para la vista de épicas',
 };
 const queEs = (campo: string) => (idioma() === 'es' ? QUE_ES_ES[campo] : QUE_ES[campo]);
 /** Describe columna a columna cómo se lee un export de Jira: qué es, si se usa, se descarta o se ignora. */

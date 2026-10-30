@@ -641,3 +641,16 @@ details.mas > summary { cursor: pointer; color: var(--accent); font-size: 14px; 
 
 /* Estados de origen sin revisar en la tabla de mapeo */
 tr.dudoso td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+
+/* Previsión por probabilidad en la ficha de equipo */
+.prev-fila { display: grid; grid-template-columns: minmax(0, 1.3fr) auto minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.prev-fila b { font-size: 18px; }
+.prev-q { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.prev-q input { width: 84px; }
+/* Decisión y quién en el panel de una medida */
+.ficha-4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.ficha-4 > div { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 600px) { .prev-fila { grid-template-columns: 1fr; } .ficha-4 { grid-template-columns: 1fr; } }
+/* Preguntas de dirección: el título completo, aunque ocupe dos líneas */
+.ficha[data-tipo="pregunta"] .f-head { flex-wrap: wrap; row-gap: 6px; }
+.ficha[data-tipo="pregunta"] .f-title { white-space: normal; overflow: visible; text-overflow: clip; }

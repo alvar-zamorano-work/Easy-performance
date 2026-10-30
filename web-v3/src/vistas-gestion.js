@@ -178,8 +178,8 @@
 
   // ---------- fuentes y mapeo ----------
   function fuentes() {
-    const tabs = `<div class="tabs">${['ficheros', 'mapeo', 'tipos', 'equipos', 'context'].map((x) => `<button class="tab ${S.fuentesTab === x ? 'on' : ''}" data-action="fuentes-tab" data-tab="${x}">${esc(t('fuentes.tab.' + x))}</button>`).join('')}</div>`;
-    const cuerpo = { ficheros: fuentesFicheros, mapeo: fuentesMapeo, tipos: fuentesTipos, equipos: fuentesEquipos, context: fuentesContext }[S.fuentesTab] || fuentesFicheros;
+    const tabs = `<div class="tabs">${['ficheros', 'mapeo', 'tipos', 'equipos', 'context', 'acuerdos'].map((x) => `<button class="tab ${S.fuentesTab === x ? 'on' : ''}" data-action="fuentes-tab" data-tab="${x}">${esc(t('fuentes.tab.' + x))}</button>`).join('')}</div>`;
+    const cuerpo = { ficheros: fuentesFicheros, mapeo: fuentesMapeo, tipos: fuentesTipos, equipos: fuentesEquipos, context: fuentesContext, acuerdos: fuentesAcuerdos }[S.fuentesTab] || fuentesFicheros;
     return tabs + cuerpo();
   }
   EP.accion('fuentes-tab', (el) => { S.fuentesTab = el.dataset.tab; EP.render(); });
@@ -263,10 +263,16 @@
     const opt = (v, txt) => `<option value="${esc(v)}" ${((actual == null ? '__auto' : actual) === v) ? 'selected' : ''}>${esc(txt)}</option>`;
     const estSel = `<select data-change="tipo-estimacion">${opt('__auto', auto ? t('tipos.estAuto', { c: auto }) : t('tipos.estAutoNada'))}${candidatas.filter((c) => c.columna !== auto).map((c) => opt(c.columna, t('tipos.estColumna', { c: c.columna, n: c.conValor }))).join('')}${opt('', t('tipos.estNinguna'))}</select>`;
     const conEst = S.lectura.tareas.filter((x) => x.estimacion != null).length;
+    // Reparto: una columna de texto con pocos valores (tipo de requisito, línea de negocio...)
+    const categoricas = S.ficheros && S.ficheros[0] ? N.columnasCategoricas(S.ficheros[0].texto) : [];
+    const repActual = S.cfg.columnaReparto || '';
+    const repOpciones = categoricas.concat(repActual && !categoricas.some((c) => c.columna === repActual) ? [{ columna: repActual, valores: 0 }] : []);
+    const repSel = `<select data-change="tipo-reparto"><option value="">${esc(t('tipos.repartoNinguno'))}</option>${repOpciones.map((c) => `<option value="${esc(c.columna)}" ${repActual === c.columna ? 'selected' : ''}>${esc(c.valores ? t('tipos.repartoOpcion', { c: c.columna, n: c.valores }) : c.columna)}</option>`).join('')}</select>`;
     return K.statusBar('neutral', esc(t('tipos.titular', { n: tipos.length, b: bugs })), [esc(t('tipos.items1')), esc(t('tipos.items2'))])
       + `<div class="ficha"><p class="small muted" style="margin:0 0 8px">${esc(t('tipos.texto'))}</p><div class="table-wrap"><table><tr><th>${esc(t('tipos.col.origen'))}</th><th class="num">${esc(t('tipos.col.tareas'))}</th><th>${esc(t('tipos.col.comun'))}</th><th>${esc(t('mapeo.col.como'))}</th></tr>${filas}</table></div></div>`
       + `<div class="fichas cols-2 sp"><div class="ficha"><div class="field"><label>${esc(t('tipos.etiqueta'))}</label>${etqSel}</div><p class="tiny muted">${esc(todas.length ? t('tipos.etiquetaAyuda') : t('tipos.sinEtiquetas'))}</p></div>`
-      + `<div class="ficha"><div class="field"><label>${esc(t('tipos.estimacion'))}</label>${estSel}</div><p class="tiny muted">${esc(t('tipos.estAyuda', { n: conEst, de: S.lectura.tareas.length }))}</p></div></div>`;
+      + `<div class="ficha"><div class="field"><label>${esc(t('tipos.estimacion'))}</label>${estSel}</div><p class="tiny muted">${esc(t('tipos.estAyuda', { n: conEst, de: S.lectura.tareas.length }))}</p></div></div>`
+      + `<div class="fichas cols-2 sp"><div class="ficha"><div class="field"><label>${esc(t('tipos.reparto'))}</label>${repSel}</div><p class="tiny muted">${esc(t('tipos.repartoAyuda'))}</p></div></div>`;
   }
   EP.cambio('tipo-origen', (el) => aplicarCfg(() => {
     const m = Object.assign({}, S.cfg.mapeoTipos || {}), propuesto = N.tiposDeOrigen(S.lectura).filter((x) => x.tipo_origen === el.dataset.tipo)[0];
@@ -274,11 +280,54 @@
     S.cfg.mapeoTipos = m;
   }));
   EP.cambio('tipo-etiqueta', (el) => aplicarCfg(() => { if (el.value) S.cfg.etiquetaBug = el.value; else delete S.cfg.etiquetaBug; }));
+  // El campo de reparto también se lee del export: cambiarlo obliga a leer otra vez los ficheros
+  EP.cambio('tipo-reparto', (el) => {
+    if (el.value) S.cfg.columnaReparto = el.value; else delete S.cfg.columnaReparto;
+    EP.guardarCfg();
+    EP.enSegundoPlano(() => { if (S.ficheros) EP.procesar(S.ficheros); EP.render(); });
+  });
   // Cambiar la columna de estimación obliga a leer otra vez los ficheros
   EP.cambio('tipo-estimacion', (el) => {
     if (el.value === '__auto') delete S.cfg.columnaEstimacion; else S.cfg.columnaEstimacion = el.value;
     EP.guardarCfg();
     EP.enSegundoPlano(() => { if (S.ficheros) EP.procesar(S.ficheros); EP.render(); });
+  });
+
+  // ---------- acuerdos: qué se mide y cómo, sacado de la configuración ----------
+  const horaDe = (iso) => new Date(iso).toLocaleTimeString(window.I18N && window.I18N.lang === 'en' ? 'en-GB' : 'es-ES', { hour: '2-digit', minute: '2-digit' });
+  function acuerdos() {
+    const vm = S.vm, inf = vm.informe, det = vm.det, P = EP.P;
+    const revisar = P.porRevisar(S.cfg, det).length;
+    const tipos = N.tiposDeOrigen(S.lectura, { mapeoTipos: S.cfg.mapeoTipos || null, etiquetaBug: S.cfg.etiquetaBug || null });
+    const bugs = tipos.filter((x) => x.tipo === 'error').map((x) => x.tipo_origen || t('tipos.sinTipo'));
+    const leidas = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
+    const auto = (leidas.filter((x) => x.campo === 'puntos')[0] || {}).columna || null;
+    const est = S.cfg.columnaEstimacion;
+    const cortes = (S.demo ? S.cortesDemo : S.cortes) || [];
+    const ultimo = cortes.slice().sort((a, b) => a.creado.localeCompare(b.creado)).pop();
+    const ep = vm.epicas;
+    return [
+      { id: 'trabajo', d: t('acu.trabajo.d', { e: inf.epicas, s: inf.subtareas }) },
+      { id: 'equipos', d: t('acu.equipos.d', { campo: t('campo.' + vm.campoEquipo).toLowerCase(), n: vm.equiposMedidos.length }) },
+      { id: 'estados', d: revisar ? tn('acu.estados.revisar', revisar, { de: det.estados.length }) : t('acu.estados.d', { n: det.estados.length }), revisar: revisar > 0 },
+      { id: 'bugs', d: t('acu.bugs.d', { tipos: bugs.length ? lista(bugs) : t('acu.ninguno') }) + (S.cfg.etiquetaBug ? ' ' + t('acu.bugs.etiqueta', { e: S.cfg.etiquetaBug }) : '') },
+      { id: 'unidades', d: t('acu.unidades.d') },
+      { id: 'estimacion', d: est === '' ? t('acu.est.ninguna') : est ? t('acu.est.columna', { c: est }) : auto ? t('acu.est.auto', { c: auto }) : t('acu.est.nada') },
+      { id: 'periodo', d: t('acu.periodo.d', { f: fecha(vm.semanaFin), k: vm.semanas.K, r: vm.semanas.R }) },
+      { id: 'prevision', d: t('acu.prevision.d', { s: N.SEMANAS_MUESTRA }) },
+      { id: 'epicas', d: ep && ep.tareas ? t('acu.epicas.d', { n: ep.sinEpica, de: ep.tareas }) : t('acu.epicas.ninguna') },
+      { id: 'congelado', d: ultimo ? t('acu.congelado.d', { f: fecha(ultimo.creado), h: horaDe(ultimo.creado) }) : t('acu.congelado.ninguno') },
+    ];
+  }
+  function fuentesAcuerdos() {
+    const lista_ = acuerdos(), revisar = lista_.filter((x) => x.revisar).length;
+    const filas = lista_.map((x) => `<div class="rrow">${K.chip(x.revisar ? 'warn' : 'good', t(x.revisar ? 'acu.porRevisar' : 'acu.acordado'))}<div class="rrow-t"><b>${esc(t('acu.' + x.id))}</b><div class="small muted">${esc(x.d)}</div></div></div>`).join('');
+    return K.statusBar(revisar ? 'warn' : 'good', esc(revisar ? t('acu.titularRevisar') : t('acu.titular')), [esc(t('acu.items1')), esc(t('acu.items2'))])
+      + `<div class="ficha list">${filas}</div><div class="row" style="margin-top:12px"><button class="btn sm" data-action="acu-descargar">${esc(t('acu.descargar'))}</button></div>`;
+  }
+  EP.accion('acu-descargar', () => {
+    const md = ['# ' + t('acu.docTitulo'), '', t('acu.docSub', { f: fecha(S.vm.fechaDatos) }), ''].concat(acuerdos().map((x) => '- **' + t('acu.' + x.id) + '.** ' + x.d)).join('\n') + '\n';
+    EP.descargar('acuerdos-easyperformance.md', md, 'text/markdown');
   });
 
   function fuentesEquipos() {

@@ -4,108 +4,144 @@
       "nombre": "Entregas",
       "pregunta": "¿Cuánto terminamos?",
       "unidad": "tareas por semana",
-      "como": "Tareas terminadas cada semana. No cuenta las descartadas (duplicadas, no se hará)."
+      "como": "Tareas terminadas cada semana. No cuenta las descartadas (duplicadas, no se hará).",
+      "decision": "Si el equipo puede con lo que se le pide y si hay que replanificar fechas.",
+      "quien": "Dirección de entrega"
     },
     "regularidad": {
       "nombre": "Regularidad de entregas",
       "pregunta": "¿Somos previsibles?",
       "unidad": "de variación",
-      "como": "Cuánto cambian las entregas de una semana a otra frente a su media, en las últimas 8 semanas. Cuanto más bajo, más previsible."
+      "como": "Cuánto cambian las entregas de una semana a otra frente a su media, en las últimas 8 semanas. Cuanto más bajo, más previsible.",
+      "decision": "Si hacer entregas más pequeñas y constantes.",
+      "quien": "Responsable del equipo"
     },
     "ciclo": {
       "nombre": "Tiempo de ciclo",
       "pregunta": "¿Cuánto tarda una tarea desde que se empieza?",
       "unidad": "días",
-      "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que se termina casi todo lo empezado: el 85% de las tareas de las últimas 4 semanas."
+      "como": "Días desde que una tarea entra en curso hasta que se termina. Se muestra el plazo en el que se termina casi todo lo empezado: el 85% de las tareas de las últimas 4 semanas.",
+      "decision": "Dónde quitar esperas o partir el trabajo cuando sube.",
+      "quien": "Responsable del equipo y PMO"
     },
     "total": {
       "nombre": "Tiempo total",
       "pregunta": "¿Cuánto espera quien lo pidió?",
       "unidad": "días",
-      "como": "Días desde que se crea una tarea hasta que se termina. Plazo en el que se termina casi todo: el 85% de las tareas de las últimas 4 semanas."
+      "como": "Días desde que se crea una tarea hasta que se termina. Plazo en el que se termina casi todo: el 85% de las tareas de las últimas 4 semanas.",
+      "decision": "Qué plazo prometer al negocio.",
+      "quien": "Dirección de entrega"
     },
     "espera": {
       "nombre": "Tiempo en espera",
       "pregunta": "¿Cuánto tiempo está parada una tarea?",
       "unidad": "del tiempo de ciclo",
-      "como": "Parte del tiempo de ciclo que las tareas pasan en estados de espera de Jira (revisión, pruebas o el estado Bloqueado). Últimas 4 semanas."
+      "como": "Parte del tiempo de ciclo que las tareas pasan en estados de espera de Jira (revisión, pruebas o el estado Bloqueado). Últimas 4 semanas.",
+      "decision": "Qué paso (revisión, pruebas, despliegue) necesita capacidad o una regla nueva.",
+      "quien": "Responsable del equipo y PMO"
     },
     "edad": {
       "nombre": "Trabajo bloqueado",
       "pregunta": "¿Qué está bloqueado hoy?",
       "unidad": "tareas",
-      "como": "Tareas en curso que ya llevan más tiempo que el plazo en el que el equipo termina casi todo lo que empieza (el 85% de las tareas)."
+      "como": "Tareas en curso que ya llevan más tiempo que el plazo en el que el equipo termina casi todo lo que empieza (el 85% de las tareas).",
+      "decision": "Qué trabajo parado desbloquear o descartar esta semana.",
+      "quien": "Responsable del equipo"
     },
     "wip": {
       "nombre": "Trabajo en curso",
       "pregunta": "¿Cuántas cosas llevamos a la vez?",
       "unidad": "tareas",
-      "como": "Tareas empezadas y sin terminar al final de cada semana. Con el export es una aproximación; con la API o las fotos semanales es exacto."
+      "como": "Tareas empezadas y sin terminar al final de cada semana. Con el export es una aproximación; con la API o las fotos semanales es exacto.",
+      "decision": "Si poner o bajar un límite de trabajo en curso.",
+      "quien": "Responsable del equipo"
     },
     "fiabilidad": {
       "nombre": "Fiabilidad del sprint",
       "pregunta": "¿Cumplimos lo comprometido?",
-      "como": "Lo terminado frente a lo que había en el sprint al empezar."
+      "como": "Lo terminado frente a lo que había en el sprint al empezar.",
+      "decision": "Cuánto comprometer en el próximo sprint.",
+      "quien": "Responsable del equipo y de producto"
     },
     "arrastradas": {
       "nombre": "Tareas arrastradas",
       "pregunta": "¿Cuánto pasa al sprint siguiente?",
       "unidad": "de lo terminado",
-      "como": "Parte de las tareas terminadas en las últimas 8 semanas que pasaron por más de un sprint."
+      "como": "Parte de las tareas terminadas en las últimas 8 semanas que pasaron por más de un sprint.",
+      "decision": "Si los compromisos del sprint son demasiado grandes y cuánto menos planificar.",
+      "quien": "Responsable del equipo y de producto"
     },
     "errores": {
       "nombre": "Proporción de bugs",
       "pregunta": "¿Cuánto es arreglar?",
       "unidad": "de lo terminado",
-      "como": "Parte de lo terminado en las últimas 8 semanas que son errores."
+      "como": "Parte de lo terminado en las últimas 8 semanas que son errores.",
+      "decision": "Si invertir en calidad antes de añadir alcance.",
+      "quien": "Dirección de entrega y calidad"
     },
     "retrabajo": {
       "nombre": "Retrabajo",
       "pregunta": "¿Cuánto vuelve atrás?",
       "unidad": "de lo terminado",
-      "como": "Parte de las tareas terminadas en las últimas 8 semanas que volvieron a un estado por el que ya habían pasado. No cuenta las vueltas tras un bloqueo."
+      "como": "Parte de las tareas terminadas en las últimas 8 semanas que volvieron a un estado por el que ya habían pasado. No cuenta las vueltas tras un bloqueo.",
+      "decision": "Si endurecer la definición de listo o de terminado.",
+      "quien": "Responsable del equipo y de producto"
     },
     "reparto": {
       "nombre": "Reparto del trabajo",
       "pregunta": "¿En qué se va el esfuerzo?",
       "unidad": "en historias",
-      "como": "Parte de lo terminado en las últimas 8 semanas por tipo: historias, errores, tareas y otros."
+      "como": "Parte de lo terminado en las últimas 8 semanas por tipo: historias, errores, tareas y otros.",
+      "decision": "Si el reparto del esfuerzo cuadra con las prioridades.",
+      "quien": "Dirección de entrega"
     },
     "pendiente": {
       "nombre": "Pendiente",
       "pregunta": "¿Entra más de lo que sale?",
       "unidad": "tareas sin empezar",
-      "como": "Tareas sin empezar al final de cada semana, y tareas que entran frente a las que salen."
+      "como": "Tareas sin empezar al final de cada semana, y tareas que entran frente a las que salen.",
+      "decision": "Si dejar de aceptar trabajo nuevo o volver a priorizar el pendiente.",
+      "quien": "Responsable de producto"
     },
     "estimacion": {
       "nombre": "Precisión de la estimación",
       "pregunta": "¿Los puntos predicen la duración?",
       "unidad": "de 0 a 1",
-      "como": "Relación entre los puntos estimados y el tiempo de ciclo real en las últimas 12 semanas. 1 es una relación perfecta; por debajo de 0,2 los puntos no predicen."
+      "como": "Relación entre los puntos estimados y el tiempo de ciclo real en las últimas 12 semanas. 1 es una relación perfecta; por debajo de 0,2 los puntos no predicen.",
+      "decision": "Si estimar compensa o basta con contar tareas.",
+      "quien": "Responsable del equipo"
     },
     "velocidad": {
       "nombre": "Velocidad",
       "pregunta": "¿Cuántos puntos terminamos?",
       "unidad": "puntos por semana",
-      "como": "Puntos de las tareas terminadas cada semana. Sirve para comparar al equipo consigo mismo, nunca con otros equipos."
+      "como": "Puntos de las tareas terminadas cada semana. Sirve para comparar al equipo consigo mismo, nunca con otros equipos.",
+      "decision": "Cuánto compromete el propio equipo en su próximo sprint. Nunca para comparar equipos.",
+      "quien": "El equipo"
     },
     "primera": {
       "nombre": "Primera respuesta",
       "pregunta": "¿Cuánto tarda en atenderse algo nuevo?",
       "unidad": "horas",
-      "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atiende casi todo: el 85% de las tareas creadas en las últimas 4 semanas."
+      "como": "Horas desde que se crea una tarea hasta su primera respuesta. Plazo en el que se atiende casi todo: el 85% de las tareas creadas en las últimas 4 semanas.",
+      "decision": "Si las peticiones nuevas necesitan una primera respuesta más rápida o un turno.",
+      "quien": "Responsable del equipo"
     },
     "agent_readiness": {
       "nombre": "Listo para agentes",
       "pregunta": "¿Está el trabajo descrito para que lo haga un agente?",
       "unidad": "de los tickets nuevos",
-      "como": "Parte de los tickets creados en las últimas 12 semanas que cumplen al menos 4 de los 5 criterios de la rúbrica: descripción con contenido, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas."
+      "como": "Parte de los tickets creados en las últimas 12 semanas que cumplen al menos 4 de los 5 criterios de la rúbrica: descripción con contenido, criterios de aceptación, alcance acotado, referencias y sin dependencias abiertas.",
+      "decision": "Qué pendiente refinar antes de dar trabajo a agentes de IA.",
+      "quien": "Responsable de producto"
     },
     "bugs": {
       "nombre": "Bugs nuevos",
       "pregunta": "¿Cuántos bugs entran?",
       "unidad": "bugs por semana",
-      "como": "Bugs creados cada semana, media de las últimas 4 semanas. No cuentan los descartados (duplicados, no se hará)."
+      "como": "Bugs creados cada semana, media de las últimas 4 semanas. No cuentan los descartados (duplicados, no se hará).",
+      "decision": "Si una entrega o un cambio está creando fallos y si hay que parar a corregir.",
+      "quien": "Responsable del equipo y calidad"
     }
   }
 }

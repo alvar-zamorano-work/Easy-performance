@@ -20,6 +20,9 @@ export interface MedidaDef {
   formato: string;
   requiere?: Requisito;
   como: string;
+  /** Qué decisión dispara cuando cambia y quién la toma. */
+  decision?: string;
+  quien?: string;
   limites?: Limites;
 }
 

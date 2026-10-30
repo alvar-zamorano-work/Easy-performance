@@ -33,9 +33,31 @@
     const dest = K.destacados();
     const fichas = eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
       `<span class="small muted">${esc(e.cambios[0] ? t('resumen.cambio', { m: nombreMedida(e.cambios[0].id) }) : t('resumen.fichaEstable'))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
-    return K.statusBar(tono, titular, items)
+    return K.statusBar(tono, titular, items) + preguntas()
       + K.sec(t('resumen.baselineEquipos'), `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span>`) + `<div class="fichas cols-2">${fichas}</div>`
       + K.sec(t('resumen.primero'), `<button class="link" data-action="go" data-view="recomendaciones">${esc(t('comun.verTodas'))}</button>`) + `<div class="ficha list">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
+  }
+  /**
+   * Preguntas de dirección: una por objetivo del Context. Cada una se responde con las medidas de ese objetivo
+   * en los equipos visibles: qué equipos están fuera de lo normal. Una pregunta entra si su respuesta lleva a decidir algo.
+   */
+  function preguntas() {
+    const vm = S.vm, P = EP.P, c = P.contexto(S.cfg, S.det), eqs = EP.visibles(), cols = vm.kpis;
+    const tarjetas = P.OBJETIVOS.filter((o) => c.objetivos.indexOf(o.id) >= 0).map((o) => {
+      const kpis = o.kpis.filter((k) => cols.indexOf(k) >= 0);
+      if (!kpis.length) return '';
+      const malos = []; let conDato = false;
+      eqs.forEach((e) => kpis.forEach((k) => { const m = P.med(e, k); if (m && m.disponible) { conDato = true; if (m.estado === 'atencion' || m.estado === 'critico') malos.push({ e, k, m }); } }));
+      malos.sort((a, b) => (b.m.estado === 'critico' ? 1 : 0) - (a.m.estado === 'critico' ? 1 : 0));
+      const tono = !conDato ? 'neutral' : malos.some((x) => x.m.estado === 'critico') ? 'bad' : malos.length ? 'warn' : 'good';
+      const nEq = new Set(malos.map((x) => x.e.nombre)).size;
+      const resp = !conDato ? t('preg.sinDatos') : malos.length ? tn('preg.revisar', nEq) : t('preg.bien');
+      const cuerpo = malos.length ? malos.slice(0, 4).map((x) => `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(x.e.nombre)}" data-medida="${esc(x.k)}" role="button" tabindex="0">${K.estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreEquipo(x.e.nombre))}</b><div class="small muted">${esc(nombreMedida(x.k))}: ${esc(valor(x.k, x.m.valor))} · ${esc(K.rango(x.k, x.m))}</div></div><span class="go">›</span></div>`).join('')
+        + (malos.length > 4 ? `<div class="tiny muted">${esc(tn('preg.mas', malos.length - 4))}</div>` : '')
+        : `<p class="small muted">${esc(conDato ? t('preg.bienDetalle') : t('preg.sinDatosDetalle'))}</p>`;
+      return K.ficha(`<div class="f-title">${esc(t('preg.' + o.id))}</div>${K.chip(tono, resp)}`, cuerpo, `<span class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</span>`, ' data-tipo="pregunta"');
+    }).filter(Boolean);
+    return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="fichas">${tarjetas.join('')}</div>` : '';
   }
   function recsActivas(eqs) { const n = eqs.map((e) => e.nombre); return S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => n.indexOf(e) >= 0)); }
 
@@ -62,7 +84,72 @@
     const recs = recsActivas([e]);
     const fRecs = K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>${K.chip(recs.length ? 'warn' : 'neutral', tn('recs.cuenta', recs.length))}`, recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`);
     return K.statusBar(e.cambios.length ? 'bad' : e.estado === 'estable' ? 'good' : 'warn', titular, items) + tiles
-      + `<div class="fichas cols-2 sp">${fCambios}${fRecs}</div>` + masDetalle(e);
+      + `<div class="fichas cols-2 sp">${fCambios}${fRecs}</div>` + `<div class="fichas cols-2 sp">${fichaPrevision(e)}${fichaEpicasEquipo(e)}</div>` + masDetalle(e);
+  }
+  // ---------- previsión por probabilidad ----------
+  const DIA_MS = 864e5;
+  const semanaFecha = (fin, w) => fecha(new Date(new Date(fin).getTime() + w * 7 * DIA_MS));
+  const filaPrev = (label, grande, peque) => `<div class="prev-fila"><span class="small muted">${esc(label)}</span><b>${esc(grande)}</b><span class="small muted">${esc(peque || '')}</span></div>`;
+  function fichaPrevision(e) {
+    const p = e.prevision;
+    const cab = `<div class="f-title">${esc(t('prev.titulo'))}</div>${K.chip('neutral', t('prev.chip'))}`;
+    if (!p) return K.ficha(cab, `<p class="muted small">${esc(t('prev.sinDatos'))}</p>`);
+    const cuando = (c) => (c.p85 == null ? t('prev.sinFin') : tn('prev.semanas', c.p85));
+    let html = filaPrev(t('prev.cuatro'), t('prev.alMenos', { n: p.cuatro.p85 }), t('prev.normal', { n: p.cuatro.p50 }));
+    if (p.cuandoEnCurso) html += filaPrev(tn('prev.enCurso', p.enCurso), cuando(p.cuandoEnCurso), p.cuandoEnCurso.p85 == null ? '' : t('prev.hacia', { f: semanaFecha(p.semanaFin, p.cuandoEnCurso.p85) }));
+    const n = (S.prevN || {})[e.nombre] || 0;
+    let res = '';
+    if (n > 0) {
+      const c = N.cuandoTerminan(p.muestra, n, 11);
+      res = c.p85 == null ? t('prev.sinFin') : cuando(c) + ', ' + t('prev.hacia', { f: semanaFecha(p.semanaFin, c.p85) }) + '. ' + t('prev.normalSem', { w: c.p50 });
+    }
+    html += `<div class="prev-q"><label class="small">${esc(t('prev.pregunta'))}</label><input type="number" min="1" max="2000" step="1" class="sm num" data-change="prev-n" data-team="${esc(e.nombre)}" value="${n || ''}" aria-label="${esc(t('prev.pregunta'))}"><span class="small">${esc(res)}</span></div>`;
+    html += `<p class="tiny muted" style="margin:10px 0 0">${esc(t('prev.como', { s: p.muestra.length }))}</p>`;
+    return K.ficha(cab, html);
+  }
+  EP.cambio('prev-n', (el) => { S.prevN = S.prevN || {}; S.prevN[el.dataset.team] = Math.max(0, Math.min(2000, parseInt(el.value, 10) || 0)); EP.render(); });
+
+  // ---------- épicas ----------
+  const TONO_SIT = { vencida: 'bad', parada: 'bad', en_riesgo: 'warn', en_plazo: 'good', sin_fecha: 'neutral', terminada: 'good' };
+  const sitChip = (x) => K.chip(TONO_SIT[x.situacion], t('epicas.sit.' + x.situacion));
+  const prevEpica = (x) => (x.situacion === 'terminada' ? t('epicas.cerrada') : x.prevision85 ? t('prev.hacia', { f: fecha(x.prevision85) }) : t('epicas.sinRitmo'));
+  function epicaFila(x) {
+    return `<div class="rrow">${sitChip(x)}<div class="rrow-t"><b>${esc(x.clave)} · ${esc(x.titulo)}</b><div class="small muted">${esc(t('epicas.hijas', { t: x.terminadas, n: x.hijas }))} · ${esc(prevEpica(x))}</div>${K.barra(x.avance, 'good')}</div></div>`;
+  }
+  function fichaEpicasEquipo(e) {
+    const v = S.vm.epicas;
+    const mias = v ? v.epicas.filter((x) => x.equipo === e.nombre && x.situacion !== 'terminada') : [];
+    if (!mias.length) return '';
+    const puede = (EP.POR_ROL[S.role] || []).indexOf('epicas') >= 0;
+    return K.ficha(`<div class="f-title">${esc(t('epicas.equipoTitulo'))}</div>${K.chip('neutral', tn('epicas.abiertas', mias.length))}`, mias.slice(0, 4).map(epicaFila).join(''),
+      puede ? `<button class="link" data-action="go" data-view="epicas">${esc(t('epicas.verTodas'))}</button>` : '');
+  }
+  function epicas() {
+    const v = S.vm.epicas, vis = EP.visibles().map((e) => e.nombre);
+    const todas = (v ? v.epicas : []).filter((x) => vis.indexOf(x.equipo) >= 0);
+    if (!todas.length) return K.statusBar('neutral', esc(t('epicas.ninguna')), [esc(t('epicas.items1'))]) + `<div class="ficha empty">${esc(t('epicas.vacio'))}</div>`;
+    const abiertas = todas.filter((x) => x.situacion !== 'terminada'), terminadas = todas.filter((x) => x.situacion === 'terminada');
+    const n = (s) => abiertas.filter((x) => x.situacion === s).length;
+    const venc = n('vencida'), par = n('parada'), riesgo = n('en_riesgo');
+    const tono = venc || par ? 'bad' : riesgo ? 'warn' : abiertas.length ? 'good' : 'neutral';
+    const partes = [tn('epicas.abiertas', abiertas.length)];
+    if (venc) partes.push(tn('epicas.vencidas', venc));
+    if (par) partes.push(tn('epicas.paradas', par));
+    if (riesgo) partes.push(tn('epicas.enRiesgo', riesgo));
+    const pctSin = v.tareas ? v.sinEpica / v.tareas : 0;
+    const tiles = `<div class="tiles">${K.stat(t('epicas.tile.abiertas'), String(abiertas.length), esc(tn('epicas.tile.abiertasPie', terminadas.length)), '')}`
+      + `${K.stat(t('epicas.tile.riesgo'), String(venc + riesgo), esc(v.hayVencimientos ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : 'good' })}`
+      + `${K.stat(t('epicas.tile.paradas'), String(par), esc(t('epicas.tile.paradasPie', { s: v.semanasRitmo })), '', { tone: par ? 'bad' : 'good' })}`
+      + `${K.stat(t('epicas.tile.sinEpica'), N.conPorcentaje(Math.round(pctSin * 100)), esc(t('epicas.tile.sinEpicaPie', { n: v.sinEpica, de: v.tareas })), '', { tone: pctSin > 0.2 ? 'warn' : 'good' })}</div>`;
+    const fila = (x) => `<tr${x.situacion === 'vencida' || x.situacion === 'parada' ? ' class="dudoso"' : ''}><td><b>${esc(x.clave)}</b><div class="small">${esc(x.titulo)}</div>${x.estadoDescuadrado ? `<div class="tiny t-warn" title="${esc(t('epicas.descuadradoTitle'))}">${esc(t('epicas.descuadrado', { e: x.estado }))}</div>` : ''}</td>
+      <td>${esc(nombreEquipo(x.equipo))}</td><td style="min-width:120px">${K.barra(x.avance, 'good')}<div class="tiny muted">${esc(t('epicas.hijas', { t: x.terminadas, n: x.hijas }))}</div></td>
+      <td class="num">${esc(t('epicas.ritmo', { n: N.formatear(x.ritmo, 'dec') }))}</td><td>${esc(prevEpica(x))}</td><td>${esc(x.vence ? fecha(x.vence) : t('epicas.sinFecha'))}</td><td>${sitChip(x)}</td></tr>`;
+    const cab = `<tr><th>${esc(t('epicas.col.epica'))}</th><th>${esc(t('epicas.col.equipo'))}</th><th>${esc(t('epicas.col.avance'))}</th><th class="num">${esc(t('epicas.col.ritmo'))}</th><th>${esc(t('epicas.col.prevision'))}</th><th>${esc(t('epicas.col.vence'))}</th><th>${esc(t('epicas.col.situacion'))}</th></tr>`;
+    const tabla = abiertas.length ? `<div class="ficha"><div class="table-wrap"><table>${cab}${abiertas.map(fila).join('')}</table></div></div>` : `<div class="ficha empty">${esc(t('epicas.todasCerradas'))}</div>`;
+    const cerradas = terminadas.length ? `<details class="mas"><summary>${esc(tn('epicas.terminadas', terminadas.length))}</summary><div class="ficha"><div class="table-wrap"><table>${cab}${terminadas.map(fila).join('')}</table></div></div></details>` : '';
+    return K.statusBar(tono, esc(partes.join(' · ')), [esc(t('epicas.items1')), esc(t('epicas.items2', { s: v.semanasRitmo }))])
+      + tiles + (v.hayVencimientos ? '' : `<div class="notice info small" style="margin:12px 0">${esc(t('epicas.sinVencimientos'))}</div>`)
+      + `<div class="sp">${tabla}</div>` + cerradas;
   }
   /** Lo que no es baseline va plegado: tiempo por etapa, fiabilidad, trabajo parado y el resto de medidas. */
   function masDetalle(e) {
@@ -85,7 +172,9 @@
     const fParado = K.ficha(`<div class="f-title">${esc(t('equipo.parado'))}</div>${e.umbralEdad != null ? K.chip('neutral', t('equipo.paradoUmbral', { d: N.formatear(e.umbralEdad, 'dias') })) : ''}`, parado);
     const otras = cat().ordenMedidas.filter((id) => dest.indexOf(id) < 0 && e.medidas[id] && e.medidas[id].disponible);
     const fOtras = otras.length ? K.ficha(`<div class="f-title">${esc(tn('equipo.verTodas', otras.length))}</div>`, `<div class="fbs">${otras.map((id) => K.filaBaseline(e, id)).join('')}</div>`) : '';
-    return `<details class="mas"><summary>${esc(t('equipo.masDetalle'))}</summary><div class="fichas cols-2 sp">${fTiempo}${fFiab}${fParado}${fOtras}</div></details>`;
+    const rp = e.reparto;
+    const fReparto = rp ? K.ficha(`<div class="f-title">${esc(t('reparto.titulo', { c: rp.campo }))}</div>`, rp.filas.slice(0, 8).map((x) => `<div class="fila-barra"><span class="small">${esc(x.valor || t('reparto.sinValor'))}</span>${K.barra(x.parte, 'good')}<b class="small">${esc(N.conPorcentaje(Math.round(x.parte * 100)))}</b></div>`).join(''), `<span class="tiny muted">${esc(t('reparto.pie'))}</span>`) : '';
+    return `<details class="mas"><summary>${esc(t('equipo.masDetalle'))}</summary><div class="fichas cols-2 sp">${fTiempo}${fFiab}${fParado}${fReparto}${fOtras}</div></details>`;
   }
 
   // ---------- Comparar ----------
@@ -181,7 +270,8 @@
     const id = d.medida, m = e && e.medidas[id], def = cat().medidas[id];
     const titulo = nombreEquipo(d.team) + ' · ' + nombreMedida(id);
     if (!m) return [titulo, `<p class="muted">${esc(t('medida.noDisponible'))}</p>`, ''];
-    let html = `<p>${esc(def ? def.como : t('medida.costeComo'))}</p>`;
+    let html = (def && def.pregunta ? `<p class="small muted">${esc(def.pregunta)}</p>` : '') + `<p>${esc(def ? def.como : t('medida.costeComo'))}</p>`;
+    if (def && def.decision) html += `<div class="ficha-4"><div><span class="tiny muted">${esc(t('cajon.decision'))}</span><b class="small">${esc(def.decision)}</b></div><div><span class="tiny muted">${esc(t('cajon.quien'))}</span><b class="small">${esc(def.quien || '')}</b></div></div>`;
     if (m.disponible) html += `<div class="kv"><div><span>${esc(t('cajon.valor'))}</span><b>${esc(valor(id, m.valor))}</b></div><div><span>${esc(t('cajon.normal'))}</span><b>${esc(K.rango(id, m))}</b></div><div><span>${esc(t('cajon.estado'))}</span>${K.estadoChip(m)}</div><div><span>${esc(t('cajon.referencia'))}</span><b>${esc(t('ref.' + (m.referencia || 'sin')))}</b></div></div><p class="small">${esc(K.porque(id, m))}</p>`;
     else html += `<div class="notice warn small">${esc(m.motivo || t('medida.noDisponible'))}</div>`;
     if (m.serie) html += `<div class="ficha" style="margin:10px 0">${K.spark(m.serie.slice(-26), m.ref, { tone: K.tonoDe(m), h: 70, label: nombreMedida(id) })}<div class="tiny muted">${esc(t('cajon.serie'))}</div></div>`;
@@ -236,5 +326,5 @@
     return [t('ayuda.titulo'), html];
   }
 
-  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, calidad, cajon, recsActivas });
+  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas });
 })();

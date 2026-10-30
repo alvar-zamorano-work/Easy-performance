@@ -27,7 +27,9 @@
       "unidad": "tasks per week",
       "dir": "mas",
       "formato": "num",
-      "como": "Tasks done each week. Discarded tasks (duplicates, will not do) do not count."
+      "como": "Tasks done each week. Discarded tasks (duplicates, will not do) do not count.",
+      "decision": "Whether the team can take what is asked of it, and whether to replan dates.",
+      "quien": "Delivery leadership"
     },
     "regularidad": {
       "nombre": "Delivery regularity",
@@ -35,7 +37,9 @@
       "unidad": "of variation",
       "dir": "menos",
       "formato": "pct",
-      "como": "How much deliveries change from one week to the next against their average, over the last 8 weeks. The lower, the more predictable."
+      "como": "How much deliveries change from one week to the next against their average, over the last 8 weeks. The lower, the more predictable.",
+      "decision": "Whether to make deliveries smaller and steadier.",
+      "quien": "Team lead"
     },
     "ciclo": {
       "nombre": "Lead time",
@@ -44,7 +48,9 @@
       "dir": "menos",
       "formato": "dias",
       "requiere": "tiempos",
-      "como": "Days from when a task enters in progress until it is done. Shown as the lead time in which almost everything started is done: 85% of the tasks in the last 4 weeks."
+      "como": "Days from when a task enters in progress until it is done. Shown as the lead time in which almost everything started is done: 85% of the tasks in the last 4 weeks.",
+      "decision": "Where to remove waiting or split the work when it rises.",
+      "quien": "Team lead and PMO"
     },
     "total": {
       "nombre": "Total time",
@@ -52,7 +58,9 @@
       "unidad": "days",
       "dir": "menos",
       "formato": "dias",
-      "como": "Days from when a task is created until it is done. The time in which almost everything is done: 85% of the tasks in the last 4 weeks."
+      "como": "Days from when a task is created until it is done. The time in which almost everything is done: 85% of the tasks in the last 4 weeks.",
+      "decision": "What date to promise the business.",
+      "quien": "Delivery leadership"
     },
     "espera": {
       "nombre": "Waiting time",
@@ -65,7 +73,9 @@
       "limites": {
         "atencion": 0.5,
         "critico": 0.65
-      }
+      },
+      "decision": "Which hand-off (review, testing, deployment) needs capacity or a new rule.",
+      "quien": "Team lead and PMO"
     },
     "edad": {
       "nombre": "Blocked work",
@@ -78,7 +88,9 @@
       "limites": {
         "atencion": 2,
         "critico": 4
-      }
+      },
+      "decision": "Which stuck work to unblock or drop this week.",
+      "quien": "Team lead"
     },
     "wip": {
       "nombre": "Work in progress",
@@ -87,7 +99,9 @@
       "dir": "menos",
       "formato": "num",
       "requiere": "inicio",
-      "como": "Tasks started and not done at the end of each week. With the export it is an approximation; with the API or weekly snapshots it is exact."
+      "como": "Tasks started and not done at the end of each week. With the export it is an approximation; with the API or weekly snapshots it is exact.",
+      "decision": "Whether to set or lower a work in progress limit.",
+      "quien": "Team lead"
     },
     "fiabilidad": {
       "nombre": "Sprint reliability",
@@ -96,7 +110,9 @@
       "dir": "mas",
       "formato": "pct",
       "requiere": "api",
-      "como": "What was done against what was in the sprint at the start."
+      "como": "What was done against what was in the sprint at the start.",
+      "decision": "How much to commit in the next sprint.",
+      "quien": "Team lead and product owner"
     },
     "arrastradas": {
       "nombre": "Carried over tasks",
@@ -109,7 +125,9 @@
       "limites": {
         "atencion": 0.35,
         "critico": 0.5
-      }
+      },
+      "decision": "Whether sprint commitments are too big, and how much less to plan.",
+      "quien": "Team lead and product owner"
     },
     "errores": {
       "nombre": "Share of bugs",
@@ -122,7 +140,9 @@
       "limites": {
         "atencion": 0.3,
         "critico": 0.4
-      }
+      },
+      "decision": "Whether to invest in quality before adding scope.",
+      "quien": "Delivery leadership and QA"
     },
     "bugs": {
       "nombre": "New bugs",
@@ -131,7 +151,9 @@
       "dir": "menos",
       "formato": "num",
       "requiere": "errores",
-      "como": "Bugs created each week, average of the last 4 weeks. Discarded bugs (duplicates, will not do) do not count."
+      "como": "Bugs created each week, average of the last 4 weeks. Discarded bugs (duplicates, will not do) do not count.",
+      "decision": "Whether a release or a change is creating defects, and whether to stop and fix.",
+      "quien": "Team lead and QA"
     },
     "retrabajo": {
       "nombre": "Rework",
@@ -144,7 +166,9 @@
       "limites": {
         "atencion": 0.2,
         "critico": 0.3
-      }
+      },
+      "decision": "Whether to tighten the definition of ready or of done.",
+      "quien": "Team lead and product owner"
     },
     "reparto": {
       "nombre": "Mix of work",
@@ -152,7 +176,9 @@
       "unidad": "in stories",
       "dir": null,
       "formato": "pct",
-      "como": "Share of work done in the last 8 weeks by type: stories, bugs, tasks and other."
+      "como": "Share of work done in the last 8 weeks by type: stories, bugs, tasks and other.",
+      "decision": "Whether the split of effort matches the priorities.",
+      "quien": "Delivery leadership"
     },
     "pendiente": {
       "nombre": "Backlog",
@@ -160,7 +186,9 @@
       "unidad": "tasks not started",
       "dir": "menos",
       "formato": "num",
-      "como": "Tasks not started at the end of each week, and tasks coming in against tasks going out."
+      "como": "Tasks not started at the end of each week, and tasks coming in against tasks going out.",
+      "decision": "Whether to stop taking new work or reprioritise the backlog.",
+      "quien": "Product owner"
     },
     "estimacion": {
       "nombre": "Estimate accuracy",
@@ -173,7 +201,9 @@
       "limites": {
         "atencion": 0.2,
         "critico": 0.05
-      }
+      },
+      "decision": "Whether estimating is worth the time or counting tasks is enough.",
+      "quien": "Team lead"
     },
     "velocidad": {
       "nombre": "Velocity",
@@ -182,7 +212,9 @@
       "dir": "mas",
       "formato": "num",
       "requiere": "puntos",
-      "como": "Points of the tasks done each week. Useful to compare the team with itself, never with other teams."
+      "como": "Points of the tasks done each week. Useful to compare the team with itself, never with other teams.",
+      "decision": "How much the team commits in its own next sprint. Never to compare teams.",
+      "quien": "The team"
     },
     "primera": {
       "nombre": "First response",
@@ -191,7 +223,9 @@
       "dir": "menos",
       "formato": "horas",
       "requiere": "primera",
-      "como": "Hours from when a task is created until its first response. The time in which almost everything gets attention: 85% of the tasks created in the last 4 weeks."
+      "como": "Hours from when a task is created until its first response. The time in which almost everything gets attention: 85% of the tasks created in the last 4 weeks.",
+      "decision": "Whether new requests need a faster first answer or a rota.",
+      "quien": "Team lead"
     },
     "agent_readiness": {
       "nombre": "Ready for AI agents",
@@ -200,7 +234,9 @@
       "dir": "mas",
       "formato": "pct",
       "requiere": "descripcion",
-      "como": "Share of tickets created in the last 12 weeks that meet at least 4 of the 5 criteria of the rubric: description with content, acceptance criteria, bounded scope, references and no open dependencies."
+      "como": "Share of tickets created in the last 12 weeks that meet at least 4 of the 5 criteria of the rubric: description with content, acceptance criteria, bounded scope, references and no open dependencies.",
+      "decision": "Which backlog to refine before handing work to AI agents.",
+      "quien": "Product owner"
     }
   }
 }

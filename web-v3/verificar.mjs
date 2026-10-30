@@ -135,7 +135,7 @@ async function recorrer(p, etiqueta) {
       const vistas = await A(p, () => [...document.querySelectorAll('#nav button:not(.hidden)')].map((b) => b.dataset.view));
       for (const v of vistas) {
         await ir(p, v); await p.waitForTimeout(120);
-        const extra = v === 'fuentes' ? ['ficheros', 'mapeo', 'tipos', 'equipos', 'context'] : v === 'equipos' && rol !== 'equipo' ? ['', '__comparar'] : [''];
+        const extra = v === 'fuentes' ? ['ficheros', 'mapeo', 'tipos', 'equipos', 'context', 'acuerdos'] : v === 'equipos' && rol !== 'equipo' ? ['', '__comparar'] : [''];
         for (const x of extra) {
           if (v === 'fuentes') await A(p, (x) => document.querySelector(`[data-action="fuentes-tab"][data-tab="${x}"]`).click(), x);
           if (x === '__comparar') await A(p, () => document.querySelector('[data-team="__comparar"]').click());
@@ -322,6 +322,11 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     await p.selectOption('select[data-change="tipo-estimacion"]', '__auto'); await p.waitForTimeout(300); await quieto(p);
     const e2 = await est();
     ok('campo de estimación: ninguno y otra vez automático', e0 > 0 && e1 === 0 && e2 === e0 && !p.errores.length, `${e0} -> ${e1} -> ${e2}`);
+    // Reparto por un campo del export: sale en la ficha de cada equipo
+    await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="tipos"]').click()); await quieto(p);
+    await p.selectOption('select[data-change="tipo-reparto"]', 'Issue Type'); await p.waitForTimeout(300); await quieto(p);
+    const rep = await A(p, () => { const e = window.EP.S.vm.equipos[0]; return e.reparto ? { campo: e.reparto.campo, suma: e.reparto.filas.reduce((s, x) => s + x.parte, 0), n: e.reparto.filas.length } : null; });
+    ok('reparto por un campo elegido: suma el 100 % en la ficha de equipo', rep && rep.campo === 'Issue Type' && Math.abs(rep.suma - 1) < 1e-9 && !p.errores.length, JSON.stringify(rep));
   }
   await p.context().close();
 }
@@ -376,6 +381,47 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   await pedir(); const i3 = await leer();
   ok('IA: la propuesta queda por revisar y repetirla no la borra', i1.ia['In Review'] === 'en_pruebas' && i1.revisar.includes('In Review') && i2.ia['In Review'] === 'en_pruebas' && i2.valor === 'en_pruebas' && i2.revisar.includes('In Review'), JSON.stringify([i1, i2]));
   ok('IA: una respuesta sin nada válido mantiene la propuesta anterior', i3.ia['In Review'] === 'en_pruebas' && /(ninguna propuesta|no valid)/.test(i3.aviso || ''), JSON.stringify(i3));
+  await p.context().close();
+}
+
+// ---------- 7. Mejoras de dirección: preguntas, previsión, épicas, decisión de cada medida, acuerdos y valor congelado ----------
+{
+  const p = await pagina(1280, 800);
+  await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
+  await fijarIdioma(p, 'es'); await fijarRol(p, 'direccion'); await ir(p, 'resumen'); await quieto(p);
+  const preg = await A(p, () => ({ hay: /Preguntas de dirección/.test(document.getElementById('page').textContent), objetivos: window.EP.P.contexto(window.EP.S.cfg, window.EP.S.det).objetivos.length }));
+  ok('Resumen: preguntas de dirección, una por objetivo del Context', preg.hay, JSON.stringify(preg));
+  await p.screenshot({ path: join(SALIDA, '50-preguntas.png'), fullPage: true });
+  // Previsión en la ficha de equipo, con la pregunta de cuántas tareas
+  const equipo = await A(p, () => window.EP.S.vm.equipos[0].nombre);
+  await A(p, (n) => window.EP.openTeam(n), equipo); await quieto(p);
+  const pv = await A(p, () => window.EP.S.vm.equipos[0].prevision);
+  ok('previsión del equipo: al menos y lo normal en 4 semanas', pv && pv.cuatro.p85 <= pv.cuatro.p50 && /Previsión/.test(await A(p, () => document.getElementById('page').textContent)), JSON.stringify(pv && pv.cuatro));
+  await p.fill('input[data-change="prev-n"]', '25'); await p.press('input[data-change="prev-n"]', 'Enter'); await p.waitForTimeout(200);
+  await A(p, () => document.querySelector('input[data-change="prev-n"]').dispatchEvent(new Event('change', { bubbles: true }))); await p.waitForTimeout(200); await quieto(p);
+  const resp = await A(p, () => document.querySelector('.prev-q span.small') ? document.querySelector('.prev-q span.small').textContent : '');
+  ok('previsión: ¿cuándo terminamos 25 tareas? responde con semanas y fecha', /semana/.test(resp) && /hacia el/.test(resp), resp);
+  await p.screenshot({ path: join(SALIDA, '51-prevision.png'), fullPage: true });
+  // Épicas
+  await ir(p, 'epicas'); await quieto(p);
+  const ep = await A(p, () => ({ filas: document.querySelectorAll('#page table tr').length, v: window.EP.S.vm.epicas.epicas.length, error: window.EP.S.error ? window.EP.S.error.message : null }));
+  ok('Épicas: tabla con avance, ritmo y previsión', ep.v > 0 && ep.filas > 1 && !ep.error, JSON.stringify(ep));
+  await p.screenshot({ path: join(SALIDA, '52-epicas.png'), fullPage: true });
+  // Panel de una medida: qué decisión dispara y quién la toma
+  await A(p, (n) => window.EP.openDrill({ kind: 'medida', team: n, medida: 'entregas' }), equipo); await p.waitForTimeout(200);
+  const caj = await A(p, () => document.body.innerText);
+  ok('panel de una medida: decisión que dispara y quién la toma', /Qué decisión dispara/.test(caj) && /Quién la toma/.test(caj));
+  await A(p, () => window.EP.openDrill(null)); await p.waitForTimeout(100);
+  // Acuerdos
+  await fijarRol(p, 'pmo'); await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="acuerdos"]').click()); await quieto(p);
+  const acu = await A(p, () => document.querySelectorAll('#page .ficha.list .rrow').length);
+  const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('[data-action="acu-descargar"]')]);
+  ok('Acuerdos: diez acuerdos y se descargan', acu === 10 && /acuerdos-easyperformance\.md$/.test(descarga.suggestedFilename()), `${acu} · ${descarga.suggestedFilename()}`);
+  await p.screenshot({ path: join(SALIDA, '53-acuerdos.png'), fullPage: true });
+  // Cortes: valor oficial congelado
+  await ir(p, 'cortes'); await quieto(p);
+  ok('Cortes: cada corte dice que sus cifras son el valor oficial congelado', /valor oficial de este corte/.test(await A(p, () => document.getElementById('page').textContent)));
+  ok('sin errores de consola en las mejoras de dirección', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }
 

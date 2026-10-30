@@ -12,7 +12,7 @@ import { norm } from '../../nucleo/util.ts';
 import { proponerEstado } from '../../nucleo/estados.ts';
 import { tieneCriterios } from '../../nucleo/agent-readiness.ts';
 import type {
-  CampoAgrupador, EstadoNormalizado, EstadoOrigen, FicheroEntrada, InformeIngesta, Lectura, Prioridad, Tarea, TipoTarea,
+  CampoAgrupador, Epica, EstadoNormalizado, EstadoOrigen, FicheroEntrada, InformeIngesta, Lectura, Prioridad, Tarea, TipoTarea,
 } from '../../nucleo/modelo.ts';
 
 export const PLATAFORMA = 'jira';
@@ -78,6 +78,8 @@ interface FilaJira {
   tis: TiempoJira[];
   primera: Date | null;
   cambioCategoria: Date | null;
+  vence: Date | null;
+  reparto: string;
 }
 
 /** Opciones de lectura: columnas elegidas a mano (campo -> nombre de la columna) cuando la detección no basta. */
@@ -85,13 +87,15 @@ export interface OpcionesLectura {
   columnas?: Record<string, string>;
   /** Estimación: sin definir, la que se reconozca (o la elegida en columnas); '' no se usa ninguna; un nombre, esa columna. */
   columnaEstimacion?: string | null;
+  /** Columna por la que el cliente quiere repartir el trabajo (por ejemplo, negocio frente a técnico). Va a agrupadores.reparto. */
+  columnaReparto?: string | null;
 }
 
 /** Campos sin los que un fichero no se puede medir. */
 export const OBLIGATORIOS = ['clave', 'creada'];
 /** Campos que conviene tener: sin ellos se miden menos cosas. */
 export const RECOMENDADOS = ['tipo', 'estado', 'resuelta', 'equipo', 'actualizada', 'sprint'];
-const CAMPOS_FECHA = ['creada', 'actualizada', 'resuelta', 'primera', 'cambioCategoria'];
+const CAMPOS_FECHA = ['creada', 'actualizada', 'resuelta', 'primera', 'cambioCategoria', 'vence'];
 
 export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura = {}): Lectura {
   const informe: InformeIngesta = {
@@ -117,6 +121,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
       if (i >= 0) mapa.puntos = i;
       else informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' has no column "', ' no tiene la columna «') + opciones.columnaEstimacion + Tx('": the estimate is detected by name in this file.', '»: en este fichero la estimación se reconoce por su nombre.') });
     }
+    const iReparto = opciones.columnaReparto ? cab.findIndex((h) => String(h).trim() === opciones.columnaReparto) : -1;
     // Filas vacías del final (Excel suele dejarlas) no cuentan
     while (filas.length > 1 && filas[filas.length - 1].every((x) => !String(x || '').trim())) filas.pop();
     const n = filas.length - 1;
@@ -189,6 +194,8 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
         tis: [],
         primera: leerFecha(val(fila, 'primera')),
         cambioCategoria: leerFecha(val(fila, 'cambioCategoria')),
+        vence: leerFecha(val(fila, 'vence')),
+        reparto: iReparto >= 0 ? String(fila[iReparto] || '').trim() : '',
       };
       const p = val(fila, 'puntos').replace(',', '.');
       if (p !== '' && !isNaN(+p)) t.puntos = +p;
@@ -206,8 +213,14 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
   });
 
   const filas: (FilaJira & { creada: Date })[] = [];
+  // Las épicas no se miden como trabajo, pero se guardan para la vista de épicas (estado, vencimiento y cierre)
+  const epicas: Epica[] = [];
   porClave.forEach((t) => {
-    if (t.tipo === 'epica') { informe.epicas++; return; }
+    if (t.tipo === 'epica') {
+      informe.epicas++;
+      epicas.push({ clave: t.clave, titulo: t.resumen, estado: t.estado, categoria: t.categoria, vence: t.vence, terminada: t.resuelta, descartada: !!(t.resuelta && t.resolucion && esDescartada(t.resolucion)) });
+      return;
+    }
     if (t.tipo === 'subtarea') { informe.subtareas++; return; }
     if (!t.creada) { informe.sinFecha = (informe.sinFecha || 0) + 1; return; }
     filas.push(t as FilaJira & { creada: Date });
@@ -252,7 +265,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     descripcion: t.descripcion,
     estado_origen: t.estado,
     estado_normalizado: t.estado ? mapeoPropuesto[t.estado] : proponerEstado('', t.categoria),
-    agrupadores: { equipo: t.equipoCampo, componentes: t.componentes[0] || '', proyecto: t.proyecto, etiquetas: t.etiquetas[0] || '' },
+    agrupadores: { equipo: t.equipoCampo, componentes: t.componentes[0] || '', proyecto: t.proyecto, etiquetas: t.etiquetas[0] || '', ...(opciones.columnaReparto ? { reparto: t.reparto } : {}) },
     equipo_id: null,
     prioridad: prioridadDe(t.prioridad),
     prioridad_origen: t.prioridad,
@@ -278,7 +291,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
   }));
 
   return {
-    plataforma: PLATAFORMA, tareas, informe, estados, camposEquipo: CAMPOS_EQUIPO, mapeoPropuesto,
+    plataforma: PLATAFORMA, tareas, informe, estados, camposEquipo: CAMPOS_EQUIPO, mapeoPropuesto, epicas,
     detalle: { unidadTiempoMs: factor, nombrePorId },
   };
 }
