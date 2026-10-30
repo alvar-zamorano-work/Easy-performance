@@ -118,6 +118,12 @@ export interface InformeIngesta {
   sinClave: number;
   campos: Record<string, true | 'vacio'>;
   tareas: number;
+  /** Tareas sin fecha de creación legible: no se pueden medir y se cuentan aparte para que no se pierdan sin aviso. */
+  sinFecha?: number;
+  /** Cómo se han leído las fechas numéricas (día/mes o mes/día), cuando el fichero las trae así. */
+  ordenFechas?: 'dm' | 'md';
+  /** Ficheros que no se han podido leer porque falta una columna obligatoria: sus títulos, para elegirla a mano. */
+  columnasPendientes?: { fichero: string; cabecera: string[]; faltan: string[] }[];
 }
 
 /** Lo que devuelve cualquier adaptador: tareas en el modelo neutro y lo que sabe del origen. */

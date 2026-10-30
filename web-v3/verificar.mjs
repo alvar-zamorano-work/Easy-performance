@@ -10,7 +10,7 @@
 // la clave solo en sessionStorage; propuestas de IA validadas; los dos exports con fallos.
 
 import { chromium } from 'playwright-core';
-import { mkdirSync, existsSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -59,11 +59,11 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await fijarIdioma(p, 'es');
   await clic(p, '[data-action="ob-go"][data-step="data"]');
   const t2 = await p.textContent('#onboarding');
-  ok('paso de datos con la ayuda del CSV', /Cómo conseguir el CSV/.test(t2) && /CSV UTF-8/.test(t2) && /Exportar Excel CSV/.test(t2));
-  // Un Excel no se lee: aviso y ayuda
-  await p.setInputFiles('#file-input', { name: 'jira.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('PK') });
-  await p.waitForTimeout(300);
-  ok('Excel rechazado con aviso', /Guárdalo como CSV UTF-8/.test(await p.textContent('.toast')) && /Guárdalo como CSV UTF-8/.test(await p.textContent('#onboarding')));
+  ok('paso de datos con la ayuda para conseguir los datos', /Cómo conseguir los datos/.test(t2) && /Excel de Jira/.test(t2));
+  // Un fichero que no es ni CSV ni Excel: se dice cuál y no se rompe nada
+  await p.setInputFiles('#file-input', { name: 'roto.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from('PK\u0003\u0004nada') });
+  await p.waitForTimeout(400); await quieto(p);
+  ok('fichero ilegible: aviso con su nombre', /roto\.xlsx/.test(await p.textContent('.toast')) && !(await estado(p)).error);
   // CSV de verdad: configuración guiada completa
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv'));
   await p.waitForTimeout(500); await quieto(p);
@@ -93,6 +93,35 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   const e2 = await estado(p);
   ok('recarga sin volver a cargar', await p.isVisible('#app') && !e2.error && (await A(p, () => window.EP.S.cortes.length)) === 1, JSON.stringify(e2));
   ok('sin errores de consola en la primera vez', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+  await p.context().close();
+}
+
+// ---------- 1b. Importación: Excel, fila de título y columnas elegidas a mano ----------
+{
+  const HOJAS = join(RAIZ, 'datos-sinteticos', 'hojas');
+  for (const n of ['jira-con-titulo.xlsx', 'jira-con-titulo.xls', 'jira-html.xls']) {
+    const p = await pagina(1280, 800);
+    await p.setInputFiles('#file-input', join(HOJAS, n)); await p.waitForTimeout(500); await quieto(p);
+    const r = await A(p, () => ({ tareas: window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0, paso: window.EP.S.ob.step }));
+    ok(`Excel ${n}: se lee entero`, r.tareas === 360 && r.paso === 'revision' && !p.errores.length, JSON.stringify(r) + ' ' + p.errores.slice(0, 2).join(' | '));
+    await p.context().close();
+  }
+  // Títulos que no se reconocen: la página pide elegir las columnas, se guardan y no hay que repetirlo
+  const p = await pagina(1280, 800);
+  const raro = readFileSync(join(HOJAS, 'referencia.csv'), 'utf8').replace(/^Project,Key,Summary,Issue Type,Status,Created/, 'Proyecto,Ticket,Asunto,Clase,Situación,Alta');
+  await p.setInputFiles('#file-input', { name: 'raro.csv', mimeType: 'text/csv', buffer: Buffer.from(raro) }); await p.waitForTimeout(400); await quieto(p);
+  ok('columnas que faltan: se piden', await p.isVisible('#form-col') && /Elige las columnas que faltan/.test(await p.textContent('#onboarding')));
+  await p.screenshot({ path: join(SALIDA, '05-columnas.png'), fullPage: true });
+  await clic(p, '[data-action="col-aplicar"]');
+  ok('sin elegir la clave no sigue', await p.isVisible('#form-col') && /Falta elegir/.test(await p.textContent('.toast')));
+  await p.selectOption('#form-col select[name="clave"]', 'Ticket'); await p.selectOption('#form-col select[name="creada"]', 'Alta');
+  await p.selectOption('#form-col select[name="tipo"]', 'Clase'); await p.selectOption('#form-col select[name="estado"]', 'Situación');
+  await clic(p, '[data-action="col-aplicar"]'); await quieto(p);
+  const r = await A(p, () => ({ tareas: window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0, cfg: JSON.parse(localStorage.getItem('easyperformance.config.v2') || '{}').columnas }));
+  ok('con las columnas elegidas se lee y se guarda la elección', r.tareas === 360 && r.cfg && r.cfg.clave === 'Ticket', JSON.stringify(r));
+  await p.reload(); await p.waitForTimeout(1200); await quieto(p);
+  ok('al volver, se lee sin preguntar otra vez', (await A(p, () => window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0)) === 360 && !(await p.$('#form-col')));
+  ok('sin errores de consola en la importación', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }
 

@@ -70,7 +70,7 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance-v3
   writeFileSync(salida, html);
   // Carpeta de trabajo del cliente: la misma que la v2, así una carpeta sirve para las dos
   const leeme: Record<string, string> = {
-    exports: 'CSV exportados de Jira (con todos los campos) / CSV files exported from Jira (with all fields).\n',
+    exports: 'Exports de Jira con todos los campos, en CSV o Excel / Jira exports with all fields, as CSV or Excel.\n',
     configuracion: 'cliente.json: equipos, proveedores, áreas, FTE, estados e iniciativas / teams, vendors, areas, FTE, statuses and initiatives.\n',
     iniciativas: 'Un .json por iniciativa / One .json file per initiative.\n',
     contexto: 'contexto.json: resúmenes que escribe el consultor / summaries written by the consultant.\n',
@@ -81,7 +81,7 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance-v3
   const datosJs = join(destino, 'exports', 'datos.js');
   if (!existsSync(datosJs)) writeFileSync(datosJs, '// Filled by actualizar.ps1 with the CSV files of this folder. Empty until then.\nwindow.EASY_PERFORMANCE_EXPORTS = null;\n');
   for (const f of ['actualizar.ps1', 'actualizar.bat']) {
-    const origen = join(RAIZ, 'web', 'carpeta', f);
+    const origen = join(RAIZ, 'web-v3', 'carpeta', f);
     if (existsSync(origen)) copyFileSync(origen, join(destino, f));
   }
   return salida;

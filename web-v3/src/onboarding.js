@@ -3,7 +3,7 @@
 (function () {
   const EP = window.EP, K = EP.kit;
   const { S, t, tn, esc, nombreEquipo, fecha, lista } = EP;
-  const P = EP.P;
+  const P = EP.P, N = EP.N;
 
   const PASOS = ['welcome', 'data', 'revision', 'mapeo', 'context', 'datacheck', 'rol'];
   function cabeza(paso) {
@@ -50,7 +50,7 @@
       <p class="small muted" style="margin-top:22px">${esc(t('ob.privacidad'))}</p></div>`;
   }
   function datos() {
-    const excel = S.ob.ayudaCsv ? `<div class="notice warn small">${esc(t('carga.excel'))}</div>` : '';
+    const excel = '';
     return `<div class="ob">${cabeza('data')}<h1>${esc(t('ob.data.titulo'))}</h1><p class="lead">${esc(t('ob.data.lead'))}</p>${excel}
       <div class="drop" data-action="import" role="button" tabindex="0">${esc(t('ob.data.soltar'))}</div>
       <div class="panel">${EP.vistas.ayudaCsv()}</div>
@@ -112,5 +112,34 @@
   EP.accion('ob-team', (el) => { S.team = el.dataset.team; EP.render(); });
   EP.accion('ob-finish', () => { S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg(); if (EP.cortes) EP.cortes.capturar(S.demo); EP.render(); window.scrollTo(0, 0); });
 
-  Object.assign(EP.vistas, { onboarding, trasOnboarding, formularioContexto });
+  // ---------- elegir columnas a mano ----------
+  /** Solo aparece si un fichero no trae una columna que hace falta: se elige de entre sus títulos y se guarda. */
+  function columnas() {
+    const cp = S.colPend, titulos = [];
+    cp.pendientes.forEach((p) => p.cabecera.forEach((h) => { if (titulos.indexOf(h) < 0) titulos.push(h); }));
+    const auto = N.mapearColumnas(cp.pendientes[0].cabecera);
+    const elegida = (campo) => { const g = S.cfg.columnas && S.cfg.columnas[campo]; if (g && titulos.indexOf(g) >= 0) return g; const i = auto[campo]; const j = Array.isArray(i) ? i[0] : i; return j != null ? cp.pendientes[0].cabecera[j] : ''; };
+    const campos = N.OBLIGATORIOS.concat(['resumen'], N.RECOMENDADOS);
+    const fila = (campo) => { const ob = N.OBLIGATORIOS.indexOf(campo) >= 0, v = elegida(campo);
+      return `<div class="field col-campo"><label>${esc(t('columnas.campo.' + campo))}${ob ? ` <span class="t-bad">${esc(t('columnas.obligatoria'))}</span>` : ''}</label><select name="${esc(campo)}"><option value="">${esc(t('columnas.noEsta'))}</option>${titulos.map((h) => `<option value="${esc(h)}" ${h === v ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select><div class="tiny muted">${esc(t('columnas.ayuda.' + campo))}</div></div>`; };
+    return `<div class="ob wide">${cabeza('data')}<h1>${esc(t('columnas.titulo'))}</h1><p class="lead">${esc(t('columnas.lead', { f: cp.pendientes.map((p) => p.fichero).join(', ') }))}</p>
+      <div class="panel"><form id="form-col" class="grid cols-2" onsubmit="return false">${campos.map(fila).join('')}</form>
+      <p class="tiny muted" style="margin-top:10px">${esc(t('columnas.nota'))}</p>
+      ${pie('', `<button class="btn primary" data-action="col-aplicar">${esc(t('columnas.aplicar'))}</button>`, `<button class="btn" data-action="col-cancelar">${esc(t('comun.cancelar'))}</button>`)}</div></div>`;
+  }
+  EP.accion('col-abrir', () => { if (S.colPend) { S.colPend.abierto = true; EP.render(); window.scrollTo(0, 0); } });
+  EP.accion('col-cancelar', () => { if (S.colPend && S.vm) S.colPend.abierto = false; else S.colPend = null; EP.render(); });
+  EP.accion('col-aplicar', () => {
+    const form = document.getElementById('form-col'), sel = {};
+    [].forEach.call(form.querySelectorAll('select'), (s) => { sel[s.name] = s.value; });
+    const faltan = N.OBLIGATORIOS.filter((c) => !sel[c]);
+    if (faltan.length) { EP.toast(t('columnas.faltan', { c: faltan.map((c) => t('columnas.campo.' + c)).join(', ') }), 'bad'); return; }
+    // Se guarda lo elegido: con el mismo cliente no hay que volver a hacerlo
+    Object.keys(sel).forEach((k) => { if (!sel[k]) delete sel[k]; });
+    S.cfg.columnas = Object.assign({}, S.cfg.columnas || {}, sel); EP.guardarCfg();
+    const fs = S.colPend.ficheros;
+    EP.enSegundoPlano(() => { if (EP.procesar(fs)) EP.trasCargar(fs); else EP.render(); }, t('carga.leyendo'));
+  });
+
+  Object.assign(EP.vistas, { onboarding, trasOnboarding, formularioContexto, columnas });
 })();

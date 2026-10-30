@@ -78,37 +78,61 @@
     if (S.iaRecsDe && S.iaRecsDe !== S.lectura) { S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; }
     S.narrativas = {};
   }
-  function desdeBase64(b64) { const bin = atob(b64), b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i); return descodificar(b); }
   function descodificar(buf) {
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
     try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (e) { return new TextDecoder('windows-1252').decode(bytes); }
   }
   /** Lee los ficheros, detecta y calcula. Devuelve false si no hay tareas. */
   function procesar(ficheros) {
-    const lectura = N.leerJira(ficheros);
-    if (!lectura.tareas.length) { toast(t('carga.sinTareas') + ' ' + ((lectura.informe.avisos[0] || {}).texto || ''), 'bad'); return false; }
+    const lectura = N.leerJira(ficheros, { columnas: S.demo ? undefined : S.cfg.columnas });
+    const pendientes = lectura.informe.columnasPendientes || [];
+    if (!lectura.tareas.length) {
+      // Falta una columna que hace falta: no se descarta el fichero, se pide elegirla a mano
+      if (pendientes.length) { S.colPend = { ficheros, pendientes, abierto: true }; render(); return false; }
+      toast(t('carga.sinTareas') + ' ' + ((lectura.informe.avisos[0] || {}).texto || ''), 'bad'); return false;
+    }
+    // Algún fichero no se ha podido leer: se avisa y se deja elegir sus columnas desde Fuentes
+    S.colPend = pendientes.length ? { ficheros, pendientes, abierto: false } : null;
+    if (pendientes.length) toast(tn('carga.pendientes', pendientes.length), 'bad');
     S.lectura = lectura; S.det = N.detectar(lectura); S.ficheros = ficheros; S.cargadoEn = new Date();
     S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; S.recFilter = 'todos'; S.recLevel = null;
     recalcular();
     return true;
   }
+  /** Un fichero a texto CSV: los CSV se leen tal cual; los Excel (.xlsx, .xls) y el Excel de Jira (HTML) se convierten. */
+  async function leerFichero(f) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const formato = N.detectarFormato(bytes);
+    if (formato === 'csv') return { nombre: f.name, texto: descodificar(bytes), formato };
+    const h = await N.leerHoja(bytes);
+    return { nombre: f.name, texto: N.aCsv(h.filas), formato, hoja: h.hoja, hojas: h.hojas };
+  }
+  /** Lo que pasa después de leer bien unos ficheros: se guardan en el navegador, corte y a la página que toca. */
+  function trasCargar(fs) {
+    idbSet('ficheros', fs);
+    // El corte se guarda con la configuración ya confirmada: al terminar la primera vez, o ahora si ya estaba hecha
+    if (EP.cortes && S.onboarded) EP.cortes.capturar();
+    if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; toast(tn('carga.hecho', fs.length)); }
+    else S.ob.step = 'revision';
+    render(); window.scrollTo(0, 0);
+  }
   function cargarFicheros(files) {
     const todos = [].slice.call(files);
-    const csv = todos.filter((f) => /\.csv$/i.test(f.name) || /csv/.test(f.type));
-    const excel = todos.filter((f) => /\.xlsx?$/i.test(f.name));
-    if (!csv.length) { toast(excel.length ? t('carga.excel') : t('carga.eligeCsv'), 'bad'); if (excel.length) { S.view = S.onboarded ? 'fuentes' : S.view; S.fuentesTab = 'ficheros'; S.ob.step = S.onboarded ? S.ob.step : 'data'; S.ob.ayudaCsv = true; render(); } return; }
+    if (!todos.length) return;
     salirDemo(false);
     ocupado(true, t('carga.leyendo'));
-    Promise.all(csv.map((f) => f.arrayBuffer().then(descodificar).then((texto) => ({ nombre: f.name, texto }))))
-      .then((fs) => setTimeout(() => {
+    // Cada fichero por su lado: si uno no se puede leer, se dice cuál y los demás siguen
+    Promise.all(todos.map((f) => leerFichero(f).catch((e) => ({ nombre: f.name, error: e && e.message }))))
+      .then((leidos) => setTimeout(() => {
         try {
+          const malos = leidos.filter((x) => x.error), fs = leidos.filter((x) => !x.error);
+          if (malos.length) toast(t('carga.noSeLee', { f: malos.map((x) => x.nombre).join(', ') }), 'bad');
+          const variasHojas = fs.filter((x) => x.hojas > 1);
+          if (variasHojas.length) S.avisosCarga = variasHojas.map((x) => t('carga.primeraHoja', { f: x.nombre, h: x.hoja, n: x.hojas }));
+          else S.avisosCarga = [];
+          if (!fs.length) return;
           if (!procesar(fs)) return;
-          idbSet('ficheros', fs);
-          // El corte se guarda con la configuración ya confirmada: al terminar la primera vez, o ahora si ya estaba hecha
-          if (EP.cortes && S.onboarded) EP.cortes.capturar();
-          if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; toast(tn('carga.hecho', fs.length)); }
-          else S.ob.step = 'revision';
-          render(); window.scrollTo(0, 0);
+          trasCargar(fs);
         } catch (e) { S.error = { message: e.message, stack: e.stack }; render(); } finally { ocupado(false); }
       }, 20))
       .catch(() => { ocupado(false); toast(t('carga.error'), 'bad'); });
@@ -178,6 +202,8 @@
       ob.classList.toggle('hidden', !!enApp); app.classList.toggle('hidden', !enApp); pr.classList.toggle('hidden', !S.presenting);
       if (!S.vm || S.presenting) S.drill = null;
       if (S.presenting) { pr.innerHTML = V.presentacion(); V.asistente(); return; }
+      // Elegir columnas a mano: va por delante de todo, en la pantalla de la primera vez
+      if (S.colPend && S.colPend.abierto) { ob.classList.remove('hidden'); app.classList.add('hidden'); S.drill = null; ob.innerHTML = V.columnas(); V.cajon(); V.asistente(); return; }
       if (!enApp) { ob.innerHTML = V.onboarding(); V.trasOnboarding(); V.cajon(); V.asistente(); return; }
       const permitidas = POR_ROL[S.role] || PAGINAS;
       if (permitidas.indexOf(S.view) < 0) S.view = INICIO_ROL[S.role];
@@ -276,8 +302,17 @@
     const lista = Array.isArray(ex) ? ex : ex && Array.isArray(ex.ficheros) ? ex.ficheros : null;
     let fs = null, deCarpeta = false;
     if (lista && lista.length) {
-      try { fs = lista.map((f) => ({ nombre: f.nombre, texto: f.b64 != null ? desdeBase64(f.b64) : f.texto })); deCarpeta = true; }
-      catch (e) { toast(t('carga.datosJsMal'), 'bad'); fs = null; }
+      // Cada export en base64: CSV o Excel, se distingue por sus primeros bytes
+      try {
+        fs = await Promise.all(lista.map(async (f) => {
+          if (f.b64 == null) return { nombre: f.nombre, texto: f.texto, formato: 'csv' };
+          const bin = atob(f.b64), b = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+          const formato = N.detectarFormato(b);
+          if (formato === 'csv') return { nombre: f.nombre, texto: descodificar(b), formato };
+          const h = await N.leerHoja(b); return { nombre: f.nombre, texto: N.aCsv(h.filas), formato, hoja: h.hoja, hojas: h.hojas };
+        }));
+        deCarpeta = true;
+      } catch (e) { toast(t('carga.datosJsMal'), 'bad'); fs = null; }
       if (window.EASY_PERFORMANCE_CONFIG && !leerLocal(CLAVE_CFG)) S.cfg = window.EASY_PERFORMANCE_CONFIG;
       if (window.EASY_PERFORMANCE_INICIATIVAS) S.extraIni = [].concat(window.EASY_PERFORMANCE_INICIATIVAS).filter(Boolean);
       if (window.EASY_PERFORMANCE_CONTEXTO && window.EASY_PERFORMANCE_CONTEXTO.documentos) S.contextoDocs = window.EASY_PERFORMANCE_CONTEXTO;
@@ -293,7 +328,7 @@
 
   window.EP = {
     S, N, P, t, tn, esc, lista, fmt, fecha, valor, formatoDe, nombreMedida, nombreEquipo, cat, toast, ocupado, enSegundoPlano,
-    guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
+    guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
     visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, arrancar, vistas: {},
   };
 })();

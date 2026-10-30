@@ -1,16 +1,25 @@
 // Lector de CSV tolerante: separador coma, punto y coma o tabulador; comillas dobles; BOM.
 
+/**
+ * Separador del fichero: coma, punto y coma o tabulador. Se mira en las primeras líneas, no solo en la primera,
+ * porque un export guardado desde Excel puede traer encima de los títulos una línea con otro número de columnas.
+ * Gana el que más columnas da en alguna de esas líneas.
+ */
 export function detectarSeparador(t: string): string {
-  const cuentas: Record<string, number> = { ',': 0, ';': 0, '\t': 0 };
-  let dentro = false;
-  for (let i = 0; i < t.length && i < 20000; i++) {
+  const seps = [',', ';', '\t'];
+  const max: Record<string, number> = { ',': 0, ';': 0, '\t': 0 };
+  let cuenta: Record<string, number> = { ',': 0, ';': 0, '\t': 0 };
+  let dentro = false, lineas = 0;
+  const cerrar = () => { seps.forEach((k) => { if (cuenta[k] > max[k]) max[k] = cuenta[k]; }); cuenta = { ',': 0, ';': 0, '\t': 0 }; lineas++; };
+  for (let i = 0; i < t.length && i < 200000 && lineas < 30; i++) {
     const c = t[i];
     if (c === '"') dentro = !dentro;
-    else if (!dentro && (c === '\n' || c === '\r')) break;
-    else if (!dentro && Object.prototype.hasOwnProperty.call(cuentas, c)) cuentas[c]++;
+    else if (!dentro && c === '\n') cerrar();
+    else if (!dentro && Object.prototype.hasOwnProperty.call(cuenta, c)) cuenta[c]++;
   }
+  cerrar();
   let mejor = ',';
-  Object.keys(cuentas).forEach((k) => { if (cuentas[k] > cuentas[mejor]) mejor = k; });
+  seps.forEach((k) => { if (max[k] > max[mejor]) mejor = k; });
   return mejor;
 }
 

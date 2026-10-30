@@ -15,7 +15,7 @@
     return out;
   }
   const sub = (h, nombre) => h.getDirectoryHandle(nombre).catch(() => null);
-  const descodificar = (buf) => { const b = new Uint8Array(buf); try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); } };
+  const descodificar = (buf) => { const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf); try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); } };
 
   async function leer(h) {
     h = h || S.carpeta; if (!h) return;
@@ -24,7 +24,11 @@
     try {
       const ok = await permiso(h, 'readwrite').catch(() => permiso(h, 'read'));
       if (!ok) throw new Error('permiso');
-      const fs = await ficherosDe(await sub(h, 'exports') || h, /\.csv$/i, (f) => f.arrayBuffer().then(descodificar));
+      // Exports en CSV o Excel: los Excel se convierten como al cargarlos a mano
+      const fs = await ficherosDe(await sub(h, 'exports') || h, /\.(csv|xlsx?)$/i, async (f) => {
+        const b = new Uint8Array(await f.arrayBuffer()), formato = EP.N.detectarFormato(b);
+        return formato === 'csv' ? descodificar(b) : EP.N.aCsv((await EP.N.leerHoja(b)).filas);
+      });
       if (!fs.length) { EP.toast(t('carpeta.sinCsv'), 'bad'); return; }
       const json = async (n) => ficherosDe(await sub(h, n), /\.json$/i, (f) => f.text());
       const [conf, inis, ctx] = await Promise.all([json('configuracion'), json('iniciativas'), json('contexto')]);

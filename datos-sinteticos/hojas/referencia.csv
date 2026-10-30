@@ -1,0 +1,361 @@
+Project,Key,Summary,Issue Type,Status,Created,Updated,Resolved,Assigned Team,Story Points,Sprint
+Banco ficticio,BAN-1,Validación señal 検証 señal cálculo integración señal migración nº 1,Bug,To Do,2026-09-20 12:30,2026-09-25 12:30,,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-2,Informe añadir migración integración cálculo revisar informe integración migración nº 2,Story,Done,2026-06-10 11:00,2026-06-15 16:00,2026-06-15 16:00,Datos & IA,2,2026.3 Sprint
+Banco ficticio,BAN-3,Informe cálculo pantalla ωmega nº 3,Task,Done,2026-07-04 13:45,2026-07-09 15:45,2026-07-09 15:45,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-4,Pago cálculo informe migración informe validación revisar nº 4,Bug,Done,2026-09-26 12:15,2026-09-29 13:15,2026-09-29 13:15,Pagos,2,2026.5 Sprint
+Banco ficticio,BAN-5,検証 cálculo pago migración validación señal pago integración cálculo nº 5,Task,Done,2026-05-27 10:45,2026-06-08 11:45,2026-06-08 11:45,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-6,Integración 検証 pantalla 検証 検証 cálculo nº 6,Story,Done,2026-07-08 17:30,2026-07-26 17:30,2026-07-26 17:30,Datos & IA,17.5,2026.1 Sprint
+Banco ficticio,BAN-7,Señal ωmega integración ωmega migración cálculo integración nº 7,Task,Done,2026-08-06 16:45,2026-08-07 16:45,2026-08-07 16:45,Portal clientes,2,2026.2 Sprint
+Banco ficticio,BAN-8,Ωmega señal migración validación pantalla señal nº 8,Task,Done,2026-06-22 15:15,2026-06-29 16:15,2026-06-29 16:15,Pagos,,2026.3 Sprint
+Banco ficticio,BAN-9,Pantalla pago integración revisar nº 9,Story,In Progress,2026-07-04 16:30,2026-07-06 16:30,,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-10,Cálculo revisar migración revisar revisar nº 10,Story,Done,2026-07-15 11:45,2026-07-20 15:45,2026-07-20 15:45,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-11,Cálculo 検証 pantalla 検証 nº 11,Bug,Done,2026-07-18 12:00,2026-07-23 13:00,2026-07-23 13:00,Portal clientes,5,2026.6 Sprint
+Banco ficticio,BAN-12,Validación validación pago ωmega añadir señal revisar revisar nº 12,Story,Done,2026-09-21 12:45,2026-10-01 15:45,2026-10-01 15:45,Pagos,2,2026.1 Sprint
+Banco ficticio,BAN-13,Cálculo señal señal añadir pago señal pago revisar nº 13,Story,In Review,2026-07-06 11:00,2026-07-11 11:00,,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-14,Pantalla ωmega migración 検証 validación nº 14,Story,In Review,2026-08-30 16:30,2026-09-04 16:30,,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-15,Revisar pago revisar señal revisar nº 15,Story,To Do,2026-06-13 15:45,2026-06-13 15:45,,Portal clientes,1,2026.4 Sprint
+Banco ficticio,BAN-16,Revisar pantalla señal integración validación validación informe informe pantalla nº 16,Story,In Review,2026-07-21 10:30,2026-07-23 10:30,,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-17,Ωmega revisar pantalla señal validación nº 17,Story,Done,2026-07-16 10:30,2026-07-24 11:30,2026-07-24 11:30,App móvil,17.5,2026.6 Sprint
+Banco ficticio,BAN-18,Validación 検証 cálculo cálculo añadir migración nº 18,Bug,Done,2026-05-13 16:15,2026-05-27 23:15,2026-05-27 23:15,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-19,Revisar revisar migración 検証 nº 19,Story,In Review,2026-05-08 13:30,2026-05-11 13:30,,Portal clientes,5,2026.2 Sprint
+Banco ficticio,BAN-20,Añadir integración señal pago validación nº 20,Story,Done,2026-05-28 13:45,2026-06-05 16:45,2026-06-05 16:45,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-21,Migración cálculo pantalla pago pago pantalla migración nº 21,Story,Done,2026-07-03 17:45,2026-07-15 00:45,2026-07-15 00:45,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-22,Pago añadir señal informe revisar ωmega validación cálculo migración nº 22,Story,In Progress,2026-07-29 14:00,2026-08-01 14:00,,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-23,Cálculo cálculo señal integración añadir nº 23,Bug,Done,2026-07-04 16:15,2026-07-23 00:15,2026-07-23 00:15,Portal clientes,,2026.6 Sprint
+Banco ficticio,BAN-24,Integración pago añadir pantalla nº 24,Story,To Do,2026-09-27 16:30,2026-09-30 16:30,,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-25,Añadir 検証 ωmega pantalla ωmega revisar informe revisar nº 25,Story,Done,2026-05-05 18:00,2026-05-18 20:00,2026-05-18 20:00,App móvil,,2026.2 Sprint
+Banco ficticio,BAN-26,Añadir migración añadir cálculo señal pantalla informe pantalla nº 26,Task,Done,2026-09-13 14:00,2026-09-20 22:00,2026-09-20 22:00,Datos & IA,2,2026.3 Sprint
+Banco ficticio,BAN-27,Integración pago integración ωmega revisar cálculo migración 検証 señal nº 27,Bug,To Do,2026-06-14 14:30,2026-06-14 14:30,,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-28,Ωmega integración cálculo migración añadir señal ωmega informe nº 28,Story,Done,2026-08-08 09:45,2026-08-14 15:45,2026-08-14 15:45,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-29,Pago 検証 informe migración 検証 señal nº 29,Story,Done,2026-05-13 14:30,2026-05-17 17:30,2026-05-17 17:30,App móvil,17.5,2026.6 Sprint
+Banco ficticio,BAN-30,Pantalla informe añadir migración pago ωmega 検証 ωmega ωmega nº 30,Task,To Do,2026-05-06 10:15,2026-05-11 10:15,,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-31,Pantalla señal informe integración pantalla pantalla integración nº 31,Task,Done,2026-06-14 16:00,2026-06-19 00:00,2026-06-19 00:00,Portal clientes,8,2026.2 Sprint
+Banco ficticio,BAN-32,Cálculo pantalla señal ωmega nº 32,Bug,Done,2026-06-09 14:00,2026-06-19 20:00,2026-06-19 20:00,Pagos,8,2026.3 Sprint
+Banco ficticio,BAN-33,Añadir integración integración revisar añadir pantalla 検証 nº 33,Task,Done,2026-08-01 13:00,2026-08-16 19:00,2026-08-16 19:00,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-34,Pantalla validación 検証 pantalla cálculo señal nº 34,Story,Done,2026-07-08 11:30,2026-07-16 13:30,2026-07-16 13:30,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-35,Pantalla pantalla pago pantalla validación migración revisar nº 35,Story,Done,2026-07-31 10:00,2026-08-07 16:00,2026-08-07 16:00,Portal clientes,1,2026.6 Sprint
+Banco ficticio,BAN-36,Pago 検証 validación 検証 pantalla validación nº 36,Story,Done,2026-05-11 17:00,2026-05-25 23:00,2026-05-25 23:00,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-37,Pago cálculo cálculo validación añadir cálculo migración ωmega nº 37,Bug,Done,2026-09-15 12:15,2026-09-29 16:15,2026-09-29 16:15,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-38,検証 señal validación migración integración revisar ωmega validación nº 38,Bug,Done,2026-08-01 16:00,2026-08-18 19:00,2026-08-18 19:00,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-39,Validación integración señal 検証 ωmega pago informe revisar nº 39,Story,Done,2026-08-31 17:30,2026-09-18 18:30,2026-09-18 18:30,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-40,Integración pago pantalla informe migración cálculo ωmega validación añadir nº 40,Bug,To Do,2026-09-12 10:30,2026-09-13 10:30,,Pagos,2,2026.5 Sprint
+Banco ficticio,BAN-41,Migración pago pago pantalla señal 検証 revisar pago revisar nº 41,Bug,Done,2026-08-04 12:00,2026-08-18 17:00,2026-08-18 17:00,App móvil,1,2026.6 Sprint
+Banco ficticio,BAN-42,Integración pago migración añadir integración pago validación migración nº 42,Bug,Done,2026-08-12 15:00,2026-08-30 21:00,2026-08-30 21:00,Datos & IA,5,2026.1 Sprint
+Banco ficticio,BAN-43,Ωmega informe ωmega validación nº 43,Bug,Done,2026-08-06 13:45,2026-08-15 18:45,2026-08-15 18:45,Portal clientes,17.5,2026.2 Sprint
+Banco ficticio,BAN-44,Migración 検証 señal migración integración informe pantalla nº 44,Story,Done,2026-06-07 17:00,2026-06-24 22:00,2026-06-24 22:00,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-45,Añadir informe pago pago revisar nº 45,Bug,To Do,2026-05-12 13:30,2026-05-14 13:30,,App móvil,17.5,2026.4 Sprint
+Banco ficticio,BAN-46,検証 validación 検証 ωmega pantalla integración añadir añadir nº 46,Story,To Do,2026-09-22 17:45,2026-09-25 17:45,,Datos & IA,,2026.5 Sprint
+Banco ficticio,BAN-47,Migración pantalla migración migración informe cálculo añadir pago ωmega nº 47,Bug,In Review,2026-07-28 11:45,2026-07-29 11:45,,Portal clientes,17.5,2026.6 Sprint
+Banco ficticio,BAN-48,Señal señal pantalla informe revisar añadir nº 48,Task,Done,2026-08-01 10:30,2026-08-06 12:30,2026-08-06 12:30,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-49,Señal añadir 検証 検証 pantalla revisar ωmega nº 49,Bug,In Review,2026-08-05 10:30,2026-08-08 10:30,,App móvil,3,2026.2 Sprint
+Banco ficticio,BAN-50,Señal pago añadir señal pago migración integración nº 50,Story,Done,2026-08-26 10:45,2026-09-01 18:45,2026-09-01 18:45,Datos & IA,5,2026.3 Sprint
+Banco ficticio,BAN-51,Pago pantalla pago validación migración nº 51,Story,Done,2026-10-01 13:15,2026-10-07 20:15,2026-10-07 20:15,Portal clientes,8,2026.4 Sprint
+Banco ficticio,BAN-52,Señal ωmega validación pago informe validación integración nº 52,Task,Done,2026-09-24 15:15,2026-10-02 21:15,2026-10-02 21:15,Pagos,,2026.5 Sprint
+Banco ficticio,BAN-53,Añadir 検証 pago revisar pantalla integración 検証 cálculo nº 53,Story,In Review,2026-05-31 09:30,2026-06-04 09:30,,App móvil,2,2026.6 Sprint
+Banco ficticio,BAN-54,Señal pantalla pantalla cálculo cálculo nº 54,Story,Done,2026-09-29 16:15,2026-10-11 21:15,2026-10-11 21:15,Datos & IA,,2026.1 Sprint
+Banco ficticio,BAN-55,Pantalla cálculo señal informe validación nº 55,Story,Done,2026-09-05 12:30,2026-09-12 20:30,2026-09-12 20:30,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-56,Validación validación añadir 検証 nº 56,Story,Done,2026-07-08 14:45,2026-07-11 15:45,2026-07-11 15:45,Pagos,1,2026.3 Sprint
+Banco ficticio,BAN-57,Señal revisar pantalla ωmega cálculo añadir nº 57,Bug,Done,2026-06-05 09:15,2026-06-10 11:15,2026-06-10 11:15,App móvil,8,2026.4 Sprint
+Banco ficticio,BAN-58,Pantalla ωmega integración integración cálculo ωmega validación integración revisar nº 58,Story,Done,2026-09-19 14:30,2026-10-04 20:30,2026-10-04 20:30,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-59,Cálculo migración añadir pantalla añadir informe nº 59,Story,Done,2026-07-23 18:15,2026-07-28 18:15,2026-07-28 18:15,Portal clientes,,2026.6 Sprint
+Banco ficticio,BAN-60,Añadir pago 検証 pago pantalla cálculo validación nº 60,Story,Done,2026-06-16 14:15,2026-06-30 15:15,2026-06-30 15:15,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-61,Integración informe validación migración añadir señal cálculo nº 61,Bug,Done,2026-08-28 15:00,2026-09-08 22:00,2026-09-08 22:00,App móvil,5,2026.2 Sprint
+Banco ficticio,BAN-62,Integración revisar añadir añadir revisar cálculo pantalla nº 62,Task,To Do,2026-09-17 14:00,2026-09-19 14:00,,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-63,Revisar validación señal informe señal validación nº 63,Story,Done,2026-09-20 09:45,2026-09-27 16:45,2026-09-27 16:45,Portal clientes,1,2026.4 Sprint
+Banco ficticio,BAN-64,Validación migración pago pago nº 64,Bug,In Progress,2026-09-13 13:45,2026-09-15 13:45,,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-65,Migración pago 検証 検証 nº 65,Bug,Done,2026-07-04 14:30,2026-07-14 21:30,2026-07-14 21:30,App móvil,17.5,2026.6 Sprint
+Banco ficticio,BAN-66,Añadir añadir añadir pantalla validación 検証 informe cálculo nº 66,Bug,Done,2026-07-01 17:15,2026-07-05 01:15,2026-07-05 01:15,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-67,Ωmega revisar señal 検証 revisar añadir añadir informe nº 67,Story,Done,2026-09-16 16:30,2026-10-06 17:30,2026-10-06 17:30,Portal clientes,2,2026.2 Sprint
+Banco ficticio,BAN-68,Validación pago añadir cálculo nº 68,Story,Done,2026-08-01 13:15,2026-08-07 19:15,2026-08-07 19:15,Pagos,5,2026.3 Sprint
+Banco ficticio,BAN-69,Informe migración 検証 pago informe nº 69,Bug,Done,2026-09-06 10:00,2026-09-08 12:00,2026-09-08 12:00,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-70,Cálculo integración pago pago nº 70,Task,Done,2026-08-31 17:00,2026-09-18 00:00,2026-09-18 00:00,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-71,Migración migración migración integración 検証 nº 71,Story,In Review,2026-06-10 12:30,2026-06-11 12:30,,Portal clientes,5,2026.6 Sprint
+Banco ficticio,BAN-72,Ωmega integración informe integración añadir nº 72,Story,To Do,2026-08-25 18:00,2026-08-30 18:00,,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-73,Informe añadir integración revisar integración nº 73,Bug,In Review,2026-07-10 12:00,2026-07-10 12:00,,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-74,Señal ωmega 検証 pantalla pago pago migración migración validación nº 74,Story,In Review,2026-08-18 18:15,2026-08-20 18:15,,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-75,Informe validación validación 検証 cálculo revisar nº 75,Story,Done,2026-07-21 18:30,2026-07-26 02:30,2026-07-26 02:30,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-76,Pantalla pantalla migración cálculo pantalla cálculo pantalla nº 76,Task,Done,2026-06-05 11:30,2026-06-20 14:30,2026-06-20 14:30,Pagos,2,2026.5 Sprint
+Banco ficticio,BAN-77,Validación pago 検証 cálculo nº 77,Bug,Done,2026-08-29 10:15,2026-09-14 15:15,2026-09-14 15:15,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-78,Pago pago 検証 integración revisar pantalla señal nº 78,Bug,Done,2026-06-10 13:00,2026-06-14 16:00,2026-06-14 16:00,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-79,Migración revisar ωmega validación migración 検証 revisar ωmega añadir nº 79,Bug,Done,2026-09-08 10:15,2026-09-28 13:15,2026-09-28 13:15,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-80,Añadir señal cálculo integración señal añadir validación revisar ωmega nº 80,Story,Done,2026-09-17 13:30,2026-10-01 17:30,2026-10-01 17:30,Pagos,5,2026.3 Sprint
+Banco ficticio,BAN-81,Añadir pago migración 検証 informe migración cálculo integración validación nº 81,Story,Done,2026-09-12 15:30,2026-09-28 23:30,2026-09-28 23:30,App móvil,,2026.4 Sprint
+Banco ficticio,BAN-82,Revisar señal cálculo pantalla pago pago validación ωmega nº 82,Story,In Review,2026-06-11 15:00,2026-06-13 15:00,,Datos & IA,2,2026.5 Sprint
+Banco ficticio,BAN-83,Pago migración 検証 señal migración migración integración cálculo nº 83,Bug,In Progress,2026-06-08 10:30,2026-06-12 10:30,,Portal clientes,,2026.6 Sprint
+Banco ficticio,BAN-84,Cálculo 検証 migración ωmega informe añadir cálculo pago ωmega nº 84,Story,Done,2026-09-20 15:30,2026-10-10 16:30,2026-10-10 16:30,Pagos,2,2026.1 Sprint
+Banco ficticio,BAN-85,Cálculo señal cálculo añadir señal señal nº 85,Story,Done,2026-07-01 10:45,2026-07-19 18:45,2026-07-19 18:45,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-86,Cálculo integración validación señal 検証 añadir pantalla nº 86,Task,Done,2026-05-15 17:15,2026-05-19 18:15,2026-05-19 18:15,Datos & IA,8,2026.3 Sprint
+Banco ficticio,BAN-87,Añadir pantalla señal revisar nº 87,Task,Done,2026-07-30 17:30,2026-08-10 17:30,2026-08-10 17:30,Portal clientes,8,2026.4 Sprint
+Banco ficticio,BAN-88,Pantalla pantalla integración pantalla integración informe nº 88,Story,Done,2026-08-04 18:30,2026-08-07 21:30,2026-08-07 21:30,Pagos,1,2026.5 Sprint
+Banco ficticio,BAN-89,Ωmega revisar informe integración integración validación ωmega señal nº 89,Story,Done,2026-06-18 09:15,2026-06-20 13:15,2026-06-20 13:15,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-90,Ωmega integración validación validación pago nº 90,Story,Done,2026-09-11 12:30,2026-09-24 17:30,2026-09-24 17:30,Datos & IA,,2026.1 Sprint
+Banco ficticio,BAN-91,Añadir añadir pantalla migración 検証 añadir revisar pago nº 91,Story,To Do,2026-05-14 15:00,2026-05-19 15:00,,Portal clientes,5,2026.2 Sprint
+Banco ficticio,BAN-92,Señal señal ωmega cálculo nº 92,Bug,Done,2026-07-22 12:00,2026-07-26 19:00,2026-07-26 19:00,Pagos,17.5,2026.3 Sprint
+Banco ficticio,BAN-93,Pantalla pago pantalla señal revisar añadir nº 93,Story,Done,2026-06-14 16:45,2026-07-03 20:45,2026-07-03 20:45,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-94,Ωmega informe informe 検証 pantalla señal nº 94,Bug,In Progress,2026-06-23 10:00,2026-06-27 10:00,,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-95,Informe migración migración cálculo señal señal integración integración 検証 nº 95,Task,Done,2026-06-06 13:30,2026-06-09 20:30,2026-06-09 20:30,Portal clientes,,2026.6 Sprint
+Banco ficticio,BAN-96,Cálculo informe migración validación pago nº 96,Bug,Done,2026-08-28 09:45,2026-09-13 12:45,2026-09-13 12:45,Pagos,17.5,2026.1 Sprint
+Banco ficticio,BAN-97,検証 migración cálculo validación revisar revisar migración pantalla añadir nº 97,Task,Done,2026-08-06 12:30,2026-08-23 17:30,2026-08-23 17:30,App móvil,1,2026.2 Sprint
+Banco ficticio,BAN-98,Integración validación ωmega revisar informe señal cálculo añadir informe nº 98,Story,Done,2026-08-31 12:00,2026-09-19 17:00,2026-09-19 17:00,Datos & IA,8,2026.3 Sprint
+Banco ficticio,BAN-99,Ωmega 検証 pantalla revisar informe 検証 migración nº 99,Story,In Review,2026-09-02 10:15,2026-09-03 10:15,,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-100,Añadir informe 検証 informe nº 100,Story,In Progress,2026-06-21 15:30,2026-06-23 15:30,,Pagos,17.5,2026.5 Sprint
+Banco ficticio,BAN-101,Integración pantalla ωmega cálculo nº 101,Story,To Do,2026-07-07 10:30,2026-07-08 10:30,,App móvil,3,2026.6 Sprint
+Banco ficticio,BAN-102,Señal validación validación validación ωmega 検証 nº 102,Task,Done,2026-08-27 14:30,2026-09-01 14:30,2026-09-01 14:30,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-103,Revisar ωmega pago cálculo señal señal añadir nº 103,Bug,In Review,2026-07-29 11:00,2026-07-31 11:00,,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-104,Pago señal añadir migración nº 104,Story,In Review,2026-06-14 12:15,2026-06-14 12:15,,Pagos,17.5,2026.3 Sprint
+Banco ficticio,BAN-105,Señal informe pantalla 検証 añadir revisar nº 105,Bug,Done,2026-08-11 13:15,2026-08-23 15:15,2026-08-23 15:15,App móvil,,2026.4 Sprint
+Banco ficticio,BAN-106,Pago integración cálculo revisar revisar migración integración señal añadir nº 106,Story,Done,2026-05-13 14:15,2026-06-02 16:15,2026-06-02 16:15,Datos & IA,2,2026.5 Sprint
+Banco ficticio,BAN-107,Pantalla validación añadir revisar pantalla señal nº 107,Bug,Done,2026-07-15 13:15,2026-07-30 20:15,2026-07-30 20:15,Portal clientes,2,2026.6 Sprint
+Banco ficticio,BAN-108,検証 pago migración 検証 nº 108,Bug,Done,2026-05-13 11:15,2026-05-16 17:15,2026-05-16 17:15,Pagos,8,2026.1 Sprint
+Banco ficticio,BAN-109,Pantalla informe añadir migración revisar nº 109,Task,Done,2026-09-19 12:30,2026-09-27 19:30,2026-09-27 19:30,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-110,Cálculo señal migración informe cálculo migración 検証 integración pago nº 110,Story,Done,2026-09-18 11:15,2026-09-24 12:15,2026-09-24 12:15,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-111,Cálculo migración añadir señal validación integración integración 検証 nº 111,Story,Done,2026-09-25 16:15,2026-10-02 21:15,2026-10-02 21:15,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-112,Integración informe migración validación nº 112,Story,To Do,2026-08-09 11:00,2026-08-12 11:00,,Pagos,3,2026.5 Sprint
+Banco ficticio,BAN-113,Cálculo ωmega 検証 pantalla migración validación ωmega migración nº 113,Story,Done,2026-09-27 13:15,2026-09-29 21:15,2026-09-29 21:15,App móvil,1,2026.6 Sprint
+Banco ficticio,BAN-114,Cálculo ωmega añadir ωmega validación nº 114,Task,Done,2026-06-21 14:00,2026-07-06 14:00,2026-07-06 14:00,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-115,Pago cálculo 検証 añadir pago añadir revisar añadir revisar nº 115,Story,Done,2026-09-16 10:15,2026-09-26 10:15,2026-09-26 10:15,Portal clientes,5,2026.2 Sprint
+Banco ficticio,BAN-116,Migración validación validación revisar cálculo validación informe integración revisar nº 116,Task,Done,2026-06-09 12:30,2026-06-13 20:30,2026-06-13 20:30,Pagos,5,2026.3 Sprint
+Banco ficticio,BAN-117,Integración pantalla pago cálculo cálculo 検証 検証 cálculo pantalla nº 117,Story,In Review,2026-08-26 16:00,2026-08-29 16:00,,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-118,Informe revisar añadir cálculo revisar cálculo informe nº 118,Bug,In Review,2026-05-29 10:30,2026-06-01 10:30,,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-119,Pago ωmega pantalla pantalla pago informe informe pantalla nº 119,Story,Done,2026-05-29 11:45,2026-06-18 16:45,2026-06-18 16:45,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-120,検証 integración 検証 pago validación nº 120,Bug,Done,2026-05-27 17:15,2026-06-16 18:15,2026-06-16 18:15,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-121,Pago integración validación 検証 señal validación 検証 nº 121,Story,Done,2026-06-02 15:30,2026-06-06 20:30,2026-06-06 20:30,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-122,Informe cálculo revisar añadir cálculo integración nº 122,Task,Done,2026-06-14 13:30,2026-06-26 18:30,2026-06-26 18:30,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-123,Pantalla cálculo validación integración ωmega revisar revisar nº 123,Story,Done,2026-07-07 12:45,2026-07-20 15:45,2026-07-20 15:45,Portal clientes,8,2026.4 Sprint
+Banco ficticio,BAN-124,Migración pago pago añadir nº 124,Story,In Review,2026-06-30 15:15,2026-07-04 15:15,,Pagos,17.5,2026.5 Sprint
+Banco ficticio,BAN-125,Informe informe informe pantalla migración 検証 nº 125,Task,Done,2026-08-08 14:30,2026-08-22 21:30,2026-08-22 21:30,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-126,検証 検証 cálculo pantalla 検証 añadir revisar validación integración nº 126,Bug,Done,2026-08-18 16:45,2026-08-31 21:45,2026-08-31 21:45,Datos & IA,,2026.1 Sprint
+Banco ficticio,BAN-127,Pantalla 検証 検証 informe 検証 validación señal cálculo migración nº 127,Story,Done,2026-08-14 15:45,2026-08-31 15:45,2026-08-31 15:45,Portal clientes,8,2026.2 Sprint
+Banco ficticio,BAN-128,Validación integración añadir validación señal pantalla migración integración nº 128,Task,In Review,2026-06-05 15:15,2026-06-07 15:15,,Pagos,8,2026.3 Sprint
+Banco ficticio,BAN-129,Migración ωmega añadir pantalla revisar ωmega nº 129,Task,In Progress,2026-07-03 11:45,2026-07-06 11:45,,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-130,Señal ωmega añadir migración cálculo señal nº 130,Task,To Do,2026-08-25 13:45,2026-08-29 13:45,,Datos & IA,5,2026.5 Sprint
+Banco ficticio,BAN-131,Ωmega 検証 señal ωmega señal pantalla pago integración validación nº 131,Story,Done,2026-05-18 10:15,2026-06-01 17:15,2026-06-01 17:15,Portal clientes,3,2026.6 Sprint
+Banco ficticio,BAN-132,Cálculo añadir añadir validación 検証 migración pantalla nº 132,Story,Done,2026-07-16 12:00,2026-07-19 14:00,2026-07-19 14:00,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-133,Cálculo informe 検証 migración señal 検証 nº 133,Task,Done,2026-06-22 16:45,2026-07-03 23:45,2026-07-03 23:45,App móvil,3,2026.2 Sprint
+Banco ficticio,BAN-134,Validación integración 検証 informe nº 134,Story,Done,2026-09-03 15:15,2026-09-14 21:15,2026-09-14 21:15,Datos & IA,,2026.3 Sprint
+Banco ficticio,BAN-135,Añadir migración validación informe añadir migración informe cálculo 検証 nº 135,Story,Done,2026-08-08 12:30,2026-08-15 12:30,2026-08-15 12:30,Portal clientes,2,2026.4 Sprint
+Banco ficticio,BAN-136,Revisar integración informe integración pago 検証 integración nº 136,Task,In Progress,2026-07-06 12:15,2026-07-08 12:15,,Pagos,17.5,2026.5 Sprint
+Banco ficticio,BAN-137,Pago integración señal integración señal revisar nº 137,Story,To Do,2026-06-11 15:45,2026-06-13 15:45,,App móvil,5,2026.6 Sprint
+Banco ficticio,BAN-138,Pantalla informe integración señal nº 138,Story,Done,2026-09-25 09:00,2026-09-30 09:00,2026-09-30 09:00,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-139,Integración pantalla integración añadir migración señal ωmega informe nº 139,Task,In Progress,2026-06-05 11:00,2026-06-09 11:00,,Portal clientes,3,2026.2 Sprint
+Banco ficticio,BAN-140,Integración revisar integración añadir nº 140,Task,Done,2026-08-05 11:15,2026-08-14 13:15,2026-08-14 13:15,Pagos,,2026.3 Sprint
+Banco ficticio,BAN-141,Integración pago informe pantalla informe validación cálculo nº 141,Story,Done,2026-09-15 18:15,2026-10-04 21:15,2026-10-04 21:15,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-142,Añadir 検証 validación añadir señal validación nº 142,Story,Done,2026-05-04 10:00,2026-05-24 13:00,2026-05-24 13:00,Datos & IA,5,2026.5 Sprint
+Banco ficticio,BAN-143,Señal migración integración pantalla 検証 informe nº 143,Story,Done,2026-06-18 14:30,2026-06-22 17:30,2026-06-22 17:30,Portal clientes,1,2026.6 Sprint
+Banco ficticio,BAN-144,Pago validación señal pantalla validación informe informe nº 144,Story,Done,2026-07-16 10:45,2026-07-31 11:45,2026-07-31 11:45,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-145,Integración cálculo revisar añadir revisar nº 145,Story,Done,2026-06-15 09:45,2026-07-05 13:45,2026-07-05 13:45,App móvil,,2026.2 Sprint
+Banco ficticio,BAN-146,Ωmega 検証 pantalla pantalla nº 146,Task,Done,2026-09-22 12:00,2026-10-07 16:00,2026-10-07 16:00,Datos & IA,,2026.3 Sprint
+Banco ficticio,BAN-147,Pantalla pantalla migración informe añadir 検証 informe validación nº 147,Story,Done,2026-06-26 16:45,2026-07-07 21:45,2026-07-07 21:45,Portal clientes,17.5,2026.4 Sprint
+Banco ficticio,BAN-148,Revisar pantalla añadir pantalla cálculo validación ωmega nº 148,Task,Done,2026-09-01 15:30,2026-09-15 21:30,2026-09-15 21:30,Pagos,1,2026.5 Sprint
+Banco ficticio,BAN-149,Pago revisar migración revisar pago pantalla ωmega informe nº 149,Story,Done,2026-07-24 17:00,2026-08-01 00:00,2026-08-01 00:00,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-150,Cálculo cálculo migración ωmega validación validación nº 150,Story,Done,2026-09-30 09:00,2026-10-09 15:00,2026-10-09 15:00,Datos & IA,5,2026.1 Sprint
+Banco ficticio,BAN-151,Revisar validación ωmega integración 検証 integración nº 151,Story,Done,2026-06-11 16:45,2026-06-30 17:45,2026-06-30 17:45,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-152,Migración 検証 pantalla añadir nº 152,Story,In Review,2026-08-14 09:00,2026-08-15 09:00,,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-153,Ωmega revisar 検証 migración cálculo integración nº 153,Task,Done,2026-08-17 15:00,2026-08-20 20:00,2026-08-20 20:00,App móvil,17.5,2026.4 Sprint
+Banco ficticio,BAN-154,Revisar revisar validación migración informe nº 154,Story,Done,2026-09-25 15:30,2026-09-28 20:30,2026-09-28 20:30,Datos & IA,5,2026.5 Sprint
+Banco ficticio,BAN-155,Pantalla pantalla pantalla 検証 nº 155,Task,Done,2026-08-25 10:00,2026-09-07 14:00,2026-09-07 14:00,Portal clientes,5,2026.6 Sprint
+Banco ficticio,BAN-156,Revisar ωmega pago ωmega pantalla 検証 nº 156,Bug,Done,2026-07-31 18:15,2026-08-04 22:15,2026-08-04 22:15,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-157,Pago pago pago ωmega validación revisar nº 157,Task,Done,2026-08-11 15:30,2026-08-13 17:30,2026-08-13 17:30,App móvil,1,2026.2 Sprint
+Banco ficticio,BAN-158,Revisar validación ωmega validación ωmega nº 158,Story,To Do,2026-07-06 16:45,2026-07-09 16:45,,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-159,Ωmega añadir revisar añadir informe añadir 検証 validación nº 159,Bug,Done,2026-05-16 10:00,2026-05-28 15:00,2026-05-28 15:00,Portal clientes,1,2026.4 Sprint
+Banco ficticio,BAN-160,Validación cálculo pago ωmega informe migración nº 160,Task,In Review,2026-07-15 11:00,2026-07-15 11:00,,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-161,Integración revisar pantalla validación cálculo informe informe ωmega añadir nº 161,Story,Done,2026-07-13 17:00,2026-07-28 18:00,2026-07-28 18:00,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-162,Revisar pago validación migración migración revisar cálculo migración nº 162,Story,Done,2026-06-28 11:15,2026-06-29 14:15,2026-06-29 14:15,Datos & IA,5,2026.1 Sprint
+Banco ficticio,BAN-163,Añadir integración señal revisar señal pantalla migración migración nº 163,Bug,Done,2026-06-03 12:45,2026-06-22 15:45,2026-06-22 15:45,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-164,Pantalla pantalla 検証 pago informe cálculo revisar 検証 nº 164,Task,In Review,2026-07-05 10:45,2026-07-08 10:45,,Pagos,1,2026.3 Sprint
+Banco ficticio,BAN-165,Pantalla 検証 añadir integración pago pantalla informe pantalla nº 165,Story,Done,2026-08-06 11:15,2026-08-16 13:15,2026-08-16 13:15,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-166,Añadir 検証 migración añadir revisar pago nº 166,Story,Done,2026-09-23 17:00,2026-09-26 22:00,2026-09-26 22:00,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-167,Ωmega 検証 pantalla ωmega ωmega señal añadir integración nº 167,Story,Done,2026-08-25 15:45,2026-09-03 17:45,2026-09-03 17:45,Portal clientes,17.5,2026.6 Sprint
+Banco ficticio,BAN-168,Pantalla pantalla integración integración nº 168,Story,Done,2026-05-22 10:00,2026-06-06 16:00,2026-06-06 16:00,Pagos,2,2026.1 Sprint
+Banco ficticio,BAN-169,Pago ωmega 検証 ωmega revisar informe revisar añadir 検証 nº 169,Story,In Review,2026-08-31 17:15,2026-09-02 17:15,,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-170,Integración pago señal añadir señal migración integración integración pago nº 170,Story,Done,2026-08-14 09:30,2026-08-18 13:30,2026-08-18 13:30,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-171,Pantalla validación cálculo validación señal ωmega nº 171,Bug,Done,2026-06-23 11:45,2026-06-24 12:45,2026-06-24 12:45,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-172,Migración añadir revisar añadir 検証 pago migración integración informe nº 172,Story,In Progress,2026-08-20 14:00,2026-08-25 14:00,,Pagos,,2026.5 Sprint
+Banco ficticio,BAN-173,Validación cálculo pago cálculo informe informe ωmega cálculo informe nº 173,Bug,Done,2026-06-29 15:00,2026-07-19 21:00,2026-07-19 21:00,App móvil,3,2026.6 Sprint
+Banco ficticio,BAN-174,Migración señal informe pago ωmega pago ωmega nº 174,Story,Done,2026-05-25 10:30,2026-05-26 10:30,2026-05-26 10:30,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-175,Informe ωmega validación validación añadir informe migración señal nº 175,Story,Done,2026-08-20 15:15,2026-09-08 17:15,2026-09-08 17:15,Portal clientes,8,2026.2 Sprint
+Banco ficticio,BAN-176,Pago validación informe señal añadir señal nº 176,Story,Done,2026-08-16 12:00,2026-09-03 15:00,2026-09-03 15:00,Pagos,8,2026.3 Sprint
+Banco ficticio,BAN-177,Añadir 検証 revisar pago 検証 añadir 検証 cálculo validación nº 177,Story,In Review,2026-09-29 17:30,2026-10-01 17:30,,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-178,Añadir integración informe cálculo pago integración validación migración nº 178,Story,In Progress,2026-09-08 17:00,2026-09-12 17:00,,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-179,Migración integración validación migración revisar pago migración integración nº 179,Bug,Done,2026-07-11 09:15,2026-07-24 17:15,2026-07-24 17:15,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-180,Pago pago pantalla añadir nº 180,Bug,Done,2026-06-19 11:30,2026-07-02 14:30,2026-07-02 14:30,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-181,Pantalla añadir informe revisar 検証 migración revisar nº 181,Bug,In Review,2026-07-24 17:00,2026-07-29 17:00,,App móvil,2,2026.2 Sprint
+Banco ficticio,BAN-182,Ωmega validación integración validación añadir nº 182,Story,Done,2026-08-06 14:45,2026-08-18 19:45,2026-08-18 19:45,Datos & IA,,2026.3 Sprint
+Banco ficticio,BAN-183,Migración revisar cálculo pantalla informe migración migración nº 183,Story,Done,2026-08-28 13:00,2026-09-11 18:00,2026-09-11 18:00,Portal clientes,3,2026.4 Sprint
+Banco ficticio,BAN-184,Validación añadir cálculo añadir ωmega revisar nº 184,Bug,Done,2026-08-02 14:00,2026-08-17 17:00,2026-08-17 17:00,Pagos,,2026.5 Sprint
+Banco ficticio,BAN-185,Validación revisar pantalla informe migración nº 185,Story,In Progress,2026-07-28 11:45,2026-07-29 11:45,,App móvil,17.5,2026.6 Sprint
+Banco ficticio,BAN-186,Revisar integración cálculo revisar pago añadir nº 186,Story,Done,2026-08-11 17:00,2026-08-21 17:00,2026-08-21 17:00,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-187,Informe señal añadir pago nº 187,Story,In Progress,2026-05-04 15:45,2026-05-09 15:45,,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-188,検証 revisar señal ωmega señal revisar nº 188,Story,Done,2026-08-01 17:45,2026-08-04 23:45,2026-08-04 23:45,Pagos,3,2026.3 Sprint
+Banco ficticio,BAN-189,Integración ωmega migración informe cálculo nº 189,Task,Done,2026-07-18 09:15,2026-07-29 17:15,2026-07-29 17:15,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-190,Señal 検証 revisar pantalla nº 190,Bug,In Review,2026-05-22 18:30,2026-05-25 18:30,,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-191,Cálculo validación informe revisar nº 191,Bug,Done,2026-06-07 18:00,2026-06-19 00:00,2026-06-19 00:00,Portal clientes,17.5,2026.6 Sprint
+Banco ficticio,BAN-192,Revisar señal pantalla integración migración integración nº 192,Task,Done,2026-07-31 13:30,2026-08-14 15:30,2026-08-14 15:30,Pagos,5,2026.1 Sprint
+Banco ficticio,BAN-193,Migración integración integración informe informe 検証 informe nº 193,Story,Done,2026-05-23 09:30,2026-06-03 15:30,2026-06-03 15:30,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-194,Cálculo integración informe migración cálculo nº 194,Story,Done,2026-07-17 17:30,2026-07-21 21:30,2026-07-21 21:30,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-195,Informe migración integración 検証 nº 195,Bug,To Do,2026-08-23 12:45,2026-08-28 12:45,,Portal clientes,3,2026.4 Sprint
+Banco ficticio,BAN-196,Añadir añadir validación migración integración pantalla integración nº 196,Story,Done,2026-08-07 10:30,2026-08-18 15:30,2026-08-18 15:30,Pagos,3,2026.5 Sprint
+Banco ficticio,BAN-197,Validación informe pago revisar señal 検証 informe informe señal nº 197,Story,Done,2026-07-20 16:45,2026-07-30 21:45,2026-07-30 21:45,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-198,Revisar señal pago migración 検証 nº 198,Task,Done,2026-07-28 18:45,2026-08-07 20:45,2026-08-07 20:45,Datos & IA,17.5,2026.1 Sprint
+Banco ficticio,BAN-199,Validación integración señal añadir validación cálculo nº 199,Story,Done,2026-08-01 12:00,2026-08-21 17:00,2026-08-21 17:00,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-200,検証 ωmega revisar integración validación 検証 pago nº 200,Story,Done,2026-06-10 17:00,2026-06-29 00:00,2026-06-29 00:00,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-201,Revisar migración validación pantalla pantalla migración pantalla informe nº 201,Story,Done,2026-09-07 11:45,2026-09-13 16:45,2026-09-13 16:45,App móvil,17.5,2026.4 Sprint
+Banco ficticio,BAN-202,Migración 検証 migración 検証 validación nº 202,Story,Done,2026-08-30 09:30,2026-09-05 16:30,2026-09-05 16:30,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-203,検証 cálculo informe ωmega nº 203,Story,Done,2026-07-17 17:45,2026-07-22 00:45,2026-07-22 00:45,Portal clientes,2,2026.6 Sprint
+Banco ficticio,BAN-204,Pantalla añadir 検証 revisar señal migración señal nº 204,Story,In Review,2026-08-11 13:30,2026-08-15 13:30,,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-205,検証 pago informe revisar señal migración nº 205,Story,Done,2026-07-16 11:30,2026-07-23 14:30,2026-07-23 14:30,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-206,Pantalla informe añadir revisar integración añadir nº 206,Story,Done,2026-06-12 13:15,2026-06-30 20:15,2026-06-30 20:15,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-207,Revisar pago integración pantalla nº 207,Bug,Done,2026-05-29 17:15,2026-06-18 01:15,2026-06-18 01:15,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-208,Pantalla migración ωmega revisar migración pantalla nº 208,Story,Done,2026-09-26 09:15,2026-09-28 17:15,2026-09-28 17:15,Pagos,3,2026.5 Sprint
+Banco ficticio,BAN-209,Integración señal integración ωmega nº 209,Task,Done,2026-05-20 17:30,2026-06-09 20:30,2026-06-09 20:30,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-210,Integración 検証 añadir señal ωmega nº 210,Story,Done,2026-08-30 13:15,2026-09-04 15:15,2026-09-04 15:15,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-211,検証 検証 pago ωmega integración validación informe nº 211,Story,Done,2026-06-02 13:15,2026-06-08 15:15,2026-06-08 15:15,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-212,Ωmega informe ωmega 検証 migración pago nº 212,Story,In Review,2026-08-31 18:45,2026-09-02 18:45,,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-213,Ωmega validación informe añadir validación nº 213,Task,Done,2026-06-30 12:45,2026-07-04 17:45,2026-07-04 17:45,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-214,Migración validación validación ωmega revisar informe migración revisar integración nº 214,Task,Done,2026-07-30 14:45,2026-07-31 15:45,2026-07-31 15:45,Datos & IA,5,2026.5 Sprint
+Banco ficticio,BAN-215,Revisar añadir informe 検証 añadir integración integración pantalla señal nº 215,Story,Done,2026-07-27 09:30,2026-08-06 14:30,2026-08-06 14:30,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-216,Cálculo señal añadir integración señal revisar cálculo nº 216,Task,Done,2026-06-14 17:30,2026-06-25 20:30,2026-06-25 20:30,Pagos,1,2026.1 Sprint
+Banco ficticio,BAN-217,Validación validación informe validación informe nº 217,Story,Done,2026-05-21 16:45,2026-05-31 17:45,2026-05-31 17:45,App móvil,,2026.2 Sprint
+Banco ficticio,BAN-218,Migración 検証 revisar integración integración nº 218,Story,Done,2026-09-27 17:45,2026-10-15 00:45,2026-10-15 00:45,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-219,Revisar revisar pago añadir 検証 añadir revisar cálculo nº 219,Task,Done,2026-07-16 15:45,2026-07-17 22:45,2026-07-17 22:45,Portal clientes,3,2026.4 Sprint
+Banco ficticio,BAN-220,Ωmega 検証 pago ωmega cálculo cálculo pago nº 220,Story,To Do,2026-05-26 09:00,2026-05-31 09:00,,Pagos,8,2026.5 Sprint
+Banco ficticio,BAN-221,Integración migración ωmega pantalla migración informe nº 221,Story,Done,2026-10-01 10:00,2026-10-15 14:00,2026-10-15 14:00,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-222,Ωmega pantalla migración pago informe integración nº 222,Story,Done,2026-05-12 10:30,2026-05-16 16:30,2026-05-16 16:30,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-223,Informe pago validación integración nº 223,Story,Done,2026-05-09 18:45,2026-05-26 00:45,2026-05-26 00:45,Portal clientes,3,2026.2 Sprint
+Banco ficticio,BAN-224,Integración añadir integración cálculo nº 224,Story,To Do,2026-07-16 15:30,2026-07-16 15:30,,Pagos,5,2026.3 Sprint
+Banco ficticio,BAN-225,Integración informe cálculo 検証 señal revisar ωmega nº 225,Task,Done,2026-06-21 16:45,2026-07-05 16:45,2026-07-05 16:45,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-226,Cálculo cálculo integración señal revisar integración nº 226,Story,Done,2026-07-01 18:15,2026-07-13 19:15,2026-07-13 19:15,Datos & IA,8,2026.5 Sprint
+Banco ficticio,BAN-227,Señal integración añadir integración cálculo nº 227,Bug,Done,2026-05-13 11:15,2026-05-19 14:15,2026-05-19 14:15,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-228,Revisar 検証 informe informe cálculo nº 228,Story,Done,2026-09-08 16:30,2026-09-11 21:30,2026-09-11 21:30,Pagos,5,2026.1 Sprint
+Banco ficticio,BAN-229,Ωmega pago revisar ωmega informe pago nº 229,Story,Done,2026-05-10 10:30,2026-05-27 11:30,2026-05-27 11:30,App móvil,5,2026.2 Sprint
+Banco ficticio,BAN-230,Ωmega pantalla validación ωmega informe cálculo validación añadir nº 230,Story,Done,2026-05-16 14:15,2026-05-23 21:15,2026-05-23 21:15,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-231,Migración validación añadir pago migración ωmega migración integración nº 231,Task,Done,2026-05-21 16:30,2026-06-07 23:30,2026-06-07 23:30,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-232,Validación revisar informe señal integración nº 232,Story,In Progress,2026-05-24 15:45,2026-05-27 15:45,,Pagos,8,2026.5 Sprint
+Banco ficticio,BAN-233,Pago cálculo pago validación validación cálculo pantalla validación ωmega nº 233,Story,In Review,2026-09-24 18:00,2026-09-28 18:00,,App móvil,17.5,2026.6 Sprint
+Banco ficticio,BAN-234,Añadir validación añadir migración integración 検証 informe cálculo revisar nº 234,Story,In Review,2026-07-21 12:30,2026-07-26 12:30,,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-235,Añadir ωmega cálculo migración pantalla añadir nº 235,Story,Done,2026-08-11 17:00,2026-08-15 01:00,2026-08-15 01:00,Portal clientes,3,2026.2 Sprint
+Banco ficticio,BAN-236,Pago integración cálculo 検証 añadir migración informe ωmega revisar nº 236,Story,Done,2026-07-17 09:45,2026-07-29 14:45,2026-07-29 14:45,Pagos,,2026.3 Sprint
+Banco ficticio,BAN-237,Añadir revisar migración validación migración añadir ωmega informe nº 237,Story,Done,2026-06-28 11:15,2026-07-13 13:15,2026-07-13 13:15,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-238,Ωmega pago pantalla cálculo añadir ωmega nº 238,Task,To Do,2026-09-18 11:15,2026-09-21 11:15,,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-239,Validación cálculo pantalla revisar nº 239,Task,Done,2026-06-03 17:30,2026-06-06 23:30,2026-06-06 23:30,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-240,Validación cálculo 検証 pantalla cálculo añadir nº 240,Bug,Done,2026-09-20 13:15,2026-10-02 19:15,2026-10-02 19:15,Pagos,8,2026.1 Sprint
+Banco ficticio,BAN-241,検証 cálculo validación señal 検証 validación cálculo nº 241,Story,Done,2026-09-17 13:15,2026-09-19 16:15,2026-09-19 16:15,App móvil,1,2026.2 Sprint
+Banco ficticio,BAN-242,Informe integración ωmega cálculo migración cálculo pago integración nº 242,Bug,Done,2026-07-08 18:15,2026-07-15 20:15,2026-07-15 20:15,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-243,Revisar validación integración 検証 añadir señal nº 243,Story,Done,2026-08-16 15:15,2026-08-21 17:15,2026-08-21 17:15,Portal clientes,17.5,2026.4 Sprint
+Banco ficticio,BAN-244,Revisar validación integración integración migración integración señal informe integración nº 244,Story,To Do,2026-07-02 09:00,2026-07-02 09:00,,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-245,Validación 検証 informe informe añadir revisar 検証 nº 245,Task,Done,2026-09-29 10:30,2026-10-08 17:30,2026-10-08 17:30,App móvil,5,2026.6 Sprint
+Banco ficticio,BAN-246,Informe 検証 informe integración nº 246,Story,Done,2026-05-08 09:15,2026-05-28 13:15,2026-05-28 13:15,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-247,Migración añadir revisar señal validación integración nº 247,Bug,Done,2026-06-23 16:45,2026-07-01 18:45,2026-07-01 18:45,Portal clientes,5,2026.2 Sprint
+Banco ficticio,BAN-248,Cálculo informe añadir señal nº 248,Task,Done,2026-08-17 09:30,2026-08-20 15:30,2026-08-20 15:30,Pagos,1,2026.3 Sprint
+Banco ficticio,BAN-249,Informe pago migración migración revisar pantalla nº 249,Story,Done,2026-05-13 13:45,2026-05-22 14:45,2026-05-22 14:45,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-250,Cálculo integración revisar pantalla añadir cálculo migración nº 250,Story,Done,2026-08-19 16:30,2026-08-23 21:30,2026-08-23 21:30,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-251,Informe informe 検証 añadir informe pago nº 251,Story,Done,2026-06-05 13:45,2026-06-16 14:45,2026-06-16 14:45,Portal clientes,1,2026.6 Sprint
+Banco ficticio,BAN-252,Añadir pago añadir migración validación pantalla informe informe nº 252,Bug,Done,2026-05-12 13:45,2026-05-14 13:45,2026-05-14 13:45,Pagos,17.5,2026.1 Sprint
+Banco ficticio,BAN-253,Añadir revisar revisar pantalla revisar pantalla nº 253,Task,Done,2026-07-26 09:30,2026-08-05 11:30,2026-08-05 11:30,App móvil,8,2026.2 Sprint
+Banco ficticio,BAN-254,Integración informe 検証 pantalla señal añadir nº 254,Story,Done,2026-07-21 14:00,2026-08-06 20:00,2026-08-06 20:00,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-255,Pantalla añadir señal pago ωmega 検証 informe ωmega revisar nº 255,Bug,Done,2026-08-08 15:15,2026-08-17 17:15,2026-08-17 17:15,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-256,Integración migración ωmega señal informe señal nº 256,Story,Done,2026-07-31 14:30,2026-08-04 14:30,2026-08-04 14:30,Pagos,2,2026.5 Sprint
+Banco ficticio,BAN-257,Pago pago pago cálculo nº 257,Story,In Review,2026-09-12 11:15,2026-09-15 11:15,,App móvil,1,2026.6 Sprint
+Banco ficticio,BAN-258,Añadir pago añadir migración pantalla informe pago informe revisar nº 258,Story,Done,2026-08-19 11:45,2026-09-04 17:45,2026-09-04 17:45,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-259,Añadir informe 検証 informe migración validación señal cálculo nº 259,Story,Done,2026-06-20 17:30,2026-07-06 17:30,2026-07-06 17:30,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-260,Integración revisar pago migración 検証 cálculo migración nº 260,Task,Done,2026-05-19 18:15,2026-06-01 01:15,2026-06-01 01:15,Pagos,,2026.3 Sprint
+Banco ficticio,BAN-261,検証 integración señal 検証 migración añadir nº 261,Story,In Review,2026-08-04 16:00,2026-08-06 16:00,,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-262,Cálculo informe pantalla pantalla añadir nº 262,Task,Done,2026-07-31 10:00,2026-08-10 16:00,2026-08-10 16:00,Datos & IA,8,2026.5 Sprint
+Banco ficticio,BAN-263,検証 ωmega migración integración añadir integración nº 263,Bug,Done,2026-09-03 10:00,2026-09-08 14:00,2026-09-08 14:00,Portal clientes,1,2026.6 Sprint
+Banco ficticio,BAN-264,Pantalla 検証 informe 検証 nº 264,Task,Done,2026-08-04 10:15,2026-08-10 15:15,2026-08-10 15:15,Pagos,5,2026.1 Sprint
+Banco ficticio,BAN-265,Migración ωmega añadir ωmega cálculo informe nº 265,Story,To Do,2026-07-22 18:45,2026-07-27 18:45,,App móvil,2,2026.2 Sprint
+Banco ficticio,BAN-266,Pago pantalla informe migración pantalla pantalla validación validación pantalla nº 266,Bug,Done,2026-05-25 14:00,2026-05-31 16:00,2026-05-31 16:00,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-267,Validación revisar migración revisar ωmega pantalla cálculo informe cálculo nº 267,Bug,Done,2026-06-22 18:00,2026-06-30 18:00,2026-06-30 18:00,Portal clientes,8,2026.4 Sprint
+Banco ficticio,BAN-268,Validación pago validación migración añadir migración pantalla validación 検証 nº 268,Bug,Done,2026-08-06 11:00,2026-08-08 18:00,2026-08-08 18:00,Pagos,,2026.5 Sprint
+Banco ficticio,BAN-269,Informe migración ωmega informe añadir integración nº 269,Story,Done,2026-08-31 09:30,2026-09-17 10:30,2026-09-17 10:30,App móvil,3,2026.6 Sprint
+Banco ficticio,BAN-270,Señal pago 検証 añadir nº 270,Task,Done,2026-09-14 15:15,2026-09-22 20:15,2026-09-22 20:15,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-271,Validación pago validación validación revisar pantalla nº 271,Story,In Progress,2026-05-20 09:45,2026-05-22 09:45,,Portal clientes,3,2026.2 Sprint
+Banco ficticio,BAN-272,検証 señal señal migración añadir nº 272,Story,In Progress,2026-06-24 13:15,2026-06-25 13:15,,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-273,Revisar ωmega señal ωmega migración validación revisar señal cálculo nº 273,Story,To Do,2026-09-20 12:30,2026-09-21 12:30,,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-274,Añadir migración pantalla cálculo pantalla pago migración informe integración nº 274,Story,Done,2026-05-04 12:15,2026-05-24 13:15,2026-05-24 13:15,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-275,Validación ωmega señal 検証 cálculo pantalla validación migración pantalla nº 275,Task,Done,2026-09-23 11:15,2026-09-30 18:15,2026-09-30 18:15,Portal clientes,3,2026.6 Sprint
+Banco ficticio,BAN-276,Pantalla señal señal migración cálculo migración nº 276,Story,To Do,2026-09-29 17:30,2026-10-04 17:30,,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-277,Validación pago señal informe nº 277,Story,Done,2026-08-12 17:15,2026-08-21 19:15,2026-08-21 19:15,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-278,Añadir cálculo validación validación integración nº 278,Bug,Done,2026-08-28 12:15,2026-09-17 15:15,2026-09-17 15:15,Datos & IA,1,2026.3 Sprint
+Banco ficticio,BAN-279,Integración validación migración añadir ωmega informe nº 279,Story,Done,2026-07-02 18:15,2026-07-03 19:15,2026-07-03 19:15,Portal clientes,5,2026.4 Sprint
+Banco ficticio,BAN-280,Integración revisar ωmega integración informe validación ωmega revisar nº 280,Story,Done,2026-07-18 12:15,2026-07-31 15:15,2026-07-31 15:15,Pagos,8,2026.5 Sprint
+Banco ficticio,BAN-281,Integración integración integración pantalla integración revisar nº 281,Story,In Review,2026-05-19 14:00,2026-05-20 14:00,,App móvil,2,2026.6 Sprint
+Banco ficticio,BAN-282,Pago revisar integración validación informe cálculo integración 検証 migración nº 282,Story,To Do,2026-09-17 09:45,2026-09-21 09:45,,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-283,Informe señal 検証 revisar añadir integración nº 283,Bug,To Do,2026-07-19 14:15,2026-07-20 14:15,,Portal clientes,2,2026.2 Sprint
+Banco ficticio,BAN-284,Migración cálculo validación 検証 validación pago señal integración nº 284,Bug,Done,2026-09-28 14:30,2026-10-09 21:30,2026-10-09 21:30,Pagos,17.5,2026.3 Sprint
+Banco ficticio,BAN-285,検証 añadir ωmega informe cálculo integración añadir revisar informe nº 285,Task,Done,2026-06-28 11:15,2026-06-30 19:15,2026-06-30 19:15,App móvil,3,2026.4 Sprint
+Banco ficticio,BAN-286,Revisar pantalla 検証 検証 cálculo 検証 informe migración nº 286,Story,Done,2026-05-14 16:00,2026-05-15 19:00,2026-05-15 19:00,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-287,Revisar pantalla cálculo ωmega migración nº 287,Story,Done,2026-09-05 14:00,2026-09-07 21:00,2026-09-07 21:00,Portal clientes,17.5,2026.6 Sprint
+Banco ficticio,BAN-288,Pantalla pantalla pago migración cálculo migración pantalla pantalla nº 288,Story,In Review,2026-08-12 14:45,2026-08-13 14:45,,Pagos,2,2026.1 Sprint
+Banco ficticio,BAN-289,検証 integración 検証 validación añadir revisar migración nº 289,Story,Done,2026-06-01 16:30,2026-06-15 19:30,2026-06-15 19:30,App móvil,1,2026.2 Sprint
+Banco ficticio,BAN-290,Informe pantalla revisar informe pantalla validación ωmega nº 290,Story,Done,2026-07-21 15:45,2026-08-09 21:45,2026-08-09 21:45,Datos & IA,8,2026.3 Sprint
+Banco ficticio,BAN-291,Señal ωmega cálculo cálculo integración señal nº 291,Story,Done,2026-05-06 16:15,2026-05-11 19:15,2026-05-11 19:15,Portal clientes,3,2026.4 Sprint
+Banco ficticio,BAN-292,Validación 検証 ωmega señal integración informe 検証 nº 292,Bug,Done,2026-07-06 14:45,2026-07-07 19:45,2026-07-07 19:45,Pagos,17.5,2026.5 Sprint
+Banco ficticio,BAN-293,Pantalla 検証 informe ωmega informe 検証 ωmega pantalla revisar nº 293,Task,Done,2026-07-04 13:00,2026-07-14 14:00,2026-07-14 14:00,App móvil,3,2026.6 Sprint
+Banco ficticio,BAN-294,Pantalla añadir cálculo integración integración 検証 pago pago nº 294,Task,Done,2026-09-20 14:15,2026-10-04 20:15,2026-10-04 20:15,Datos & IA,5,2026.1 Sprint
+Banco ficticio,BAN-295,Señal pantalla integración cálculo nº 295,Bug,Done,2026-09-17 14:45,2026-09-27 17:45,2026-09-27 17:45,Portal clientes,1,2026.2 Sprint
+Banco ficticio,BAN-296,Señal señal ωmega migración integración informe pantalla añadir nº 296,Story,Done,2026-08-04 09:30,2026-08-16 12:30,2026-08-16 12:30,Pagos,3,2026.3 Sprint
+Banco ficticio,BAN-297,Informe cálculo integración migración nº 297,Story,To Do,2026-07-02 16:15,2026-07-03 16:15,,App móvil,,2026.4 Sprint
+Banco ficticio,BAN-298,Ωmega pantalla revisar informe pantalla nº 298,Story,Done,2026-06-04 14:00,2026-06-19 19:00,2026-06-19 19:00,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-299,Pantalla integración ωmega integración integración migración pantalla nº 299,Story,Done,2026-07-16 09:00,2026-08-03 09:00,2026-08-03 09:00,Portal clientes,17.5,2026.6 Sprint
+Banco ficticio,BAN-300,Revisar pago cálculo informe añadir nº 300,Bug,Done,2026-07-09 14:15,2026-07-28 22:15,2026-07-28 22:15,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-301,Revisar integración integración integración señal migración cálculo validación nº 301,Story,Done,2026-10-01 11:30,2026-10-15 15:30,2026-10-15 15:30,App móvil,17.5,2026.2 Sprint
+Banco ficticio,BAN-302,Validación cálculo pago informe cálculo informe validación nº 302,Story,Done,2026-09-25 13:30,2026-10-10 21:30,2026-10-10 21:30,Datos & IA,2,2026.3 Sprint
+Banco ficticio,BAN-303,Ωmega pantalla revisar ωmega revisar nº 303,Story,To Do,2026-08-11 10:15,2026-08-12 10:15,,Portal clientes,8,2026.4 Sprint
+Banco ficticio,BAN-304,Señal 検証 cálculo informe añadir pantalla nº 304,Story,Done,2026-09-10 12:00,2026-09-12 13:00,2026-09-12 13:00,Pagos,8,2026.5 Sprint
+Banco ficticio,BAN-305,Señal ωmega cálculo añadir validación validación nº 305,Story,In Progress,2026-07-20 14:30,2026-07-23 14:30,,App móvil,1,2026.6 Sprint
+Banco ficticio,BAN-306,Validación informe revisar revisar añadir validación nº 306,Bug,Done,2026-07-02 15:00,2026-07-06 15:00,2026-07-06 15:00,Datos & IA,8,2026.1 Sprint
+Banco ficticio,BAN-307,Migración informe pago informe nº 307,Story,Done,2026-05-25 16:00,2026-06-06 18:00,2026-06-06 18:00,Portal clientes,3,2026.2 Sprint
+Banco ficticio,BAN-308,Cálculo informe informe integración ωmega añadir añadir validación nº 308,Bug,Done,2026-05-27 13:15,2026-06-04 20:15,2026-06-04 20:15,Pagos,17.5,2026.3 Sprint
+Banco ficticio,BAN-309,検証 pago ωmega ωmega ωmega informe ωmega nº 309,Story,Done,2026-09-16 16:15,2026-09-17 21:15,2026-09-17 21:15,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-310,Pantalla informe pantalla revisar nº 310,Story,Done,2026-08-23 17:00,2026-09-06 22:00,2026-09-06 22:00,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-311,Señal señal cálculo pago cálculo informe nº 311,Task,Done,2026-06-19 09:00,2026-06-25 13:00,2026-06-25 13:00,Portal clientes,,2026.6 Sprint
+Banco ficticio,BAN-312,Pantalla cálculo pago revisar nº 312,Bug,Done,2026-07-25 15:15,2026-08-04 20:15,2026-08-04 20:15,Pagos,5,2026.1 Sprint
+Banco ficticio,BAN-313,Migración revisar informe señal 検証 pago nº 313,Story,In Progress,2026-06-24 13:00,2026-06-27 13:00,,App móvil,2,2026.2 Sprint
+Banco ficticio,BAN-314,Añadir migración revisar revisar integración migración integración nº 314,Story,Done,2026-07-03 13:15,2026-07-19 18:15,2026-07-19 18:15,Datos & IA,5,2026.3 Sprint
+Banco ficticio,BAN-315,Cálculo integración cálculo informe integración nº 315,Bug,Done,2026-07-04 18:30,2026-07-21 01:30,2026-07-21 01:30,Portal clientes,1,2026.4 Sprint
+Banco ficticio,BAN-316,Cálculo ωmega ωmega añadir 検証 informe nº 316,Bug,In Review,2026-05-31 11:00,2026-06-02 11:00,,Pagos,2,2026.5 Sprint
+Banco ficticio,BAN-317,Validación integración ωmega informe añadir añadir señal migración validación nº 317,Story,Done,2026-06-01 15:00,2026-06-06 15:00,2026-06-06 15:00,App móvil,2,2026.6 Sprint
+Banco ficticio,BAN-318,Informe informe migración 検証 revisar pantalla pago nº 318,Story,Done,2026-09-01 16:15,2026-09-16 17:15,2026-09-16 17:15,Datos & IA,17.5,2026.1 Sprint
+Banco ficticio,BAN-319,Revisar migración integración añadir nº 319,Task,Done,2026-06-05 16:30,2026-06-10 18:30,2026-06-10 18:30,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-320,Informe migración pantalla 検証 señal añadir revisar informe nº 320,Story,Done,2026-08-30 13:00,2026-09-09 13:00,2026-09-09 13:00,Pagos,2,2026.3 Sprint
+Banco ficticio,BAN-321,Señal integración revisar validación migración pantalla señal pago pago nº 321,Story,Done,2026-08-16 17:15,2026-09-03 23:15,2026-09-03 23:15,App móvil,5,2026.4 Sprint
+Banco ficticio,BAN-322,Integración ωmega señal ωmega ωmega informe pago nº 322,Story,Done,2026-05-21 11:00,2026-05-23 17:00,2026-05-23 17:00,Datos & IA,1,2026.5 Sprint
+Banco ficticio,BAN-323,Ωmega añadir migración informe cálculo informe informe migración nº 323,Story,Done,2026-07-12 13:45,2026-07-25 18:45,2026-07-25 18:45,Portal clientes,5,2026.6 Sprint
+Banco ficticio,BAN-324,Informe informe pago ωmega cálculo cálculo ωmega migración nº 324,Task,Done,2026-08-16 18:45,2026-08-18 18:45,2026-08-18 18:45,Pagos,,2026.1 Sprint
+Banco ficticio,BAN-325,Cálculo informe pantalla cálculo ωmega revisar cálculo ωmega señal nº 325,Story,Done,2026-07-22 15:45,2026-08-04 17:45,2026-08-04 17:45,App móvil,3,2026.2 Sprint
+Banco ficticio,BAN-326,Añadir integración ωmega pago cálculo señal informe nº 326,Bug,Done,2026-07-13 17:30,2026-07-14 21:30,2026-07-14 21:30,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-327,検証 ωmega revisar señal añadir pantalla pantalla cálculo nº 327,Story,Done,2026-05-16 09:45,2026-05-30 10:45,2026-05-30 10:45,Portal clientes,17.5,2026.4 Sprint
+Banco ficticio,BAN-328,Cálculo migración pago integración integración integración revisar informe nº 328,Story,Done,2026-08-14 10:00,2026-08-21 18:00,2026-08-21 18:00,Pagos,1,2026.5 Sprint
+Banco ficticio,BAN-329,Integración señal migración migración pago ωmega pago pago nº 329,Story,Done,2026-05-27 17:15,2026-06-04 18:15,2026-06-04 18:15,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-330,Señal cálculo 検証 検証 migración cálculo nº 330,Task,In Review,2026-05-27 13:15,2026-05-31 13:15,,Datos & IA,2,2026.1 Sprint
+Banco ficticio,BAN-331,Revisar cálculo ωmega señal migración informe nº 331,Story,Done,2026-09-05 10:45,2026-09-20 12:45,2026-09-20 12:45,Portal clientes,17.5,2026.2 Sprint
+Banco ficticio,BAN-332,検証 validación pago cálculo cálculo pago nº 332,Story,Done,2026-10-01 13:00,2026-10-07 21:00,2026-10-07 21:00,Pagos,5,2026.3 Sprint
+Banco ficticio,BAN-333,Revisar validación ωmega señal añadir cálculo pago pantalla cálculo nº 333,Task,Done,2026-08-18 18:30,2026-09-04 20:30,2026-09-04 20:30,App móvil,2,2026.4 Sprint
+Banco ficticio,BAN-334,Añadir añadir ωmega ωmega ωmega 検証 migración validación integración nº 334,Task,Done,2026-08-20 14:30,2026-09-06 15:30,2026-09-06 15:30,Datos & IA,3,2026.5 Sprint
+Banco ficticio,BAN-335,Pantalla migración pantalla migración revisar integración migración nº 335,Task,Done,2026-07-17 11:00,2026-07-23 14:00,2026-07-23 14:00,Portal clientes,8,2026.6 Sprint
+Banco ficticio,BAN-336,Revisar cálculo añadir pago revisar nº 336,Story,In Progress,2026-05-16 12:00,2026-05-17 12:00,,Pagos,3,2026.1 Sprint
+Banco ficticio,BAN-337,検証 pago señal validación ωmega revisar ωmega integración ωmega nº 337,Story,Done,2026-09-12 15:15,2026-09-18 17:15,2026-09-18 17:15,App móvil,,2026.2 Sprint
+Banco ficticio,BAN-338,Señal revisar señal pago cálculo pago señal nº 338,Story,Done,2026-07-08 18:15,2026-07-12 01:15,2026-07-12 01:15,Datos & IA,17.5,2026.3 Sprint
+Banco ficticio,BAN-339,検証 migración añadir cálculo ωmega nº 339,Story,Done,2026-09-09 11:00,2026-09-25 15:00,2026-09-25 15:00,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-340,Integración 検証 señal añadir 検証 revisar nº 340,Story,Done,2026-07-01 10:00,2026-07-07 13:00,2026-07-07 13:00,Pagos,8,2026.5 Sprint
+Banco ficticio,BAN-341,Migración señal integración validación nº 341,Story,Done,2026-09-19 13:30,2026-10-02 14:30,2026-10-02 14:30,App móvil,,2026.6 Sprint
+Banco ficticio,BAN-342,Migración cálculo pago señal pago ωmega informe señal nº 342,Story,In Review,2026-05-12 17:00,2026-05-12 17:00,,Datos & IA,1,2026.1 Sprint
+Banco ficticio,BAN-343,Validación señal migración pantalla pago nº 343,Story,Done,2026-06-10 12:45,2026-06-20 14:45,2026-06-20 14:45,Portal clientes,,2026.2 Sprint
+Banco ficticio,BAN-344,Señal integración validación migración añadir ωmega revisar nº 344,Story,In Review,2026-07-30 14:30,2026-08-04 14:30,,Pagos,8,2026.3 Sprint
+Banco ficticio,BAN-345,Pago revisar migración 検証 nº 345,Bug,In Progress,2026-08-06 09:45,2026-08-06 09:45,,App móvil,1,2026.4 Sprint
+Banco ficticio,BAN-346,Ωmega ωmega validación revisar añadir cálculo señal nº 346,Task,Done,2026-07-04 13:45,2026-07-17 21:45,2026-07-17 21:45,Datos & IA,17.5,2026.5 Sprint
+Banco ficticio,BAN-347,Informe añadir migración pantalla informe nº 347,Story,Done,2026-08-18 17:15,2026-08-28 01:15,2026-08-28 01:15,Portal clientes,3,2026.6 Sprint
+Banco ficticio,BAN-348,Añadir añadir pago pantalla señal validación ωmega integración cálculo nº 348,Bug,Done,2026-07-25 12:00,2026-08-02 13:00,2026-08-02 13:00,Pagos,17.5,2026.1 Sprint
+Banco ficticio,BAN-349,Señal validación añadir añadir añadir validación nº 349,Story,Done,2026-08-31 09:15,2026-09-10 12:15,2026-09-10 12:15,App móvil,3,2026.2 Sprint
+Banco ficticio,BAN-350,検証 pantalla pantalla integración ωmega migración 検証 nº 350,Bug,Done,2026-05-18 15:45,2026-05-27 15:45,2026-05-27 15:45,Datos & IA,3,2026.3 Sprint
+Banco ficticio,BAN-351,Revisar señal migración señal nº 351,Story,Done,2026-06-25 09:45,2026-07-14 12:45,2026-07-14 12:45,Portal clientes,,2026.4 Sprint
+Banco ficticio,BAN-352,Cálculo ωmega señal pantalla cálculo ωmega migración migración integración nº 352,Bug,Done,2026-08-09 11:15,2026-08-14 11:15,2026-08-14 11:15,Pagos,5,2026.5 Sprint
+Banco ficticio,BAN-353,Cálculo migración validación 検証 検証 pantalla señal ωmega informe nº 353,Bug,To Do,2026-07-04 16:45,2026-07-07 16:45,,App móvil,8,2026.6 Sprint
+Banco ficticio,BAN-354,Migración revisar ωmega señal pago pago nº 354,Story,In Review,2026-05-16 17:00,2026-05-20 17:00,,Datos & IA,,2026.1 Sprint
+Banco ficticio,BAN-355,Pantalla pantalla ωmega pago pantalla validación 検証 pago nº 355,Story,Done,2026-06-12 16:00,2026-06-13 23:00,2026-06-13 23:00,Portal clientes,8,2026.2 Sprint
+Banco ficticio,BAN-356,Revisar informe cálculo informe 検証 señal validación nº 356,Task,Done,2026-09-01 15:30,2026-09-13 23:30,2026-09-13 23:30,Pagos,17.5,2026.3 Sprint
+Banco ficticio,BAN-357,Pantalla pago validación añadir validación añadir pantalla 検証 cálculo nº 357,Task,In Review,2026-06-27 16:45,2026-07-01 16:45,,App móvil,8,2026.4 Sprint
+Banco ficticio,BAN-358,Validación informe migración 検証 cálculo nº 358,Bug,To Do,2026-07-24 15:30,2026-07-26 15:30,,Datos & IA,8,2026.5 Sprint
+Banco ficticio,BAN-359,Ωmega pago señal pantalla pago añadir revisar integración validación nº 359,Bug,Done,2026-06-04 17:15,2026-06-23 00:15,2026-06-23 00:15,Portal clientes,5,2026.6 Sprint
+Banco ficticio,BAN-360,Cálculo informe revisar informe migración cálculo añadir nº 360,Bug,In Review,2026-08-15 16:30,2026-08-18 16:30,,Pagos,3,2026.1 Sprint
