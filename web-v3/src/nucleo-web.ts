@@ -26,7 +26,8 @@ import { aplicarReglasTipo, tiposDeOrigen, etiquetasDe, TIPOS_ELEGIBLES } from '
 import { columnasNumericas } from '../../adaptadores/comun/numericas.ts';
 import { completarDesdeHistorial } from '../../adaptadores/comun/historial.ts';
 import { columnasCategoricas } from '../../adaptadores/comun/categoricas.ts';
-import { muestraDeRitmo, cuantasEnSemanas, cuandoTerminan, SEMANAS_MUESTRA } from '../../nucleo/prevision.ts';
+import { muestraDeRitmo, cuantasEnSemanas, cuandoTerminan, SEMANAS_MUESTRA, SEMILLA_CUANDO } from '../../nucleo/prevision.ts';
+import { SEMANAS_RITMO_EPICA } from '../../nucleo/epicas.ts';
 import { vistaEpicas, repartoPorCampo } from '../../nucleo/epicas.ts';
 
 const Nucleo = {
@@ -34,7 +35,7 @@ const Nucleo = {
   RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA, etapasV0AMapeo, etapaDe, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida,
   fiabilidad, COMPROBACIONES_EQUIPO, seguimiento, detalleMedida, tiempoPorEtapa, fijarIdioma, idioma, formatear, fechaCorta, conPorcentaje, IA,
   aplicarReglasTipo, tiposDeOrigen, etiquetasDe, TIPOS_ELEGIBLES, columnasNumericas, completarDesdeHistorial,
-  columnasCategoricas, muestraDeRitmo, cuantasEnSemanas, cuandoTerminan, SEMANAS_MUESTRA, vistaEpicas, repartoPorCampo,
+  columnasCategoricas, muestraDeRitmo, cuantasEnSemanas, cuandoTerminan, SEMANAS_MUESTRA, SEMILLA_CUANDO, SEMANAS_RITMO_EPICA, vistaEpicas, repartoPorCampo,
 };
 
 const w = globalThis as unknown as Record<string, unknown>;

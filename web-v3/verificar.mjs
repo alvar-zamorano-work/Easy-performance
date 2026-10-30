@@ -421,6 +421,32 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   // Cortes: valor oficial congelado
   await ir(p, 'cortes'); await quieto(p);
   ok('Cortes: cada corte dice que sus cifras son el valor oficial congelado', /valor oficial de este corte/.test(await A(p, () => document.getElementById('page').textContent)));
+  // Acuerdos: el periodo acaba el domingo (como el documento de definiciones) y con un solo equipo no dice "0 equipos"
+  await fijarRol(p, 'pmo'); await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="acuerdos"]').click()); await quieto(p);
+  const per = await A(p, () => { const S = window.EP.S, f = window.EP.fecha(new Date(new Date(S.vm.semanaFin).getTime() - 864e5)); return { f, ok: document.getElementById('page').textContent.includes('acaba el ' + f) }; });
+  ok('Acuerdos: el periodo acaba el último día de la semana cerrada', per.ok, JSON.stringify(per));
+  await A(p, () => { window.EP.S.cfg.campoEquipo = 'todos'; window.EP.recalcular(); window.EP.render(); }); await quieto(p);
+  const uno = await A(p, () => document.getElementById('page').textContent);
+  ok('Acuerdos: con todo el trabajo como un equipo no dice "0 equipos"', /un solo equipo/.test(uno) && !/0 equipos/.test(uno));
+  await A(p, () => { delete window.EP.S.cfg.campoEquipo; window.EP.recalcular(); window.EP.render(); }); await quieto(p);
+  // Reparto también en la demo
+  await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="tipos"]').click()); await quieto(p);
+  await p.selectOption('select[data-change="tipo-reparto"]', 'Issue Type'); await p.waitForTimeout(300); await quieto(p);
+  const repDemo = await A(p, () => { const r = window.EP.S.vm.equipos[0].reparto; return r ? r.filas.map((x) => x.valor) : null; });
+  ok('reparto en la demo: valores reales, no todo "sin valor"', repDemo && repDemo.length > 1 && repDemo.every((v) => v), JSON.stringify(repDemo));
+  // Misma pregunta, misma respuesta: N igual a lo que hay en curso
+  await A(p, (n) => window.EP.openTeam(n), equipo); await quieto(p);
+  const enCurso = await A(p, () => { const pv = window.EP.S.vm.equipos[0].prevision; return pv && pv.cuandoEnCurso ? { n: pv.enCurso, w: pv.cuandoEnCurso.p85 } : null; });
+  if (enCurso) {
+    await A(p, (n) => { window.EP.S.prevN = { [window.EP.S.vm.equipos[0].nombre]: n }; window.EP.render(); }, enCurso.n); await quieto(p);
+    const txt = await A(p, () => document.querySelector('.prev-q span.small').textContent);
+    ok('previsión: la misma pregunta da la misma respuesta en la ficha', new RegExp('en ' + enCurso.w + ' semana').test(txt), `${JSON.stringify(enCurso)} · ${txt}`);
+  }
+  // Pregunta de coste: con coste y FTE el Resumen la responde con cifras, no "Sin datos"
+  await A(p, () => { const S = window.EP.S; S.cfg.contexto = Object.assign({}, window.EP.P.contexto(S.cfg, S.det), { objetivos: ['speed', 'quality', 'predictability', 'cost'], hecho: true }); S.vm.equipos.forEach((e) => { S.cfg.fte = S.cfg.fte || {}; S.cfg.fte[e.nombre] = S.cfg.fte[e.nombre] || 5; S.cfg.coste = S.cfg.coste || {}; S.cfg.coste[e.nombre] = 6000; }); window.EP.recalcular(); }); 
+  await fijarRol(p, 'direccion'); await ir(p, 'resumen'); await quieto(p);
+  const coste = await A(p, () => { const hay = window.EP.S.vm.equipos.some((e) => e.medidas.coste && e.medidas.coste.disponible); const fichas = [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((f) => f.textContent); const c = fichas.find((x) => /cuesta cada entrega/.test(x)); return { hay, c: c ? c.slice(0, 120) : null }; });
+  ok('pregunta de coste: responde cuando hay coste', coste.hay && coste.c && !/Sin datos/.test(coste.c), JSON.stringify(coste));
   ok('sin errores de consola en las mejoras de dirección', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }

@@ -85,7 +85,7 @@
   /** Lee los ficheros, detecta y calcula. Devuelve false si no hay tareas. */
   function procesar(ficheros) {
     // Columnas elegidas a mano y columna de estimación; el historial de estados, si la fuente lo da, se convierte en tiempos
-    const lectura = N.completarDesdeHistorial(N.leerJira(ficheros, { columnas: S.demo ? undefined : S.cfg.columnas, columnaEstimacion: S.demo ? undefined : S.cfg.columnaEstimacion, columnaReparto: S.demo ? undefined : S.cfg.columnaReparto }));
+    const lectura = N.completarDesdeHistorial(N.leerJira(ficheros, { columnas: S.demo ? undefined : S.cfg.columnas, columnaEstimacion: S.cfg.columnaEstimacion, columnaReparto: S.cfg.columnaReparto }));
     const pendientes = lectura.informe.columnasPendientes || [];
     if (!lectura.tareas.length) {
       // Falta una columna que hace falta: no se descarta el fichero, se pide elegirla a mano

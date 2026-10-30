@@ -306,23 +306,29 @@
     const cortes = (S.demo ? S.cortesDemo : S.cortes) || [];
     const ultimo = cortes.slice().sort((a, b) => a.creado.localeCompare(b.creado)).pop();
     const ep = vm.epicas;
+    const enExport = (c) => !leidas.length || leidas.some((x) => x.columna === c);
+    const estFalta = !!est && !enExport(est), rep = S.cfg.columnaReparto, repFalta = !!rep && !enExport(rep);
+    const hayPadre = inf.campos && inf.campos.padreClave === true;
+    const unDia = new Date(new Date(vm.semanaFin).getTime() - 864e5);
+    const semanasEquipo = Math.max(0, ...vm.equipos.map((e) => (e.prevision ? e.prevision.muestra.length : 0)));
     return [
       { id: 'trabajo', d: t('acu.trabajo.d', { e: inf.epicas, s: inf.subtareas }) },
-      { id: 'equipos', d: t('acu.equipos.d', { campo: t('campo.' + vm.campoEquipo).toLowerCase(), n: vm.equiposMedidos.length }) },
+      { id: 'equipos', d: vm.campoEquipo === 'todos' ? t('acu.equipos.todos') : t('acu.equipos.d', { campo: t('campo.' + vm.campoEquipo).toLowerCase(), n: vm.equiposMedidos.length }) },
       { id: 'estados', d: revisar ? tn('acu.estados.revisar', revisar, { de: det.estados.length }) : t('acu.estados.d', { n: det.estados.length }), revisar: revisar > 0 },
       { id: 'bugs', d: t('acu.bugs.d', { tipos: bugs.length ? lista(bugs) : t('acu.ninguno') }) + (S.cfg.etiquetaBug ? ' ' + t('acu.bugs.etiqueta', { e: S.cfg.etiquetaBug }) : '') },
       { id: 'unidades', d: t('acu.unidades.d') },
-      { id: 'estimacion', d: est === '' ? t('acu.est.ninguna') : est ? t('acu.est.columna', { c: est }) : auto ? t('acu.est.auto', { c: auto }) : t('acu.est.nada') },
-      { id: 'periodo', d: t('acu.periodo.d', { f: fecha(vm.semanaFin), k: vm.semanas.K, r: vm.semanas.R }) },
-      { id: 'prevision', d: t('acu.prevision.d', { s: N.SEMANAS_MUESTRA }) },
-      { id: 'epicas', d: ep && ep.tareas ? t('acu.epicas.d', { n: ep.sinEpica, de: ep.tareas }) : t('acu.epicas.ninguna') },
+      { id: 'estimacion', d: est === '' ? t('acu.est.ninguna') : estFalta ? t('acu.est.falta', { c: est }) : est ? t('acu.est.columna', { c: est }) : auto ? t('acu.est.auto', { c: auto }) : t('acu.est.nada'), revisar: estFalta },
+      ...(rep ? [{ id: 'reparto', d: repFalta ? t('acu.reparto.falta', { c: rep }) : t('acu.reparto.d', { c: rep }), revisar: repFalta }] : []),
+      { id: 'periodo', d: t('acu.periodo.d', { f: fecha(unDia), k: vm.semanas.K, r: vm.semanas.R }) },
+      { id: 'prevision', d: t('acu.prevision.d', { s: semanasEquipo || N.SEMANAS_MUESTRA, e: N.SEMANAS_RITMO_EPICA }) },
+      { id: 'epicas', d: hayPadre && ep && ep.tareas ? t('acu.epicas.d', { n: ep.sinEpica, de: ep.tareas }) : t('acu.epicas.ninguna') },
       { id: 'congelado', d: ultimo ? t('acu.congelado.d', { f: fecha(ultimo.creado), h: horaDe(ultimo.creado) }) : t('acu.congelado.ninguno') },
     ];
   }
   function fuentesAcuerdos() {
     const lista_ = acuerdos(), revisar = lista_.filter((x) => x.revisar).length;
-    const filas = lista_.map((x) => `<div class="rrow">${K.chip(x.revisar ? 'warn' : 'good', t(x.revisar ? 'acu.porRevisar' : 'acu.acordado'))}<div class="rrow-t"><b>${esc(t('acu.' + x.id))}</b><div class="small muted">${esc(x.d)}</div></div></div>`).join('');
-    return K.statusBar(revisar ? 'warn' : 'good', esc(revisar ? t('acu.titularRevisar') : t('acu.titular')), [esc(t('acu.items1')), esc(t('acu.items2'))])
+    const filas = lista_.map((x) => `<div class="rrow">${K.chip(x.revisar ? 'warn' : 'neutral', t(x.revisar ? 'acu.porRevisar' : 'acu.aplicado'))}<div class="rrow-t"><b>${esc(t('acu.' + x.id))}</b><div class="small muted">${esc(x.d)}</div></div></div>`).join('');
+    return K.statusBar(revisar ? 'warn' : 'neutral', esc(revisar ? tn('acu.titularRevisar', revisar) : t('acu.titular')), [esc(t('acu.items1')), esc(t('acu.items2'))])
       + `<div class="ficha list">${filas}</div><div class="row" style="margin-top:12px"><button class="btn sm" data-action="acu-descargar">${esc(t('acu.descargar'))}</button></div>`;
   }
   EP.accion('acu-descargar', () => {

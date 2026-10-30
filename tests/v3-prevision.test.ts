@@ -110,3 +110,57 @@ test('reparto por un campo que elige el cliente: suma el 100 % de lo terminado',
   // Sin elegir campo, el reparto no aparece en los agrupadores
   assert.ok(lectura.tareas.every((t) => !('reparto' in t.agrupadores)));
 });
+
+// ---------- casos de la revisión independiente ----------
+
+test('equipo nuevo: las semanas antes de su primera entrega no cuentan como ritmo cero', () => {
+  const m = muestraDeRitmo([0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 10, 10, 10, 10, 10]);
+  assert.deepEqual(m, [10, 10, 10, 10, 10, 10]);
+  assert.equal(cuantasEnSemanas(m!, 4).p85, 40);
+  // Con menos de 6 semanas desde la primera entrega, o menos de 3 con entregas, no hay previsión
+  assert.equal(muestraDeRitmo([0, 0, 0, 0, 10, 10, 10]), null);
+  assert.equal(muestraDeRitmo([0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1]), null);
+  // Las semanas sin entregas después de la primera sí cuentan
+  assert.deepEqual(muestraDeRitmo([5, 0, 5, 0, 5, 0]), [5, 0, 5, 0, 5, 0]);
+});
+
+test('épicas: vencimiento el mismo día no es vencida; más de dos años no es "sin ritmo"; una épica nueva no está parada', () => {
+  const base = vistaEpicas(p, lectura.epicas);
+  const abierta = base.epicas.find((e) => e.abiertas > 0 && e.prevision85)!;
+  const hoy = p.ctx.fechaRef;
+  const conMeta = (cambios: Partial<Epica>) => vistaEpicas(p, (lectura.epicas || []).map((x) => (x.clave === abierta.clave ? { ...x, ...cambios } : x))).epicas.find((e) => e.clave === abierta.clave)!;
+  const mismoDia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+  assert.notEqual(conMeta({ vence: mismoDia }).situacion, 'vencida');
+  assert.equal(conMeta({ vence: sumarDias(mismoDia, -1) }).situacion, 'vencida');
+  // La previsión cuenta desde la fecha de los datos
+  assert.ok(abierta.prevision85! >= hoy);
+  // Una épica con muchas tareas abiertas y ritmo muy bajo: previsión lejana, no "sin ritmo"
+  const fin = p.ctx.semanaFin;
+  const hija = (i: number, terminada: Date | null) => ({ equipo: 'X', entregada: !!terminada, descartada: false, etapa: terminada ? 'hecho' : 'pendiente',
+    t: { id: 'l' + i, padre_id: 'LEJOS-1', padre_titulo: 'Lejos', fechas: { creada: sumarDias(fin, -100), terminada } } });
+  const hijas = [hija(0, sumarDias(fin, -20)), hija(1, sumarDias(fin, -40))].concat(Array.from({ length: 2000 }, (_, i) => hija(i + 2, null)));
+  const minima = { nombresEquipo: ['X'], porEquipo: { X: hijas }, ctx: { semanaFin: fin, fechaRef: p.ctx.fechaRef } } as never;
+  const lejana = vistaEpicas(minima, []).epicas[0];
+  assert.equal(lejana.previsionLejana, true, JSON.stringify({ r: lejana.ritmo, a: lejana.abiertas, s: lejana.situacion }));
+  assert.equal(lejana.prevision85, null);
+  assert.equal(lejana.situacion, 'sin_fecha');
+  // Una épica creada hace dos semanas, con trabajo en curso y nada terminado: sin ritmo aún, no parada
+  const plantilla = p.porEquipo[abierta.equipo][0];
+  const nueva = Array.from({ length: 5 }, (_, i) => ({ ...plantilla, entregada: false, etapa: 'curso' as const, descartada: false, t: { ...plantilla.t, id: 'n' + i, padre_id: 'NUEVA-1', fechas: { ...plantilla.t.fechas, creada: sumarDias(p.ctx.semanaFin, -10), terminada: null } } }));
+  const conNueva = { ...p, porEquipo: { ...p.porEquipo, [abierta.equipo]: p.porEquipo[abierta.equipo].concat(nueva) } };
+  assert.equal(vistaEpicas(conNueva, lectura.epicas).epicas.find((e) => e.clave === 'NUEVA-1')!.situacion, 'sin_ritmo');
+  // La misma épica, antigua y sin nada en curso: parada
+  const vieja = nueva.map((d) => ({ ...d, etapa: 'pendiente' as const, t: { ...d.t, fechas: { ...d.t.fechas, creada: sumarDias(p.ctx.semanaFin, -120) } } }));
+  const conVieja = { ...p, porEquipo: { ...p.porEquipo, [abierta.equipo]: p.porEquipo[abierta.equipo].concat(vieja) } };
+  assert.equal(vistaEpicas(conVieja, lectura.epicas).epicas.find((e) => e.clave === 'NUEVA-1')!.situacion, 'parada');
+});
+
+test('reparto: si un fichero no tiene la columna elegida se avisa; las columnas numéricas no se proponen', async () => {
+  const sinColumna = texto.replace(/(^|,)Issue Type(,|\r?\n)/, '$1Clase$2');
+  const l = leerJira([{ nombre: 'a.csv', texto }, { nombre: 'b.csv', texto: sinColumna }], { columnaReparto: 'Issue Type' });
+  assert.ok(l.informe.avisos.some((a) => a.texto.includes('b.csv') && a.texto.includes('Issue Type')), JSON.stringify(l.informe.avisos.map((a) => a.texto)));
+  const { columnasCategoricas } = await import('../adaptadores/comun/categoricas.ts');
+  const cols = columnasCategoricas(texto).map((c) => c.columna);
+  assert.ok(cols.includes('Issue Type'));
+  assert.ok(!cols.some((c) => /story points/i.test(c)), JSON.stringify(cols));
+});

@@ -47,7 +47,7 @@
       const kpis = o.kpis.filter((k) => cols.indexOf(k) >= 0);
       if (!kpis.length) return '';
       const malos = []; let conDato = false;
-      eqs.forEach((e) => kpis.forEach((k) => { const m = P.med(e, k); if (m && m.disponible) { conDato = true; if (m.estado === 'atencion' || m.estado === 'critico') malos.push({ e, k, m }); } }));
+      eqs.forEach((e) => kpis.forEach((k) => { const m = e.medidas[k]; if (m && m.disponible) { conDato = true; if (m.estado === 'atencion' || m.estado === 'critico') malos.push({ e, k, m }); } }));
       malos.sort((a, b) => (b.m.estado === 'critico' ? 1 : 0) - (a.m.estado === 'critico' ? 1 : 0));
       const tono = !conDato ? 'neutral' : malos.some((x) => x.m.estado === 'critico') ? 'bad' : malos.length ? 'warn' : 'good';
       const nEq = new Set(malos.map((x) => x.e.nombre)).size;
@@ -88,7 +88,7 @@
   }
   // ---------- previsión por probabilidad ----------
   const DIA_MS = 864e5;
-  const semanaFecha = (fin, w) => fecha(new Date(new Date(fin).getTime() + w * 7 * DIA_MS));
+  const semanaFecha = (desde, w) => fecha(new Date(new Date(desde).getTime() + w * 7 * DIA_MS));
   const filaPrev = (label, grande, peque) => `<div class="prev-fila"><span class="small muted">${esc(label)}</span><b>${esc(grande)}</b><span class="small muted">${esc(peque || '')}</span></div>`;
   function fichaPrevision(e) {
     const p = e.prevision;
@@ -96,12 +96,12 @@
     if (!p) return K.ficha(cab, `<p class="muted small">${esc(t('prev.sinDatos'))}</p>`);
     const cuando = (c) => (c.p85 == null ? t('prev.sinFin') : tn('prev.semanas', c.p85));
     let html = filaPrev(t('prev.cuatro'), t('prev.alMenos', { n: p.cuatro.p85 }), t('prev.normal', { n: p.cuatro.p50 }));
-    if (p.cuandoEnCurso) html += filaPrev(tn('prev.enCurso', p.enCurso), cuando(p.cuandoEnCurso), p.cuandoEnCurso.p85 == null ? '' : t('prev.hacia', { f: semanaFecha(p.semanaFin, p.cuandoEnCurso.p85) }));
+    if (p.cuandoEnCurso) html += filaPrev(tn('prev.enCurso', p.enCurso), cuando(p.cuandoEnCurso), p.cuandoEnCurso.p85 == null ? '' : t('prev.hacia', { f: semanaFecha(p.desde, p.cuandoEnCurso.p85) }));
     const n = (S.prevN || {})[e.nombre] || 0;
     let res = '';
     if (n > 0) {
-      const c = N.cuandoTerminan(p.muestra, n, 11);
-      res = c.p85 == null ? t('prev.sinFin') : cuando(c) + ', ' + t('prev.hacia', { f: semanaFecha(p.semanaFin, c.p85) }) + '. ' + t('prev.normalSem', { w: c.p50 });
+      const c = N.cuandoTerminan(p.muestra, n, N.SEMILLA_CUANDO);
+      res = c.p85 == null ? t('prev.sinFin') : cuando(c) + ', ' + t('prev.hacia', { f: semanaFecha(p.desde, c.p85) }) + '. ' + tn('prev.normalSem', c.p50);
     }
     html += `<div class="prev-q"><label class="small">${esc(t('prev.pregunta'))}</label><input type="number" min="1" max="2000" step="1" class="sm num" data-change="prev-n" data-team="${esc(e.nombre)}" value="${n || ''}" aria-label="${esc(t('prev.pregunta'))}"><span class="small">${esc(res)}</span></div>`;
     html += `<p class="tiny muted" style="margin:10px 0 0">${esc(t('prev.como', { s: p.muestra.length }))}</p>`;
@@ -110,9 +110,9 @@
   EP.cambio('prev-n', (el) => { S.prevN = S.prevN || {}; S.prevN[el.dataset.team] = Math.max(0, Math.min(2000, parseInt(el.value, 10) || 0)); EP.render(); });
 
   // ---------- épicas ----------
-  const TONO_SIT = { vencida: 'bad', parada: 'bad', en_riesgo: 'warn', en_plazo: 'good', sin_fecha: 'neutral', terminada: 'good' };
+  const TONO_SIT = { vencida: 'bad', parada: 'bad', en_riesgo: 'warn', en_plazo: 'good', sin_fecha: 'neutral', sin_ritmo: 'neutral', terminada: 'good' };
   const sitChip = (x) => K.chip(TONO_SIT[x.situacion], t('epicas.sit.' + x.situacion));
-  const prevEpica = (x) => (x.situacion === 'terminada' ? t('epicas.cerrada') : x.prevision85 ? t('prev.hacia', { f: fecha(x.prevision85) }) : t('epicas.sinRitmo'));
+  const prevEpica = (x) => (x.situacion === 'terminada' ? t('epicas.cerrada') : x.prevision85 ? t('prev.hacia', { f: fecha(x.prevision85) }) : x.previsionLejana ? t('prev.sinFin') : x.situacion === 'parada' ? t('epicas.sinRitmo') : t('epicas.aunSinRitmo'));
   function epicaFila(x) {
     return `<div class="rrow">${sitChip(x)}<div class="rrow-t"><b>${esc(x.clave)} · ${esc(x.titulo)}</b><div class="small muted">${esc(t('epicas.hijas', { t: x.terminadas, n: x.hijas }))} · ${esc(prevEpica(x))}</div>${K.barra(x.avance, 'good')}</div></div>`;
   }

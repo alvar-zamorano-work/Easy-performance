@@ -168,11 +168,12 @@
    * Previsión por probabilidad desde las entregas reales de las últimas 12 semanas: cuántas tareas en 4 semanas
    * y cuándo termina lo que hay en curso. null si no hay semanas suficientes con entregas.
    */
-  function previsionDe(eq, semanaFin) {
+  function previsionDe(eq, desde) {
     const m = N.muestraDeRitmo(eq.series.entregas);
     if (!m) return null;
     const enCurso = (eq.enCurso || []).length;
-    return { muestra: m, semanaFin, cuatro: N.cuantasEnSemanas(m, 4, 4), enCurso, cuandoEnCurso: enCurso ? N.cuandoTerminan(m, enCurso, 7) : null };
+    // Las fechas cuentan desde la fecha de los datos, no desde el lunes: la semana en curso no cuenta como una semana entera
+    return { muestra: m, desde, cuatro: N.cuantasEnSemanas(m, 4, 4), enCurso, cuandoEnCurso: enCurso ? N.cuandoTerminan(m, enCurso, N.SEMILLA_CUANDO) : null };
   }
   /** Reparto de lo terminado por el campo que ha elegido el cliente. */
   function repartoDe(r, eq, cfg) {
@@ -200,7 +201,7 @@
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
-      prevision: previsionDe(eq, r.preparacion.ctx.semanaFin), reparto: repartoDe(r, eq, cfg),
+      prevision: previsionDe(eq, r.preparacion.ctx.fechaRef), reparto: repartoDe(r, eq, cfg),
     };
   }
 

@@ -122,6 +122,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
       else informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' has no column "', ' no tiene la columna «') + opciones.columnaEstimacion + Tx('": the estimate is detected by name in this file.', '»: en este fichero la estimación se reconoce por su nombre.') });
     }
     const iReparto = opciones.columnaReparto ? cab.findIndex((h) => String(h).trim() === opciones.columnaReparto) : -1;
+    if (opciones.columnaReparto && iReparto < 0) informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' has no column "', ' no tiene la columna «') + opciones.columnaReparto + Tx('": its tasks have no value for the split.', '»: sus tareas quedan sin valor en el reparto.') });
     // Filas vacías del final (Excel suele dejarlas) no cuentan
     while (filas.length > 1 && filas[filas.length - 1].every((x) => !String(x || '').trim())) filas.pop();
     const n = filas.length - 1;

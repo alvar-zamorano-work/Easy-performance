@@ -20,8 +20,10 @@ export function columnasCategoricas(texto: string): ColumnaCategorica[] {
     if (!nombre || vistas.has(nombre) || PERSONAS.test(n) || TEXTO_LIBRE.test(n)) return;
     vistas.add(nombre);
     const distintos = new Set<string>();
-    let conValor = 0;
-    muestra.forEach((f) => { const v = String(f[c] || '').trim(); if (v) { conValor++; distintos.add(v); } });
+    let conValor = 0, numeros = 0;
+    muestra.forEach((f) => { const v = String(f[c] || '').trim(); if (v) { conValor++; distintos.add(v); if (/^-?\d+([.,]\d+)?$/.test(v)) numeros++; } });
+    // Las columnas numéricas (puntos, horas) no sirven para repartir
+    if (conValor && numeros / conValor >= 0.9) return;
     if (distintos.size >= 2 && distintos.size <= 15 && conValor >= muestra.length * 0.5) out.push({ columna: nombre, valores: distintos.size, conValor, filas: muestra.length });
   });
   return out;

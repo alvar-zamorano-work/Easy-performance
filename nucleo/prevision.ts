@@ -3,7 +3,9 @@
 // solo lo que el equipo ha terminado de verdad. La semilla es fija, así la misma entrada da siempre la misma cifra.
 
 export const SEMANAS_MUESTRA = 12;
+/** Semanas desde la primera entrega del equipo, y cuántas de ellas con entregas, para poder prever. */
 export const MINIMO_SEMANAS = 6;
+export const MINIMO_CON_ENTREGAS = 3;
 export const SIMULACIONES = 5000;
 /** Más allá de dos años la previsión no dice nada útil. */
 export const MAXIMO_SEMANAS = 104;
@@ -23,14 +25,22 @@ function aleatorio(semilla: number): () => number {
 const percentil = (ordenados: number[], p: number): number => ordenados[Math.min(ordenados.length - 1, Math.max(0, Math.ceil(p * ordenados.length) - 1))];
 
 /**
- * Semanas del histórico reciente que sirven para prever: las últimas `semanas` completas.
- * null si hay pocas semanas o si el equipo no ha terminado nada en ellas.
+ * Semanas del histórico reciente que sirven para prever: las últimas `semanas` completas desde la primera entrega.
+ * Las semanas anteriores a que el equipo entregara nada no cuentan: un equipo nuevo no tiene ritmo cero, aún no existía.
+ * Las semanas sin entregas después de la primera sí cuentan: son ritmo real.
+ * null si hay menos de 6 semanas desde la primera entrega o menos de 3 con entregas.
  */
-export function muestraDeRitmo(serie: number[], semanas = SEMANAS_MUESTRA): number[] | null {
-  const m = serie.slice(-semanas).filter((x) => Number.isFinite(x) && x >= 0);
-  if (m.length < MINIMO_SEMANAS || !m.some((x) => x > 0)) return null;
+export function muestraDeRitmo(serie: number[], semanas = SEMANAS_MUESTRA, minimo = MINIMO_SEMANAS, minimoConEntregas = MINIMO_CON_ENTREGAS): number[] | null {
+  const limpia = serie.map((x) => (Number.isFinite(x) && x >= 0 ? x : 0));
+  const primera = limpia.findIndex((x) => x > 0);
+  if (primera < 0) return null;
+  const m = limpia.slice(primera).slice(-semanas);
+  if (m.length < minimo || m.filter((x) => x > 0).length < minimoConEntregas) return null;
   return m;
 }
+
+/** Semilla única para las preguntas de "cuándo": la misma pregunta da siempre la misma respuesta en toda la página. */
+export const SEMILLA_CUANDO = 7;
 
 export interface PrevisionCuantas {
   semanas: number;
