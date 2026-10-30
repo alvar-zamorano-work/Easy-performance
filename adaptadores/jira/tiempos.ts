@@ -1,6 +1,7 @@
 // Campo "Tiempo en estado" de Jira: viene por id de estado y en una unidad que no se declara.
 // Aquí se deduce el nombre de cada id y la unidad (milisegundos, segundos o minutos), con las fechas como referencia.
 
+import { Tx } from '../../nucleo/idioma.ts';
 import { cuantil, norm } from '../../nucleo/util.ts';
 import { etapaDe, proponerEstado } from '../../nucleo/estados.ts';
 import type { Aviso } from '../../nucleo/modelo.ts';
@@ -76,10 +77,10 @@ export function nombresDeEstado(tareas: TareaJiraParaTiempos[]): { nombrePorId: 
 
   const avisos: Aviso[] = [];
   const sinNombre = Object.keys(ids).filter((id) => !nombrePorId[id]).length;
-  if (sinNombre) avisos.push({ tipo: 'aviso', texto: sinNombre + ' status(es) in the Time in Status field have no name in the export. Check which stage they belong to.' });
+  if (sinNombre) avisos.push({ tipo: 'aviso', texto: sinNombre + Tx(' status(es) in the Time in Status field have no name in the export. Check which stage they belong to.', ' estado(s) del campo Tiempo en estado no tienen nombre en el export. Revisa a qué etapa pertenecen.') });
   return { nombrePorId, avisos };
 }
 
 export function nombreDeId(nombrePorId: Record<string, string>, id: string): string {
-  return nombrePorId[id] || ('Status ' + id);
+  return nombrePorId[id] || (Tx('Status ', 'Estado ') + id);
 }

@@ -118,6 +118,25 @@ export interface InformeIngesta {
   sinClave: number;
   campos: Record<string, true | 'vacio'>;
   tareas: number;
+  /** Tareas sin fecha de creación legible: no se pueden medir y se cuentan aparte para que no se pierdan sin aviso. */
+  sinFecha?: number;
+  /** Cómo se han leído las fechas numéricas (día/mes o mes/día), cuando el fichero las trae así. */
+  ordenFechas?: 'dm' | 'md';
+  /** Ficheros que no se han podido leer porque falta una columna obligatoria: sus títulos, para elegirla a mano. */
+  columnasPendientes?: { fichero: string; cabecera: string[]; faltan: string[] }[];
+}
+
+/** Una épica del origen. No se mide como trabajo: sirve para la vista de épicas (avance por sus hijas, vencimiento). */
+export interface Epica {
+  clave: string;
+  /** Solo en memoria. */
+  titulo: string;
+  estado: string;
+  categoria: string;
+  /** Fecha de vencimiento (Due date), si la fuente la da. */
+  vence: Date | null;
+  terminada: Date | null;
+  descartada: boolean;
 }
 
 /** Lo que devuelve cualquier adaptador: tareas en el modelo neutro y lo que sabe del origen. */
@@ -128,6 +147,8 @@ export interface Lectura {
   estados: EstadoOrigen[];
   camposEquipo: CampoAgrupador[];
   mapeoPropuesto: Record<string, EstadoNormalizado>;
+  /** Épicas del origen, si el adaptador las lee. */
+  epicas?: Epica[];
   /** Detalle propio de la plataforma (por ejemplo, unidad del Tiempo en estado de Jira). */
   detalle: Record<string, unknown>;
 }

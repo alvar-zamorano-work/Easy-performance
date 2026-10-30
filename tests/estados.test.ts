@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
-import { proponerEstado, etapaDe, etapasV0AMapeo } from '../nucleo/estados.ts';
+import { proponerEstado, explicarEstado, etapaDe, etapasV0AMapeo } from '../nucleo/estados.ts';
 import { norm } from '../nucleo/util.ts';
 
 const v0 = createRequire(import.meta.url)('./referencia-v0/motor.js') as { etapaPropuesta: (n: string, c: string) => string };
@@ -28,6 +28,8 @@ test('misma etapa que la v0 (y mismo bloqueo en curso o espera) para cientos de 
     // "UAT", "Quality assurance" y "Staging" son esperas (pruebas o despliegue), no pendiente.
     if (/\blisto\b|selected for|seleccionad[oa]s? para|ready for (dev|develop)|\buat\b|quality assurance|staging/.test(norm(n))) continue;
     for (const c of categorias) {
+      // "Indeterminate" es la clave interna de Jira para la categoría En curso: se reconoce como en curso, la v0 no.
+      if (c === 'Indeterminate' && explicarEstado(n, c).por === 'categoria') continue;
       const p = proponerEstado(n, c), etapa = etapaDe(p), etapaV0 = v0.etapaPropuesta(n, c);
       assert.equal(etapa, etapaV0, `"${n}" (${c}): ${p}`);
       if (etapa === 'curso' || etapa === 'espera') assert.equal(p === 'bloqueado', esBloqueoV0(n), `bloqueo "${n}"`);
@@ -47,6 +49,21 @@ test('Jira en castellano y nombres habituales', () => {
     ['On Hold', '', 'bloqueado'], ['Scheduled', '', 'en_espera'], ['Authorize', '', 'en_revision'], ['Assess', '', 'pendiente'], ['UAT', '', 'en_pruebas'], ['Work in Progress', '', 'en_curso'],
   ];
   for (const [n, c, e] of casos) assert.equal(proponerEstado(n, c), e, n);
+});
+
+test('estados de exports reales que antes quedaban por defecto o mal', () => {
+  const casos: [string, string, string, string][] = [
+    ['In Acceptance', 'In Progress', 'en_pruebas', 'nombre'], ['En aceptación', 'En curso', 'en_pruebas', 'nombre'],
+    ['In Clarification', 'To Do', 'pendiente', 'nombre'], ['In Clarification', 'In Progress', 'en_espera', 'nombre'],
+    ['In Queue', 'To Do', 'pendiente', 'nombre'], ['En cola', 'Por hacer', 'pendiente', 'nombre'], ['Queued for deploy', 'In Progress', 'en_espera', 'nombre'],
+    ['Bloq.', 'In Progress', 'bloqueado', 'nombre'],
+    ['Fase 3', 'To Do', 'pendiente', 'categoria'], ['Fase 3', 'indeterminate', 'en_curso', 'categoria'], ['Fase 3', 'new', 'pendiente', 'categoria'],
+    ['Fase 3', '', 'pendiente', 'defecto'],
+    // Con categoría Hecho las reglas nuevas no mandan: siguen terminadas
+    ['Clarified', 'Done', 'terminado', 'categoria'], ['Aclarado', 'Listo', 'terminado', 'categoria'],
+    ['Acceptance', 'Done', 'terminado', 'categoria'], ['Deploy queue', 'Done', 'terminado', 'categoria'],
+  ];
+  for (const [n, c, e, por] of casos) assert.deepEqual(explicarEstado(n, c), { estado: e, por }, n + ' (' + c + ')');
 });
 
 test('cliente.json de la v0: las etapas pasan a estados normalizados', () => {

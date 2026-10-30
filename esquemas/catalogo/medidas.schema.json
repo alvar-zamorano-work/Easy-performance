@@ -22,6 +22,8 @@
           "formato": { "enum": ["num", "pct", "dias", "horas", "dec"] },
           "requiere": { "enum": ["tiempos", "inicio", "puntos", "errores", "primera", "sprints", "api", "descripcion"] },
           "como": { "type": "string", "minLength": 1 },
+          "decision": { "type": "string", "minLength": 1 },
+          "quien": { "type": "string", "minLength": 1 },
           "limites": { "$ref": "../modelo/comun.schema.json#/$defs/limites" }
         }
       }

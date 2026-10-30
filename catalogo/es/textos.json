@@ -1,0 +1,30 @@
+{
+  "textos": {
+    "equipo.titulo": "Informe semanal",
+    "equipo.intro": "Cada equipo se compara solo con sus 12 semanas anteriores. Nunca con otros equipos ni por personas.",
+    "equipo.casos": "Qué hacer esta semana",
+    "equipo.atascado": "Qué está bloqueado hoy",
+    "equipo.medidas": "Cómo van las medidas",
+    "equipo.evolucion": "Cómo han evolucionado",
+    "todos.titulo": "El área",
+    "todos.intro": "El área en conjunto, frente a su propia historia. Y cada equipo, frente a la suya: sin rankings.",
+    "pmo.titulo": "Compromisos y riesgos",
+    "pmo.intro": "Previsibilidad, salud del dato y casos abiertos de cada equipo.",
+    "negocio.titulo": "Plazos y reparto",
+    "negocio.intro": "Cuánto tarda una petición y en qué se va la capacidad de cada equipo.",
+    "chequeo.titulo": "Fiabilidad de los datos",
+    "kpi.entrega": "Tiempo de entrega",
+    "kpi.valor": "Valor entregado",
+    "kpi.calidad": "Calidad de entrega",
+    "kpi.carga": "Carga de trabajo",
+    "comparacion.aviso": "Compara solo medidas normalizadas y dentro del mismo tipo y tamaño de tarea. No mide el esfuerzo, la dificultad ni a las personas. Una diferencia es una pregunta para la reunión, no un ranking.",
+    "comparacion.pocosDatos": "Pocos datos",
+    "iniciativa.aviso": "No es un experimento controlado: indica si merece la pena seguir, no demuestra la causa.",
+    "agentes.aviso": "Se calcula sobre el texto de los tickets en este navegador. Fuera solo salen cifras agregadas, nunca el texto.",
+    "grupos.titulo": "Comparar con las mismas reglas",
+    "iniciativas.titulo": "Iniciativas de mejora",
+    "iniciativas.intro": "Cada iniciativa, con el antes y el después de su medida, frente a los equipos que no participan.",
+    "agentes.titulo": "Backlog listo para agentes",
+    "agentes.intro": "Cuánto del trabajo nuevo podría completar un agente de IA sin preguntar."
+  }
+}

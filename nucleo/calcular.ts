@@ -1,11 +1,12 @@
 // Cálculo de medidas por equipo: series semanales, valor actual, rango habitual del propio equipo,
 // semáforo, tendencia, trabajo bloqueado, indicadores de comité, calidad del dato y casos activos.
 
+import { Tx } from './idioma.ts';
 import { DIA, cuantil, desv, inicioSemana, media, spearman, sumarDias } from './util.ts';
 import { CATALOGO, type Catalogo } from './catalogo.ts';
 import { etapaDe, etapasV0AMapeo } from './estados.ts';
 import { valorEquipo } from './detectar.ts';
-import { estadoMedida, rangoDe, tendencia } from './semaforo.ts';
+import { estadoMedida, estadoReferencia, rangoDe, tendencia } from './semaforo.ts';
 import { analizarSprints } from './sprints.ts';
 import { negocio } from './negocio.ts';
 import { calidadEquipo, cierresEnBloque } from './calidad.ts';
@@ -71,6 +72,7 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
   tareas.forEach((t) => {
     let eq = valor(t) || 'No team';
     if (incluidos && incluidos.indexOf(eq) < 0) return;
+    const equipoOrigen = eq;
     if (cfg.unirComo) eq = cfg.unirComo; // visión del área: los equipos incluidos, juntos como uno solo
     const f = t.fechas;
     const estado = mapeo[t.estado_origen] || t.estado_normalizado;
@@ -91,7 +93,7 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     });
     const descartada = !!(f.terminada && (t.descartada || estado === 'descartado'));
     const d: Derivada = {
-      t, equipo: eq, estado, etapa, cursoMs: curso, esperaMs: espera, porEstado,
+      t, equipo: eq, equipoOrigen, estado, etapa, cursoMs: curso, esperaMs: espera, porEstado,
       entregada: !!(f.terminada && !descartada && (etapa === 'hecho' || !t.estado_origen)),
       descartada,
       conTiempos: t.tiempos_estado.length > 0,
@@ -105,6 +107,10 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
     if (d.entregada && (curso + espera) > 0) {
       d.ciclo = (curso + espera) / DIA;
       d.inicio = f.empezada || new Date(f.terminada!.getTime() - curso - espera);
+    } else if (d.entregada && f.empezada && f.terminada! > f.empezada) {
+      // Sin tiempo por estado pero con fecha de inicio explícita (Azure DevOps: Activated Date): plazo de inicio a fin
+      d.ciclo = (f.terminada!.getTime() - f.empezada.getTime()) / DIA;
+      d.inicio = f.empezada;
     } else if (!f.terminada && (d.etapa === 'curso' || d.etapa === 'espera')) {
       d.inicio = f.empezada || f.cambio_estado || (f.actualizada ? new Date(f.actualizada.getTime() - curso - espera) : null);
     }
@@ -128,7 +134,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   const s: Series = {
     entregas: vacia(), entradas: vacia(), salidas: vacia(), pendiente: vacia(), wip: vacia(), velocidad: vacia(),
     pendienteEdad: nula(), // antigüedad típica (mediana, días) de lo que espera sin empezar
-    entregasMedia: nula(), ciclo85: nula(), ciclo50: nula(), total85: nula(), espera: nula(), errores: nula(), retrabajo: nula(),
+    entregasMedia: nula(), bugsEntrada: vacia(), bugsMedia: nula(), ciclo85: nula(), ciclo50: nula(), total85: nula(), espera: nula(), errores: nula(), retrabajo: nula(),
     arrastradas: nula(), regularidad: nula(), estimacion: nula(), primera85: nula(), velocidadMedia: nula(),
     reparto: nula<Record<string, number>>(),
     agentReady: nula(),
@@ -138,7 +144,10 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   items.forEach((d) => {
     const t = d.t;
     const wc = c.semanaDe(t.fechas.creada);
-    if (wc >= 0) s.entradas[wc]++;
+    if (wc >= 0) {
+      s.entradas[wc]++;
+      if (t.tipo === 'error' && !d.descartada) s.bugsEntrada[wc]++;
+    }
     if (t.fechas.terminada) {
       const wr = c.semanaDe(t.fechas.terminada);
       if (wr >= 0) {
@@ -172,6 +181,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   for (let w = 0; w < N; w++) {
     if (w >= K - 1) {
       s.entregasMedia[w] = media(s.entregas.slice(w - K + 1, w + 1));
+      s.bugsMedia[w] = media(s.bugsEntrada.slice(w - K + 1, w + 1));
       s.velocidadMedia[w] = media(s.velocidad.slice(w - K + 1, w + 1));
     }
     const v = ventana(w, K);
@@ -225,7 +235,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   const L = N - 1;
   const series: Record<string, (number | null)[]> = {
     entregas: s.entregasMedia, regularidad: s.regularidad, ciclo: s.ciclo85, total: s.total85, espera: s.espera,
-    wip: s.wip, arrastradas: s.arrastradas, errores: s.errores, retrabajo: s.retrabajo, pendiente: s.pendiente,
+    wip: s.wip, arrastradas: s.arrastradas, errores: s.errores, bugs: s.bugsMedia, retrabajo: s.retrabajo, pendiente: s.pendiente,
     estimacion: s.estimacion, velocidad: s.velocidadMedia, primera: s.primera85,
     reparto: s.reparto.map((r) => (r ? r.historia : null)),
     agent_readiness: s.agentReady,
@@ -248,6 +258,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       const refVals = (m.serie || []).slice(Math.max(0, L - win - R + 1), Math.max(0, L - win + 1)).filter((x): x is number => x != null);
       const ref = rangoDe(refVals);
       if (ref) m.ref = ref;
+      m.referencia = estadoReferencia(ref, R);
       const previo = m.serie && L - win >= 0 ? m.serie[L - win] : null;
       m.tendencia = tendencia(m.valor, previo, def.dir);
     }
@@ -255,6 +266,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     const est = estadoMedida(id, m.valor, m.ref, lim, def);
     m.estado = est.estado;
     m.estadoTexto = est.texto;
+    if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
     medidas[id] = m;
   });
 
@@ -283,14 +295,15 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
   Object.keys(catalogo.medidas).forEach((id) => {
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
-    else if (req === 'tiempos') out[id] = hayTiempos ? true : 'The export has no time in each status (in Jira, the Time in Status field). Export with All fields.';
-    else if (req === 'inicio') out[id] = hayInicio ? true : 'This export does not say when each task started.';
-    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : 'Very few tasks have story points.';
-    else if (req === 'errores') out[id] = hayErrores ? true : 'The export has no task type.';
-    else if (req === 'primera') out[id] = hayPrimera ? true : 'The export has no date of first response.';
+    else if (req === 'tiempos' && id === 'ciclo' && !hayTiempos && items.some((d) => d.ciclo != null)) out[id] = true;
+    else if (req === 'tiempos') out[id] = hayTiempos ? true : Tx('The export has no time in each status (in Jira, the Time in Status field). Export with All fields.', 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.');
+    else if (req === 'inicio') out[id] = hayInicio ? true : Tx('This export does not say when each task started.', 'No se puede saber cuándo empezó cada tarea con este export.');
+    else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : Tx('Very few tasks have story points.', 'Hay muy pocas tareas con puntos de historia.');
+    else if (req === 'errores') out[id] = hayErrores ? true : Tx('The export has no task type.', 'El export no trae el tipo de tarea.');
+    else if (req === 'primera') out[id] = hayPrimera ? true : Tx('The export has no date of first response.', 'El export no trae la fecha de primera respuesta.');
     else if (req === 'sprints') out[id] = sp.fiables ? true : (sp.motivo as string);
-    else if (req === 'descripcion') out[id] = hayDescripciones ? true : 'The export has no task descriptions.';
-    else if (req === 'api') out[id] = 'It needs to know what was in each sprint at the start: with the Jira API or weekly snapshots.';
+    else if (req === 'descripcion') out[id] = hayDescripciones ? true : Tx('The export has no task descriptions.', 'El export no trae la descripción de las tareas.');
+    else if (req === 'api') out[id] = Tx('It needs to know what was in each sprint at the start: with the Jira API or weekly snapshots.', 'Necesita saber qué había al empezar cada sprint: con la API de Jira o con fotos semanales.');
     else out[id] = true;
   });
   return out;

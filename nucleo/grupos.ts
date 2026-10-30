@@ -2,6 +2,7 @@
 // y equipos de una misma área. Solo medidas normalizadas, nunca volumen bruto ni personas.
 // Las medidas de lo terminado se comparan dentro del mismo tipo y tamaño de tarea, con una muestra mínima por celda.
 
+import { Tx } from './idioma.ts';
 import { DIA, cuantil, sumarDias } from './util.ts';
 import { RUBRICA, agregar, type AgregadoAR } from './agent-readiness.ts';
 import { DELTA_MIN } from './semaforo.ts';
@@ -153,8 +154,8 @@ export function gruposDe(equipos: Equipo[], dimension: Dimension): { ambito: str
   const nombres = (f: (e: Equipo) => boolean) => equipos.filter(f).map((e) => e.nombre);
   if (dimension === 'tipo') {
     const g = [
-      { id: 'interno', nombre: 'In-house', equipos: nombres((e) => e.tipo === 'interno') },
-      { id: 'proveedor', nombre: 'Vendors', equipos: nombres((e) => e.tipo === 'proveedor') },
+      { id: 'interno', nombre: Tx('In-house', 'Internos'), equipos: nombres((e) => e.tipo === 'interno') },
+      { id: 'proveedor', nombre: Tx('Vendors', 'Proveedores'), equipos: nombres((e) => e.tipo === 'proveedor') },
     ].filter((x) => x.equipos.length);
     return g.length >= 2 ? [{ ambito: null, grupos: g }] : [];
   }
