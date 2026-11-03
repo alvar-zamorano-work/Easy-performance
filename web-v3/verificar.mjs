@@ -833,6 +833,89 @@ const medirMaquetacion = () => {
   }
 }
 
+// ---------- 11. Recomendaciones coherentes: cada equipo con su nivel y su evidencia; nada sobre datos por revisar ----------
+{
+  const { variantes, EQUIPO_SALTO } = await import('../tests/variantes.ts');
+  const V = variantes();
+  const DS = join(RAIZ, 'datos-sinteticos');
+  const abrirCon = async (ficheros) => {
+    const p = await pagina(1280, 800);
+    await p.setInputFiles('#file-input', ficheros); await p.waitForTimeout(500); await quieto(p);
+    if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+    return p;
+  };
+  // Lo que ve cada equipo de cada recomendación: nivel y evidencia, comparados con el caso de ese equipo en el modelo
+  const coherencia = (p) => A(p, () => {
+    const EP = window.EP, S = EP.S, mal = [];
+    const nivelDe = (c) => (c.gravedad === 'critico' ? 'alto' : c.confianza === 'baja' ? 'bajo' : 'medio');
+    const casoDe = (eq, id) => { const m = S.r.modelo.equipos.filter((x) => x.nombre === eq)[0]; return m ? m.casos.filter((c) => c.id === id)[0] : null; };
+    let comprobadas = 0;
+    S.vm.equipos.forEach((e) => {
+      EP.vistas.recsActivas([e]).forEach((r) => {
+        const c = r.grupo || r.fuente !== 'banco' ? null : casoDe(e.nombre, r.id);
+        if (!c) return;
+        comprobadas++;
+        if (r.nivel !== nivelDe(c)) mal.push(e.nombre + ': ' + r.id + ' nivel ' + r.nivel + ' en vez de ' + nivelDe(c));
+        if (r.evidencias[0][0] !== e.nombre) mal.push(e.nombre + ': ' + r.id + ' con la evidencia de ' + r.evidencias[0][0]);
+      });
+      // Un equipo "Estable" no tiene ningún caso grave activo
+      if (e.estado === 'estable' && EP.vistas.recsActivas([e]).some((r) => { const c = !r.grupo && casoDe(e.nombre, r.id); return c && c.gravedad === 'critico'; })) mal.push(e.nombre + ': estable con recomendación alta');
+    });
+    return { mal, comprobadas };
+  });
+  // Datos con un caso compartido por varios equipos con distinta gravedad: el equipo leve no hereda el nivel ni la evidencia del grave
+  const forzarCasoMixto = (p) => A(p, () => {
+    const EP = window.EP, S = EP.S, eqs = S.r.modelo.equipos;
+    if (eqs.length < 2) return false;
+    eqs[0].casos.push({ id: 'todo_urgente', gravedad: 'critico', confianza: 'alta', evidencia: 'Evidencia grave de ' + eqs[0].nombre + '.', datos: {} });
+    eqs[1].casos.push({ id: 'todo_urgente', gravedad: 'atencion', confianza: 'media', evidencia: 'Evidencia leve de ' + eqs[1].nombre + '.', datos: {} });
+    S.vm = EP.P.construirVM(S.r, { lectura: S.lectura, det: S.det, cfg: S.cfg });
+    return true;
+  });
+  {
+    const p = await abrirCon(join(DS, 'jira-ejemplo-completo-2026-10-12.csv'));
+    await forzarCasoMixto(p);
+    const c = await coherencia(p);
+    ok('recomendaciones: cada equipo ve su nivel y su evidencia, y ningún equipo estable tiene un caso grave', c.comprobadas > 0 && !c.mal.length, c.mal.slice(0, 3).join(' | ') + ' · comprobadas: ' + c.comprobadas);
+    // La ficha de cada equipo enseña su propia evidencia (no la del primer equipo de la lista)
+    const fichas = await A(p, () => {
+      const EP = window.EP, S = EP.S, mal = []; let filas = 0;
+      S.vm.equipos.forEach((e) => {
+        const m = S.r.modelo.equipos.filter((x) => x.nombre === e.nombre)[0];
+        S.team = e.nombre; S.teamCompare = false; EP.go('equipos');
+        document.querySelectorAll('.rrow[data-kind="caso"]').forEach((row) => {
+          const r = S.vm.recs.filter((x) => x.clave === row.dataset.id)[0], c = r && !r.grupo && m.casos.filter((x) => x.id === r.id)[0];
+          if (!c) return;
+          filas++;
+          if (row.textContent.indexOf(EP.kit.primeraFrase(c.evidencia)) < 0) mal.push(e.nombre + ': ' + r.id);
+        });
+      });
+      return { mal, filas };
+    });
+    ok('ficha de equipo: "Qué hacer" enseña la evidencia del propio equipo', fichas.filas > 0 && !fichas.mal.length, fichas.mal.slice(0, 3).join(', ') + ' · filas: ' + fichas.filas);
+    // Resumen redactado de un equipo: su fiabilidad, no la del área
+    const narr = await A(p, () => { const EP = window.EP, S = EP.S, e = S.vm.equipos[0]; EP.openDrill({ kind: 'resumen', team: e.nombre }); return document.querySelector('#drawer') ? document.querySelector('#drawer').textContent : ''; });
+    ok('resumen redactado de un equipo: habla del equipo y de su dato', /Dato del equipo/.test(narr) && !/Ningún equipo se ha salido/.test(narr), narr.slice(0, 160));
+    ok('recomendaciones: sin errores', !p.errores.length, p.errores.join(' | '));
+    await p.context().close();
+  }
+  // Un equipo con un cierre en bloque: no se le recomienda nada que salga de sus entregas y la previsión lo avisa
+  {
+    const p = await abrirCon(V.salto.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) })));
+    const r = await A(p, (eq) => {
+      const EP = window.EP, S = EP.S, e = S.vm.equipos.filter((x) => x.nombre === eq)[0];
+      const deEntregas = ['demasiado_a_la_vez', 'entregas_irregulares'];
+      const recs = S.vm.recs.filter((x) => deEntregas.indexOf(x.id) >= 0 && x.equipos.indexOf(eq) >= 0).map((x) => x.id);
+      S.team = eq; S.teamCompare = false; EP.go('equipos');
+      return { revisar: !!(e.medidas.entregas && e.medidas.entregas.revisar), recs, aviso: !!document.querySelector('.notice.warn') && /por revisar/.test(document.querySelector('#page').textContent) };
+    }, EQUIPO_SALTO);
+    ok('cierre en bloque: ninguna recomendación sale de entregas por revisar, y la previsión lo avisa', r.revisar && !r.recs.length && r.aviso, JSON.stringify(r));
+    ok('cierre en bloque: sin errores', !p.errores.length, p.errores.join(' | '));
+    await p.context().close();
+  }
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);

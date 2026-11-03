@@ -982,5 +982,15 @@
  "ajustes.ficheroCopia": "configuracion-easyperformance",
  "pestanas.cambios": "Se han aplicado los cambios hechos en otra pestaña.",
  "pestanas.datos": "Se han cargado los datos nuevos de otra pestaña.",
- "carga.usandoManual": "Se usan los ficheros cargados a mano. Los de la carpeta no han cambiado."
+ "carga.usandoManual": "Se usan los ficheros cargados a mano. Los de la carpeta no han cambiado.",
+ "equipo.estado.atencion": "Pide atención",
+ "resumen.atencionEn": "recomendación urgente en {equipos}",
+ "resumen.atencionPie": "Dentro de lo normal, pero con una recomendación urgente: {r}",
+ "recs.yOtros.1": "(y 1 equipo más)",
+ "recs.yOtros.n": "(y {n} equipos más)",
+ "caso.nivelPorEquipo": "Cada equipo lleva su nivel. El de la recomendación es el del equipo más urgente.",
+ "narr.sinCambiosEquipo": "El equipo no se ha salido de lo normal en las últimas semanas.",
+ "narr.atencion": "{e} está dentro de lo normal, pero tiene una recomendación urgente: {r}.",
+ "narr.fiabilidadEquipo": "Dato del equipo: {bien} de {n} comprobaciones bien.",
+ "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela."
 }

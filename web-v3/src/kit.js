@@ -17,7 +17,7 @@
     if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
     return chip('neutral', t('estado.sinBanda'));
   }
-  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' };
+  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' };
   const equipoChip = (e) => chip(ESTADO_EQUIPO[e.estado], t('equipo.estado.' + e.estado));
   const nivelChip = (nivel) => `<span class="chip level-${nivel}">${esc(t('nivel.' + nivel))}</span>`;
 
@@ -154,6 +154,19 @@
   const ficha = (cab, cuerpo, pie, attrs) => `<div class="ficha"${attrs || ''}><div class="f-head">${cab}</div><div class="f-body">${cuerpo}</div>${pie ? `<div class="f-foot">${pie}</div>` : ''}</div>`;
   const tituloEquipo = (e) => `<button class="f-title link-plain" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button>`;
 
+  /**
+   * Una recomendación vista desde unos equipos: el nivel y la evidencia son los de esos equipos, no los del peor
+   * ni los de otro. Las de grupo (sin detalle por equipo) se quedan como están.
+   */
+  const RANGO_NIVEL = { alto: 0, medio: 1, bajo: 2 };
+  function recPara(r, nombres) {
+    if (!r.porEquipo || !nombres) return r;
+    const mios = r.equipos.filter((e) => nombres.indexOf(e) >= 0 && r.porEquipo[e]);
+    if (!mios.length || mios.length === r.equipos.length) return r;
+    const nivel = mios.map((e) => r.porEquipo[e].nivel).sort((a, b) => RANGO_NIVEL[a] - RANGO_NIVEL[b])[0];
+    return Object.assign({}, r, { nivel, equipos: mios, evidencias: mios.map((e) => [e, r.porEquipo[e].evidencia]), otros: r.equipos.length - mios.length, todos: r.equipos });
+  }
+  const ordenRecs = (a, b) => RANGO_NIVEL[a.nivel] - RANGO_NIVEL[b.nivel];
   /** Fila de recomendación: nivel, título, para quién y la primera evidencia. */
   function recFila(r) {
     const ev = r.evidencias[0] ? r.evidencias[0][1] : r.senal;
@@ -161,7 +174,7 @@
   }
   /** Equipos de una recomendación en texto; con más de cuatro, los tres primeros y cuántos más. */
   const equiposTexto = (eqs) => (eqs.length > 4 ? t('recs.yMas', { lista: eqs.slice(0, 3).map(nombreEquipo).join(', '), n: eqs.length - 3 }) : window.EP.lista(eqs.map(nombreEquipo)));
-  const paraQuien = (r) => (r.grupo ? r.grupoNombre + ' (' + equiposTexto(r.equipos) + ')' : equiposTexto(r.equipos));
+  const paraQuien = (r) => (r.grupo ? r.grupoNombre + ' (' + equiposTexto(r.equipos) + ')' : equiposTexto(r.equipos) + (r.otros ? ' ' + window.EP.tn('recs.yOtros', r.otros) : ''));
   const primeraFrase = (txt) => { const m = /^(.*?[.!?])(\s|$)/.exec(String(txt || '').trim()); return m ? m[1] : String(txt || ''); };
   /** Fila de un cambio: la medida fuera de lo normal, con su valor y su banda. */
   function cambioFila(eq, x) {
@@ -169,5 +182,5 @@
   }
   const barra = (pct, tono) => `<div class="bar"><i class="tone-${tono}" style="width:${Math.max(2, Math.min(100, pct * 100)).toFixed(1)}%"></i></div>`;
 
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

@@ -187,6 +187,16 @@
   // ---------- piezas de la VM ----------
   const med = (eq, id) => (id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: null, falta: 'coste' } : eq.medidas[id]);
   const malo = (m) => m && m.disponible && (m.estado === 'atencion' || m.estado === 'critico');
+  /** Nivel de una recomendación: alto si el caso es grave; bajo si hay pocas semanas de datos. */
+  const nivelDe = (gravedad, confianza) => (gravedad === 'critico' ? 'alto' : confianza === 'baja' ? 'bajo' : 'medio');
+  const RANGO_NIVEL = { alto: 0, medio: 1, bajo: 2 };
+  // Medidas de las que sale cada caso. Si alguna está "por revisar" en un equipo, el caso no se le recomienda:
+  // primero hay que arreglar el dato (lo dice su ficha), y una recomendación sobre un dato dudoso parece una certeza.
+  const MEDIDAS_CASO = {
+    demasiado_a_la_vez: ['wip', 'ciclo', 'entregas'], sprint_no_cumple: ['arrastradas'], pendiente_crece: ['pendiente'], mucha_espera: ['espera'],
+    retrabajo: ['retrabajo'], errores_capacidad: ['errores'], entregas_irregulares: ['regularidad', 'entregas'], estimaciones_no_predicen: ['estimacion'],
+  };
+  const casoSobreDatoDudoso = (id, eq) => (MEDIDAS_CASO[id] || []).some((k) => { const m = med(eq, k); return !!(m && m.disponible && m.revisar); });
 
   /**
    * Previsión por probabilidad desde las entregas reales de las últimas 12 semanas: cuántas tareas en 4 semanas
@@ -208,7 +218,7 @@
   }
 
   /** Ficha de un equipo (o del área). */
-  function fichaEquipo(r, eq, cols, fiab, cfg) {
+  function fichaEquipo(r, eq, cols, fiab, cfg, det, esArea) {
     const info = (cfg.equiposInfo || {})[eq.nombre] || {};
     const fe = fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
     const bien = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado === 'bien').length : null;
@@ -231,10 +241,12 @@
     // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
-    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : 'estable';
+    // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
+    const graves = esArea ? [] : (eq.casos || []).filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
+    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores,
+      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -243,17 +255,27 @@
   }
 
   /** Recomendaciones del banco de casos, filtradas por el Context y agrupadas cuando se repiten (como en la v2). */
-  function recomendaciones(r, cfg, det) {
+  function recomendaciones(r, cfg, det, equiposVM) {
     const porId = {}, out = [];
+    // Las medidas de la ficha (con lo marcado "por revisar", como los cierres masivos): de ahí se sabe qué dato es dudoso
+    const fichaDe = {}; (equiposVM || []).forEach((e) => { fichaDe[e.nombre] = e; });
     const deEquipo = (id, gravedad, confianza, equipo, evidencia) => {
       if (!casoActivo(id, cfg, det)) return;
-      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false };
+      if (fichaDe[equipo] && casoSobreDatoDudoso(id, fichaDe[equipo])) return;
+      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false, porEquipo: {} };
       if (gravedad === 'critico') x.gravedad = 'critico';
       if (confianza === 'alta' || (confianza === 'media' && x.confianza === 'baja')) x.confianza = confianza;
       x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]);
+      // Cada equipo con su nivel y su evidencia: la ficha de un equipo no enseña la de otro ni el nivel del peor
+      x.porEquipo[equipo] = { gravedad, confianza, evidencia, nivel: nivelDe(gravedad, confianza) };
     };
     r.modelo.equipos.forEach((eq) => eq.casos.forEach((c) => deEquipo(c.id, c.gravedad, c.confianza, eq.nombre, c.evidencia)));
     r.casosAgentReady.forEach((c) => deEquipo(c.id, c.gravedad, 'alta', c.equipo, c.evidencia));
+    // Primero el equipo con el nivel más alto: su evidencia es la que explica el nivel de la recomendación
+    Object.keys(porId).forEach((k) => {
+      const x = porId[k], orden = x.equipos.map((e, i) => i).sort((a, b) => RANGO_NIVEL[x.porEquipo[x.equipos[a]].nivel] - RANGO_NIVEL[x.porEquipo[x.equipos[b]].nivel] || a - b);
+      x.equipos = orden.map((i) => x.equipos[i]); x.evidencias = orden.map((i) => x.evidencias[i]);
+    });
     Object.keys(porId).forEach((k) => out.push(porId[k]));
     const dims = r.casosGrupo.some((x) => x.dimension !== 'area') ? ['tipo', 'proveedor'] : ['area'];
     r.casosGrupo.filter((x) => dims.indexOf(x.dimension) >= 0 && casoActivo(x.id, cfg, det)).forEach((x) => {
@@ -267,7 +289,7 @@
     out.forEach((x) => {
       const c = C().casos[x.id];
       x.caso = c; x.titulo = c.titulo; x.senal = c.senal; x.medida = c.medida || null;
-      x.nivel = x.gravedad === 'critico' ? 'alto' : x.confianza === 'baja' ? 'bajo' : 'medio';
+      x.nivel = nivelDe(x.gravedad, x.confianza);
       x.evaluable = !!(x.medida && N.MEDIDAS_INICIATIVA[x.medida]);
       x.clave = x.id + '|' + x.equipos.join(',');
       x.fuente = 'banco';
@@ -311,13 +333,13 @@
     const { det, cfg } = entrada, lectura = lecturaCalculo(entrada.lectura, cfg);
     const cols = columnas(cfg, det);
     const fiab = N.fiabilidad(lectura, det, r.preparacion, r.modelo, cfgCalculo(cfg, det));
-    const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg));
-    const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg);
+    const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg, det));
+    const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg, det, true);
     const inis = r.iniciativas.map((x) => ({ ini: x.iniciativa, ev: x.evaluacion, s: N.seguimiento(x.iniciativa, x.evaluacion, r.preparacion) }));
     return {
       fechaDatos: det.fechaRef, semanaFin: r.modelo.semanaFin, semanas: { K: r.preparacion.ctx.K, KP: r.preparacion.ctx.KP, R: r.preparacion.ctx.R, N: r.modelo.semanas.length },
       kpis: cols, contexto: contexto(cfg, det), area, equipos: equiposVM,
-      recs: recomendaciones(r, cfg, det), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
+      recs: recomendaciones(r, cfg, det, equiposVM), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
       comparaciones: r.comparaciones, casosGrupo: r.casosGrupo, iniciativas: inis, paquete: r.paquete, problemasPaquete: r.problemas,
       informe: lectura.informe, det, campoEquipo: campo(cfg, det), equiposMedidos: equipos(cfg, det), mapeo: mapeo(cfg, det),
       hayCoste: hayCoste(cfg), hayProveedores: hayProveedores(cfg),

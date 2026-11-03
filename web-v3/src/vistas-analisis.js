@@ -25,9 +25,9 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
-    const revisar = eqs.filter((e) => e.estado === 'revisar');
+    const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.estado === 'atencion');
     const recs = recsActivas(eqs);
-    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length ? 'warn' : 'good';
+    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
     // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso
     const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional');
     const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
@@ -36,6 +36,7 @@
     if (pocoFiables.length) items.push(esc(t('resumen.pocoFiables', { equipos: lista(pocoFiables.map((e) => nombreEquipo(e.nombre))) })));
     if (revisar.length) items.push(esc(t('resumen.revisarEn', { equipos: lista(revisar.map((e) => nombreEquipo(e.nombre))) })));
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
+    if (atencion.length) items.push(esc(t('resumen.atencionEn', { equipos: lista(atencion.map((e) => nombreEquipo(e.nombre))) })));
     const dest = K.destacados();
     const fichas = eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
       `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
@@ -53,6 +54,7 @@
       return [fuera.length ? t('resumen.cambio', { m: lista(fuera) }) : '', porLimite.length ? t('resumen.cambioLimite', { m: lista(porLimite) }) : '', revisar].filter(Boolean).join(' · ');
     }
     if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
+    if (e.estado === 'atencion') return t('resumen.atencionPie', { r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)) });
     if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
     // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
     const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref && !m.sinHistorico; });
@@ -97,12 +99,17 @@
     }).filter(Boolean);
     return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="fichas">${tarjetas.join('')}</div>` : '';
   }
-  function recsActivas(eqs) { const n = eqs.map((e) => e.nombre); return S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => n.indexOf(e) >= 0)); }
+  /** Recomendaciones de unos equipos, cada una con el nivel y la evidencia de esos equipos, de más a menos urgente. */
+  function recsActivas(eqs) {
+    const n = eqs.map((e) => e.nombre);
+    return S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => n.indexOf(e) >= 0)).map((r) => K.recPara(r, n))
+      .map((r, i) => [r, i]).sort((a, b) => K.ordenRecs(a[0], b[0]) || a[1] - b[1]).map((x) => x[0]);
+  }
 
   // ---------- Equipos ----------
   function pestanas() {
     if (S.role === 'equipo') return '';
-    return `<div class="tabs">${S.vm.equipos.map((e) => `<button class="tab ${!S.teamCompare && S.team === e.nombre ? 'on' : ''}" data-action="team-tab" data-team="${esc(e.nombre)}"><i class="tone-${{ poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado]}"></i>${esc(nombreEquipo(e.nombre))}</button>`).join('')}<button class="tab ${S.teamCompare ? 'on' : ''}" data-action="team-tab" data-team="__comparar">${esc(t('comparar.pestana'))}</button></div>`;
+    return `<div class="tabs">${S.vm.equipos.map((e) => `<button class="tab ${!S.teamCompare && S.team === e.nombre ? 'on' : ''}" data-action="team-tab" data-team="${esc(e.nombre)}"><i class="tone-${{ poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' }[e.estado]}"></i>${esc(nombreEquipo(e.nombre))}</button>`).join('')}<button class="tab ${S.teamCompare ? 'on' : ''}" data-action="team-tab" data-team="__comparar">${esc(t('comparar.pestana'))}</button></div>`;
   }
   function equipos() {
     if (S.teamCompare && S.role !== 'equipo') return pestanas() + comparar();
@@ -113,7 +120,7 @@
   function fichaEquipo(e) {
     const vm = S.vm, dest = K.destacados();
     const c = e.cambios[0];
-    const titular = c ? esc(nombreMedida(c.id) + ': ' + valor(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? (e.mejores && e.mejores.length ? t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) }) : t('equipo.estable')) : t('equipo.estado.' + e.estado));
+    const titular = c ? esc(nombreMedida(c.id) + ': ' + valor(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? (e.mejores && e.mejores.length ? t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) }) : t('equipo.estable')) : e.estado === 'atencion' ? pieFicha(e) : t('equipo.estado.' + e.estado));
     const fe = e.fiabilidad;
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;
@@ -143,7 +150,10 @@
     }
     html += `<div class="prev-q"><label class="small">${esc(t('prev.pregunta'))}</label><input type="number" min="1" max="2000" step="1" class="sm num" data-change="prev-n" data-team="${esc(e.nombre)}" value="${n || ''}" aria-label="${esc(t('prev.pregunta'))}"><span class="small">${esc(res)}</span></div>`;
     html += `<p class="tiny muted" style="margin:10px 0 0">${esc(t('prev.como', { s: p.muestra.length }))}</p>`;
-    return K.ficha(cab, html);
+    // Las entregas de las que sale la previsión están por revisar (cierres en bloque, saltos): se dice antes de dar cifras
+    const ent = e.medidas.entregas;
+    const aviso = ent && ent.disponible && ent.revisar ? `<div class="notice warn small">${esc(t('prev.revisar'))}</div>` : '';
+    return K.ficha(cab, aviso + html);
   }
   EP.cambio('prev-n', (el) => { S.prevN = S.prevN || {}; S.prevN[el.dataset.team] = Math.max(0, Math.min(2000, parseInt(el.value, 10) || 0)); EP.render(); });
 

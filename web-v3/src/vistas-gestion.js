@@ -43,10 +43,13 @@
     if (S.role === 'equipo') S.recFilter = nombres[0] || 'todos';
     const ia = recsIa();
     const todas = EP.vistas.recsActivas(eqs).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => nombres.indexOf(e) >= 0)));
-    const enFiltro = (r) => (S.recFilter === 'todos' || r.equipos.indexOf(S.recFilter) >= 0) && (!S.recLevel || r.nivel === S.recLevel);
-    const vistas = todas.filter(enFiltro);
-    const descartadas = S.vm.recs.filter((r) => S.dismissed[r.clave] && enFiltro(r));
-    const n = (l) => todas.filter((r) => r.nivel === l).length;
+    // Filtrado por un equipo: cada recomendación con el nivel y la evidencia de ese equipo
+    const unEquipo = S.recFilter !== 'todos' && nombres.indexOf(S.recFilter) >= 0 ? [S.recFilter] : null;
+    const delFiltro = unEquipo ? EP.vistas.recsActivas(eqs.filter((e) => e.nombre === S.recFilter)).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.indexOf(S.recFilter) >= 0)) : todas;
+    const enNivel = (r) => !S.recLevel || r.nivel === S.recLevel;
+    const vistas = delFiltro.filter(enNivel);
+    const descartadas = S.vm.recs.filter((r) => S.dismissed[r.clave] && (!unEquipo || r.equipos.indexOf(S.recFilter) >= 0)).map((r) => K.recPara(r, unEquipo || nombres)).filter(enNivel);
+    const n = (l) => delFiltro.filter((r) => r.nivel === l).length;
     const estado = S.iaEstado.recs, nIa = S.iaRecs && S.iaRecsDe === S.lectura ? S.iaRecs.length : 0;
     const iaPie = !hayIa() ? esc(t('ia.sinClave')) : estado === 'trabajando' ? esc(t('ia.trabajando')) : estado === 'error' ? esc(t('ia.error', { e: S.iaError.recs || '' })) : nIa ? esc(t('ia.recsValidadas', { n: nIa, d: S.iaDescartadas })) : esc(t('ia.recsQue'));
     // Filtros en una fila: equipo, nivel y, si hay clave, las propuestas de la IA
@@ -82,7 +85,10 @@
     if (!r) return [t('recs.titulo'), ''];
     const c = r.caso;
     let html = `<div class="meta">${K.nivelChip(r.nivel)}${K.chip('neutral', K.paraQuien(r))}</div><p><b>${esc(t('caso.senal'))}</b> ${esc(c.senal)}</p>`;
-    html += `<h4>${esc(t('caso.evidencia'))}</h4>${r.evidencias.map((x) => `<p class="small">${x[0] ? `<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</p>`).join('')}`;
+    // Con varios equipos, cada evidencia lleva el nivel de su equipo: el de la recomendación es el del más urgente
+    const nivelEq = (e) => (r.porEquipo && r.porEquipo[e] && r.equipos.length > 1 ? K.nivelChip(r.porEquipo[e].nivel) + ' ' : '');
+    html += `<h4>${esc(t('caso.evidencia'))}</h4>${r.evidencias.map((x) => `<p class="small">${x[0] ? `${nivelEq(x[0])}<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</p>`).join('')}`;
+    if (r.porEquipo && r.equipos.length > 1) html += `<p class="tiny muted">${esc(t('caso.nivelPorEquipo'))}</p>`;
     if (c.comun && r.equipos.length > 1) html += `<p class="small muted">${esc(c.comun)}</p>`;
     html += `<h4>${esc(t('caso.causas'))}</h4><ul class="small">${c.causas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
     html += `<h4>${esc(t('caso.preguntas'))}</h4><ul class="small">${c.preguntas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
@@ -481,12 +487,12 @@
     if (i === 0) {
       const alerta = eqs.filter((e) => e.estado === 'alerta');
       return cerrar + `<div class="slide title">${cab(esc(t('presentar.titulo')), esc(t('presentar.sub', { n: eqs.length, k: vm.semanas.K, f: fecha(vm.fechaDatos) })))}
-        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
+        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
     }
     if (i === ultima) {
       return cerrar + `<div class="slide">${cab(esc(t('resumen.primero')), esc(t('presentar.ultimaSub')))}${recs.length ? `<div class="ficha list big">${recs.slice(0, 4).map(K.recFila).join('')}</div>` : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}${nav}</div>`;
     }
-    const e = eqs[i - 1], r = recs.filter((x) => x.equipos.indexOf(e.nombre) >= 0)[0];
+    const e = eqs[i - 1], r = EP.vistas.recsActivas([e])[0];
     return cerrar + `<div class="slide">${cab(esc(nombreEquipo(e.nombre)), esc(e.fiabilidad ? t('fiab.equipoBien', { bien: e.fiabilidad.bien, n: e.fiabilidad.medibles }) : ''), K.equipoChip(e))}
       <div class="tiles">${K.destacados().map((id) => K.tile(e, id)).join('')}</div>
       <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(EP.vistas.textoSinCambios(e))}</p>`)}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
@@ -499,17 +505,25 @@
     const b1 = [], b2 = [], b3 = [];
     const alerta = eqs.filter((e) => e.cambios.length);
     if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
-    else b1.push(t('narr.sinCambios'));
+    else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
+    // Recomendaciones de nivel alto en equipos sin cambios: no se dice que todo va bien
+    eqs.filter((e) => e.estado === 'atencion').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
     // Lo que hay que revisar antes de leer las cifras (cierres masivos, saltos, lo normal era cero)
     const revisar = eqs.filter((e) => e.revisarDato && e.revisarDato.length);
     if (revisar.length) b1.push(t('narr.revisar', { e: lista(revisar.map((e) => nombreEquipo(e.nombre) + ' (' + lista(e.revisarDato.map(nombreMedida)).toLowerCase() + ')')) }));
     const estables = eqs.filter((e) => e.estado === 'estable').map((e) => nombreEquipo(e.nombre));
     if (estables.length && alerta.length) b1.push(t('narr.estables', { e: lista(estables) }));
     const f = vm.fiabilidad;
-    b2.push(t('narr.fiabilidad', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase(), bien: f.bien, n: f.comprobaciones.length }));
-    f.comprobaciones.filter((c) => c.estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
-    const nombres = eqs.map((e) => e.nombre);
-    const recs = EP.vistas.recsActivas(eqs).filter((r) => r.equipos.some((x) => nombres.indexOf(x) >= 0)).slice(0, 3);
+    if (equipo && eqs[0] && eqs[0].fiabilidad) {
+      // Un equipo: sus comprobaciones, no las de toda el área
+      const fe = eqs[0].fiabilidad;
+      b2.push(t('narr.fiabilidadEquipo', { bien: fe.bien, n: fe.medibles }));
+      f.comprobaciones.filter((c) => fe.valores[c.id] && fe.valores[c.id].estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
+    } else {
+      b2.push(t('narr.fiabilidad', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase(), bien: f.bien, n: f.comprobaciones.length }));
+      f.comprobaciones.filter((c) => c.estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
+    }
+    const recs = EP.vistas.recsActivas(eqs).slice(0, 3);
     if (recs.length) recs.forEach((r) => b3.push('- ' + r.titulo + ' (' + K.paraQuien(r) + ').'));
     else b3.push(t('narr.sinRecs'));
     return [[t('narr.b1'), b1], [t('narr.b2'), b2], [t('narr.b3'), b3]];
