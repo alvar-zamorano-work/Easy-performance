@@ -377,7 +377,7 @@
     return K.statusBar('bad', esc(t('dc.bloqueo.titulo')), [])
       + `<div class="ficha" data-tipo="bloqueo"><div class="f-body"><ul class="small">${duros.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul><div class="row" style="margin-top:10px">${acciones}</div></div></div>`;
   }
-  EP.accion('bloqueo-estados', () => { if (!S.onboarded) { S.ob.step = 'mapeo'; EP.render(); window.scrollTo(0, 0); } else { S.fuentesTab = 'mapeo'; EP.go('fuentes'); } });
+  EP.accion('bloqueo-estados', () => { if (!S.onboarded) { S.ob.step = 'revision'; S.ob.abierto = Object.assign({}, S.ob.abierto || {}, { estados: true }); EP.render(); window.scrollTo(0, 0); } else { S.fuentesTab = 'mapeo'; EP.go('fuentes'); } });
 
   Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
 })();

@@ -57,7 +57,10 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await fijarIdioma(p, 'en');
   ok('primera vez en inglés', /Measure your teams/.test(await p.textContent('#onboarding')));
   await fijarIdioma(p, 'es');
-  await clic(p, '[data-action="ob-go"][data-step="data"]');
+  ok('primera vez: tres pasos y la carga en la misma pantalla', (await p.$$eval('.ob-steps span', (x) => x.length)) === 3 && !!(await p.$('#onboarding .drop[data-action="import"]')));
+  const alto = async () => A(p, () => Math.round(document.querySelector('#onboarding .ob-brand').getBoundingClientRect().top + scrollY));
+  const altos = [await alto()];
+  await clic(p, '[data-action="ob-abrir"][data-que="ayuda"]');
   const t2 = await p.textContent('#onboarding');
   ok('paso de datos con la ayuda para conseguir los datos', /Cómo conseguir los datos/.test(t2) && /Excel de Jira/.test(t2));
   // Un fichero que no es ni CSV ni Excel: se dice cuál y no se rompe nada
@@ -68,19 +71,21 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv'));
   await p.waitForTimeout(500); await quieto(p);
   ok('revisión tras cargar', /Esto es lo que se ha leído/.test(await p.textContent('#onboarding')));
+  ok('revisión: el veredicto del data check va arriba', /analizar/.test(await p.textContent('#onboarding [data-tipo="veredicto"]')));
+  altos.push(await alto());
   await p.screenshot({ path: join(SALIDA, '01-revision.png'), fullPage: true });
-  await clic(p, '[data-action="ob-go"][data-step="mapeo"]');
-  ok('paso de estados', await p.$$eval('select[data-change="map-estado"]', (x) => x.length) > 0);
-  await clic(p, '[data-action="ob-mapeo-ok"]');
-  ok('paso Context', /tres preguntas/.test(await p.textContent('#onboarding')));
+  await clic(p, '[data-action="ob-abrir"][data-que="estados"]');
+  ok('revisión: la tabla de estados, a un clic', await p.$$eval('#ob-estados select[data-change="map-estado"]', (x) => x.length) > 0);
+  await p.screenshot({ path: join(SALIDA, '02-revision-estados.png'), fullPage: true });
+  await clic(p, '[data-action="ob-rev-ok"]');
+  ok('paso Qué mirar', /Qué quieres mirar primero/.test(await p.textContent('#onboarding')));
+  altos.push(await alto());
+  ok('la cabecera no salta entre pasos', Math.max(...altos) - Math.min(...altos) <= 1, altos.join(','));
   // Quitar Predictability: los arrastrados salen de la línea base
   await p.click('input[data-change="ctx-obj"][value="predictability"]', { force: true }); await p.waitForTimeout(200); await quieto(p);
   const kpis = await A(p, () => window.EP.S.vm.kpis);
   ok('Context cambia la línea base', !kpis.includes('arrastradas') && kpis.includes('bugs'), kpis.join(','));
-  await clic(p, '[data-action="ob-context-ok"]');
-  ok('data check', /aguanta este export/.test(await p.textContent('#onboarding')));
-  await p.screenshot({ path: join(SALIDA, '02-datacheck.png'), fullPage: true });
-  await clic(p, '[data-action="ob-go"][data-step="rol"], [data-step="rol"]');
+  await p.screenshot({ path: join(SALIDA, '03-que-mirar.png'), fullPage: true });
   await clic(p, '[data-action="ob-role"][data-role="pmo"]');
   await clic(p, '[data-action="ob-finish"]');
   const e = await estado(p);
@@ -88,6 +93,9 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   const cfg = await A(p, () => JSON.parse(localStorage.getItem('easyperformance.config.v2') || 'null'));
   ok('configuración guardada con la clave de la v2', cfg && cfg.contexto && cfg.contexto.hecho && cfg.mapeoEstados && !cfg.contexto.objetivos.includes('predictability'));
   ok('un corte guardado', (await A(p, () => window.EP.S.cortes.length)) === 1);
+  // Proveedores marcados después del onboarding: la comparación se activa sin volver a contestar el Context
+  const prov = await A(p, () => { const S = window.EP.S, P = window.EP.P, antes = P.contexto(S.cfg, S.det).proveedores; const eq = S.vm.equipos[0].nombre; S.cfg.equiposInfo = Object.assign({}, S.cfg.equiposInfo, { [eq]: { tipo: 'proveedor' } }); const despues = P.contexto(S.cfg, S.det).proveedores; delete S.cfg.equiposInfo[eq]; return { antes, despues, guardado: JSON.parse(localStorage.getItem('easyperformance.config.v2')).contexto.proveedores }; });
+  ok('proveedores marcados después: se activa la comparación y no se guarda un sí que nadie ha dicho', prov.antes === false && prov.despues === true && prov.guardado === false, JSON.stringify(prov));
   // Recarga: abre directamente con los ficheros guardados en el navegador
   await p.reload(); await p.waitForTimeout(1500); await quieto(p);
   const e2 = await estado(p);
@@ -276,9 +284,7 @@ async function recorrer(p, etiqueta) {
 for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv')], ['aseguradora', join(RAIZ, 'datos-sinteticos', 'aseguradora', 'jira-aseguradora.csv')]].concat(process.env.CSV_EXTRA ? [['CSV_EXTRA', process.env.CSV_EXTRA]] : [])) {
   const p = await pagina(1280, 800);
   await p.setInputFiles('#file-input', ruta); await p.waitForTimeout(500); await quieto(p);
-  for (const paso of ['mapeo', 'context']) { await clic(p, `[data-action="ob-go"][data-step="${paso}"], [data-action="ob-mapeo-ok"]`); }
-  await clic(p, '[data-action="ob-context-ok"]');
-  await clic(p, '[data-step="rol"]'); await clic(p, '[data-action="ob-finish"]');
+  await clic(p, '[data-action="ob-rev-ok"]'); await clic(p, '[data-action="ob-finish"]');
   const fallos = [];
   for (const v of ['resumen', 'equipos', 'referencias', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) { await ir(p, v); await p.waitForTimeout(100); const e = await estado(p); if (e.error || e.ancho > 0) fallos.push(v + ': ' + (e.error || 'scroll')); }
   await fijarRol(p, 'pmo'); await ir(p, 'calidad'); const e = await estado(p); if (e.error) fallos.push('calidad: ' + e.error);
@@ -345,7 +351,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   // Etapas de la v0: el estado revisado entonces como hecho sigue terminado, también después de seguir en el arranque
   let p = await conCfg({ etapas: { [dudoso]: 'hecho' } });
   const e0 = await estadoDe(p);
-  await clic(p, '[data-action="ob-go"][data-step="mapeo"]'); await clic(p, '[data-action="ob-mapeo-ok"]');
+  await clic(p, '[data-action="ob-rev-ok"]');
   const e1 = await estadoDe(p);
   ok('etapas de la v0: se respetan y cuentan como revisadas', e0.valor === 'terminado' && !e0.revisar.includes(dudoso) && e1.valor === 'terminado' && !e1.revisar.includes(dudoso), JSON.stringify({ antes: e0.valor, despues: e1.valor, revisar: e1.revisar }));
   await p.context().close();
@@ -364,8 +370,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
 {
   const p = await pagina(1280, 800);
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv')); await p.waitForTimeout(500); await quieto(p);
-  await clic(p, '[data-action="ob-go"][data-step="mapeo"]'); await clic(p, '[data-action="ob-mapeo-ok"]');
-  await clic(p, '[data-action="ob-context-ok"]'); await clic(p, '[data-step="rol"]'); await clic(p, '[data-action="ob-finish"]');
+  await clic(p, '[data-action="ob-rev-ok"]'); await clic(p, '[data-action="ob-finish"]');
   // Sin confirmar nada: In Review no está confirmado en esta prueba
   await A(p, () => { delete window.EP.S.cfg.mapeoEstados; });
   let respuesta = JSON.stringify({ 'In Review': 'en_pruebas' });
@@ -457,7 +462,6 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   const { formatos } = await import('../tests/formatos.ts');
   const V = variantes(), FMT = formatos();
   const cargarFich = async (p, fs) => {
-    await p.click('[data-action="ob-go"][data-step="data"]'); await quieto(p);
     await p.setInputFiles('#file-input', fs.map((f) => ({ name: f.nombre, mimeType: 'application/octet-stream', buffer: Buffer.from(f.texto) })));
     await p.waitForTimeout(400); await quieto(p);
   };
@@ -481,7 +485,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     ok('revisión de columnas: todos los campos por grupos, la sugerencia junto a su campo y sin nombres de personas', form.campos >= 25 && form.grupos === 6 && form.sugerida && !form.nombres, JSON.stringify(form));
     await p.selectOption('#form-col select[name="empezada"]', 'Custom field (Start Date)');
     await clic(p, '[data-action="col-aplicar"]');
-    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]', '[data-step="rol"]']) await clic(p, s);
+    await clic(p, '[data-action="ob-rev-ok"]');
     await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
     const r = await A(p, () => ({ guardada: (window.EP.S.cfg.columnas || {}).empezada, ciclo: window.EP.S.vm.equipos.filter((e) => e.medidas.ciclo && e.medidas.ciclo.disponible).length, n: window.EP.S.vm.equipos.length }));
     ok('fecha de inicio elegida a mano: se guarda y todos los equipos tienen tiempo de ciclo', r.guardada === 'Custom field (Start Date)' && r.ciclo === r.n && r.n > 1, JSON.stringify(r));
@@ -503,12 +507,11 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   const { variantes, EQUIPO_SALTO } = await import('../tests/variantes.ts');
   const V = variantes();
   const cargar = async (p, nombre) => {
-    await p.click('[data-action="ob-go"][data-step="data"]'); await quieto(p);
     await p.setInputFiles('#file-input', V[nombre].ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) })));
     await p.waitForTimeout(400); await quieto(p);
   };
   const terminar = async (p) => {
-    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]', '[data-step="rol"]']) await clic(p, s);
+    await clic(p, '[data-action="ob-rev-ok"]');
     await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
   };
   // Estados que no se reconocen: se para nada más cargar y en el data check no se puede "seguir de todos modos"
@@ -516,9 +519,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const p = await pagina(1280, 800);
     await cargar(p, 'estadosAleman');
     ok('estados sin reconocer: aviso de que no se puede medir nada más cargar', /no se puede medir/.test(await p.textContent('#onboarding')) && !!(await p.$('[data-tipo="bloqueo"]')));
-    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]']) await clic(p, s);
-    const dc = await A(p, () => ({ seguir: !!document.querySelector('#onboarding [data-step="rol"].btn'), revisar: !!document.querySelector('#onboarding [data-action="ob-go"][data-step="mapeo"].primary'), texto: document.getElementById('onboarding').innerText }));
-    ok('estados sin reconocer: el data check manda a revisar los estados, sin "seguir de todos modos"', !dc.seguir && dc.revisar && /ningún estado se reconoce como terminado/.test(dc.texto), JSON.stringify({ seguir: dc.seguir, revisar: dc.revisar }));
+    const dc = await A(p, () => ({ seguir: !!document.querySelector('#onboarding [data-action="ob-rev-ok"]'), revisar: !!document.querySelector('#onboarding [data-action="ob-ver"][data-que="estados"].primary'), texto: document.getElementById('onboarding').innerText }));
+    ok('estados sin reconocer: la revisión manda a revisar los estados, sin "seguir de todos modos"', !dc.seguir && dc.revisar && /ningún estado se reconoce como terminado/.test(dc.texto), JSON.stringify({ seguir: dc.seguir, revisar: dc.revisar }));
     ok('sin errores de consola con estados sin reconocer', !p.errores.length, p.errores.slice(0, 3).join(' | '));
     // Ya dentro de la aplicación (alguien que la usaba y carga un export malo): ni cabecera ni presentación enseñan cifras
     await A(p, () => { window.EP.S.onboarded = true; window.EP.S.view = 'resumen'; window.EP.render(); }); await quieto(p);
