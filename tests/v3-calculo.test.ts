@@ -40,11 +40,3 @@ test('sin tiempo en cada estado: "pasan por en curso" no se puede saber (no sale
   const f2 = fiabilidad(l2, det2, p2, calcularDesde(p2), {});
   assert.equal(f2.comprobaciones.find((c) => c.id === 'flujo')!.estado === 'sin', false);
 });
-
-test('sin fecha de inicio: el pendiente no tiene histórico y no salta "el pendiente crece"', () => {
-  const l = leerJira(V.sinTiempos.ficheros), det = detectar(l);
-  for (const e of calcular(l.tareas, det, {}).equipos) {
-    assert.ok(e.medidas.pendiente.sinHistorico, e.nombre);
-    assert.ok(!e.casos.some((c) => c.id === 'pendiente_crece'), e.nombre);
-  }
-});

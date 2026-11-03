@@ -6,7 +6,7 @@ import { Tx } from './idioma.ts';
 import { DIA, cuantil, sumarDias } from './util.ts';
 import { RUBRICA, agregar, type AgregadoAR } from './agent-readiness.ts';
 import { DELTA_MIN } from './semaforo.ts';
-import type { Preparacion } from './calcular.ts';
+import { cerradaSinFecha, type Preparacion } from './calcular.ts';
 import type { Derivada } from './tipos.ts';
 import type { Equipo, TipoTarea } from './modelo.ts';
 
@@ -198,7 +198,7 @@ export function comparar(p: Preparacion, equipos: Equipo[], dimension: Dimension
   const reparto: Comparacion['reparto'] = {};
   grupos.forEach((g) => {
     const ts = terminadas[g.id];
-    const pendientes = items[g.id].filter((d) => d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta) && !(d.inicio && d.inicio < hasta));
+    const pendientes = items[g.id].filter((d) => !cerradaSinFecha(d) && d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta) && !(d.inicio && d.inicio < hasta));
     const eqs = equipos.filter((e) => g.equipos.includes(e.nombre));
     const ftes = eqs.map(ultimoFte);
     const fteTotal = ftes.every((f) => f) ? ftes.reduce((s, f) => s + f!.valor, 0) : null;

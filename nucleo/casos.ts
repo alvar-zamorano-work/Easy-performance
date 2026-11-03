@@ -35,8 +35,9 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   if (eq.sprints.fiables && am != null && am > 0.3 && ult.every((x) => x.arrastre! > 0.2)) {
     add('sprint_no_cumple', am > 0.45, Tx('In the last three sprints an average of ', 'En los tres últimos sprints se arrastró de media el ') + f(am, 'pct') + Tx(' of the work was carried over (', ' del trabajo (') + ult.map((x) => x.nombre + ': ' + f(x.arrastre, 'pct')).join('; ') + ').', { media: am });
   }
-  // 4 el pendiente crece (no si el pendiente no tiene histórico fiable: sin fechas de inicio, la serie de antes está inflada)
-  if (L >= 8 && !(M.pendiente && M.pendiente.sinHistorico)) {
+  // 4 el pendiente crece. Sin fechas de inicio la serie de antes sale inflada (lo que estaba en curso cuenta como
+  // pendiente), así que el crecimiento solo puede quedarse corto: si aun así salta, es real.
+  if (L >= 8) {
     let semMas = 0;
     for (let w = L - 5; w <= L; w++) if (s.entradas[w] > s.salidas[w]) semMas++;
     const p0 = s.pendiente[L - 8], p1 = s.pendiente[L];

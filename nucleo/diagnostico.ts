@@ -31,17 +31,20 @@ export function diagnosticar(lectura: Lectura, cliente: ClienteV2, iniciativas: 
   const enArea = areaSin.length ? conRango : modelo.equipos.map((e) => e.nombre);
   const fteDe = cfg.fte || {}, fteArea = enArea.filter((n) => fteDe[n] != null).map((n) => fteDe[n]);
   const capacidad = capacidadArea(cfg, cliente.equipos.lista.map((e) => e.nombre));
+  // El coste medio por FTE del área, con los mismos equipos que entran en ella
+  const costeArea = capacidadArea(cfg, enArea).costeFteMedio;
   const area = calcularDesde(preparar(lectura.tareas, det, {
     ...cfg, unirComo: NOMBRE_AREA, ...(areaSin.length ? { equipos: enArea } : {}),
     fte: fteArea.length === enArea.length ? { [NOMBRE_AREA]: fteArea.reduce((s, v) => s + v, 0) } : {},
-    ...(cfg.coste ? { coste: capacidad.costeFteMedio != null ? { [NOMBRE_AREA]: capacidad.costeFteMedio } : {} } : {}),
+    // El coste medio por FTE del área, con los mismos equipos que entran en ella
+    ...(cfg.coste ? { coste: costeArea != null ? { [NOMBRE_AREA]: costeArea } : {} } : {}),
   }));
   const comparaciones = compararTodo(preparacion, cliente.equipos.lista);
   const casosGrupo = casosDeGrupo(comparaciones);
   const casosAR = casosAgentReady(modelo);
   const evaluaciones = iniciativas.map((i) => ({ iniciativa: i, evaluacion: evaluarIniciativa(i, preparacion) }));
   const paquete = generarPaquete({
-    cliente, lectura, det, preparacion, modelo, area, comparaciones, casosGrupo, casosAgentReady: casosAR,
+    cliente, lectura, det, preparacion, modelo, area, areaSin, comparaciones, casosGrupo, casosAgentReady: casosAR,
     iniciativas: evaluaciones, contexto, alias: opciones.alias, generado: opciones.generado || new Date(),
   });
   const problemas = comprobarPaquete(paquete);

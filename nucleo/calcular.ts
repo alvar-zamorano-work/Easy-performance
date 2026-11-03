@@ -127,6 +127,14 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
   return { porEquipo, nombresEquipo, ctx, mapeo };
 }
 
+/**
+ * Cerrada (hecha o descartada) pero sin fecha de cierre: no se sabe cuándo dejó de estar abierta, así que no cuenta
+ * como pendiente ni en curso en ninguna semana. El mismo criterio en las series, en el detalle y en las comparaciones.
+ */
+export function cerradaSinFecha(d: Derivada): boolean {
+  return !d.t.fechas.terminada && (d.etapa === 'hecho' || d.estado === 'descartado' || !!d.t.descartada);
+}
+
 function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, catalogo: Catalogo): ResultadoEquipo {
   const N = c.N, K = c.K, R = c.R, det = c.det, cfg = c.cfg;
   const vacia = () => new Array<number>(N).fill(0);
@@ -165,11 +173,8 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       if (t.fechas.creada >= fin) continue;
       const abierta = !t.fechas.terminada || t.fechas.terminada >= fin;
       if (!abierta) continue;
-      // Cerrada sin fecha de cierre (hecha o descartada): no se sabe cuándo dejó de estar abierta, no cuenta como pendiente
-      if (!t.fechas.terminada && (d.etapa === 'hecho' || d.estado === 'descartado' || t.descartada)) continue;
-      // En curso ahora sin fecha de inicio: cuenta en curso esta semana (en las anteriores no se sabe, se queda en pendiente)
-      const enCursoAhora = !d.inicio && !t.fechas.terminada && w === N - 1 && (d.etapa === 'curso' || d.etapa === 'espera');
-      if ((d.inicio && d.inicio < fin) || enCursoAhora) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
+      if (cerradaSinFecha(d)) continue;
+      if (d.inicio && d.inicio < fin) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
     }
     s.pendiente[w] = pend;
     s.wip[w] = wip;

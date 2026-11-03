@@ -76,7 +76,7 @@ function paqueteParaPrompt(p: Paquete) {
   const recortar = (m: Record<string, any>) => Object.fromEntries(Object.entries(m).map(([id, x]) => [id, x && x.serie ? { ...x, serie: x.serie.slice(-8) } : x]));
   return {
     ...p,
-    medidas: { equipos: Object.fromEntries(Object.entries(p.medidas.equipos).map(([e, m]) => [e, recortar(m as Record<string, any>)])), area: p.medidas.area ? recortar(p.medidas.area as Record<string, any>) : null },
+    medidas: { equipos: Object.fromEntries(Object.entries(p.medidas.equipos).map(([e, m]) => [e, recortar(m as Record<string, any>)])), area: p.medidas.area ? recortar(p.medidas.area as Record<string, any>) : null, area_sin: (p.medidas as any).area_sin || [] },
   };
 }
 

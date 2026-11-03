@@ -57,7 +57,9 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion, cfg: ConfigC
   // Solo se puede saber con el tiempo en cada estado: sin él, ninguna tarea "salta" y saldría un 100 % que no es verdad
   const entT = ent.filter((d) => d.conTiempos);
   if (ent.length < 5) out.flujo = { valor: Tx('Few tasks', 'Pocas tareas'), estado: 'sin', detalle: Tx('Fewer than 5 tasks were done in recent weeks.', 'Hay menos de 5 tareas terminadas en las últimas semanas.') };
-  else if (entT.length < 5) out.flujo = { valor: Tx('Unknown', 'No se sabe'), estado: 'sin', detalle: Tx('The export has no time in each status, so it cannot tell whether tasks went through in progress.', 'El export no trae el tiempo en cada estado: no se puede saber si las tareas pasaron por en curso.') };
+  else if (entT.length < 5) out.flujo = { valor: Tx('Unknown', 'No se sabe'), estado: 'sin', detalle: det.hayTiempos
+    ? Tx('Fewer than 5 recent done tasks have the time in each status: it cannot tell whether tasks went through in progress.', 'Menos de 5 tareas terminadas recientes traen el tiempo en cada estado: no se puede saber si pasaron por en curso.')
+    : Tx('The export has no time in each status, so it cannot tell whether tasks went through in progress.', 'El export no trae el tiempo en cada estado: no se puede saber si las tareas pasaron por en curso.') };
   else {
     const x = 1 - entT.filter((d) => d.salto).length / entT.length;
     out.flujo = { valor: pct(x), estado: x >= 0.95 ? 'bien' : 'revisar', detalle: pct(x) + Tx(' of done work went through in progress before it was closed.', ' de lo terminado pasó por en curso antes de cerrarse.') };
