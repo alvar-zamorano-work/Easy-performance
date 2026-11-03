@@ -231,9 +231,8 @@ async function recorrer(p, etiqueta) {
   const p = await pagina(1280, 800);
   await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
   await ir(p, 'resumen');
-  await p.click('#assistant-fab'); await p.waitForTimeout(150);
-  ok('asistente sin clave no pregunta', await p.isDisabled('#chat-input') && /Sin clave de IA/.test(await p.textContent('#assistant')));
-  await p.click('[data-chat="close"]');
+  // Sin clave de IA no sale el botón Preguntar (no tapa contenido para algo que no se puede usar)
+  ok('asistente sin clave: no sale el botón Preguntar', await A(p, () => document.getElementById('assistant-fab').classList.contains('hidden')));
   let modo = 'buena', peticiones = 0;
   await p.route('https://api.anthropic.com/**', async (route) => {
     peticiones++;
@@ -450,7 +449,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   // Pregunta de coste: con coste y FTE el Resumen la responde con cifras, no "Sin datos"
   await A(p, () => { const S = window.EP.S; S.cfg.contexto = Object.assign({}, window.EP.P.contexto(S.cfg, S.det), { objetivos: ['speed', 'quality', 'predictability', 'cost'], hecho: true }); S.vm.equipos.forEach((e) => { S.cfg.fte = S.cfg.fte || {}; S.cfg.fte[e.nombre] = S.cfg.fte[e.nombre] || 5; S.cfg.coste = S.cfg.coste || {}; S.cfg.coste[e.nombre] = 6000; }); window.EP.recalcular(); }); 
   await fijarRol(p, 'direccion'); await ir(p, 'resumen'); await quieto(p);
-  const coste = await A(p, () => { const hay = window.EP.S.vm.equipos.some((e) => e.medidas.coste && e.medidas.coste.disponible); const fichas = [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((f) => f.textContent); const c = fichas.find((x) => /cuesta cada entrega/.test(x)); return { hay, c: c ? c.slice(0, 120) : null }; });
+  const coste = await A(p, () => { const hay = window.EP.S.vm.equipos.some((e) => e.medidas.coste && e.medidas.coste.disponible); const fichas = [...document.querySelectorAll('[data-tipo="pregunta"]')].map((f) => f.textContent); const c = fichas.find((x) => /cuesta cada entrega/.test(x)); return { hay, c: c ? c.slice(0, 120) : null }; });
   ok('pregunta de coste: responde cuando hay coste', coste.hay && coste.c && !/Sin datos/.test(coste.c), JSON.stringify(coste));
   ok('sin errores de consola en las mejoras de dirección', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
@@ -568,7 +567,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   {
     const p = await pagina(1280, 800);
     await cargar(p, 'sinTiempos'); await terminar(p); await ir(p, 'resumen'); await quieto(p);
-    const pr = await A(p, () => [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((x) => x.innerText.replace(/\s+/g, ' ')).find((x) => /ritmo de siempre/.test(x)) || '');
+    const pr = await A(p, () => [...document.querySelectorAll('[data-tipo="pregunta"]')].map((x) => x.innerText.replace(/\s+/g, ' ')).find((x) => /ritmo de siempre/.test(x)) || '');
     ok('sin tiempo en cada estado: "¿Vamos al ritmo de siempre?" responde "En parte"', /En parte/.test(pr) && /Sin datos de Tiempo de ciclo/.test(pr), pr.slice(0, 160));
     await p.context().close();
   }
