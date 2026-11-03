@@ -10,6 +10,7 @@ import { calcular } from '../nucleo/calcular.ts';
 import { estadoMedida, revisarComparacion, inicioReferencia } from '../nucleo/semaforo.ts';
 import { diasMasivos } from '../nucleo/calidad.ts';
 import { unificarAgrupadores } from '../adaptadores/comun/limpieza.ts';
+import { elegirColumnaEquipo, valorVacio, describirColumnas } from '../adaptadores/jira/columnas.ts';
 import type { Tarea } from '../nucleo/modelo.ts';
 import { CATALOGO } from '../nucleo/catalogo.ts';
 import type { Derivada } from '../nucleo/tipos.ts';
@@ -149,4 +150,95 @@ test('nombre unido: la misma forma en cualquier export, sea cual sea la más fre
   unificarAgrupadores(a); unificarAgrupadores(b);
   assert.deepEqual([...new Set(a.map((x) => x.agrupadores.equipo))], ['Pagos']);
   assert.deepEqual([...new Set(b.map((x) => x.agrupadores.equipo))], ['Pagos']);
+});
+
+test('export con todos los campos: "Team" con None no tapa la columna que sí trae los equipos', () => {
+  const r = medir('todosLosCampos');
+  assert.equal(r.det.equipoRecomendado, 'equipo');
+  assert.deepEqual(entregasPorEquipo(r.modelo), entregasPorEquipo(base.modelo));
+  assert.ok(r.lectura.informe.avisos.some((a) => /Assigned Team/.test(a.texto) && /Team/.test(a.texto)), 'se dice de qué columna salen');
+  const f0 = V.todosLosCampos.ficheros[0].nombre;
+  const cols = describirColumnas(V.todosLosCampos.ficheros[0].texto, { equipo: r.lectura.informe.columnaEquipo![f0] });
+  assert.equal(cols.find((c) => c.campo === 'equipo')?.columna, 'Custom field (Assigned Team)', 'Fuentes dice la misma columna');
+});
+
+test('columna de equipo con un nombre que no está en la lista: se reconoce por sus datos', () => {
+  const r = medir('equipoOtroNombre');
+  assert.equal(r.det.equipoRecomendado, 'equipo');
+  assert.deepEqual(entregasPorEquipo(r.modelo), entregasPorEquipo(base.modelo));
+});
+
+test('elección de la columna de equipo: solo se cambia la que da el nombre cuando viene vacía', () => {
+  const cab = ['Key', 'Issue Type', 'Team', 'Assigned Team', 'Team Lead', 'Team Size', 'Impacted Teams'];
+  const idx = { clave: 0, tipo: 1 };
+  const fila = (i: number, team: string, asig: string) => ['K-' + i, 'Story', team, asig, 'Persona ' + (i % 5), String(5 + (i % 4)), 'Pagos, Datos'];
+  const tabla = (fn: (i: number) => string[]) => [cab, ...Array.from({ length: 40 }, (_, i) => fn(i))];
+  // Team con un solo equipo (export de un equipo) o con más de 60: se queda
+  assert.equal(elegirColumnaEquipo(cab, tabla((i) => fila(i, 'Pagos', 'A' + (i % 4))), 2, idx).i, 2, 'un solo equipo');
+  assert.equal(elegirColumnaEquipo(cab, tabla((i) => fila(i, 'T' + i, 'A' + (i % 4))), 2, idx).i, 2, 'muchos equipos');
+  // Team con None: sale Assigned Team, aunque sea un solo equipo, y se dice cuál se dejó
+  const r = elegirColumnaEquipo(cab, tabla((i) => fila(i, 'None', 'Pagos')), 2, idx);
+  assert.equal(r.i, 3); assert.equal(r.descartada, 'Team');
+  // Nunca una de personas ni una numérica: sin Assigned Team, se queda la de siempre
+  const sinAsig = tabla((i) => fila(i, 'None', ''));
+  assert.notEqual(elegirColumnaEquipo(cab, sinAsig, 2, idx).i, 4, 'Team Lead son personas');
+  assert.notEqual(elegirColumnaEquipo(cab, sinAsig, 2, idx).i, 5, 'Team Size es un número');
+  // Las subtareas sin equipo no cuentan para la cobertura
+  const conSub = [cab, ...Array.from({ length: 40 }, (_, i) => fila(i, 'T' + (i % 3), '')), ...Array.from({ length: 200 }, (_, i) => ['S-' + i, 'Sub-task', '', '', '', '', 'Pagos'])];
+  assert.equal(elegirColumnaEquipo(cab, conSub, 2, idx).i, 2, 'subtareas');
+  assert.ok(valorVacio('None') && valorVacio(' none ') && !valorVacio('NA') && !valorVacio('Nonetheless'));
+});
+
+test('todos los campos con un solo equipo y con un fichero por equipo: salen los equipos', () => {
+  // Con un solo equipo la página lo trata como "todo el trabajo" (igual que sin la columna vacía); lo que importa es que lee el equipo
+  const uno = medir('unEquipoTodosCampos');
+  assert.ok(uno.lectura.tareas.length > 0 && uno.lectura.tareas.every((t) => t.agrupadores.equipo === EQUIPO_SALTO));
+  const varios = medir('ficheroPorEquipo');
+  assert.equal(varios.det.equipoRecomendado, 'equipo');
+  assert.deepEqual(entregasPorEquipo(varios.modelo), entregasPorEquipo(base.modelo));
+});
+
+test('un equipo llamado "NA" se lee como equipo', () => {
+  const r = medir('equipoNA');
+  assert.equal(r.det.equipoRecomendado, 'equipo');
+  assert.ok(r.modelo.equipos.some((e) => e.nombre === 'NA'));
+});
+
+test('elección a mano de la columna de equipo: manda, y Fuentes dice la misma', () => {
+  const columnas = { equipo: 'Custom field (Team)' };
+  const lectura = leerJira(V.todosLosCampos.ficheros, { hoy: HOY, columnas });
+  assert.equal(lectura.informe.columnaEquipo![V.todosLosCampos.ficheros[0].nombre], 'Custom field (Team)');
+  const cols = describirColumnas(V.todosLosCampos.ficheros[0].texto, { ...columnas, equipo: lectura.informe.columnaEquipo![V.todosLosCampos.ficheros[0].nombre] });
+  assert.equal(cols.find((c) => c.campo === 'equipo')?.columna, 'Custom field (Team)');
+});
+
+test('sin cambios de estado: el trabajo en curso no da alerta y el lead time dice qué columna falta', () => {
+  const r = medir('sinCambiosEstado');
+  for (const e of r.modelo.equipos) {
+    const w = e.medidas.wip;
+    if (!w.disponible) continue;
+    assert.equal(w.ref, undefined, e.nombre + ': sin rango');
+    assert.equal(w.sinHistorico, true, e.nombre);
+    assert.ok(w.estado !== 'atencion' && w.estado !== 'critico', e.nombre + ': sin alerta');
+    assert.equal(e.medidas.ciclo.disponible, false);
+    assert.match(String(e.medidas.ciclo.motivo), /\[CHART\] Time in Status/);
+    assert.equal(e.medidas.total.disponible, true);
+    const p = e.medidas.pendiente;
+    assert.ok(p.sinHistorico && !p.ref && p.serie === null, e.nombre + ': pendiente sin histórico');
+    assert.equal(e.kpis.carga.disponible, false, e.nombre + ': edad del pendiente');
+    assert.ok(!/Total time|tiempo total/.test(String(e.medidas.retrabajo.motivo)), 'lo del tiempo total solo en el tiempo de ciclo');
+  }
+});
+
+test('tiempo por estado solo en lo reciente: el trabajo en curso conserva su rango', () => {
+  const r = medir('tiemposSoloRecientes');
+  const conRango = base.modelo.equipos.filter((e) => e.medidas.wip.ref).map((e) => e.nombre);
+  assert.ok(conRango.length > 0);
+  conRango.forEach((n) => { const e = r.modelo.equipos.find((x) => x.nombre === n)!; assert.ok(e.medidas.wip.ref && !e.medidas.wip.sinHistorico, n); });
+});
+
+test('con tiempo por estado el trabajo en curso conserva su rango', () => {
+  const e = base.modelo.equipos.find((x) => x.medidas.wip.ref)!;
+  assert.ok(e, 'algún equipo con rango');
+  assert.equal(e.medidas.wip.sinHistorico, undefined);
 });

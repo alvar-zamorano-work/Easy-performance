@@ -128,6 +128,8 @@ export interface InformeIngesta {
   fechasImposibles?: number;
   /** Nombres de equipo que solo cambiaban en mayúsculas o espacios y se han unido. */
   equiposUnidos?: number;
+  /** Columna de la que salen los equipos en cada fichero (por nombre de fichero). */
+  columnaEquipo?: Record<string, string>;
 }
 
 /** Una épica del origen. No se mide como trabajo: sirve para la vista de épicas (avance por sus hijas, vencimiento). */

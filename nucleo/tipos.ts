@@ -135,6 +135,8 @@ export interface MedidaCalculada {
    * "salto" si el valor es más del triple de lo normal por el lado bueno (típico de una limpieza del tablero).
    */
   revisar?: Revisar;
+  /** Hay valor actual pero no histórico con el que compararlo (el export no dice cuándo empezó el trabajo terminado). */
+  sinHistorico?: boolean;
 }
 
 export type Revisar = 'cero' | 'salto';

@@ -240,7 +240,13 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     reparto: s.reparto.map((r) => (r ? r.historia : null)),
     agent_readiness: s.agentReady,
   };
-  const disponibles = disponibilidad(items, sprintsInfo, catalogo);
+  const disponibles = disponibilidad(items, sprintsInfo, catalogo, c.det.plataforma);
+  // Sin saber cuándo empezó el trabajo ya terminado (ni tiempo por estado ni fecha de inicio), las tareas cerradas no
+  // cuentan como "en curso" en ninguna semana pasada: el histórico del trabajo en curso sale casi a cero y el pendiente,
+  // inflado. Cualquier valor de ahora parecería una alerta (o una mejora). Si a la mayoría de lo entregado en las últimas
+  // 16 semanas le falta ese dato, esas dos medidas se enseñan sin histórico ni rango.
+  const recientes = entregadas.filter((d) => d.t.fechas.terminada! >= sumarDias(c.semanaFin, -7 * 16));
+  const sinHistoricoInicio = recientes.length > 0 && recientes.filter((d) => !d.conTiempos && !d.t.fechas.empezada).length > recientes.length / 2;
   const medidas: Record<string, MedidaCalculada> = {};
   Object.keys(catalogo.medidas).forEach((id) => {
     const def = catalogo.medidas[id];
@@ -262,6 +268,10 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       m.referencia = estadoReferencia(ref, R);
       const previo = m.serie && L - win >= 0 ? m.serie[L - win] : null;
       m.tendencia = tendencia(m.valor, previo, def.dir);
+    }
+    if (sinHistoricoInicio && SIN_INICIO_NO_COMPARA.has(id)) {
+      delete m.ref; m.referencia = 'sin'; m.serie = null; m.tendencia = null; m.sinHistorico = true;
+      m.motivo = Tx('No history to compare with: the export does not say when the finished work started.', 'Sin histórico con el que comparar: el export no dice cuándo empezó el trabajo terminado.');
     }
     const lim = (cfg.limites && cfg.limites[nombre] && cfg.limites[nombre][id]) || null;
     const est = estadoMedida(id, m.valor, m.ref, lim, def);
@@ -287,7 +297,10 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
   return { ...info, casos: evaluarCasos(info, items, c) };
 }
 
-function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo): Record<string, true | string> {
+/** Medidas cuyo histórico depende de saber cuándo empezó cada tarea terminada. */
+const SIN_INICIO_NO_COMPARA = new Set(['wip', 'pendiente']);
+
+function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo, plataforma?: string): Record<string, true | string> {
   const hayTiempos = items.some((d) => d.conTiempos);
   const hayInicio = items.some((d) => d.inicio);
   const conPuntos = items.filter((d) => d.t.estimacion != null).length;
@@ -299,7 +312,9 @@ function disponibilidad(items: Derivada[], sp: InfoSprints, catalogo: Catalogo):
     const req = catalogo.medidas[id].requiere;
     if (!req) out[id] = true;
     else if (req === 'tiempos' && id === 'ciclo' && !hayTiempos && items.some((d) => d.ciclo != null)) out[id] = true;
-    else if (req === 'tiempos') out[id] = hayTiempos ? true : Tx('The export has no time in each status (in Jira, the Time in Status field). Export with All fields.', 'El export no trae el tiempo en cada estado (en Jira, el campo Tiempo en estado). Exporta con Todos los campos.');
+    else if (req === 'tiempos') out[id] = hayTiempos ? true : Tx('The export has no time in each status.', 'El export no trae el tiempo en cada estado.')
+      + (plataforma === 'jira' ? Tx(' In Jira, add the [CHART] Time in Status column to the filter, or export all fields.', ' En Jira, añade la columna [CHART] Time in Status al filtro o exporta con todos los campos.') : '')
+      + (id === 'ciclo' ? Tx(' Total time (created to done) is still measured.', ' El tiempo total (de creada a terminada) sí se mide.') : '');
     else if (req === 'inicio') out[id] = hayInicio ? true : Tx('This export does not say when each task started.', 'No se puede saber cuándo empezó cada tarea con este export.');
     else if (req === 'puntos') out[id] = conPuntos >= 20 ? true : Tx('Very few tasks have story points.', 'Hay muy pocas tareas con puntos de historia.');
     else if (req === 'errores') out[id] = hayErrores ? true : Tx('The export has no task type.', 'El export no trae el tipo de tarea.');

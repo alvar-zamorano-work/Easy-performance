@@ -3,6 +3,7 @@
 import { Tx, idioma } from '../../nucleo/idioma.ts';
 import { interior, norm } from '../../nucleo/util.ts';
 import { describir, type ColumnaLeida } from '../comun/describir.ts';
+import { aplicarColumnas } from '../comun/cabecera.ts';
 export type { ColumnaLeida, AccionColumna } from '../comun/describir.ts';
 
 export const ALIAS: Record<string, string[]> = {
@@ -49,6 +50,46 @@ export function mapearColumnas(cab: string[]): MapaColumnas {
   return mapa;
 }
 
+/** Valor con el que Jira escribe un campo de lista vacío en el export de Excel. No es un equipo. */
+const VACIOS = new Set(['none', '(none)']);
+export const valorVacio = (v: unknown): boolean => VACIOS.has(norm(v));
+
+/** Títulos que hablan de equipo aunque no estén en la lista ("Assigned Scrum Team", "Delivery Squad"...). */
+const PARECE_EQUIPO = /\b(team|teams|equipo|equipos|squad|squads)\b/;
+/** Títulos de personas o de datos sobre el equipo, no del equipo ("Team Lead", "Team Size", "Team Role"...). */
+const NO_ES_EQUIPO = /\b(lead|leads|leader|manager|owner|owners|member|members|lider|responsable|miembro|miembros|persona|people|user|users|usuario|email|correo|size|tamano|role|rol|capacity|capacidad|approval|aprobacion|id)\b/;
+const NUMERO = /^-?\d+([.,]\d+)?$/;
+
+export interface EleccionEquipo { i: number | undefined; descartada: string | null }
+
+/**
+ * Columna de equipo: la que da el nombre, salvo que venga vacía. Un export con todos los campos puede traer el campo
+ * "Team" del sistema con "None" en todas las filas y los equipos reales en otra columna ("Assigned Team"). Solo en ese
+ * caso (menos del 10 % de las tareas con valor) se busca otra: primero una de la lista de nombres conocidos, luego una
+ * cuyo título habla de equipo, nunca una de personas ni una numérica. Se cuentan solo las filas de trabajo (con clave,
+ * sin épicas ni subtareas), que son las que se miden.
+ */
+export function elegirColumnaEquipo(cab: string[], filas: string[][], actual: number | undefined, idx: { clave?: number; tipo?: number } = {}): EleccionEquipo {
+  const trabajo = filas.slice(1).filter((f) => (idx.clave == null || String(f[idx.clave] ?? '').trim())
+    && (idx.tipo == null || !/epic|epica|sub/.test(norm(f[idx.tipo]))));
+  const n = trabajo.length;
+  if (!n) return { i: actual, descartada: null };
+  const datos = (i: number) => {
+    const vals = trabajo.map((f) => String(f[i] ?? '').trim()).filter((v) => v && !valorVacio(v));
+    return { cobertura: vals.length / n, distintos: new Set(vals.map((v) => v.toLocaleLowerCase('es'))).size, numerica: vals.length > 0 && vals.filter((v) => NUMERO.test(v)).length / vals.length >= 0.8 };
+  };
+  if (actual != null && datos(actual).cobertura >= 0.1) return { i: actual, descartada: null };
+  const conocidos = new Set(ALIAS.equipo);
+  const candidatas = cab.map((h, i) => ({ i, x: interior(h), h: norm(h) }))
+    .filter((c) => c.i !== actual && !NO_ES_EQUIPO.test(c.x) && (conocidos.has(c.x) || conocidos.has(c.h) || PARECE_EQUIPO.test(c.x)))
+    .map((c) => ({ i: c.i, conocida: conocidos.has(c.x) || conocidos.has(c.h), ...datos(c.i) }))
+    // Una de la lista vale con un solo equipo (export de un equipo); una que solo lo parece tiene que distinguir al menos dos
+    .filter((c) => !c.numerica && c.cobertura >= 0.5 && (c.conocida || c.distintos >= 2));
+  const mejor = candidatas.sort((a, b) => Number(b.conocida) - Number(a.conocida) || b.cobertura - a.cobertura || a.i - b.i)[0];
+  if (!mejor) return { i: actual, descartada: null };
+  return { i: mejor.i, descartada: actual != null ? String(cab[actual]).trim() : null };
+}
+
 /** Columnas de vínculos entre tareas ("Outward issue link (Blocks)", "Vínculo de incidencia saliente (...)"). */
 export function columnasDeEnlaces(cab: string[]): number[] {
   const out: number[] = [];
@@ -79,6 +120,7 @@ const QUE_ES_ES: Record<string, string> = {
 };
 const queEs = (campo: string) => (idioma() === 'es' ? QUE_ES_ES[campo] : QUE_ES[campo]);
 /** Describe columna a columna cómo se lee un export de Jira: qué es, si se usa, se descarta o se ignora. */
-export function describirColumnas(texto: string): ColumnaLeida[] {
-  return describir(texto, mapearColumnas, queEs);
+export function describirColumnas(texto: string, columnas?: Record<string, string>): ColumnaLeida[] {
+  // Con las columnas que ha usado la lectura (elegidas a mano o la de equipo que se eligió por sus datos)
+  return describir(texto, (cab) => aplicarColumnas(mapearColumnas(cab), cab, columnas), queEs);
 }
