@@ -6,7 +6,7 @@ import { DIA, cuantil, desv, inicioSemana, media, spearman, sumarDias } from './
 import { CATALOGO, type Catalogo } from './catalogo.ts';
 import { etapaDe, etapasV0AMapeo } from './estados.ts';
 import { valorEquipo } from './detectar.ts';
-import { estadoMedida, estadoReferencia, rangoDe, tendencia } from './semaforo.ts';
+import { estadoMedida, estadoReferencia, inicioReferencia, rangoDe, tendencia, valoresReferencia } from './semaforo.ts';
 import { analizarSprints } from './sprints.ts';
 import { negocio } from './negocio.ts';
 import { calidadEquipo, cierresEnBloque } from './calidad.ts';
@@ -255,7 +255,8 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       const vent = VENTANA[id];
       const win = vent === 'P' ? c.KP : (vent || K);
       m.ventana = win;
-      const refVals = (m.serie || []).slice(Math.max(0, L - win - R + 1), Math.max(0, L - win + 1)).filter((x): x is number => x != null);
+      // La referencia empieza cuando el equipo ya entregaba: las semanas de antes no son "lo normal" del equipo, son su ausencia
+      const refVals = valoresReferencia(m.serie, L, win, R, inicioReferencia(s.entregas, win));
       const ref = rangoDe(refVals);
       if (ref) m.ref = ref;
       m.referencia = estadoReferencia(ref, R);
@@ -267,6 +268,8 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     m.estado = est.estado;
     m.estadoTexto = est.texto;
     if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
+    if (est.lado) m.lado = est.lado;
+    if (est.revisar) m.revisar = est.revisar;
     medidas[id] = m;
   });
 

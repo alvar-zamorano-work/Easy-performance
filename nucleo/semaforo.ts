@@ -4,7 +4,7 @@ import { Tx } from './idioma.ts';
 import { formatear } from './formato.ts';
 import { cuantil } from './util.ts';
 import type { DefSemaforo } from './catalogo.ts';
-import type { EstadoPor, EstadoReferencia, Limites, Rango, Semaforo, Tendencia } from './tipos.ts';
+import type { EstadoPor, EstadoReferencia, Limites, Rango, Revisar, Semaforo, Tendencia } from './tipos.ts';
 
 /** Cambio mínimo con sentido para cada medida: evita que una variación mínima cambie el semáforo. */
 export const DELTA_MIN: Record<string, number> = {
@@ -23,7 +23,45 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
   return { sentido: mejora ? 'mejora' : 'empeora', cambio, sube };
 }
 
-interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null }
+interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor'; revisar?: Revisar }
+
+/** Medidas en las que cero quiere decir que no había actividad (no que todo fuera bien). */
+const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
+
+/**
+ * Cuándo la comparación con lo normal no es de fiar: lo normal era cero (no había actividad de este tipo) o el valor
+ * es más del triple de lo normal por el lado bueno, lo típico de una limpieza del tablero o de un cambio en cómo se registra.
+ */
+export function revisarComparacion(id: string, v: number | null | undefined, ref: Rango | undefined, def: DefSemaforo): Revisar | null {
+  if (v == null || !ref || !def.dir) return null;
+  const delta = DELTA_MIN[id] || 0;
+  if (ACTIVIDAD[id] && ref.hi === 0 && ref.lo === 0 && Math.abs(v) >= Math.max(delta, 1e-9)) return 'cero';
+  if (def.dir === 'mas' && ref.hi > 0 && v > 3 * ref.hi && v - ref.hi >= 2 * delta) return 'salto';
+  return null;
+}
+
+/** Valores de la referencia: las R semanas antes de la ventana actual, sin las semanas en que el equipo aún no entregaba. */
+export function valoresReferencia(serie: (number | null)[] | null | undefined, L: number, win: number, R: number, desde = 0): number[] {
+  const out: number[] = [];
+  if (!serie) return out;
+  const ini = Math.max(0, L - win - R + 1, desde), fin = Math.max(0, L - win + 1);
+  for (let i = ini; i < fin; i++) { const x = serie[i]; if (x != null) out.push(x); }
+  return out;
+}
+
+/** Semanas sin entregas al principio del export a partir de las que se considera que el equipo empezó más tarde. */
+export const ARRANQUE_TARDIO = 3;
+
+/**
+ * Primera semana de la referencia. Si el equipo empezó a entregar bastante después del principio del export,
+ * la referencia empieza cuando una ventana de `win` semanas ya cae entera dentro de su vida: antes no hay
+ * "lo normal" del equipo, solo su ausencia. Un arranque en las primeras semanas (semana parcial, export a mitad) no cambia nada.
+ */
+export function inicioReferencia(entregas: number[], win: number): number {
+  const primera = entregas.findIndex((x) => x > 0);
+  if (primera < 0) return entregas.length;
+  return primera >= ARRANQUE_TARDIO ? primera + Math.max(1, win) - 1 : 0;
+}
 
 export function estadoMedida(id: string, v: number | null | undefined, ref: Rango | undefined, limEquipo: Limites | null, def: DefSemaforo): Resultado {
   if (v == null) return { estado: 'sin', texto: Tx('Not enough data in recent weeks.', 'Sin datos suficientes en las últimas semanas.') };
@@ -49,16 +87,27 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
     if (def.dir === 'menos') {
-      if (v <= ref.hi + margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + Tx(' or better.', ' o mejor.'), por: 'banda' };
+      if (v < ref.lo - margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v <= ref.hi + margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     } else {
-      if (v >= ref.lo - margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + Tx(' or better.', ' o mejor.'), por: 'banda' };
+      if (v > ref.hi + margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v >= ref.lo - margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     }
   }
   const abs = absoluto(def.limites, 'limite');
+  // Comparación dudosa: no da alerta por la banda. Un límite fijo superado sigue mandando.
+  const rev = revisarComparacion(id, v, ref, def);
+  if (rev) {
+    if (abs && abs.estado !== 'bien') return abs;
+    const texto = rev === 'cero'
+      ? Tx('Its normal was zero: in the reference weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Lo normal era cero: en las semanas de referencia el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
+      : Tx('More than three times its usual range (', 'Más del triple de su rango habitual (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
+    return { estado: 'sin', texto, por: 'banda', revisar: rev };
+  }
   const cands = [rel, abs].filter((x): x is Resultado => !!x);
   if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet to know what is normal for this team.', 'Aún no hay semanas suficientes para saber qué es lo habitual en este equipo.') };
   // Gana el peor. Si empatan, manda la banda del equipo (es la que se ve en la tarjeta).

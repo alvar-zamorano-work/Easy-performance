@@ -4,6 +4,7 @@
 
 import { Tx, regional } from '../../nucleo/idioma.ts';
 import { leerCSV } from '../comun/csv.ts';
+import { limpiarLectura } from '../comun/limpieza.ts';
 import { mapearColumnas, columnasDeEnlaces } from './columnas.ts';
 import { ordenFechas, leerFechaOrden, hayNumericas, type OrdenFechas } from '../comun/fechas.ts';
 import { buscarCabecera, aplicarColumnas } from '../comun/cabecera.ts';
@@ -89,6 +90,8 @@ export interface OpcionesLectura {
   columnaEstimacion?: string | null;
   /** Columna por la que el cliente quiere repartir el trabajo (por ejemplo, negocio frente a técnico). Va a agrupadores.reparto. */
   columnaReparto?: string | null;
+  /** Fecha de hoy para decidir qué fechas son futuras (en las pruebas, fija). Sin ella, la del reloj. */
+  hoy?: Date | string | null;
 }
 
 /** Campos sin los que un fichero no se puede medir. */
@@ -291,8 +294,8 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     padre_titulo: t.padre,
   }));
 
-  return {
+  return limpiarLectura({
     plataforma: PLATAFORMA, tareas, informe, estados, camposEquipo: CAMPOS_EQUIPO, mapeoPropuesto, epicas,
     detalle: { unidadTiempoMs: factor, nombrePorId },
-  };
+  }, opciones.hoy);
 }

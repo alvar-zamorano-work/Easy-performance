@@ -19,6 +19,21 @@ export function cierresEnBloque(tareas: Tarea[]): CierreEnBloque[] {
   return out;
 }
 
+/** Días en que un equipo cerró 15 o más tareas y al menos 5 veces lo de un día normal suyo con cierres. */
+export function diasMasivos(entregadas: Derivada[]): { fecha: Date; n: number }[] {
+  const porDia = new Map<string, { fecha: Date; n: number }>();
+  entregadas.forEach((d) => {
+    const f = d.t.fechas.terminada!;
+    const k = f.getFullYear() + '-' + f.getMonth() + '-' + f.getDate();
+    const x = porDia.get(k) || { fecha: new Date(f.getFullYear(), f.getMonth(), f.getDate()), n: 0 };
+    x.n++; porDia.set(k, x);
+  });
+  const ns = [...porDia.values()].map((x) => x.n);
+  if (ns.length < 5) return [];
+  const normal = cuantil(ns, 0.5)!;
+  return [...porDia.values()].filter((x) => x.n >= 15 && x.n >= 5 * normal).sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+}
+
 export function calidadEquipo(items: Derivada[], c: ContextoCalculo, sp: InfoSprints, det: Deteccion): CalidadEquipo {
   const desde = sumarDias(c.semanaFin, -112);
   const ent = items.filter((d) => d.entregada && d.t.fechas.terminada! >= desde);
@@ -30,11 +45,14 @@ export function calidadEquipo(items: Derivada[], c: ContextoCalculo, sp: InfoSpr
   const avisos: string[] = [];
   if (ent.length && saltos / ent.length > 0.05) avisos.push(Math.round(saltos / ent.length * 100) + Tx('% of done work went from backlog to done without being in progress (', '% de lo terminado pasó de pendiente a hecho sin estar en curso (') + saltos + Tx(' tasks).', ' tareas).'));
   if (bloque.length) avisos.push(bloque.length === 1 ? Tx('There is a bulk closure: ', 'Hay un cierre en bloque: ') + bloque[0].n + Tx(' tasks closed in the same minute (', ' tareas cerradas en el mismo minuto (') + fechaCorta(bloque[0].fecha) + ').' : Tx('There are ', 'Hay ') + bloque.length + Tx(' bulk closures (10 or more tasks closed in the same minute).', ' cierres en bloque (10 o más tareas cerradas en el mismo minuto).'));
+  // Cierres masivos de un día: muchas más tareas que en un día normal del equipo, aunque no sea en el mismo minuto
+  const dias = diasMasivos(ent);
+  if (dias.length) avisos.push(Tx('Mass closures in one day: ', 'Cierres masivos en un día: ') + dias.map((x) => x.n + Tx(' tasks on ', ' tareas el ') + fechaCorta(x.fecha)).join(', ') + Tx('. If it was a board clean-up, deliveries in those weeks are not reliable.', '. Si fue una limpieza del tablero, las entregas de esas semanas no son de fiar.'));
   const totales = ent.map((d) => d.total);
   if (ent.length >= 30 && cuantil(totales, 0.85)! < 1) avisos.push(Tx('Almost all tasks are closed less than a day after they are created: they seem to be logged in Jira after the work is done.', 'Casi todas las tareas se cierran menos de un día después de crearse: parece que se registran en Jira después de hacer el trabajo.'));
   if (historias.length >= 10 && sinPuntos / historias.length > 0.3) avisos.push(Math.round(sinPuntos / historias.length * 100) + Tx('% of stories have no points.', '% de las historias no tienen puntos.'));
   // Un equipo que no usa sprints (Kanban) no es un fallo: solo se avisa si los usa y no son creíbles
   if (det.haySprints && !sp.fiables && sp.motivo && items.some((d) => d.t.sprints.length > 0)) avisos.push(sp.motivo);
   if (det.hayTiempos && items.length && items.filter((d) => d.t.fechas.terminada && !d.conTiempos).length / items.length > 0.2) avisos.push(Tx('Many closed tasks have no Time in Status.', 'Muchas tareas cerradas no traen Tiempo en estado.'));
-  return { saltos, saltosParte: ent.length ? saltos / ent.length : 0, sinPuntos, historias: historias.length, cierresBloque: bloque, avisos };
+  return { saltos, saltosParte: ent.length ? saltos / ent.length : 0, sinPuntos, historias: historias.length, cierresBloque: bloque, diasMasivos: dias, avisos };
 }
