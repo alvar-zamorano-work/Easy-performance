@@ -20,8 +20,9 @@ b, strong { font-weight: 600; }
 
 select, input[type="text"], input[type="password"], input[type="number"], input[type="date"], textarea { font: inherit; font-size: 0.9333rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 select.sm, input.sm { padding: 4px 8px; font-size: 0.8667rem; }
-button.btn { font: inherit; font-size: 0.9333rem; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
-button.btn:hover { border-color: var(--grey4); }
+label.btn { display: inline-flex; align-items: center; }
+button.btn, label.btn { font: inherit; font-size: 0.9333rem; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+button.btn:hover, label.btn:hover { border-color: var(--grey4); }
 button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
 button.btn.primary:hover { filter: brightness(1.1); }
 button.btn.sm { padding: 5px 10px; font-size: 0.8667rem; }
@@ -267,6 +268,7 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
 /* Impresión (al final para ganar a las reglas del shell) */
 @media print {
   #drawer, .toast, .sidebar, #page-actions, .howto, .no-print, .page-actions { display: none !important; }
+  .recorrido, .sub-tabs, .que-hacer .btn { display: none !important; }
   .app { display: block; }
   .content { padding: 0; max-width: none; width: 100%; }
   body { background: #fff; }
@@ -754,3 +756,19 @@ html { font-size: 14px; }
 .preg > summary b { font-weight: 600; }
 .preg-quien { flex: 1 1 200px; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .preg-cuerpo { padding: 0 16px 12px; }
+
+/* Recorrido de la primera visita */
+.recorrido { border-left: 4px solid var(--accent); margin-bottom: 16px; }
+.recorrido b { display: block; font-size: 1.0667rem; margin: 2px 0 4px; }
+.recorrido p { margin: 0 0 10px; max-width: 70ch; }
+
+/* Pestañas de una entrada del menú (Qué hacer, Datos): subrayadas, para no confundirlas con los filtros en píldora */
+.sub-tabs { gap: 0; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.sub-tabs .tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; padding: 8px 14px; color: var(--muted); }
+.sub-tabs .tab.on { background: none; color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.sub-tabs .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Resumen: la línea de Qué hacer, en una sola fila con su botón a la derecha */
+.que-hacer { display: block; margin: 16px 0; }
+.que-hacer .f-body { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.recorrido { display: block; }
