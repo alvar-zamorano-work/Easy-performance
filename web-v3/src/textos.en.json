@@ -1021,5 +1021,7 @@
  "cortes.verCambios": "See the changes",
  "equipos.tareas.1": "1 task",
  "equipos.tareas.n": "{n} tasks",
- "personalizar.elegidos": "Chosen: {n} of 4."
+ "personalizar.elegidos": "Chosen: {n} of 4.",
+ "personalizar.min": "Keep at least one indicator.",
+ "personalizar.noMedible": "cannot be measured with this export"
 }

@@ -130,15 +130,19 @@
     const vm = S.vm; if (!vm) return false;
     if (id === 'coste' && !vm.hayCoste) return false;
     const ok = (e) => { const m = e && (e.medidas[id] || (id === 'coste' && e.kpis && e.kpis.coste)); return !!(m && m.disponible); };
-    return ok(vm.area) || vm.equipos.some(ok);
+    // Con lo que ve el rol: para el rol Equipo, solo su equipo
+    return (S.role !== 'equipo' && ok(vm.area)) || window.EP.visibles().some(ok);
   }
-  /** Los cuatro indicadores destacados del rol: solo los que se pueden medir con estos datos (nunca ocupan hueco los que no). */
+  /**
+   * Los cuatro indicadores destacados del rol. Uno elegido que no se puede medir con este export se queda (dice por qué
+   * no se puede y qué falta); en Personalizar sale marcado y se puede cambiar por otro.
+   */
   function destacados() {
-    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => (cat().medidas[k] || k === 'coste') && medible(k)) : null;
+    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => cat().medidas[k] || (k === 'coste' && S.vm.hayCoste)) : null;
     if (p && p.length) return p.slice(0, 4);
-    const base = S.vm.kpis.filter(medible);
-    // Si el Context da menos de cuatro, se completan con medidas que suelen estar
-    ['entregas', 'bugs', 'wip', 'edad', 'pendiente', 'errores', 'ciclo', 'retrabajo'].forEach((k) => { if (base.length < 4 && base.indexOf(k) < 0 && medible(k)) base.push(k); });
+    const base = S.vm.kpis.slice();
+    // Si el enfoque da menos de cuatro, se completan con medidas que suelen estar
+    ['entregas', 'bugs', 'wip', 'edad', 'pendiente', 'errores'].forEach((k) => { if (base.length < 4 && base.indexOf(k) < 0) base.push(k); });
     return base.slice(0, 4);
   }
 

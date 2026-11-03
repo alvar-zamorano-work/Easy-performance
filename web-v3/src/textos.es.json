@@ -1021,5 +1021,7 @@
  "cortes.verCambios": "Ver los cambios",
  "equipos.tareas.1": "1 tarea",
  "equipos.tareas.n": "{n} tareas",
- "personalizar.elegidos": "Elegidos: {n} de 4."
+ "personalizar.elegidos": "Elegidos: {n} de 4.",
+ "personalizar.min": "Deja al menos un indicador.",
+ "personalizar.noMedible": "no se puede medir con este export"
 }

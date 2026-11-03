@@ -1085,17 +1085,20 @@ const medirMaquetacion = () => {
   await p.setInputFiles('#file-input', variantes().sinTiempos.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
-  // Un indicador elegido que no se puede medir (tiempo de ciclo sin tiempos) no ocupa hueco
+  // Un indicador elegido que no se puede medir (tiempo de ciclo sin tiempos): sale marcado con el motivo, cuenta y se puede cambiar
   const r = await A(p, () => {
     const EP = window.EP, S = EP.S; S.prefs.byRole.direccion = ['ciclo', 'entregas', 'bugs', 'wip']; EP.guardarPrefs();
     EP.openDrill({ kind: 'personalizar' });
     const marcados = [...document.querySelectorAll('input[data-change="pref-tile"]:checked')].map((x) => x.value);
-    const texto = document.querySelector('#drawer').textContent;
-    return { medible: EP.kit.medible('ciclo'), dest: EP.kit.destacados(), marcados, cuenta: /Elegidos: 3 de 4/.test(texto) };
+    const fila = [...document.querySelectorAll('#drawer label.check')].filter((l) => l.querySelector('input').value === 'ciclo')[0];
+    return { medible: EP.kit.medible('ciclo'), marcados, cuenta: /Elegidos: 4 de 4/.test(document.querySelector('#drawer').textContent), motivo: fila ? /no se puede medir/.test(fila.textContent) : false };
   });
-  // Y se puede elegir un cuarto
-  const cuarto = await A(p, () => { const libre = [...document.querySelectorAll('input[data-change="pref-tile"]:not(:checked)')][0]; libre.click(); return window.EP.kit.destacados().length; });
-  ok('Personalizar: un indicador que no se puede medir no ocupa hueco y se puede elegir otro', !r.medible && r.dest.indexOf('ciclo') < 0 && r.marcados.length === r.dest.length && r.cuenta && cuarto === 4, JSON.stringify({ r, cuarto }));
+  const cambio = await A(p, () => {
+    document.querySelector('input[data-change="pref-tile"][value="ciclo"]').click();
+    const libre = [...document.querySelectorAll('input[data-change="pref-tile"]:not(:checked)')].filter((x) => window.EP.kit.medible(x.value) && x.value !== 'ciclo')[0]; libre.click();
+    return window.EP.kit.destacados();
+  });
+  ok('Personalizar: lo que cuenta coincide con lo marcado; un indicador que no se puede medir lo dice y se cambia por otro', !r.medible && r.marcados.length === 4 && r.cuenta && r.motivo && cambio.length === 4 && cambio.indexOf('ciclo') < 0, JSON.stringify({ r, cambio }));
   await A(p, () => window.EP.openDrill(null));
   // Rol Equipo: no hereda "Comparar equipos" y solo puede crear iniciativas de su equipo
   await fijarRol(p, 'pmo');

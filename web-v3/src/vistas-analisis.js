@@ -366,17 +366,24 @@
   }
   function cajonPersonalizar() {
     const sel = K.destacados();
-    const opciones = cat().ordenMedidas.concat(S.vm.hayCoste ? ['coste'] : []).filter(K.medible);
-    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p><p class="small"><b>${esc(t('personalizar.elegidos', { n: sel.length }))}</b></p><div class="checks">${opciones.map((id) => `<label class="check"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}> ${esc(nombreMedida(id))}</label>`).join('')}</div>
+    // Todas las medidas: las que no se pueden medir con este export se ven (y se pueden quitar) con el motivo
+    const elegidas = sel.filter((id) => cat().ordenMedidas.indexOf(id) < 0 && id !== 'coste');
+    const opciones = cat().ordenMedidas.concat(S.vm.hayCoste ? ['coste'] : []).concat(elegidas);
+    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p><p class="small"><b>${esc(t('personalizar.elegidos', { n: sel.length }))}</b></p><div class="checks">${opciones.map((id) => `<label class="check"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}> ${esc(nombreMedida(id))}${K.medible(id) ? '' : ` <span class="tiny muted">(${esc(t('personalizar.noMedible'))})</span>`}</label>`).join('')}</div>
       <div class="row" style="margin-top:12px"><button class="btn" data-action="pref-reset">${esc(t('personalizar.restaurar'))}</button></div>`;
     return [t('personalizar.titulo'), html];
   }
   EP.cambio('pref-tile', (el) => {
-    const actual = K.destacados().slice();
-    const i = actual.indexOf(el.value);
-    if (el.checked && i < 0) { if (actual.length >= 4) { el.checked = false; EP.toast(t('personalizar.max'), 'bad'); return; } actual.push(el.value); }
-    if (!el.checked && i >= 0) actual.splice(i, 1);
-    S.prefs.byRole = S.prefs.byRole || {}; S.prefs.byRole[S.role] = actual; EP.guardarPrefs(); EP.render();
+    // Se parte de lo guardado (con los que ahora no se pueden medir, que no se olvidan) o de lo que se ve por defecto
+    const by = S.prefs.byRole || {}, guardados = K.destacados().slice();
+    const i = guardados.indexOf(el.value);
+    if (el.checked && i < 0) { if (guardados.length >= 4) { el.checked = false; EP.toast(t('personalizar.max'), 'bad'); return; } guardados.push(el.value); }
+    if (!el.checked && i >= 0) {
+      // El último no se quita: sin ninguno volverían los de por defecto
+      if (guardados.length <= 1) { el.checked = true; EP.toast(t('personalizar.min'), 'bad'); return; }
+      guardados.splice(i, 1);
+    }
+    S.prefs.byRole = by; S.prefs.byRole[S.role] = guardados; EP.guardarPrefs(); EP.render();
   });
   EP.accion('pref-reset', () => { if (S.prefs.byRole) delete S.prefs.byRole[S.role]; EP.guardarPrefs(); EP.render(); });
   function cajonAyuda() {
