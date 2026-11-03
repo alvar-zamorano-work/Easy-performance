@@ -74,7 +74,8 @@ test('sin Tiempo en estado: esas medidas quedan sin datos con su motivo y el res
     assert.ok(!e.casos.some((c) => ['mucha_espera', 'retrabajo'].includes(c.id)), e.nombre);
   }
   const portal = equipo(r.modelo, 'Portal clientes').casos.map((c) => c.id);
-  assert.ok(portal.includes('pendiente_crece') && portal.includes('todo_urgente'));
+  // Sin saber cuándo empezó lo terminado, la serie del pendiente no tiene histórico fiable: no salta "el pendiente crece"
+  assert.ok(!portal.includes('pendiente_crece') && portal.includes('todo_urgente'), portal.join(','));
   assert.ok(equipo(r.modelo, 'Datos').casos.some((c) => c.id === 'errores_capacidad'));
 });
 

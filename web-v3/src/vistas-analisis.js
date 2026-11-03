@@ -261,7 +261,9 @@
       const corta = refs.filter((m) => m.referencia !== 'establecida')[0];
       const cab = (e === vm.area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e)) + K.chip(establecida ? 'good' : 'warn', establecida ? t('ref.establecida') : t('ref.provisional'));
       const graficos = dest.map((id) => { const m = e.medidas[id]; return `<div class="bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"><div class="bl-cab"><span>${esc(nombreMedida(id))}</span>${m && m.disponible ? K.estadoChip(m) : ''}</div><div class="bl-cifras"><b>${esc(m && m.disponible ? valor(id, m.valor) : t('comun.sinDatos'))}</b><span class="small muted">${esc(m && m.disponible ? K.rango(id, m) : K.porque(id, m))}</span>${m && m.disponible && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? `<span class="t-why">${esc(K.porque(id, m))}</span>` : ''}</div>${m && m.disponible ? K.grafico(id, m, { h: 52, sinEje: true }) : ''}</div>`; }).join('');
-      return K.ficha(cab, `<div class="bls">${graficos}</div>`, corta ? `<span class="small t-warn">${esc(t('ref.motivo', { n: corta.ref ? corta.ref.n : 0, r: vm.semanas.R }))}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`);
+      // El área se calcula sin los equipos que aún no tienen su rango normal: se dice cuáles
+      const sinEllos = e === vm.area && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span> ` : '';
+      return K.ficha(cab, `<div class="bls">${graficos}</div>`, sinEllos + (corta ? `<span class="small t-warn">${esc(t('ref.motivo', { n: corta.ref ? corta.ref.n : 0, r: vm.semanas.R }))}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`));
     }).join('');
     return K.statusBar(prov.length ? 'warn' : 'good', esc(prov.length ? t('ref.provisionalEn', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) }) : t('ref.todas')), [esc(t('ref.items1', { r: vm.semanas.R })), esc(t('ref.items2'))])
       + `<p class="small muted lectura">${esc(t('ref.como', { r: vm.semanas.R, k: vm.semanas.K }))}</p><div class="fichas cols-1">${fichas}</div>`;
@@ -335,7 +337,7 @@
         if (det.filas.length > 300) html += `<div class="tiny muted">${esc(t('cajon.primeras', { n: 300 }))}</div>`;
         extra = `<button class="btn sm" data-action="drill-csv" data-team="${esc(e.nombre)}" data-medida="${esc(id)}">${esc(t('cajon.csv'))}</button>`;
       }
-    } else if (e === S.vm.area) html += `<div class="tiny muted">${esc(t('cajon.areaSinDetalle'))}</div>`;
+    } else if (e === S.vm.area) html += `<div class="tiny muted">${esc(t('cajon.areaSinDetalle'))}${S.vm.areaSin.length ? ' ' + esc(t('ref.areaSin', { equipos: lista(S.vm.areaSin.map(nombreEquipo)) })) : ''}</div>`;
     return [titulo, html, extra];
   }
   EP.accion('drill-csv', (el) => {

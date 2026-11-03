@@ -933,6 +933,33 @@ const medirMaquetacion = () => {
   }
 }
 
+// ---------- 12. Cálculo: el área sin equipos sin rango normal, y lo que no se puede saber no sale "bien" ----------
+{
+  const { variantes, EQUIPO_TARDIO } = await import('../tests/variantes.ts');
+  const V = variantes();
+  const abrirVar = async (nombre) => {
+    const p = await pagina(1280, 800);
+    await p.setInputFiles('#file-input', V[nombre].ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
+    if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+    return p;
+  };
+  {
+    const p = await abrirVar('equipoTardio');
+    await ir(p, 'referencias'); await quieto(p);
+    const r = await A(p, (eq) => ({ sin: window.EP.S.vm.areaSin, n: window.EP.S.r.area.equipos[0].n, total: window.EP.S.r.modelo.equipos.filter((e) => e.nombre !== eq).reduce((s, e) => s + e.n, 0), texto: document.querySelector('#page').textContent }), EQUIPO_TARDIO);
+    ok('área: sin el equipo que aún no tiene rango normal, y se dice', r.sin.indexOf(EQUIPO_TARDIO) >= 0 && r.n === r.total && r.texto.indexOf('Sin ' + EQUIPO_TARDIO) >= 0, JSON.stringify({ sin: r.sin, n: r.n, total: r.total }));
+    ok('área: sin errores', !p.errores.length, p.errores.join(' | '));
+    await p.context().close();
+  }
+  {
+    const p = await abrirVar('sinTiempos');
+    const f = await A(p, () => { const c = window.EP.S.vm.fiabilidad.comprobaciones.filter((x) => x.id === 'flujo')[0]; return c ? c.estado : null; });
+    ok('sin tiempo en cada estado: "pasan por en curso" no sale bien', f !== 'bien', String(f));
+    await p.context().close();
+  }
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);

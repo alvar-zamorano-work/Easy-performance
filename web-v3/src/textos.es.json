@@ -992,5 +992,6 @@
  "narr.sinCambiosEquipo": "El equipo no se ha salido de lo normal en las últimas semanas.",
  "narr.atencion": "{e} tiene una recomendación urgente: {r}.",
  "narr.fiabilidadEquipo": "Dato del equipo: {bien} de {n} comprobaciones bien.",
- "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela."
+ "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela.",
+ "ref.areaSin": "Sin {equipos}: todavía no tienen su rango normal y moverían la cifra del área sin que nada cambie."
 }

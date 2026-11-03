@@ -165,7 +165,11 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       if (t.fechas.creada >= fin) continue;
       const abierta = !t.fechas.terminada || t.fechas.terminada >= fin;
       if (!abierta) continue;
-      if (d.inicio && d.inicio < fin) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
+      // Cerrada sin fecha de cierre (hecha o descartada): no se sabe cuándo dejó de estar abierta, no cuenta como pendiente
+      if (!t.fechas.terminada && (d.etapa === 'hecho' || d.estado === 'descartado' || t.descartada)) continue;
+      // En curso ahora sin fecha de inicio: cuenta en curso esta semana (en las anteriores no se sabe, se queda en pendiente)
+      const enCursoAhora = !d.inicio && !t.fechas.terminada && w === N - 1 && (d.etapa === 'curso' || d.etapa === 'espera');
+      if ((d.inicio && d.inicio < fin) || enCursoAhora) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
     }
     s.pendiente[w] = pend;
     s.wip[w] = wip;
