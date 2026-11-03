@@ -456,6 +456,52 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   await p.context().close();
 }
 
+// ---------- 7b. Campos de Jira: cualquier formato se lee y cualquier columna se puede revisar y asignar ----------
+{
+  const { variantes } = await import('../tests/variantes.ts');
+  const { formatos } = await import('../tests/formatos.ts');
+  const V = variantes(), FMT = formatos();
+  const cargarFich = async (p, fs) => {
+    await p.setInputFiles('#file-input', fs.map((f) => ({ name: f.nombre, mimeType: 'application/octet-stream', buffer: Buffer.from(f.texto) })));
+    await p.waitForTimeout(400); await quieto(p);
+  };
+  // El "Excel" de Jira Server / Data Center (tabla HTML): equipos, sprints, etiquetas y épicas como en el CSV de Cloud
+  {
+    const p = await pagina(1280, 800);
+    await cargarFich(p, [{ nombre: 'dc-excel.xls', texto: FMT.dcExcel.texto }]);
+    const r = await A(p, () => { const T = window.EP.S.lectura.tareas; return { n: T.length, equipos: window.EP.S.det.equipoRecomendado, varios: T.filter((t) => t.sprints.length > 1).length, epica: T.filter((t) => t.padre_id).length }; });
+    ok('Excel de Jira Data Center: equipos, sprints y épicas como en Cloud', r.n > 1000 && r.equipos === 'equipo' && r.varios > 100 && r.epica > 1000, JSON.stringify(r));
+    await p.context().close();
+  }
+  // Columna rara: una fecha de inicio propia se avisa al cargar, se revisa y, elegida, da el tiempo de ciclo
+  {
+    const p = await pagina(1280, 800);
+    await cargarFich(p, V.conFechaInicio.ficheros);
+    const aviso = await A(p, () => { const x = document.querySelector('[data-tipo="columnas-raras"]'); return x ? x.innerText : ''; });
+    ok('columnas raras: se avisa al cargar de la fecha de inicio sin usar', /Start Date\)»: fecha de inicio/.test(aviso), aviso.slice(0, 160));
+    await clic(p, '[data-tipo="columnas-raras"] [data-action="col-revisar"]');
+    const form = await A(p, () => ({ campos: document.querySelectorAll('#form-col select').length, grupos: document.querySelectorAll('#form-col .col-grupo').length,
+      nombres: [...document.querySelectorAll('#form-col option')].some((o) => /Marta Ruiz|Jorge Gil/.test(o.textContent)), sugerida: /Start Date/.test(document.querySelector('#form-col select[name="empezada"]').closest('.field').innerText) }));
+    ok('revisión de columnas: todos los campos por grupos, la sugerencia junto a su campo y sin nombres de personas', form.campos >= 25 && form.grupos === 6 && form.sugerida && !form.nombres, JSON.stringify(form));
+    await p.selectOption('#form-col select[name="empezada"]', 'Custom field (Start Date)');
+    await clic(p, '[data-action="col-aplicar"]');
+    await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+    const r = await A(p, () => ({ guardada: (window.EP.S.cfg.columnas || {}).empezada, ciclo: window.EP.S.vm.equipos.filter((e) => e.medidas.ciclo && e.medidas.ciclo.disponible).length, n: window.EP.S.vm.equipos.length }));
+    ok('fecha de inicio elegida a mano: se guarda y todos los equipos tienen tiempo de ciclo', r.guardada === 'Custom field (Start Date)' && r.ciclo === r.n && r.n > 1, JSON.stringify(r));
+    // "No usar" el equipo desde Fuentes: todo pasa a ser un solo equipo, y se puede volver atrás
+    await ir(p, 'fuentes'); await quieto(p);
+    await clic(p, '#page [data-action="col-revisar"]');
+    await p.selectOption('#form-col select[name="equipo"]', '__no_usar__');
+    await clic(p, '[data-action="col-aplicar"]');
+    const sinEq = await A(p, () => ({ campo: window.EP.S.vm.campoEquipo, sinColumna: window.EP.S.lectura.tareas.every((t) => !t.agrupadores.equipo), nota: document.body.innerText.indexOf('No usar') >= 0 }));
+    // Sin la columna de equipo, los equipos se reconocen por lo siguiente que sirva (aquí, el componente)
+    ok('"No usar" la columna de equipo: deja de leerse, los equipos salen de otro campo y Fuentes lo dice', sinEq.sinColumna && sinEq.campo !== 'equipo' && sinEq.nota, JSON.stringify(sinEq));
+    ok('sin errores de consola al revisar columnas', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
+}
+
 // ---------- 8. Datos imperfectos (auditoría de noviembre de 2026): lo que no se puede medir no sale "normal" ----------
 {
   const { variantes, EQUIPO_SALTO } = await import('../tests/variantes.ts');
@@ -562,6 +608,53 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     ok('datos de ejemplo: "Supera el límite" en vez de "Fuera de rango" cuando manda un límite fijo', r.limite && !r.malas.length, JSON.stringify(r));
     await p.context().close();
   }
+}
+
+// ---------- 9. Maquetación: nada se pisa, nada se sale y el panel lateral se alcanza entero ----------
+// Portátiles con Windows al 125 % o 150 % ven la página a 1280 x 720; también tableta y móvil.
+{
+const medirMaquetacion = () => {
+      const vis = (el) => { const s = getComputedStyle(el); return s.visibility !== 'hidden' && s.display !== 'none' && el.getClientRects().length; };
+      // Rectángulos de cada nodo de texto visible
+      const rects = []; const tw = document.createTreeWalker(document.querySelector('.app') || document.body, NodeFilter.SHOW_TEXT);
+      let n; while ((n = tw.nextNode())) { if (!n.textContent.trim()) continue; const el = n.parentElement; if (!el || !vis(el) || el.closest('svg') || el.closest('details:not([open]) > :not(summary)')) continue;
+        // Recortado por el contenedor que oculta lo que sobra (texto con "…"): solo cuenta lo visible
+        let clip = { left: -1e9, top: -1e9, right: 1e9, bottom: 1e9 };
+        for (let x = el; x && x !== document.body; x = x.parentElement) { const s = getComputedStyle(x); if (s.overflowX !== 'visible' || s.overflowY !== 'visible') { const c = x.getBoundingClientRect(); clip = { left: Math.max(clip.left, c.left), top: Math.max(clip.top, c.top), right: Math.min(clip.right, c.right), bottom: Math.min(clip.bottom, c.bottom) }; } }
+        const rg = document.createRange(); rg.selectNodeContents(n); for (const q0 of rg.getClientRects()) { const q = { left: Math.max(q0.left, clip.left), top: Math.max(q0.top, clip.top), right: Math.min(q0.right, clip.right), bottom: Math.min(q0.bottom, clip.bottom) }; if (q.right - q.left > 2 && q.bottom - q.top > 2) rects.push({ el, q, t: n.textContent.trim().slice(0, 40) }); } }
+      const solapes = [];
+      for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+        const a = rects[i], c = rects[j]; if (a.el === c.el) continue;
+        const ix = Math.min(a.q.right, c.q.right) - Math.max(a.q.left, c.q.left), iy = Math.min(a.q.bottom, c.q.bottom) - Math.max(a.q.top, c.q.top);
+        if (ix > 3 && iy > 3) solapes.push(a.t + ' ⟂ ' + c.t);
+      }
+      // Texto cortado: contenedores que recortan su contenido
+      const cortados = [...document.querySelectorAll('.app *')].filter((el) => vis(el) && el.children.length === 0 && el.textContent.trim() && el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).overflow !== 'visible' && getComputedStyle(el).textOverflow !== 'ellipsis').map((el) => el.textContent.trim().slice(0, 40));
+      // Contenido que se sale de su ficha o tarjeta (se ve cortado por el borde)
+      const salen = [...document.querySelectorAll('.ficha, .tile, .card, .m, .status')].filter((el) => vis(el) && el.scrollWidth > el.clientWidth + 2).map((el) => (el.querySelector('.f-title, .t-label, b') || el).textContent.trim().slice(0, 30));
+      const elip = [...document.querySelectorAll('.app *')].filter((el) => vis(el) && el.children.length === 0 && el.textContent.trim() && el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).textOverflow === 'ellipsis').length;
+      const sb = document.querySelector('.sidebar');
+      const lateral = sb ? { alto: sb.clientHeight, contenido: sb.scrollHeight, scroll: getComputedStyle(sb).overflowY, fijo: getComputedStyle(sb).position } : null;
+      const desplaza = (el) => { for (let x = el.parentElement; x; x = x.parentElement) { const s = getComputedStyle(x); if (/(auto|scroll)/.test(s.overflowY + s.overflowX) && (x.scrollHeight > x.clientHeight || x.scrollWidth > x.clientWidth)) return true; } return false; };
+      const fijo = sb && getComputedStyle(sb).position !== 'static';
+      const fuera = [...document.querySelectorAll('.sidebar button, .sidebar select')].filter((el) => { const q = el.getBoundingClientRect(); return (q.bottom > innerHeight + 1 && fijo || q.right > innerWidth + 1) && !desplaza(el); }).length;
+      return { solapes: [...new Set(solapes)].slice(0, 8), nSolapes: solapes.length, cortados: [...new Set(cortados.concat(salen))].slice(0, 6), nCortados: cortados.length + salen.length, elip,
+        scrollH: document.documentElement.scrollWidth - innerWidth, lateral, botonesLateralFuera: fuera, base: getComputedStyle(document.body).fontSize };
+    };
+  const p = await pagina(1280, 720);
+  await clic(p, '[data-action="demo"]'); await fijarRol(p, 'pmo');
+  await A(p, () => document.querySelector('.toast')?.remove());
+  for (const [w, h] of [[1280, 720], [1024, 768], [390, 844]]) {
+    await p.setViewportSize({ width: w, height: h });
+    const mal = [];
+    for (const v of ['resumen', 'equipos', 'referencias', 'epicas', 'calidad', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) {
+      await ir(p, v); await quieto(p);
+      const r = await A(p, medirMaquetacion);
+      if (r.nSolapes || r.nCortados || r.scrollH > 0 || r.botonesLateralFuera) mal.push(v + ': ' + JSON.stringify({ solapes: r.solapes.slice(0, 2), cortados: r.cortados.slice(0, 2), scrollH: r.scrollH, panel: r.botonesLateralFuera }));
+    }
+    ok(`maquetación a ${w} x ${h}: sin textos que se pisan, sin contenido cortado y con el panel lateral entero`, !mal.length, mal.slice(0, 3).join(' | '));
+  }
+  await p.context().close();
 }
 
 await navegador.close();
