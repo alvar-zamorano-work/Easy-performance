@@ -990,7 +990,7 @@
  "recs.yOtros.n": "(and {n} more teams)",
  "caso.nivelPorEquipo": "Each team has its own level. The recommendation's level is that of the most urgent team.",
  "narr.sinCambiosEquipo": "The team has not gone outside its normal range in recent weeks.",
- "narr.atencion": "{e} is within normal, but has an urgent recommendation: {r}.",
+ "narr.atencion": "{e} has an urgent recommendation: {r}.",
  "narr.fiabilidadEquipo": "Team data: {bien} of {n} checks fine.",
  "prev.revisar": "This team's deliveries need checking (for example, a bulk close). The forecast comes from them: treat it with care."
 }

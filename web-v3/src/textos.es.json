@@ -990,7 +990,7 @@
  "recs.yOtros.n": "(y {n} equipos más)",
  "caso.nivelPorEquipo": "Cada equipo lleva su nivel. El de la recomendación es el del equipo más urgente.",
  "narr.sinCambiosEquipo": "El equipo no se ha salido de lo normal en las últimas semanas.",
- "narr.atencion": "{e} está dentro de lo normal, pero tiene una recomendación urgente: {r}.",
+ "narr.atencion": "{e} tiene una recomendación urgente: {r}.",
  "narr.fiabilidadEquipo": "Dato del equipo: {bien} de {n} comprobaciones bien.",
  "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela."
 }

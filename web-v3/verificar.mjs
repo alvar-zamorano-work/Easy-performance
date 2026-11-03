@@ -894,6 +894,23 @@ const medirMaquetacion = () => {
       return { mal, filas };
     });
     ok('ficha de equipo: "Qué hacer" enseña la evidencia del propio equipo', fichas.filas > 0 && !fichas.mal.length, fichas.mal.slice(0, 3).join(', ') + ' · filas: ' + fichas.filas);
+    // La clave de un descarte no depende del orden de urgencia; el cajón abierto desde un equipo enseña lo de ese equipo;
+    // y un equipo que solo "pide atención" por una recomendación vuelve a "Estable" si se descarta
+    const otros = await A(p, () => {
+      const EP = window.EP, S = EP.S, eqs = S.r.modelo.equipos;
+      const r = S.vm.recs.filter((x) => x.id === 'todo_urgente')[0];
+      const orden = eqs.map((e) => e.nombre).filter((n) => r.equipos.indexOf(n) >= 0);
+      EP.openDrill({ kind: 'caso', id: r.clave, team: eqs[1].nombre });
+      const cajon = document.querySelector('#drawer').textContent; EP.openDrill(null);
+      // Un equipo estable con un caso grave: "Pide atención"; descartada la recomendación, vuelve a "Estable"
+      const e = S.vm.equipos.filter((x) => x.nombre === eqs[1].nombre)[0], antes = { estado: e.estado, todas: e.gravesTodas };
+      e.estado = 'estable'; e.gravesTodas = ['todo_urgente'];
+      EP.P.ajustarAtencion(S.vm, S.dismissed); const con = e.estado;
+      S.dismissed[r.clave] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); const sin = e.estado;
+      delete S.dismissed[r.clave]; e.estado = antes.estado; e.gravesTodas = antes.todas; EP.P.ajustarAtencion(S.vm, S.dismissed);
+      return { clave: r.clave, esperada: 'todo_urgente|' + orden.join(','), cajonLeve: cajon.indexOf('Evidencia leve de ' + eqs[1].nombre) >= 0, cajonGrave: cajon.indexOf('Evidencia grave de') >= 0, con, sin };
+    });
+    ok('recomendaciones: la clave sigue el orden del modelo, el cajón de un equipo es suyo y descartar quita "Pide atención"', otros.clave === otros.esperada && otros.cajonLeve && !otros.cajonGrave && otros.con === 'atencion' && otros.sin === 'estable', JSON.stringify(otros));
     // Resumen redactado de un equipo: su fiabilidad, no la del área
     const narr = await A(p, () => { const EP = window.EP, S = EP.S, e = S.vm.equipos[0]; EP.openDrill({ kind: 'resumen', team: e.nombre }); return document.querySelector('#drawer') ? document.querySelector('#drawer').textContent : ''; });
     ok('resumen redactado de un equipo: habla del equipo y de su dato', /Dato del equipo/.test(narr) && !/Ningún equipo se ha salido/.test(narr), narr.slice(0, 160));

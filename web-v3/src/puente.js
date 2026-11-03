@@ -242,11 +242,12 @@
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
     // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
-    const graves = esArea ? [] : (eq.casos || []).filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
+    const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))
+      .filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
     const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves,
+      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves, gravesTodas: graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -262,10 +263,10 @@
     const deEquipo = (id, gravedad, confianza, equipo, evidencia) => {
       if (!casoActivo(id, cfg, det)) return;
       if (fichaDe[equipo] && casoSobreDatoDudoso(id, fichaDe[equipo])) return;
-      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false, porEquipo: {} };
+      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false, porEquipo: {}, ordenModelo: [] };
       if (gravedad === 'critico') x.gravedad = 'critico';
       if (confianza === 'alta' || (confianza === 'media' && x.confianza === 'baja')) x.confianza = confianza;
-      x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]);
+      x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]); x.ordenModelo.push(equipo);
       // Cada equipo con su nivel y su evidencia: la ficha de un equipo no enseña la de otro ni el nivel del peor
       x.porEquipo[equipo] = { gravedad, confianza, evidencia, nivel: nivelDe(gravedad, confianza) };
     };
@@ -291,7 +292,8 @@
       x.caso = c; x.titulo = c.titulo; x.senal = c.senal; x.medida = c.medida || null;
       x.nivel = nivelDe(x.gravedad, x.confianza);
       x.evaluable = !!(x.medida && N.MEDIDAS_INICIATIVA[x.medida]);
-      x.clave = x.id + '|' + x.equipos.join(',');
+      // La clave (con la que se guarda un descarte) sigue el orden del modelo, no el de urgencia: así no cambia entre cargas
+      x.clave = x.id + '|' + (x.ordenModelo || x.equipos).join(',');
       x.fuente = 'banco';
     });
     const rango = { alto: 0, medio: 1, bajo: 2 };
@@ -328,6 +330,19 @@
     return { veredicto, bloqueos, limites, avisos, kpis: cols };
   }
 
+  /**
+   * Recomendaciones urgentes que siguen activas en cada equipo (sin las descartadas). Un equipo "Pide atención" solo
+   * mientras tenga alguna; si se descartan todas, vuelve a "Estable".
+   */
+  function ajustarAtencion(vm, descartadas) {
+    const desc = descartadas || {};
+    vm.equipos.forEach((e) => {
+      e.graves = (e.gravesTodas || []).filter((id) => vm.recs.some((r) => r.id === id && r.equipos.indexOf(e.nombre) >= 0 && !desc[r.clave]));
+      if (e.estado === 'atencion' && !e.graves.length) e.estado = 'estable';
+      else if (e.estado === 'estable' && e.graves.length) e.estado = 'atencion';
+    });
+    return vm;
+  }
   /** La vista-modelo completa. */
   function construirVM(r, entrada) {
     const { det, cfg } = entrada, lectura = lecturaCalculo(entrada.lectura, cfg);
@@ -336,7 +351,7 @@
     const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg, det));
     const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg, det, true);
     const inis = r.iniciativas.map((x) => ({ ini: x.iniciativa, ev: x.evaluacion, s: N.seguimiento(x.iniciativa, x.evaluacion, r.preparacion) }));
-    return {
+    return ajustarAtencion({
       fechaDatos: det.fechaRef, semanaFin: r.modelo.semanaFin, semanas: { K: r.preparacion.ctx.K, KP: r.preparacion.ctx.KP, R: r.preparacion.ctx.R, N: r.modelo.semanas.length },
       kpis: cols, contexto: contexto(cfg, det), area, equipos: equiposVM,
       recs: recomendaciones(r, cfg, det, equiposVM), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
@@ -344,8 +359,8 @@
       informe: lectura.informe, det, campoEquipo: campo(cfg, det), equiposMedidos: equipos(cfg, det), mapeo: mapeo(cfg, det),
       hayCoste: hayCoste(cfg), hayProveedores: hayProveedores(cfg),
       epicas: N.vistaEpicas(r.preparacion, lectura.epicas || []),
-    };
+    }, entrada.descartadas);
   }
 
-  window.Puente = { migrarNombres, OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { migrarNombres, OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, ajustarAtencion, casoSobreDatoDudoso, hayCoste, hayProveedores, med };
 })();

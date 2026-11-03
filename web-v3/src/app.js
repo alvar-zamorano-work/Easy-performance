@@ -178,7 +178,7 @@
   // ---------- cálculo ----------
   function recalcular() {
     S.r = P.diagnosticar(S.lectura, S.det, S.cfg, S.extraIni, S.contextoDocs);
-    S.vm = P.construirVM(S.r, { lectura: S.lectura, det: S.det, cfg: S.cfg });
+    S.vm = P.construirVM(S.r, { lectura: S.lectura, det: S.det, cfg: S.cfg, descartadas: S.dismissed });
     if (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team)) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
     if (S.iaRecsDe && S.iaRecsDe !== S.lectura) { S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; }
     S.narrativas = {};

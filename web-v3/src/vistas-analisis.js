@@ -25,7 +25,7 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
-    const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.estado === 'atencion');
+    const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
     const recs = recsActivas(eqs);
     const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
     // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso

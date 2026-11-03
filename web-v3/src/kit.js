@@ -170,7 +170,8 @@
   /** Fila de recomendación: nivel, título, para quién y la primera evidencia. */
   function recFila(r) {
     const ev = r.evidencias[0] ? r.evidencias[0][1] : r.senal;
-    return `<div class="rrow clickable" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}" role="button" tabindex="0">${nivelChip(r.nivel)}<div class="rrow-t"><b>${esc(r.titulo)}</b><div class="small muted">${esc(paraQuien(r))} · ${esc(primeraFrase(ev))}</div></div><span class="go">›</span></div>`;
+    const equipo = r.todos && r.equipos.length === 1 ? ` data-team="${esc(r.equipos[0])}"` : '';
+    return `<div class="rrow clickable" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}"${equipo} role="button" tabindex="0">${nivelChip(r.nivel)}<div class="rrow-t"><b>${esc(r.titulo)}</b><div class="small muted">${esc(paraQuien(r))} · ${esc(primeraFrase(ev))}</div></div><span class="go">›</span></div>`;
   }
   /** Equipos de una recomendación en texto; con más de cuatro, los tres primeros y cuántos más. */
   const equiposTexto = (eqs) => (eqs.length > 4 ? t('recs.yMas', { lista: eqs.slice(0, 3).map(nombreEquipo).join(', '), n: eqs.length - 3 }) : window.EP.lista(eqs.map(nombreEquipo)));

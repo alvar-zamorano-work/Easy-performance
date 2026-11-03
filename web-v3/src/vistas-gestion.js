@@ -14,7 +14,13 @@
   function recsIa() {
     S.vm.recs.forEach((r) => { r.ia = null; });
     if (!S.iaRecs || S.iaRecsDe !== S.lectura) return [];
-    return S.iaRecs.filter((x) => {
+    const dudoso = (caso, eq) => { const e = S.vm.equipos.filter((y) => y.nombre === eq)[0]; return !!(caso && e && EP.P.casoSobreDatoDudoso(caso, e)); };
+    return S.iaRecs.map((x) => {
+      // Un equipo cuyo dato está por revisar no recibe esta propuesta (como en el banco de casos)
+      const equipos = x.equipos.filter((e) => !dudoso(x.causa.caso, e));
+      return equipos.length === x.equipos.length ? x : Object.assign({}, x, { equipos, evidencia: x.evidencia.filter((e) => equipos.indexOf(e.equipo) >= 0) });
+    }).filter((x) => {
+      if (!x.equipos.length) return false;
       if (x.causa.caso && !EP.P.casoActivo(x.causa.caso, S.cfg, S.det)) return false;
       const mismo = x.causa.caso && S.vm.recs.filter((c) => c.id === x.causa.caso && !c.ia && x.equipos.some((e) => c.equipos.indexOf(e) >= 0))[0];
       if (mismo) { mismo.ia = x; return false; }
@@ -28,7 +34,7 @@
     const ev = r.evidencias.slice(0, 2).map((x) => `<div class="small">${x[0] ? `<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</div>`).join('');
     const ini = iniDeRec(r);
     const botones = [
-      r.fuente === 'ia' ? '' : `<button class="btn sm" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}">${esc(t('recs.porque'))}</button>`,
+      r.fuente === 'ia' ? '' : `<button class="btn sm" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}"${r.todos && r.equipos.length === 1 ? ` data-team="${esc(r.equipos[0])}"` : ''}>${esc(t('recs.porque'))}</button>`,
       ini ? K.chip('good', t('recs.yaIniciativa')) : r.evaluable ? `<button class="btn sm primary" data-action="rec-ini" data-id="${esc(r.clave)}">${esc(t('recs.crearIni'))}</button>` : '',
       opts.descartada ? `<button class="link small" data-action="rec-restore" data-id="${esc(r.clave)}">${esc(t('recs.restaurar'))}</button>` : `<button class="link small" data-action="rec-dismiss" data-id="${esc(r.clave)}">${esc(t('recs.descartar'))}</button>`,
     ].join('');
@@ -45,7 +51,8 @@
     const todas = EP.vistas.recsActivas(eqs).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => nombres.indexOf(e) >= 0)));
     // Filtrado por un equipo: cada recomendación con el nivel y la evidencia de ese equipo
     const unEquipo = S.recFilter !== 'todos' && nombres.indexOf(S.recFilter) >= 0 ? [S.recFilter] : null;
-    const delFiltro = unEquipo ? EP.vistas.recsActivas(eqs.filter((e) => e.nombre === S.recFilter)).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.indexOf(S.recFilter) >= 0)) : todas;
+    const soloEquipo = (r) => { const ev = r.evidencias.filter((x) => x[0] === S.recFilter); return Object.assign({}, r, { equipos: [S.recFilter], evidencias: ev.length ? ev : r.evidencias, otros: r.equipos.length - 1 }); };
+    const delFiltro = unEquipo ? EP.vistas.recsActivas(eqs.filter((e) => e.nombre === S.recFilter)).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.indexOf(S.recFilter) >= 0).map(soloEquipo)) : todas;
     const enNivel = (r) => !S.recLevel || r.nivel === S.recLevel;
     const vistas = delFiltro.filter(enNivel);
     const descartadas = S.vm.recs.filter((r) => S.dismissed[r.clave] && (!unEquipo || r.equipos.indexOf(S.recFilter) >= 0)).map((r) => K.recPara(r, unEquipo || nombres)).filter(enNivel);
@@ -66,8 +73,8 @@
   EP.accion('rec-level', (el) => { S.recLevel = S.recLevel === el.dataset.level ? null : el.dataset.level; EP.render(); });
   EP.accion('rec-filter', (el) => { S.recFilter = el.dataset.team; EP.render(); });
   EP.cambio('rec-team', (el) => { S.recFilter = el.value; EP.render(); });
-  EP.accion('rec-dismiss', (el) => { S.dismissed[el.dataset.id] = true; EP.guardarPrefs(); EP.render(); EP.toast(t('recs.descartada')); });
-  EP.accion('rec-restore', (el) => { delete S.dismissed[el.dataset.id]; EP.guardarPrefs(); EP.render(); });
+  EP.accion('rec-dismiss', (el) => { S.dismissed[el.dataset.id] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); EP.guardarPrefs(); EP.render(); EP.toast(t('recs.descartada')); });
+  EP.accion('rec-restore', (el) => { delete S.dismissed[el.dataset.id]; EP.P.ajustarAtencion(S.vm, S.dismissed); EP.guardarPrefs(); EP.render(); });
   EP.accion('rec-ini', (el) => {
     const r = S.vm.recs.concat(recsIa()).filter((x) => x.clave === el.dataset.id)[0]; if (!r) return;
     S.iniForm = { nombre: r.titulo, equipos: r.equipos.slice(), medida: r.medida, inicio: hoyLocal(), origen: r.fuente === 'ia' ? (r.ia.causa && r.ia.causa.caso) || 'propia' : r.id, efecto: r.caso ? r.caso.comprobar : (r.ia ? r.ia.comprobar : '') };
@@ -81,8 +88,11 @@
     }).catch((e) => { S.iaEstado.recs = 'error'; S.iaError.recs = e.message; EP.render(); });
   });
   function cajonCaso(d) {
-    const r = S.vm.recs.filter((x) => x.clave === d.id)[0];
+    let r = S.vm.recs.filter((x) => x.clave === d.id)[0];
     if (!r) return [t('recs.titulo'), ''];
+    // Abierto desde un equipo (su ficha, Presentar o el rol Equipo): con el nivel y la evidencia de ese equipo
+    const desde = S.role === 'equipo' ? EP.visibles().map((e) => e.nombre) : d.team ? [d.team] : null;
+    if (desde) r = K.recPara(r, desde);
     const c = r.caso;
     let html = `<div class="meta">${K.nivelChip(r.nivel)}${K.chip('neutral', K.paraQuien(r))}</div><p><b>${esc(t('caso.senal'))}</b> ${esc(c.senal)}</p>`;
     // Con varios equipos, cada evidencia lleva el nivel de su equipo: el de la recomendación es el del más urgente
@@ -507,7 +517,7 @@
     if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
     // Recomendaciones de nivel alto en equipos sin cambios: no se dice que todo va bien
-    eqs.filter((e) => e.estado === 'atencion').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
+    eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
     // Lo que hay que revisar antes de leer las cifras (cierres masivos, saltos, lo normal era cero)
     const revisar = eqs.filter((e) => e.revisarDato && e.revisarDato.length);
     if (revisar.length) b1.push(t('narr.revisar', { e: lista(revisar.map((e) => nombreEquipo(e.nombre) + ' (' + lista(e.revisarDato.map(nombreMedida)).toLowerCase() + ')')) }));
@@ -530,7 +540,13 @@
   }
   const md = (txt) => String(txt || '').split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => (/^- /.test(l) ? `<li>${esc(l.slice(2))}</li>` : `<p>${esc(l)}</p>`)).join('').replace(/(<li>.*?<\/li>)+/g, (m) => `<ul>${m}</ul>`);
   /** Cifras de la página que no están en el paquete y el asistente puede citar. */
-  const extraIa = () => ({ fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto });
+  const extraIa = (equipo) => {
+    const e = equipo && S.vm.equipos.filter((x) => x.nombre === equipo)[0];
+    // Un equipo: sus comprobaciones, no las del área
+    if (e && e.fiabilidad) return { fiabilidad_equipo: { bien: e.fiabilidad.bien, medibles: e.fiabilidad.medibles, comprobaciones: S.vm.fiabilidad.comprobaciones.filter((c) => e.fiabilidad.valores[c.id]).map((c) => ({ id: c.id, nombre: c.nombre, valor: e.fiabilidad.valores[c.id].valor, estado: e.fiabilidad.valores[c.id].estado })) }, data_check: S.vm.dataCheck.veredicto };
+    return extraArea();
+  };
+  const extraArea = () => ({ fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto });
   function cajonResumen(d) {
     const equipo = d.team || (S.role === 'equipo' ? S.team : null);
     const clave = (equipo || 'area') + '|' + S.role + '|' + window.I18N.lang;
@@ -545,7 +561,7 @@
   EP.accion('ia-resumen', (el) => {
     const equipo = el.dataset.team || null, clave = (equipo || 'area') + '|' + S.role + '|' + window.I18N.lang;
     S.narrativas[clave] = { trabajando: true }; EP.render();
-    const o = { idioma: window.I18N.lang, rol: S.role, equipo, extra: extraIa() };
+    const o = { idioma: window.I18N.lang, rol: S.role, equipo, extra: extraIa(equipo) };
     proveedor()(IA.peticionResumen(S.vm.paquete, o, cat())).then((texto) => {
       const v = IA.validarChat(texto, S.vm.paquete, { equipo, extra: o.extra });
       S.narrativas[clave] = v.ok ? { texto: v.respuesta.respuesta } : { error: t('ia.noComprobada') };
