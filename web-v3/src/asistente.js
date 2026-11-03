@@ -28,8 +28,10 @@
 
   function asistente() {
     const el = document.getElementById('assistant'), fab = document.getElementById('assistant-fab');
-    const enApp = !!(S.onboarded && S.vm && !S.presenting && !S.error);
-    if (fab) fab.classList.toggle('hidden', !enApp || S.chat.open);
+    // El asistente es de Labs: con Labs apagado no sale ni el botón ni el panel
+    const enApp = !!(S.onboarded && S.vm && !S.presenting && !S.error && S.prefs && S.prefs.labs);
+    // Sin clave de IA el botón no sale: no tapa contenido para algo que no se puede usar
+    if (fab) fab.classList.toggle('hidden', !enApp || S.chat.open || !S.ia.clave);
     if (!el) return;
     if (!enApp || !S.chat.open) { el.classList.add('hidden'); el.innerHTML = ''; return; }
     el.classList.remove('hidden');
@@ -55,7 +57,7 @@
 
   async function preguntar(texto, reintento) {
     const q = String(texto || '').trim(); if (!q) return;
-    if (!S.ia.clave) { EP.toast(t('asistente.sinClave'), 'bad'); return; }
+    if (!S.ia.clave || !(S.prefs && S.prefs.labs)) { EP.toast(t('asistente.sinClave'), 'bad'); return; }
     if (!S.vm) return;
     if (!reintento) S.chat.msgs.push({ rol: 'usuario', texto: q });
     S.chat.draft = ''; S.chat.busy = true; persistir(); asistente();

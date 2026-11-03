@@ -20,8 +20,9 @@ b, strong { font-weight: 600; }
 
 select, input[type="text"], input[type="password"], input[type="number"], input[type="date"], textarea { font: inherit; font-size: 0.9333rem; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 select.sm, input.sm { padding: 4px 8px; font-size: 0.8667rem; }
-button.btn { font: inherit; font-size: 0.9333rem; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
-button.btn:hover { border-color: var(--grey4); }
+label.btn { display: inline-flex; align-items: center; }
+button.btn, label.btn { font: inherit; font-size: 0.9333rem; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; }
+button.btn:hover, label.btn:hover { border-color: var(--grey4); }
 button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
 button.btn.primary:hover { filter: brightness(1.1); }
 button.btn.sm { padding: 5px 10px; font-size: 0.8667rem; }
@@ -267,12 +268,14 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
 /* Impresión (al final para ganar a las reglas del shell) */
 @media print {
   #drawer, .toast, .sidebar, #page-actions, .howto, .no-print, .page-actions { display: none !important; }
+  .recorrido, .sub-tabs, .que-hacer .btn { display: none !important; }
   .app { display: block; }
   .content { padding: 0; max-width: none; width: 100%; }
   body { background: #fff; }
   .card { box-shadow: none; break-inside: avoid; }
   .table-wrap { overflow: visible; }
   details.more { display: block; } details.more > summary { display: none; }
+  .preg > summary::after { display: none; }
 }
 
 /* Asistente de IA: botón flotante y panel lateral de conversación */
@@ -316,6 +319,8 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
 .t-value { font-size: 2rem; font-weight: 600; color: var(--navy); letter-spacing: -0.02em; line-height: 1.1; margin: 8px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t-value small { font-size: 0.9333rem; font-weight: 400; color: var(--muted); margin-left: 2px; }
 .t-value.tone-bad { color: var(--bad); } .t-value.tone-good { color: var(--ok); } .t-value.tone-warn { color: var(--warn); }
+.t-unit { font-size: 0.8333rem; color: var(--muted); margin: -4px 0 6px; }
+.fb-u { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.75rem; color: var(--muted); font-weight: 400; line-height: 1.3; }
 .t-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.8333rem; color: var(--muted); min-height: 22px; }
 .t-warn { color: var(--warn); font-weight: 600; font-size: 0.8rem; }
 .t-bad { color: var(--bad); }
@@ -737,3 +742,33 @@ html { font-size: 14px; }
 /* Filas de lista (preguntas, recomendaciones): la línea de detalle lleva el dato (lo normal, los equipos); hasta dos
    renglones antes de cortar */
 .rrow-t .small { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: clip; }
+
+/* Preguntas de dirección: una línea por pregunta, el detalle al abrirla */
+.ficha.list.preguntas { padding: 4px 0; }
+.leyenda { display: grid; gap: 6px; }
+.preg { border-bottom: 1px solid var(--line); }
+.preg:last-child { border-bottom: 0; }
+.preg > summary { display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer; list-style: none; flex-wrap: wrap; color: inherit; font-size: inherit; }
+.preg > summary > b { order: 2; } .preg > summary > .chip { order: 1; } .preg > summary > .preg-quien { order: 3; }
+.preg > summary::-webkit-details-marker { display: none; }
+.preg > summary::after { content: '›'; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.preg[open] > summary::after { transform: rotate(90deg); }
+.preg > summary b { font-weight: 600; }
+.preg-quien { flex: 1 1 200px; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.preg-cuerpo { padding: 0 16px 12px; }
+
+/* Recorrido de la primera visita */
+.recorrido { border-left: 4px solid var(--accent); margin-bottom: 16px; }
+.recorrido b { display: block; font-size: 1.0667rem; margin: 2px 0 4px; }
+.recorrido p { margin: 0 0 10px; max-width: 70ch; }
+
+/* Pestañas de una entrada del menú (Qué hacer, Datos): subrayadas, para no confundirlas con los filtros en píldora */
+.sub-tabs { gap: 0; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.sub-tabs .tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; padding: 8px 14px; color: var(--muted); }
+.sub-tabs .tab.on { background: none; color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.sub-tabs .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Resumen: la línea de Qué hacer, en una sola fila con su botón a la derecha */
+.que-hacer { display: block; margin: 16px 0; }
+.que-hacer .f-body { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.recorrido { display: block; }

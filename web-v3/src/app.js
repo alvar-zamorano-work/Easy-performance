@@ -318,22 +318,56 @@
   }
 
   // ---------- navegación y render ----------
-  const PAGINAS = ['resumen', 'equipos', 'referencias', 'epicas', 'calidad', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes'];
-  const POR_ROL = {
-    direccion: ['resumen', 'equipos', 'referencias', 'epicas', 'recomendaciones', 'iniciativas', 'cortes', 'ajustes'],
-    pmo: PAGINAS,
-    equipo: ['equipos', 'referencias', 'calidad', 'recomendaciones', 'iniciativas', 'cortes', 'ajustes'],
-  };
-  const INICIO_ROL = { direccion: 'resumen', pmo: 'calidad', equipo: 'equipos' };
+  // El mismo menú para todos los roles: el rol solo decide la página de inicio y, en Equipo, qué equipo se ve.
+  // "Qué hacer" junta recomendaciones e iniciativas; "Datos", la calidad del dato y las fuentes. Cortes va en Labs.
+  // La página de línea base sale: la vista de toda el área está en el Resumen y los gráficos, en la ficha de cada equipo.
+  const PAGINAS = ['resumen', 'equipos', 'recomendaciones', 'iniciativas', 'epicas', 'calidad', 'fuentes', 'ajustes', 'cortes'];
+  const POR_ROL = { direccion: PAGINAS, pmo: PAGINAS, equipo: PAGINAS };
+  const INICIO_ROL = { direccion: 'resumen', pmo: 'resumen', equipo: 'equipos' };
+  /** Grupo del menú de cada página (la entrada que se marca). */
+  const GRUPO = { iniciativas: 'recomendaciones', fuentes: 'calidad' };
+  /** Recorrido de la primera visita: tres pasos, cada uno en su página, con "Siguiente" y "Saltar".
+   *  Se da por visto al empezar: si se recarga a medias no vuelve solo, se puede ver otra vez desde Ajustes. */
+  const PASOS = [null, 'resumen', 'equipos', 'recomendaciones'];
+  function empezarRecorrido() { S.recorrido = 1; S.prefs.recorridoHecho = true; guardarPrefs(); }
+  function recorrido() {
+    const n = S.recorrido; if (!n || S.view !== PASOS[n]) return '';
+    // Sin cifras que enseñar (export que no se puede medir), el recorrido no tiene nada que explicar
+    if (EP.vistas.bloqueoDuro && EP.vistas.bloqueoDuro()) return '';
+    const ultimo = n === 3;
+    return `<div class="ficha recorrido" role="region" aria-label="${esc(t('recorrido.titulo'))}"><div class="f-body">
+      <div class="tiny muted">${esc(t('recorrido.paso', { n }))}</div><b>${esc(t('recorrido.t' + n))}</b><p class="small">${esc(t('recorrido.d' + n))}</p>
+      <div class="row"><button class="btn sm primary" data-action="recorrido-sig">${esc(t(ultimo ? 'recorrido.terminar' : 'recorrido.siguiente'))}</button>${ultimo ? '' : `<button class="link small" data-action="recorrido-fin">${esc(t('recorrido.saltar'))}</button>`}</div></div></div>`;
+  }
+  function terminarRecorrido() { S.recorrido = 0; S.prefs.recorridoHecho = true; guardarPrefs(); }
+  /** Pestañas de las entradas que juntan dos páginas: Qué hacer (recomendaciones e iniciativas) y Datos (calidad y fuentes). */
+  const SUBPESTANAS = { recomendaciones: ['recomendaciones', 'iniciativas'], iniciativas: ['recomendaciones', 'iniciativas'], calidad: ['calidad', 'fuentes'], fuentes: ['calidad', 'fuentes'] };
+  // Son enlaces entre páginas, no pestañas de un mismo panel: se marcan con aria-current
+  function subPestanas() {
+    const g = SUBPESTANAS[S.view]; if (!g) return '';
+    return `<nav class="tabs sub-tabs" aria-label="${esc(t('nav.' + GRUPO_DE(S.view)))}">${g.map((v) => `<button class="tab ${S.view === v ? 'on' : ''}" ${S.view === v ? 'aria-current="page"' : ''} data-action="go" data-view="${v}" data-sub="1">${esc(t('pestana.' + v))}</button>`).join('')}</nav>`;
+  }
+  const GRUPO_DE = (v) => GRUPO[v] || v;
+  /** Entradas del menú que se ven: Épicas solo si el export trae épicas; Cortes solo con Labs. */
+  function enMenu(v) {
+    if (v === 'epicas') return !!(S.vm && S.vm.epicas && S.vm.epicas.epicas && S.vm.epicas.epicas.length);
+    if (v === 'cortes') return !!(S.prefs && S.prefs.labs);
+    return true;
+  }
   /** Equipos que ve el rol: el rol Equipo solo ve el suyo. */
   const visibles = () => (!S.vm ? [] : S.role === 'equipo' && S.team ? S.vm.equipos.filter((e) => e.nombre === S.team) : S.vm.equipos);
-  function go(view) { S.view = view; if (view !== 'equipos') S.teamCompare = false; S.drill = null; render(); window.scrollTo(0, 0); }
+  function go(view) {
+    // Ir a otra página que no es el paso del recorrido lo termina: si no, la tarjeta volvería más tarde fuera de contexto
+    if (S.recorrido && view !== PASOS[S.recorrido]) terminarRecorrido();
+    S.view = view; if (view !== 'equipos') S.teamCompare = false; S.drill = null; render(); window.scrollTo(0, 0);
+  }
   function openTeam(team) { S.team = team; S.teamCompare = false; S.view = 'equipos'; S.drill = null; guardarPrefs(); render(); window.scrollTo(0, 0); }
   function openDrill(spec) { S.drill = spec; render(); }
 
   function pintarTextosFijos() {
     document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t(el.getAttribute('data-t')); });
     document.querySelectorAll('#nav button').forEach((b) => { b.dataset.label = t('nav.' + b.dataset.view); });
+    const labs = document.querySelector('#nav .sb-labs'); if (labs) labs.classList.toggle('hidden', !(S.prefs && S.prefs.labs));
     document.querySelectorAll('#role-seg button').forEach((b) => { b.textContent = t('rol.' + b.dataset.role); b.classList.toggle('on', b.dataset.role === S.role); });
     document.querySelectorAll('#lang-seg button').forEach((b) => b.classList.toggle('on', b.dataset.lang === I.lang));
     byId('assistant-fab').textContent = t('asistente.abrir');
@@ -363,17 +397,16 @@
       if (S.colPend && S.colPend.abierto) { ob.classList.remove('hidden'); app.classList.add('hidden'); S.drill = null; ob.innerHTML = V.columnas(); V.cajon(); V.asistente(); return; }
       if (!enApp) { ob.innerHTML = V.onboarding(); V.trasOnboarding(); V.cajon(); V.asistente(); return; }
       const permitidas = POR_ROL[S.role] || PAGINAS;
-      if (permitidas.indexOf(S.view) < 0) S.view = INICIO_ROL[S.role];
+      // Una página que no está en el menú (Cortes sin Labs, Épicas sin épicas) lleva a la de inicio del rol
+      if (permitidas.indexOf(S.view) < 0 || !enMenu(S.view)) S.view = INICIO_ROL[S.role];
       const vt = visibles().map((e) => e.nombre);
       const cuentas = {
         recomendaciones: S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => vt.indexOf(e) >= 0)).length,
-        iniciativas: S.vm.iniciativas.filter((x) => x.ini.equipos.some((e) => vt.indexOf(e) >= 0)).length,
         calidad: S.vm.fiabilidad.revisar,
-        referencias: visibles().filter(EP.kit.baselineProvisional).length,
       };
       document.querySelectorAll('#nav button').forEach((b) => {
         const v = b.dataset.view, c = cuentas[v];
-        b.classList.toggle('hidden', permitidas.indexOf(v) < 0); b.classList.toggle('active', v === S.view);
+        b.classList.toggle('hidden', permitidas.indexOf(v) < 0 || !enMenu(v)); const activa = v === GRUPO_DE(S.view); b.classList.toggle('active', activa); if (activa) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
         const etiqueta = v === 'equipos' && S.role === 'equipo' ? t('nav.miEquipo') : t('nav.' + v);
         b.innerHTML = esc(etiqueta) + (c ? `<span class="count">${c}</span>` : '');
       });
@@ -385,7 +418,7 @@
       // Sin entregas medibles, las páginas de análisis no enseñan cifras: solo por qué y cómo arreglarlo
       const bloqueo = V.bloqueoDuro ? V.bloqueoDuro() : '';
       // Un export que no se puede medir no tapa lo que no depende de sus cifras: iniciativas, cortes y configuración
-      byId('page').innerHTML = avisoCarga() + (bloqueo && ['fuentes', 'ajustes', 'calidad', 'iniciativas', 'cortes'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)());
+      byId('page').innerHTML = avisoCarga() + recorrido() + subPestanas() + (bloqueo && ['fuentes', 'ajustes', 'calidad', 'iniciativas', 'cortes'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)());
       V.cajon(); V.asistente();
     } catch (e) {
       console.error(e);
@@ -397,14 +430,22 @@
   // ---------- acciones ----------
   const acciones = {};
   function accion(nombre, fn) { acciones[nombre] = fn; }
-  accion('go', (el) => go(el.dataset.view));
+  accion('go', (el) => {
+    go(el.dataset.view);
+    // Al cambiar de pestaña se repinta la página: el foco vuelve a la pestaña elegida, no al principio del documento
+    if (el.dataset.sub) { const b = document.querySelector('.sub-tabs [aria-current="page"]'); if (b) b.focus(); }
+  });
   accion('open-team', (el) => openTeam(el.dataset.team));
   accion('team-tab', (el) => { if (el.dataset.team === '__comparar') { S.teamCompare = true; } else { S.team = el.dataset.team; S.teamCompare = false; guardarPrefs(); } S.drill = null; render(); });
-  accion('set-role', (el) => { S.role = el.dataset.role; S.recFilter = 'todos'; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
+  accion('set-role', (el) => { if (S.recorrido) terminarRecorrido(); S.role = el.dataset.role; S.recFilter = 'todos'; if (S.role === 'equipo') S.teamCompare = false; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
   accion('set-lang', (el) => { I.fijar(el.dataset.lang); guardarPrefs(); if (S.vm) enSegundoPlano(() => { recalcular(); render(); }); else render(); });
   accion('toast-close', () => document.querySelector('.toast').classList.add('hidden'));
   accion('retry', () => { S.error = null; try { if (S.lectura) recalcular(); } catch (e) { S.error = { message: e.message, stack: e.stack }; } render(); });
   accion('import', () => byId('file-input').click());
+  accion('recorrido-sig', () => { if (S.recorrido >= 3) { terminarRecorrido(); render(); return; } S.recorrido++; go(PASOS[S.recorrido]); });
+  accion('recorrido-fin', () => { terminarRecorrido(); render(); });
+  accion('ver-que-hacer', () => { S.recFilter = 'todos'; S.recLevel = null; go('recomendaciones'); });
+  accion('recorrido-ver', () => { S.view = 'resumen'; empezarRecorrido(); render(); window.scrollTo(0, 0); });
   // Otro export con datos ya cargados: sustituir, sumar o cancelar; y volver a los datos buenos
   accion('carga-sustituir', () => { const p = S.cargaPend; S.cargaPend = null; if (p) enSegundoPlano(() => aplicarCarga(p.fs), t('carga.leyendo')); });
   accion('carga-sumar', () => {
@@ -480,6 +521,8 @@
   }
   async function arrancar() {
     cargarPrefs();
+    // Quien ya trabajaba con una carpeta compartida la sigue teniendo: la carpeta ahora está en Labs y Labs se enciende
+    if (S.carpeta && S.prefs.labs === undefined) S.prefs.labs = true;
     // Si hay exports de la carpeta (actualizar.ps1), se cargan primero; si no, los últimos ficheros guardados en el navegador
     // exports/datos.js (actualizar.ps1, el mismo de la v2): ficheros en base64, configuración, iniciativas y contexto
     const ex = window.EASY_PERFORMANCE_EXPORTS;
@@ -520,7 +563,7 @@
   window.EP = {
     S, N, P, t, tn, esc, lista, fmt, fecha, valor, formatoDe, nombreMedida, nombreEquipo, cat, toast, ocupado, enSegundoPlano,
     guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, aplicarCarga, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
-    visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, idbActualizar, firmaCarpeta, arrancar, migrar: migrarAEspacio, vistas: {},
+    visibles, POR_ROL, INICIO_ROL, empezarRecorrido, accion, cambio, descargar, descargarCsv, idbGet, idbSet, idbActualizar, firmaCarpeta, arrancar, migrar: migrarAEspacio, vistas: {},
     CLAVES: { cfg: CLAVE_CFG, prefs: CLAVE_PREFS, idb: NOMBRE_IDB, espacio: ESPACIO }, leerLocal, guardarLocal, cargarPrefs,
   };
 })();

@@ -153,7 +153,10 @@
   // Un Context ya guardado (también el de la v2) no se reescribe. Proveedores no se pregunta: lo añaden los equipos marcados.
   EP.accion('ob-finish', () => {
     if (!S.cfg.contexto || !S.cfg.contexto.hecho) S.cfg.contexto = Object.assign({}, P.contexto(S.cfg, S.det), { hecho: true, proveedores: false, trabajoDe: 'export' });
-    S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg();
+    S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null;
+    // Primera visita: un recorrido de tres pasos (Resumen, ficha de equipo, Qué hacer). Se puede saltar.
+    if (!(S.prefs && S.prefs.recorridoHecho)) { S.view = 'resumen'; EP.empezarRecorrido(); }
+    EP.guardarPrefs(); EP.guardarCfg();
     EP.enSegundoPlano(() => { EP.recalcular(); if (EP.cortes) EP.cortes.capturar(S.demo); EP.render(); window.scrollTo(0, 0); });
   });
 

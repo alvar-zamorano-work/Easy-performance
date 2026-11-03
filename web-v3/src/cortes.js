@@ -105,7 +105,8 @@
   }
   /** Una línea para el Resumen: qué ha cambiado desde la carga anterior (si la hay). */
   function lineaResumen() {
-    if (S.demo) return '';
+    // Cortes es de Labs: apagado, el Resumen no enlaza a una página que no está en el menú
+    if (S.demo || !(S.prefs && S.prefs.labs)) return '';
     const c = comparar();
     if (!c.ant) return '';
     return `<p class="small">${esc(t('cortes.desde', { f: fecha(c.ant.fechaDatos), m: c.mejora, e: c.empeora }))} <button class="link small" data-action="go" data-view="cortes">${esc(t('cortes.verCambios'))}</button></p>`;
