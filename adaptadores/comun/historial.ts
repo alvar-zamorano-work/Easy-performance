@@ -6,6 +6,7 @@
 // estado inicial con la fecha de creación. Si el primer cambio es posterior a la creación y no se sabe el estado
 // inicial, ese tramo no se atribuye a ningún estado.
 
+import { fechaPosible } from './limpieza.ts';
 import type { CambioEstado, Lectura, Tarea, TiempoEnEstado } from '../../nucleo/modelo.ts';
 
 /** Entradas con estado y fecha válidos, por orden de fecha. */
@@ -57,7 +58,7 @@ export function completarDesdeHistorial(lectura: Lectura, fin: Date = ultimaActi
       ...t,
       tiempos_estado: tiempos,
       estado_origen: t.estado_origen || ultimo.estado,
-      fechas: { ...t.fechas, cambio_estado: t.fechas.cambio_estado || ultimo.fecha },
+      fechas: { ...t.fechas, cambio_estado: t.fechas.cambio_estado || (fechaPosible(ultimo.fecha, new Date()) ? ultimo.fecha : null) },
     };
   });
   return cambios ? { ...lectura, tareas } : lectura;

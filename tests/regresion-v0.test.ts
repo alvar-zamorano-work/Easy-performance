@@ -46,15 +46,18 @@ function sinTextos<T>(x: T): T {
 }
 
 /** Lo que el núcleo añade después de la v0 no existe en la v0: se quita antes de comparar.
- *  B3: agent readiness. v3: medida de bugs nuevos, y qué decide el estado y el estado de la referencia en cada medida. */
+ *  B3: agent readiness. v3: medida de bugs nuevos, y qué decide el estado y el estado de la referencia en cada medida.
+ *  Nov 2026: lado (mejor de lo normal), revisar (comparación dudosa) y días con cierres masivos. */
 function sinNovedades(m: unknown): unknown {
   type M = Record<string, Record<string, unknown>>;
-  const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown> }[] };
-  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; });
+  const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown>; calidad?: Record<string, unknown> }[] };
+  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; });
   x.equipos.forEach((e) => {
     delete e.medidas.agent_readiness; delete e.series.agentReady;
     delete e.medidas.bugs; delete e.series.bugsEntrada; delete e.series.bugsMedia;
     limpiar(e.medidas); limpiar(e.kpis);
+    // Nov 2026: días con cierres masivos por equipo (dato nuevo; no cambia ninguna cifra)
+    if (e.calidad) delete e.calidad.diasMasivos;
   });
   return x;
 }

@@ -97,6 +97,7 @@
     if (pendientes.length) toast(tn('carga.pendientes', pendientes.length), 'bad');
     S.lectura = lectura; S.det = N.detectar(lectura); S.ficheros = ficheros; S.cargadoEn = new Date();
     if (P.migrarMapeo(S.cfg, S.det)) guardarCfg();
+    if (P.migrarNombres(S.cfg, S.det)) guardarCfg();
     S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; S.recFilter = 'todos'; S.recLevel = null;
     recalcular();
     return true;
@@ -200,6 +201,8 @@
         byId('page-title').textContent = t('error.titulo'); byId('page-sub').textContent = ''; byId('page-actions').innerHTML = '';
         byId('page').innerHTML = errorHtml(S.error); return;
       }
+      // Con un bloqueo duro no hay cifras que enseñar: ni presentación ni panel lateral con cifras
+      if (S.vm && V.bloqueoDuro && V.bloqueoDuro()) { S.presenting = false; if (S.drill && S.drill.kind !== 'como') S.drill = null; }
       const enApp = S.onboarded && S.vm;
       ob.classList.toggle('hidden', !!enApp); app.classList.toggle('hidden', !enApp); pr.classList.toggle('hidden', !S.presenting);
       if (!S.vm || S.presenting) S.drill = null;
@@ -227,7 +230,9 @@
       if (S.demo) banda.innerHTML = `<span>${esc(t('demo.banda'))}</span><button class="link" data-action="demo-exit">${esc(t('demo.salir'))}</button>`;
       const cab = V.cabecera(S.view);
       byId('page-title').textContent = cab.titulo; byId('page-sub').textContent = cab.sub; byId('page-actions').innerHTML = cab.acciones || '';
-      byId('page').innerHTML = (V[S.view] || V.resumen)();
+      // Sin entregas medibles, las páginas de análisis no enseñan cifras: solo por qué y cómo arreglarlo
+      const bloqueo = V.bloqueoDuro ? V.bloqueoDuro() : '';
+      byId('page').innerHTML = bloqueo && ['fuentes', 'ajustes', 'calidad'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)();
       V.cajon(); V.asistente();
     } catch (e) {
       console.error(e);
@@ -251,7 +256,7 @@
   accion('demo-exit', () => salirDemo(true));
   accion('drill', (el) => openDrill({ kind: el.dataset.kind, team: el.dataset.team || null, medida: el.dataset.medida || null, id: el.dataset.id || null }));
   accion('drill-close', () => { S.drill = null; render(); });
-  accion('present', () => { S.presenting = true; S.slide = 0; render(); });
+  accion('present', () => { if (EP.vistas.bloqueoDuro && EP.vistas.bloqueoDuro()) return; S.presenting = true; S.slide = 0; render(); });
   accion('present-close', () => { S.presenting = false; render(); });
   accion('slide', (el) => { S.slide = Math.max(0, S.slide + parseInt(el.dataset.dir, 10)); render(); });
   accion('print', () => window.print());

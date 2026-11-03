@@ -5,6 +5,7 @@
 // Lo que el CSV de Azure DevOps no trae: el historial de estados (solo el actual) y los sprints anteriores (solo la
 // iteración actual). Con Activated Date y Closed Date sí se puede medir el plazo de inicio a fin.
 
+import { limpiarLectura } from '../comun/limpieza.ts';
 import { Tx, regional } from '../../nucleo/idioma.ts';
 import { leerCSV } from '../comun/csv.ts';
 import { mapearConAlias, describir, type ColumnaLeida, type MapaColumnas } from '../comun/describir.ts';
@@ -146,7 +147,7 @@ interface FilaAzure {
 
 const COLUMNAS_FECHA = ['creada', 'actualizada', 'cerrada', 'resuelta', 'activada', 'cambioEstado'];
 
-export function leerAzure(ficheros: FicheroEntrada[]): Lectura {
+export function leerAzure(ficheros: FicheroEntrada[], hoy?: Date | string | null): Lectura {
   const informe: InformeIngesta = { plataforma: PLATAFORMA, ficheros: [], avisos: [], filasLeidas: 0, duplicadas: 0, epicas: 0, subtareas: 0, sinClave: 0, campos: {}, tareas: 0 };
   const porClave = new Map<string, FilaAzure>();
   let ordenUsado = 'dm' as 'dm' | 'md';
@@ -247,5 +248,5 @@ export function leerAzure(ficheros: FicheroEntrada[]): Lectura {
   const tituloDe = new Map<string, string>(); porClave.forEach((t) => tituloDe.set(t.clave, t.resumen));
   tareas.forEach((t) => { if (t.padre_id) t.padre_titulo = tituloDe.get(t.padre_id) || ''; });
   if (ficheros.length && informe.ficheros.length) informe.avisos.push({ tipo: 'aviso', texto: Tx('Dates read as ', 'Fechas leídas como ') + (ordenUsado === 'md' ? Tx('month/day', 'mes/día') : Tx('day/month', 'día/mes')) + Tx(' (from the date values in the file).', ' (por los valores de fecha del fichero).') });
-  return { plataforma: PLATAFORMA, tareas, informe, estados, camposEquipo: CAMPOS_EQUIPO, mapeoPropuesto, detalle: { sprintsSoloActual: true, ordenFechas: ordenUsado, numeroFilas: informe.filasLeidas.toLocaleString(regional()) } };
+  return limpiarLectura({ plataforma: PLATAFORMA, tareas, informe, estados, camposEquipo: CAMPOS_EQUIPO, mapeoPropuesto, detalle: { sprintsSoloActual: true, ordenFechas: ordenUsado, numeroFilas: informe.filasLeidas.toLocaleString(regional()) } }, hoy);
 }

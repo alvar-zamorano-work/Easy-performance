@@ -56,11 +56,22 @@
       <div class="panel">${EP.vistas.ayudaCsv()}</div>
       ${pie('welcome', S.vm && !S.demo ? continuar('revision', t('ob.data.seguir', { n: S.vm.informe.tareas })) : '', `<span class="small muted">${esc(t('ob.data.sinExports'))}</span><button class="btn" data-action="demo">${esc(t('ob.demo'))}</button>`)}</div>`;
   }
+  /** Qué hacer cuando no se puede medir: revisar los estados o cargar otro export. Sin "seguir de todos modos". */
+  function accionesBloqueo(dc) {
+    return [...new Set(dc.bloqueos.filter((b) => b.duro).map((b) => b.accion))].map((a) => a === 'estados'
+      ? `<button class="btn primary" data-action="ob-go" data-step="mapeo">${esc(t('dc.accion.estados'))}</button>`
+      : `<button class="btn primary" data-action="import">${esc(t('dc.accion.datos'))}</button>`).join('');
+  }
+  /** El bloqueo se dice nada más cargar, antes de configurar nada. */
+  function avisoBloqueo() {
+    const dc = S.vm.dataCheck, duros = dc.bloqueos.filter((b) => b.duro);
+    return duros.length ? `<div class="notice bad" data-tipo="bloqueo"><b>${esc(t('dc.bloqueo.titulo'))}</b><ul class="small">${duros.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul></div>` : '';
+  }
   function revision() {
     const inf = S.vm.informe, det = S.vm.det;
     const campo = det.opcionesEquipo.filter((o) => o.id === S.vm.campoEquipo)[0];
     const resumen = `<div class="tiles">${K.stat(t('fuentes.tile.tareas'), String(inf.tareas), esc(t('fuentes.tile.tareasPie', { f: inf.filasLeidas })), '')}${K.stat(t('ob.rev.equipos'), String(S.vm.equipos.length), esc(campo && campo.id !== 'todos' ? t('ob.rev.campo', { c: t('campo.' + campo.id) }) : t('ob.rev.sinCampo')), '')}${K.stat(t('ob.rev.semanas'), String(S.vm.semanas.N), esc(t('ob.rev.hasta', { f: fecha(S.vm.fechaDatos) })), '')}${K.stat(t('ob.rev.estados'), String(det.estados.length), esc(tn('mapeo.porRevisar', P.porRevisar(S.cfg, det).length)), '')}</div>`;
-    return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p><div class="panel">${resumen}
+    return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p>${avisoBloqueo()}<div class="panel">${resumen}
       ${EP.vistas.fuentesEquipos()}
       ${pie('data', continuar('mapeo'), `<button class="btn" data-action="import">${esc(t('fuentes.anadir'))}</button>`)}</div></div>`;
   }
@@ -77,7 +88,8 @@
     const lim = dc.kpis.map((id) => { const l = dc.limites.filter((x) => x.kpi === id)[0]; return `<div class="fila-dot"><span class="s-dot tone-${!l ? 'good' : l.parcial ? 'warn' : 'bad'}"></span><span class="small"><b>${esc(EP.nombreMedida(id))}</b>${l ? ' · ' + esc(l.parcial ? t('dc.soloPara', { equipos: lista(l.equipos) }) : (l.motivo || t('medida.noDisponible'))) : ''}</span></div>`; }).join('')
       + dc.limites.filter((l) => !l.kpi).map((l) => `<div class="fila-dot"><span class="s-dot tone-warn"></span><span class="small">${esc(t(l.clave))}</span></div>`).join('');
     const revisar = f.comprobaciones.filter((c) => c.estado === 'revisar');
-    const siguiente = dc.veredicto === 'not_ready' ? `<button class="btn" data-action="ob-go" data-step="rol">${esc(t('ob.dc.igualmente'))}</button>` : continuar('rol');
+    const duro = dc.bloqueos.some((b) => b.duro);
+    const siguiente = duro ? accionesBloqueo(dc) : dc.veredicto === 'not_ready' ? `<button class="btn" data-action="ob-go" data-step="rol">${esc(t('ob.dc.igualmente'))}</button>` : continuar('rol');
     return `<div class="ob wide">${cabeza('datacheck')}<h1>${esc(t('ob.dc.titulo'))}</h1><p class="lead">${esc(t('ob.dc.lead'))}</p><div class="panel">
       ${K.statusBar(ver, esc(t('dc.veredicto.' + dc.veredicto) + '. ' + t('ob.dc.texto.' + dc.veredicto)), [esc(t('fiab.bienDe', { bien: f.bien, n: f.comprobaciones.length })), esc(t('calidad.tile.nivel') + ' ' + t('fiab.nivel.' + f.nivel).toLowerCase())])}
       ${dc.bloqueos.length ? `<div class="notice bad small"><ul>${dc.bloqueos.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul></div>` : ''}
@@ -121,7 +133,7 @@
     const elegida = (campo) => { const g = S.cfg.columnas && S.cfg.columnas[campo]; if (g && titulos.indexOf(g) >= 0) return g; const i = auto[campo]; const j = Array.isArray(i) ? i[0] : i; return j != null ? cp.pendientes[0].cabecera[j] : ''; };
     const campos = N.OBLIGATORIOS.concat(['resumen'], N.RECOMENDADOS);
     const fila = (campo) => { const ob = N.OBLIGATORIOS.indexOf(campo) >= 0, v = elegida(campo);
-      return `<div class="field col-campo"><label>${esc(t('columnas.campo.' + campo))}${ob ? ` <span class="t-bad">${esc(t('columnas.obligatoria'))}</span>` : ''}</label><select name="${esc(campo)}"><option value="">${esc(t('columnas.noEsta'))}</option>${titulos.map((h) => `<option value="${esc(h)}" ${h === v ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select><div class="tiny muted">${esc(t('columnas.ayuda.' + campo))}</div></div>`; };
+      return `<div class="field col-campo"><label>${esc(t('columnas.campo.' + campo))}${ob ? ` <span class="t-bad">${esc(t('columnas.obligatoria'))}</span>` : ''}</label><select name="${esc(campo)}"><option value="">${esc(t('columnas.noEsta'))}</option>${titulos.map((h) => `<option value="${esc(h)}" ${h === v ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select><div class="tiny muted">${esc(t('columnas.ayuda.' + campo))}${campo === 'resuelta' ? ' ' + esc(t('columnas.ayuda.resueltaNecesaria')) : ''}</div></div>`; };
     return `<div class="ob wide">${cabeza('data')}<h1>${esc(t('columnas.titulo'))}</h1><p class="lead">${esc(t('columnas.lead', { f: cp.pendientes.map((p) => p.fichero).join(', ') }))}</p>
       <div class="panel"><form id="form-col" class="grid cols-2" onsubmit="return false">${campos.map(fila).join('')}</form>
       <p class="tiny muted" style="margin-top:10px">${esc(t('columnas.nota'))}</p>

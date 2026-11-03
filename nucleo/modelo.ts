@@ -124,6 +124,10 @@ export interface InformeIngesta {
   ordenFechas?: 'dm' | 'md';
   /** Ficheros que no se han podido leer porque falta una columna obligatoria: sus títulos, para elegirla a mano. */
   columnasPendientes?: { fichero: string; cabecera: string[]; faltan: string[] }[];
+  /** Fechas imposibles (anteriores a 2000 o futuras) que se han ignorado. */
+  fechasImposibles?: number;
+  /** Nombres de equipo que solo cambiaban en mayúsculas o espacios y se han unido. */
+  equiposUnidos?: number;
 }
 
 /** Una épica del origen. No se mide como trabajo: sirve para la vista de épicas (avance por sus hijas, vencimiento). */

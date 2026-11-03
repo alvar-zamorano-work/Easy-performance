@@ -53,7 +53,7 @@
   function borrar(id) { S.cortes = S.cortes.filter((c) => c.id !== id); guardar(); }
   function borrarTodo() { S.cortes = []; S.cortesDemo = []; guardar(); }
 
-  const RANGO = { estable: 0, provisional: 1, alerta: 2, poco_fiable: 3 };
+  const RANGO = { estable: 0, provisional: 1, revisar: 1, alerta: 2, poco_fiable: 3 };
   /** Sentido del cambio de una medida entre dos cortes según el catálogo: mejora, empeora o igual. */
   function sentido(id, antes, ahora) {
     if (antes == null || ahora == null) return null;

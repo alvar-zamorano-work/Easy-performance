@@ -351,7 +351,8 @@
         <td><input class="sm num" type="number" min="0" step="0.5" data-change="eq-fte" data-eq="${esc(v.valor)}" value="${esc(isFinite(+fte[v.valor]) && fte[v.valor] != null ? +fte[v.valor] : '')}"></td>
         <td><input class="sm num" type="number" min="0" step="100" data-change="eq-coste" data-eq="${esc(v.valor)}" value="${esc(isFinite(+coste[v.valor]) && coste[v.valor] != null ? +coste[v.valor] : '')}"></td></tr>`;
     }).join('') : '';
-    return K.statusBar('neutral', esc(t('equipos.titular', { n: medidos.length, campo: t('campo.' + campo) })), [esc(t('equipos.items1')), esc(t('equipos.items2'))])
+    // Sin campo de equipo se mide todo el trabajo como un solo equipo: lo dice así, no "0 equipos"
+    return K.statusBar('neutral', esc(campo === 'todos' ? t('equipos.titularTodo') : t('equipos.titular', { n: medidos.length, campo: t('campo.' + campo) })), [esc(t('equipos.items1')), esc(t('equipos.items2'))])
       + `<div class="ficha"><div class="field"><label>${esc(t('equipos.campo'))}</label><select data-change="eq-campo">${opciones.map((o) => `<option value="${esc(o.id)}" ${o.id === campo ? 'selected' : ''}>${esc(nombreOp(o))}</option>`).join('')}</select></div>
         ${filas ? `<div class="table-wrap" style="margin-top:12px"><table><tr><th>${esc(t('equipos.col.equipo'))}</th><th class="num">${esc(t('equipos.col.tareas'))}</th><th>${esc(t('equipos.col.tipo'))}</th><th>${esc(t('equipos.col.proveedor'))}</th><th>${esc(t('equipos.col.area'))}</th><th>${esc(t('equipos.col.fte'))}</th><th>${esc(t('equipos.col.coste'))}</th></tr>${filas}</table></div>` : ''}
         <p class="tiny muted" style="margin-top:8px">${esc(t('equipos.nota'))}</p></div>`;
@@ -428,7 +429,7 @@
     if (i === 0) {
       const alerta = eqs.filter((e) => e.estado === 'alerta');
       return cerrar + `<div class="slide title">${cab(esc(t('presentar.titulo')), esc(t('presentar.sub', { n: eqs.length, k: vm.semanas.K, f: fecha(vm.fechaDatos) })))}
-        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
+        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
     }
     if (i === ultima) {
       return cerrar + `<div class="slide">${cab(esc(t('resumen.primero')), esc(t('presentar.ultimaSub')))}${recs.length ? `<div class="ficha list big">${recs.slice(0, 4).map(K.recFila).join('')}</div>` : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}${nav}</div>`;
@@ -436,7 +437,7 @@
     const e = eqs[i - 1], r = recs.filter((x) => x.equipos.indexOf(e.nombre) >= 0)[0];
     return cerrar + `<div class="slide">${cab(esc(nombreEquipo(e.nombre)), esc(e.fiabilidad ? t('fiab.equipoBien', { bien: e.fiabilidad.bien, n: e.fiabilidad.medibles }) : ''), K.equipoChip(e))}
       <div class="tiles">${K.destacados().map((id) => K.tile(e, id)).join('')}</div>
-      <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(t('equipo.todoNormal'))}</p>`)}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
+      <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(EP.vistas.textoSinCambios(e))}</p>`)}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
   }
 
   // ---------- resumen redactado ----------
@@ -447,6 +448,9 @@
     const alerta = eqs.filter((e) => e.cambios.length);
     if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t('narr.sinCambios'));
+    // Lo que hay que revisar antes de leer las cifras (cierres masivos, saltos, lo normal era cero)
+    const revisar = eqs.filter((e) => e.revisarDato && e.revisarDato.length);
+    if (revisar.length) b1.push(t('narr.revisar', { e: lista(revisar.map((e) => nombreEquipo(e.nombre) + ' (' + lista(e.revisarDato.map(nombreMedida)).toLowerCase() + ')')) }));
     const estables = eqs.filter((e) => e.estado === 'estable').map((e) => nombreEquipo(e.nombre));
     if (estables.length && alerta.length) b1.push(t('narr.estables', { e: lista(estables) }));
     const f = vm.fiabilidad;

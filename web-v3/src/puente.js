@@ -68,6 +68,28 @@
     const total = o.valores.reduce((s, v) => s + v.n, 0);
     return o.valores.filter((v) => v.n / total >= 0.02).map((v) => v.valor);
   }
+  /**
+   * Configuración guardada con un nombre de equipo que ahora llega escrito distinto (solo mayúsculas o espacios, que la
+   * lectura ya une): se pasa al nombre actual para que no se pierdan equipos elegidos, FTE, coste ni proveedores.
+   */
+  const claveNombre = (v) => String(v).replace(/\s+/g, ' ').trim().toLocaleLowerCase('es');
+  function migrarNombres(cfg, det) {
+    const o = opcion(det, campo(cfg, det));
+    if (!o || o.id === 'todos') return false;
+    const actual = new Map(o.valores.map((v) => [claveNombre(v.valor), v.valor]));
+    const nuevo = (n) => actual.get(claveNombre(n)) || n;
+    let cambio = false;
+    if (Array.isArray(cfg.equipos)) {
+      const l = [...new Set(cfg.equipos.map(nuevo))];
+      if (JSON.stringify(l) !== JSON.stringify(cfg.equipos)) { cfg.equipos = l; cambio = true; }
+    }
+    ['fte', 'coste', 'equiposInfo', 'fteOrigen', 'limites'].forEach((k) => {
+      const m = cfg[k];
+      if (!m || typeof m !== 'object') return;
+      Object.keys(m).forEach((n) => { const nn = nuevo(n); if (nn !== n && m[nn] == null) { m[nn] = m[n]; delete m[n]; cambio = true; } });
+    });
+    return cambio;
+  }
   // El mapeo de estados tiene tres capas: la propuesta del adaptador, la propuesta de la IA (cfg.mapeoIA, sin confirmar)
   // y lo que el usuario ha confirmado (cfg.mapeoEstados). Solo lo confirmado cuenta como revisado.
   // Un cliente de la v0 trae etapas (cfg.etapas) revisadas en su día: cuentan como confirmadas.
@@ -189,15 +211,28 @@
     const fe = fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
     const bien = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado === 'bien').length : null;
     const medibles = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado !== 'sin').length : null;
+    // Un cierre masivo en las semanas que se miden: las entregas de esas semanas no son de fiar, se marcan para revisar
+    const ctx = r.preparacion.ctx, desdeVentana = new Date(ctx.semanaFin.getTime() - 7 * 864e5 * ctx.K);
+    const masivos = ((eq.calidad && eq.calidad.diasMasivos) || []).filter((x) => new Date(x.fecha) >= desdeVentana && new Date(x.fecha) < ctx.semanaFin);
+    let medidasEq = eq.medidas;
+    if (masivos.length) {
+      medidasEq = Object.assign({}, eq.medidas);
+      // Las medidas que cuentan lo terminado: entregas y velocidad (puntos terminados)
+      ['entregas', 'velocidad'].forEach((id) => { const m = eq.medidas[id]; if (m && m.disponible && !m.revisar) medidasEq[id] = Object.assign({}, m, { revisar: 'masivo', diasMasivos: masivos }); });
+    }
+    eq = Object.assign({}, eq, { medidas: medidasEq });
     const cambios = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => malo(x.m))
       .sort((a, b) => (b.m.estado === 'critico' ? 1 : 0) - (a.m.estado === 'critico' ? 1 : 0));
     const refs = ['entregas', 'bugs'].map((id) => eq.medidas[id]).filter((m) => m && m.disponible);
     const provisional = refs.some((m) => m.referencia !== 'establecida');
     const pocoFiable = !!(fe && fe.revisar >= 3);
-    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : provisional ? 'provisional' : 'estable';
+    // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
+    const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
+    const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
+    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : 'estable';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios,
+      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -248,7 +283,13 @@
     const cobertura = num(porId.equipo), tareas = lectura.informe.tareas, semanas = r.modelo.semanas.length;
     if (tareas < 50) bloqueos.push({ clave: 'dc.bloqueo.tareas', p: { n: tareas } });
     if (cobertura != null && cobertura < 0.5) bloqueos.push({ clave: 'dc.bloqueo.equipo', p: { n: Math.round(cobertura * 100) } });
-    if (semanas < 4) bloqueos.push({ clave: 'dc.bloqueo.semanas', p: { n: semanas } });
+    if (semanas < 4) bloqueos.push({ clave: 'dc.bloqueo.semanas', p: { n: semanas }, duro: true, accion: 'datos' });
+    // Sin entregas no hay nada que medir: se para aquí y se dice por qué, en vez de presentar ceros como normales
+    const ts = lectura.tareas || [], conFin = ts.filter((x) => x.fechas && x.fechas.terminada).length;
+    const entregadas = r.modelo.equipos.reduce((n, e) => n + (e.entregadas || 0), 0);
+    const campoFin = lectura.informe.campos ? lectura.informe.campos.resuelta : undefined;
+    if (ts.length && !conFin) bloqueos.push(campoFin === true || campoFin === 'vacio' ? { clave: 'dc.bloqueo.soloAbierto', duro: true, accion: 'datos' } : { clave: 'dc.bloqueo.sinFechaFin', duro: true, accion: 'datos' });
+    else if (conFin && !entregadas) bloqueos.push({ clave: 'dc.bloqueo.sinTerminado', p: { n: conFin }, duro: true, accion: 'estados' });
     const cols = columnas(cfg, det), c = contexto(cfg, det);
     cols.forEach((id) => {
       const eqs = r.modelo.equipos, conDato = eqs.filter((e) => { const m = med(e, id); return m && m.disponible; });
@@ -282,5 +323,5 @@
     };
   }
 
-  window.Puente = { OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { migrarNombres, OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
 })();
