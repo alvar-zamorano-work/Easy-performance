@@ -318,7 +318,7 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
 .t-value small { font-size: 0.9333rem; font-weight: 400; color: var(--muted); margin-left: 2px; }
 .t-value.tone-bad { color: var(--bad); } .t-value.tone-good { color: var(--ok); } .t-value.tone-warn { color: var(--warn); }
 .t-unit { font-size: 0.8333rem; color: var(--muted); margin: -4px 0 6px; }
-.fb-u { display: block; font-size: 0.75rem; color: var(--muted); font-weight: 400; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fb-u { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 0.75rem; color: var(--muted); font-weight: 400; line-height: 1.3; }
 .t-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.8333rem; color: var(--muted); min-height: 22px; }
 .t-warn { color: var(--warn); font-weight: 600; font-size: 0.8rem; }
 .t-bad { color: var(--bad); }

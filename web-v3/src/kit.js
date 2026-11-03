@@ -142,7 +142,12 @@
       : m && m.disponible ? (m.sinHistorico ? t('medida.sinHistoricoCorto') : t('medida.sinBanda')) : m ? t('medida.noSeMide') : '';
     const motivo = m && !m.disponible ? porque(id, m) : m && m.sinHistorico ? t('medida.sinHistorico') : '';
     return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"${motivo ? ` title="${esc(motivo)}"` : ''}>
-      <span class="fb-n">${esc(nombreMedida(id))}${(() => { const u = [unidad(id), m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · '); return `<small class="fb-u" title="${esc(u)}">${esc(u)}</small>`; })()}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
+      <span class="fb-n">${esc(nombreMedida(id))}${(() => {
+        // En la fila, la unidad corta y la ventana (el texto entero, al pasar por encima)
+        const corta = [unidad(id).split(' · ').filter((x) => x !== t('medida.p85'))[0] || '', m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · ');
+        const larga = [unidad(id), m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · ');
+        return `<small class="fb-u" title="${esc(larga)}">${esc(corta)}</small>`;
+      })()}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
   }
 
   /** Indicadores destacados del rol: los elegidos en Personalizar o los cuatro primeros del Context. */
