@@ -6,6 +6,8 @@
   // ---------- cabecera ----------
   function cabecera(view) {
     const vm = S.vm;
+    // Con un bloqueo duro no hay resumen redactado, ni personalizar, ni presentar: no hay cifras de las que hablar
+    if (bloqueoDuro() && ['fuentes', 'ajustes', 'calidad'].indexOf(view) < 0) return { titulo: t('nav.' + view), sub: t('dc.bloqueo.titulo') };
     const btn = (label, action, extra, primary) => `<button class="btn${primary ? ' primary' : ''}" data-action="${action}"${extra || ''}>${esc(label)}</button>`;
     const sub = t('cabecera.datosHasta', { fecha: fecha(vm.fechaDatos), n: vm.equipos.length, k: vm.semanas.K });
     if (view === 'resumen') return { titulo: t('nav.resumen'), sub, acciones: btn(t('resumen.redactado'), 'drill', ' data-kind="resumen"') + btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') + btn(t('presentar.abrir'), 'present', '', true) };
@@ -27,7 +29,7 @@
     const recs = recsActivas(eqs);
     const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length ? 'warn' : 'good';
     // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso
-    const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional' || e.estado === 'revisar');
+    const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional');
     const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
     const f = vm.fiabilidad;
     const items = [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
@@ -109,7 +111,7 @@
   function fichaEquipo(e) {
     const vm = S.vm, dest = K.destacados();
     const c = e.cambios[0];
-    const titular = c ? esc(nombreMedida(c.id) + ': ' + valor(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? t('equipo.estable') : t('equipo.estado.' + e.estado));
+    const titular = c ? esc(nombreMedida(c.id) + ': ' + valor(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? (e.mejores && e.mejores.length ? t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) }) : t('equipo.estable')) : t('equipo.estado.' + e.estado));
     const fe = e.fiabilidad;
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;

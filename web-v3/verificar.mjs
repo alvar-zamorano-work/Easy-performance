@@ -473,6 +473,12 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const dc = await A(p, () => ({ seguir: !!document.querySelector('#onboarding [data-step="rol"].btn'), revisar: !!document.querySelector('#onboarding [data-action="ob-go"][data-step="mapeo"].primary'), texto: document.getElementById('onboarding').innerText }));
     ok('estados sin reconocer: el data check manda a revisar los estados, sin "seguir de todos modos"', !dc.seguir && dc.revisar && /ningún estado se reconoce como terminado/.test(dc.texto), JSON.stringify({ seguir: dc.seguir, revisar: dc.revisar }));
     ok('sin errores de consola con estados sin reconocer', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    // Ya dentro de la aplicación (alguien que la usaba y carga un export malo): ni cabecera ni presentación enseñan cifras
+    await A(p, () => { window.EP.S.onboarded = true; window.EP.S.view = 'resumen'; window.EP.render(); }); await quieto(p);
+    const cab = await A(p, () => ({ botones: document.getElementById('page-actions').innerText, bloqueo: !!document.querySelector('#page [data-tipo="bloqueo"]') }));
+    await A(p, () => { const b = document.createElement('button'); b.dataset.action = 'present'; b.id = 'x-present'; document.body.appendChild(b); }); await p.click('#x-present'); await p.waitForTimeout(200);
+    const pres = await A(p, () => window.EP.S.presenting);
+    ok('bloqueo dentro de la aplicación: sin resumen redactado ni presentación', cab.bloqueo && !/Presentar|Resumen redactado/.test(cab.botones) && !pres, JSON.stringify({ cab, pres }));
     await p.context().close();
   }
   // Solo trabajo abierto: lo dice al cargar
@@ -489,6 +495,24 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const f = await A(p, (n) => { const e = window.EP.S.vm.equipos.find((x) => x.nombre === n); return { estado: e.estado, pie: window.EP.vistas.pieFicha(e), chip: [...document.querySelectorAll('.ficha')].filter((x) => x.textContent.indexOf(n) >= 0).map((x) => x.textContent).join(' ').slice(0, 400) }; }, EQUIPO_SALTO);
     // El equipo puede tener además otra alerta: el pie dice las dos cosas, y nunca "normal" o "mejor"
     ok('cierre masivo: la ficha pide revisar el dato', (f.estado === 'revisar' || f.estado === 'alerta') && /Revisar el dato: Entregas/.test(f.pie) && !/Mejor de lo normal|Todo dentro de lo normal/.test(f.pie), JSON.stringify({ estado: f.estado, pie: f.pie }));
+    await p.context().close();
+  }
+  // Un cierre masivo de hace 9 semanas no marca las entregas de ahora
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'masivoFuera'); await terminar(p);
+    const m = await A(p, (n) => { const e = window.EP.S.vm.equipos.find((x) => x.nombre === n); return { revisar: e.medidas.entregas.revisar || null, dias: (e.medidas.entregas.diasMasivos || []).length }; }, EQUIPO_SALTO);
+    ok('cierre masivo fuera de las semanas medidas: no marca las entregas de ahora', !m.revisar, JSON.stringify(m));
+    await p.context().close();
+  }
+  // Configuración guardada con un nombre escrito de otra forma: el equipo elegido y su FTE no se pierden
+  {
+    const p = await pagina(1280, 800);
+    await A(p, () => localStorage.setItem('easyperformance.config.v2', JSON.stringify({ campoEquipo: 'equipo', equipos: ['PORTAL CLIENTES', 'Datos'], fte: { 'PORTAL CLIENTES': 5 } })));
+    await p.reload(); await p.waitForTimeout(500);
+    await cargar(p, 'equiposMayusculas');
+    const c = await A(p, () => ({ medidos: window.EP.S.vm.equiposMedidos, fte: window.EP.S.cfg.fte }));
+    ok('configuración con un nombre antiguo: se pasa al nombre actual', c.medidos.length === 2 && c.medidos.indexOf('Datos') >= 0 && Object.values(c.fte)[0] === 5 && !c.fte['PORTAL CLIENTES'], JSON.stringify(c));
     await p.context().close();
   }
   // Sin tiempo en cada estado: la pregunta de ritmo responde "En parte", nunca "Sí"

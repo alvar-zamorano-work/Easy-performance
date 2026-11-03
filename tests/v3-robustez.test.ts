@@ -9,6 +9,8 @@ import { detectar } from '../nucleo/detectar.ts';
 import { calcular } from '../nucleo/calcular.ts';
 import { estadoMedida, revisarComparacion, inicioReferencia } from '../nucleo/semaforo.ts';
 import { diasMasivos } from '../nucleo/calidad.ts';
+import { unificarAgrupadores } from '../adaptadores/comun/limpieza.ts';
+import type { Tarea } from '../nucleo/modelo.ts';
 import { CATALOGO } from '../nucleo/catalogo.ts';
 import type { Derivada } from '../nucleo/tipos.ts';
 
@@ -37,7 +39,8 @@ test('fechas imposibles: se ignoran, se avisa y no mueven la fecha del análisis
   const r = medir('fechaImposible');
   assert.equal(r.det.fechaRef.getTime(), base.det.fechaRef.getTime(), 'fecha del análisis');
   assert.equal(r.lectura.informe.fechasImposibles, 2);
-  assert.equal(r.lectura.tareas.length, base.lectura.tareas.length - 1, 'la tarea creada en 1999 sale');
+  // Sale la creada en 1999 y también la terminada en 2031: si no, contaría como abierta para siempre
+  assert.equal(r.lectura.tareas.length, base.lectura.tareas.length - 2);
   assert.ok(r.lectura.informe.avisos.some((a) => /impossible dates|fechas imposibles/.test(a.texto)), 'aviso');
 });
 
@@ -108,12 +111,42 @@ test('comparación dudosa: cero en entregas sí, cero en regularidad no; salto s
 test('inicio de la referencia: un arranque en las primeras semanas no cambia nada; uno tardío sí', () => {
   assert.equal(inicioReferencia([0, 2, 3, 4, 5], 4), 0);
   assert.equal(inicioReferencia([0, 0, 0, 0, 0, 1, 2], 4), 8);
-  assert.equal(inicioReferencia([0, 0, 0], 4), 3);
+  assert.equal(inicioReferencia([0, 0, 0], 4), 0, 'sin ninguna entrega no se recorta nada');
 });
 
-test('días con cierres masivos: 15 o más y 5 veces lo normal del equipo', () => {
+test('días con cierres masivos: 15 o más y el triple de los días grandes del equipo', () => {
   const d = (dia: number, n: number) => Array.from({ length: n }, () => ({ t: { fechas: { terminada: new Date(2026, 9, dia, 10) } } }) as unknown as Derivada);
   const normales = [1, 2, 3, 6, 7, 8].flatMap((x) => d(x, 2));
   assert.equal(diasMasivos(normales.concat(d(9, 20))).length, 1);
   assert.equal(diasMasivos(normales.concat(d(9, 9))).length, 0, 'menos de 15');
+});
+
+test('reviews de Scrum: cerrar mucho cada dos semanas es el normal del equipo, no un cierre masivo', () => {
+  const d = (dia: number, n: number) => Array.from({ length: n }, () => ({ t: { fechas: { terminada: new Date(2026, 8, dia, 17) } } }) as unknown as Derivada);
+  const sprint = [4, 18].flatMap((x) => d(x, 16)).concat([1, 2, 8, 9, 15, 16, 22, 23].flatMap((x) => d(x, 2))).concat([25, 26].flatMap((x) => d(x, 16)));
+  assert.deepEqual(diasMasivos(sprint), []);
+  assert.equal(diasMasivos(sprint.concat(d(29, 60))).length, 1, 'una limpieza de 60 sí destaca');
+});
+
+test('salto solo en medidas de actividad: una mejora real de una proporción no se marca', () => {
+  const r = { lo: 0.05, hi: 0.12, med: 0.08, n: 12 };
+  for (const id of ['agent_readiness', 'estimacion', 'valor']) {
+    const def = CATALOGO.medidas[id] || { dir: 'mas', formato: 'pct' };
+    assert.equal(revisarComparacion(id, 0.45, r, def as never), null, id);
+  }
+});
+
+test('equipo sin ninguna entrega en un export mixto: el resto de sus medidas conserva su referencia', () => {
+  const r = medir('equipoSinEntregas');
+  const e = r.modelo.equipos.find((x) => x.nombre === EQUIPO_TARDIO)!;
+  assert.equal(e.entregadas, 0);
+  assert.ok(e.medidas.wip.ref, 'trabajo en curso con su referencia');
+});
+
+test('nombre unido: la misma forma en cualquier export, sea cual sea la más frecuente', () => {
+  const t = (v: string) => ({ agrupadores: { equipo: v } }) as unknown as Tarea;
+  const a = [t('Pagos'), t('Pagos'), t('PAGOS')], b = [t('Pagos'), t('PAGOS'), t('PAGOS'), t(' pagos ')];
+  unificarAgrupadores(a); unificarAgrupadores(b);
+  assert.deepEqual([...new Set(a.map((x) => x.agrupadores.equipo))], ['Pagos']);
+  assert.deepEqual([...new Set(b.map((x) => x.agrupadores.equipo))], ['Pagos']);
 });

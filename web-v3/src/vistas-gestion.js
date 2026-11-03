@@ -429,7 +429,7 @@
     if (i === 0) {
       const alerta = eqs.filter((e) => e.estado === 'alerta');
       return cerrar + `<div class="slide title">${cab(esc(t('presentar.titulo')), esc(t('presentar.sub', { n: eqs.length, k: vm.semanas.K, f: fecha(vm.fechaDatos) })))}
-        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
+        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
     }
     if (i === ultima) {
       return cerrar + `<div class="slide">${cab(esc(t('resumen.primero')), esc(t('presentar.ultimaSub')))}${recs.length ? `<div class="ficha list big">${recs.slice(0, 4).map(K.recFila).join('')}</div>` : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}${nav}</div>`;
@@ -448,6 +448,9 @@
     const alerta = eqs.filter((e) => e.cambios.length);
     if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t('narr.sinCambios'));
+    // Lo que hay que revisar antes de leer las cifras (cierres masivos, saltos, lo normal era cero)
+    const revisar = eqs.filter((e) => e.revisarDato && e.revisarDato.length);
+    if (revisar.length) b1.push(t('narr.revisar', { e: lista(revisar.map((e) => nombreEquipo(e.nombre) + ' (' + lista(e.revisarDato.map(nombreMedida)).toLowerCase() + ')')) }));
     const estables = eqs.filter((e) => e.estado === 'estable').map((e) => nombreEquipo(e.nombre));
     if (estables.length && alerta.length) b1.push(t('narr.estables', { e: lista(estables) }));
     const f = vm.fiabilidad;

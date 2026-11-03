@@ -17,7 +17,7 @@ export function fechaPosible(d: Date | null | undefined, hoy: Date): boolean {
 const CAMPOS_FECHA: (keyof Tarea['fechas'])[] = ['creada', 'actualizada', 'empezada', 'terminada', 'cambio_estado', 'primera_respuesta'];
 
 /** Nombre normalizado para comparar: sin espacios de más y sin distinguir mayúsculas. */
-const clave = (v: string) => v.replace(/\s+/g, ' ').trim().toLocaleLowerCase('es');
+export const clave = (v: string) => v.replace(/\s+/g, ' ').trim().toLocaleLowerCase('es');
 
 /**
  * Valores de agrupador (equipo, componente, proyecto...) que solo cambian en mayúsculas o espacios se unen
@@ -42,7 +42,9 @@ export function unificarAgrupadores(tareas: Tarea[]): Record<string, number> {
     const canonica = new Map<string, string>();
     let n = 0;
     cuenta.forEach((formas, k) => {
-      const orden = [...formas.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      // Forma estable entre exports: antes una con mayúsculas y minúsculas (ni todo mayúsculas ni todo minúsculas), luego la más frecuente
+      const mixta = (x: string) => (x !== x.toLocaleUpperCase('es') && x !== x.toLocaleLowerCase('es') ? 0 : 1);
+      const orden = [...formas.entries()].sort((a, b) => mixta(a[0]) - mixta(b[0]) || b[1] - a[1] || a[0].localeCompare(b[0]));
       canonica.set(k, orden[0][0]);
       if (formas.size > 1) n += formas.size - 1;
     });
@@ -62,12 +64,15 @@ export function unificarAgrupadores(tareas: Tarea[]): Record<string, number> {
 export function limpiarLectura(lectura: Lectura, hoyEntrada?: Date | string | null): Lectura {
   const hoy = hoyEntrada ? new Date(hoyEntrada) : new Date();
   let fechas = 0, fuera = 0;
+  const terminadas = new Set(lectura.tareas.filter((t) => t.fechas.terminada && !fechaPosible(t.fechas.terminada, hoy)).map((t) => t.id));
+  const terminadaImposible = (t: Tarea, _h: Date) => terminadas.has(t.id);
   const tareas = lectura.tareas.filter((t) => {
     CAMPOS_FECHA.forEach((c) => {
       const d = t.fechas[c] as Date | null;
       if (d && !fechaPosible(d, hoy)) { fechas++; (t.fechas as unknown as Record<string, Date | null>)[c] = null; }
     });
-    if (!t.fechas.creada) { fuera++; return false; }
+    // Sin fecha de creación no se puede medir; con un terminado imposible tampoco: si no, contaría como abierta para siempre
+    if (!t.fechas.creada || (terminadaImposible(t, hoy))) { fuera++; return false; }
     return true;
   });
   const inf = lectura.informe;
@@ -77,13 +82,15 @@ export function limpiarLectura(lectura: Lectura, hoyEntrada?: Date | string | nu
     inf.avisos.push({
       tipo: 'aviso',
       texto: fechas.toLocaleString(regional()) + Tx(' impossible dates (before 2000 or in the future) were ignored', ' fechas imposibles (anteriores a 2000 o futuras) se han ignorado')
-        + (fuera ? Tx('; ', '; ') + fuera.toLocaleString(regional()) + Tx(' tasks were left out because it was their creation date.', ' tareas se han dejado fuera porque era su fecha de creación.') : '.'),
+        + (fuera ? Tx('; ', '; ') + fuera.toLocaleString(regional()) + Tx(' tasks were left out because it was their creation or done date.', ' tareas se han dejado fuera porque era su fecha de creación o de terminado.') : '.'),
     });
   }
   const unidos = unificarAgrupadores(tareas);
-  if (unidos.equipo) {
-    inf.equiposUnidos = unidos.equipo;
-    inf.avisos.push({ tipo: 'aviso', texto: unidos.equipo.toLocaleString(regional()) + Tx(' team names that only differed in capitals or spaces were joined.', ' nombres de equipo que solo cambiaban en mayúsculas o espacios se han unido.') });
+  const otros = Object.keys(unidos).filter((k) => k !== 'equipo').reduce((n, k) => n + unidos[k], 0);
+  if (unidos.equipo) inf.equiposUnidos = unidos.equipo;
+  if (unidos.equipo || otros) {
+    const partes = [unidos.equipo ? unidos.equipo.toLocaleString(regional()) + Tx(' team names', ' nombres de equipo') : '', otros ? otros.toLocaleString(regional()) + Tx(' values of other fields (component, project, label)', ' valores de otros campos (componente, proyecto, etiqueta)') : ''].filter(Boolean);
+    inf.avisos.push({ tipo: 'aviso', texto: partes.join(Tx(' and ', ' y ')) + Tx(' that only differed in capitals or spaces were joined.', ' que solo cambiaban en mayúsculas o espacios se han unido.') });
   }
   return { ...lectura, tareas };
 }

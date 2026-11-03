@@ -882,7 +882,7 @@
  "prev.normalSem.1": "Lo normal: 1 semana",
  "prev.normalSem.n": "Lo normal: {n} semanas",
  "dc.bloqueo.soloAbierto": "El export solo trae trabajo abierto: ninguna tarea tiene fecha de terminado. Sin trabajo terminado no se pueden medir las entregas. Exporta sin filtrar por estado.",
- "dc.bloqueo.sinFechaFin": "El export no trae la fecha de terminado (en Jira, Resolved o Resuelta). Sin ella no se pueden medir las entregas. Vuelve a exportar con esa columna o elígela a mano.",
+ "dc.bloqueo.sinFechaFin": "El export no trae la fecha de terminado (en Jira, Resolved o Resuelta). Sin ella no se pueden medir las entregas. Vuelve a exportar con esa columna.",
  "dc.bloqueo.sinTerminado": "{n} tareas tienen fecha de terminado, pero ningún estado se reconoce como terminado. Revisa cómo se traducen los estados: hasta entonces las entregas saldrían a cero.",
  "dc.bloqueo.titulo": "Con estos datos no se puede medir",
  "dc.accion.estados": "Revisar los estados",
@@ -905,5 +905,6 @@
  "resumen.sinRango": "Aún sin rango normal en {m}: faltan semanas",
  "resumen.cambioLimite": "Supera el límite: {m}",
  "medida.masivo": "Cierre masivo en las semanas medidas: {dias}. Si fue una limpieza del tablero, estas entregas no son de fiar.",
- "medida.masivoDia": "{n} tareas el {f}"
+ "medida.masivoDia": "{n} tareas el {f}",
+ "narr.revisar": "Antes de leer las cifras, revisar el dato en {e}."
 }

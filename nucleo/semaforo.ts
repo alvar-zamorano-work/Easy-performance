@@ -29,14 +29,15 @@ interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?:
 const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
 
 /**
- * Cuándo la comparación con lo normal no es de fiar: lo normal era cero (no había actividad de este tipo) o el valor
- * es más del triple de lo normal por el lado bueno, lo típico de una limpieza del tablero o de un cambio en cómo se registra.
+ * Cuándo la comparación con lo normal no es de fiar, solo en medidas de actividad (entregas, velocidad, entregas por
+ * persona): lo normal era cero, o el valor es más del triple de lo normal por el lado bueno, lo típico de una limpieza
+ * del tablero o de un cambio en cómo se registra. En proporciones (valor, estimación, agentes) triplicar puede ser una mejora real.
  */
 export function revisarComparacion(id: string, v: number | null | undefined, ref: Rango | undefined, def: DefSemaforo): Revisar | null {
   if (v == null || !ref || !def.dir) return null;
   const delta = DELTA_MIN[id] || 0;
   if (ACTIVIDAD[id] && ref.hi === 0 && ref.lo === 0 && Math.abs(v) >= Math.max(delta, 1e-9)) return 'cero';
-  if (def.dir === 'mas' && ref.hi > 0 && v > 3 * ref.hi && v - ref.hi >= 2 * delta) return 'salto';
+  if (ACTIVIDAD[id] && def.dir === 'mas' && ref.hi > 0 && v > 3 * ref.hi && v - ref.hi >= 2 * delta) return 'salto';
   return null;
 }
 
@@ -59,7 +60,8 @@ export const ARRANQUE_TARDIO = 3;
  */
 export function inicioReferencia(entregas: number[], win: number): number {
   const primera = entregas.findIndex((x) => x > 0);
-  if (primera < 0) return entregas.length;
+  // Sin ninguna entrega no hay arranque que buscar: el resto de medidas (trabajo en curso, pendiente...) sigue con su referencia
+  if (primera < 0) return 0;
   return primera >= ARRANQUE_TARDIO ? primera + Math.max(1, win) - 1 : 0;
 }
 

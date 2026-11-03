@@ -128,5 +128,19 @@ export function variantes(): Record<string, Variante> {
     sal.filas.push(f);
   }
   out.salto = v('salto', 'Un equipo cierra 120 tareas en un día al final del export (limpieza del tablero)', sal);
+
+  // El mismo cierre masivo, pero 9 semanas antes del final: fuera de las semanas que se miden
+  const fuera = copia(o); const diaF = new Date(fin - 63 * 864e5); diaF.setHours(10, 0, 0, 0);
+  for (let k = 0; k < 40; k++) {
+    const f = modelo.slice(); f[iKey] = 'VIEJA-' + (k + 1); f[iTipo] = 'Task';
+    f[iCre6] = jira(new Date(diaF.getTime() - (30 + k) * 864e5)); f[iRes6] = jira(new Date(diaF.getTime() + k * 6e4 * 3)); f[iUpd] = f[iRes6]; f[iCat6] = 'Done'; f[iTis] = '';
+    fuera.filas.push(f);
+  }
+  out.masivoFuera = v('masivo-fuera', 'Un cierre masivo de 40 tareas 9 semanas antes del final del export', fuera);
+
+  // Un equipo sin ninguna tarea terminada en un export donde los demás sí entregan
+  const sinEnt = copia(o), iEq7 = col(sinEnt, 'Custom field (Team)'), iSt7 = col(sinEnt, 'Status'), iCat7 = col(sinEnt, 'Status category'), iRes7 = col(sinEnt, 'Resolved');
+  sinEnt.filas.forEach((f) => { if (f[iEq7] === EQUIPO_TARDIO) { f[iRes7] = ''; if (f[iSt7] === 'Done') { f[iSt7] = 'In Progress'; f[iCat7] = 'In Progress'; } } });
+  out.equipoSinEntregas = v('equipo-sin-entregas', 'Un equipo sin ninguna tarea terminada; los demás entregan', sinEnt);
   return out;
 }

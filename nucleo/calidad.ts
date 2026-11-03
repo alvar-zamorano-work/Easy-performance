@@ -19,7 +19,10 @@ export function cierresEnBloque(tareas: Tarea[]): CierreEnBloque[] {
   return out;
 }
 
-/** Días en que un equipo cerró 15 o más tareas y al menos 5 veces lo de un día normal suyo con cierres. */
+/**
+ * Días en que un equipo cerró 15 o más tareas y al menos el triple que sus días grandes habituales (percentil 90 de
+ * los demás días con cierres). Un equipo Scrum que cierra mucho en cada review no cuenta: sus reviews son su normal.
+ */
 export function diasMasivos(entregadas: Derivada[]): { fecha: Date; n: number }[] {
   const porDia = new Map<string, { fecha: Date; n: number }>();
   entregadas.forEach((d) => {
@@ -28,10 +31,13 @@ export function diasMasivos(entregadas: Derivada[]): { fecha: Date; n: number }[
     const x = porDia.get(k) || { fecha: new Date(f.getFullYear(), f.getMonth(), f.getDate()), n: 0 };
     x.n++; porDia.set(k, x);
   });
-  const ns = [...porDia.values()].map((x) => x.n);
-  if (ns.length < 5) return [];
-  const normal = cuantil(ns, 0.5)!;
-  return [...porDia.values()].filter((x) => x.n >= 15 && x.n >= 5 * normal).sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
+  const dias = [...porDia.values()];
+  if (dias.length < 5) return [];
+  return dias.filter((x) => {
+    if (x.n < 15) return false;
+    const otros = dias.filter((y) => y !== x).map((y) => y.n);
+    return x.n >= 3 * Math.max(1, cuantil(otros, 0.9)!);
+  }).sort((a, b) => a.fecha.getTime() - b.fecha.getTime());
 }
 
 export function calidadEquipo(items: Derivada[], c: ContextoCalculo, sp: InfoSprints, det: Deteccion): CalidadEquipo {
