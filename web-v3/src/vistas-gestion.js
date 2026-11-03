@@ -5,7 +5,8 @@
   const { S, N, t, tn, esc, valor, nombreMedida, nombreEquipo, fecha, cat, lista } = EP;
   const IA = N.IA;
   const proveedor = () => IA.proveedorAnthropic({ clave: S.ia.clave, modelo: S.ia.modelo || IA.MODELO_POR_DEFECTO });
-  const hayIa = () => !!S.ia.clave;
+  // La IA está en Labs: sin Labs no hay botones de IA aunque quede una clave de la sesión
+  const hayIa = () => !!S.ia.clave && !!(S.prefs && S.prefs.labs);
   /** Fecha de hoy en la hora local, como aaaa-mm-dd. */
   const hoyLocal = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
@@ -65,7 +66,7 @@
     const iaCtl = hayIa() ? `<span class="row"><button class="btn sm" data-action="ia-recs" ${estado === 'trabajando' ? 'disabled' : ''}>${esc(nIa ? t('ia.otraVez') : t('ia.generar'))}</button><span class="small muted">${iaPie}</span></span>` : '';
     const tiles = `<div class="filtros">${selEquipo}${niveles}${iaCtl}</div>`;
     const primera = vistas[0];
-    const status = K.statusBar(n('alto') ? 'bad' : n('medio') ? 'warn' : 'good', primera ? esc(t('recs.loPrimero', { titulo: primera.titulo, para: K.paraQuien(primera) })) : esc(t('recs.ninguna')), [esc(t('recs.items1')), esc(t('recs.items2'))]);
+    const status = K.statusBar(n('alto') ? 'bad' : n('medio') ? 'warn' : 'good', primera ? esc(t('recs.loPrimero', { titulo: primera.titulo, para: K.paraQuien(primera) })) : esc(t('recs.ninguna')), [esc(t('recs.items1'))].concat(hayIa() ? [esc(t('recs.items2'))] : []));
     const cuerpo = vistas.length ? `<div class="fichas cols-2">${vistas.map((r) => recCard(r)).join('')}</div>` : `<div class="ficha empty">${esc(descartadas.length ? t('recs.todasDescartadas') : t('recs.ningunaFiltro'))}</div>`;
     const caja = descartadas.length ? `<details class="dismissed"><summary>${esc(tn('recs.descartadas', descartadas.length))}</summary><div class="fichas cols-2">${descartadas.map((r) => recCard(r, { descartada: true })).join('')}</div></details>` : '';
     return status + tiles + cuerpo + caja;
@@ -128,6 +129,10 @@
   function iniciativas() {
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);
     const vis = vm.iniciativas.filter((x) => x.ini.equipos.some((e) => nombres.indexOf(e) >= 0));
+    // Iniciativas de equipos que ahora no se miden (renombrados, fuera del export o no elegidos): no se esconden sin decirlo
+    const enVista = vm.equipos.map((e) => e.nombre);
+    const fueraIni = S.role === 'equipo' ? [] : vm.iniciativas.filter((x) => !x.ini.equipos.some((e) => enVista.indexOf(e) >= 0));
+    const avisoFuera = fueraIni.length ? `<div class="notice warn small">${esc(tn('ini.fueraDeMedicion', fueraIni.length, { lista: lista(fueraIni.map((x) => x.ini.nombre + ' (' + lista(x.ini.equipos.map(nombreEquipo)) + ')')) }))}</div>` : '';
     const n = (est) => vis.filter((x) => x.s.estado === est).length;
     const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('ini.paso' + i + '.t'))}</b><div class="small muted">${esc(t('ini.paso' + i + '.d', { lat: N.LATENCIA_DIAS / 7 }))}</div></div></div>`).join('')}</div>`;
     const propias = (S.cfg.iniciativas || []).map((i) => i.id);
@@ -140,16 +145,17 @@
         <div class="progress"><div class="bar"><i class="tone-neutral" style="width:${Math.round(s.progreso * 100)}%"></i></div><span class="small muted">${esc(s.completa ? t('ini.completa') : t('ini.completaEl', { f: fecha(s.completaEl) }))}</span></div>
         <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${s.control ? `<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}
         <p class="small">${esc(s.texto)}</p>${graficoIni(s)}${lect ? `<div class="notice info small"><b>${esc(t('ini.lecturaIa'))}</b> ${esc(lect.lectura)}</div>` : ''}</div>
-        <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (S.carpeta && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
+        <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (EP.carpeta && EP.carpeta.enUso() && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
     }).join('');
     const estIa = S.iaEstado.impacto;
     const iaFila = vis.length && hayIa() ? `<div class="row" style="margin:8px 0"><button class="btn sm" data-action="ia-impacto" ${estIa === 'trabajando' ? 'disabled' : ''}>${esc(estIa === 'trabajando' ? t('ia.trabajando') : t('ini.leerIa'))}</button>${estIa === 'error' ? `<span class="small t-warn">${esc(t('ia.error', { e: S.iaError.impacto || '' }))}</span>` : ''}</div>` : '';
     const status = K.statusBar(n('empeora') ? 'bad' : n('funciona') ? 'good' : 'neutral', esc(vis.length ? tn('ini.titular', vis.length, { m: n('midiendo'), f: n('funciona') }) : t('ini.ninguna')), [esc(t('ini.items1')), esc(t('ini.items2'))]);
-    return status + (S.iniForm ? formulario() : '') + iaFila
+    return status + avisoFuera + (S.iniForm ? formulario() : '') + iaFila
       + (vis.length ? `<div class="fichas cols-2">${tarjetas}</div>` : `<div class="ficha empty">${esc(t('ini.vacio'))}</div>`) + `<details class="mas"><summary>${esc(t('ini.como'))}</summary>${pasos}</details>`;
   }
   function formulario() {
-    const f = S.iniForm, eqs = S.vm.equipos;
+    // Con el rol Equipo, una iniciativa es de su equipo: no se puede guardar una de otro que luego no se vería
+    const f = S.iniForm, eqs = S.role === 'equipo' ? EP.visibles() : S.vm.equipos;
     const medidas = Object.keys(N.MEDIDAS_INICIATIVA).filter((id) => cat().medidas[id]);
     return `<div class="ficha" id="form-ini"><h3>${esc(t('ini.nueva'))}</h3><form class="grid cols-2" onsubmit="return false">
       <div class="field span-2"><label>${esc(t('ini.f.nombre'))}</label><input type="text" name="nombre" value="${esc(f.nombre || '')}" placeholder="${esc(t('ini.f.nombreEj'))}"></div>
@@ -384,7 +390,16 @@
   }
   const info = (eq) => { S.cfg.equiposInfo = S.cfg.equiposInfo || {}; S.cfg.equiposInfo[eq] = S.cfg.equiposInfo[eq] || { tipo: 'interno', proveedor: null, area: null }; return S.cfg.equiposInfo[eq]; };
   EP.cambio('eq-campo', (el) => aplicarCfg(() => { S.cfg.campoEquipo = el.value; delete S.cfg.equipos; }));
-  EP.cambio('eq-incluir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value); }));
+  EP.cambio('eq-incluir', () => aplicarCfg(() => {
+    S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value);
+    // Los que se dejan sin marcar a propósito no vuelven a salir como "equipos nuevos"
+    // Se suman a los descartes de antes (un equipo descartado que no viene en este export sigue descartado)
+    const sin = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:not(:checked)'), (c) => c.value);
+    S.cfg.equiposDescartados = [...new Set((S.cfg.equiposDescartados || []).filter((e) => S.cfg.equipos.indexOf(e) < 0).concat(sin))];
+  }));
+  // Equipos nuevos en un export: se añaden a la medición o se descartan, desde el aviso del Resumen
+  EP.accion('eq-nuevos-anadir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = (S.cfg.equipos || []).concat(S.vm.fuera.nuevos); }));
+  EP.accion('eq-nuevos-no', () => aplicarCfg(() => { S.cfg.equiposDescartados = (S.cfg.equiposDescartados || []).concat(S.vm.fuera.nuevos); }));
   EP.cambio('eq-tipo', (el) => aplicarCfg(() => { const i = info(el.dataset.eq); i.tipo = el.value; if (el.value !== 'proveedor') i.proveedor = null; else i.proveedor = i.proveedor || t('equipo.proveedorEj'); }));
   EP.cambio('eq-proveedor', (el) => aplicarCfg(() => { info(el.dataset.eq).proveedor = el.value.trim() || null; }));
   EP.cambio('eq-area', (el) => aplicarCfg(() => { info(el.dataset.eq).area = el.value.trim() || null; }));
@@ -399,21 +414,27 @@
   // ---------- ajustes ----------
   function ajustes() {
     const eqs = S.vm.equipos;
+    const labs = !!(S.prefs && S.prefs.labs);
+    // Labs: funciones en prueba (IA, cortes, carpeta compartida). Apagado, no aparecen.
+    // Con Labs encendido hay seis tarjetas de media anchura y Labs va en la sexta; apagado, Labs ocupa toda la fila
+    const tarjetaLabs = `<div class="card${labs ? '' : ' full'}"><h3>${esc(t('ajustes.labs'))}</h3><p class="small muted">${esc(t('ajustes.labsTexto'))}</p>
+      <label class="check"><input type="checkbox" data-change="labs" ${labs ? 'checked' : ''}> ${esc(t('ajustes.labsActivar'))}</label></div>`;
     return `<div class="grid cols-2">
-      <div class="card"><h3>${esc(t('ajustes.ia'))}</h3><p class="small muted">${esc(t('ajustes.iaTexto'))}</p>
+      ${labs ? `<div class="card"><h3>${esc(t('ajustes.ia'))}</h3><p class="small muted">${esc(t('ajustes.iaTexto'))}</p>
         <div class="field"><label for="ia-clave">${esc(t('ajustes.clave'))}</label><input type="password" id="ia-clave" value="${esc(S.ia.clave)}" placeholder="sk-ant-..." autocomplete="off"><div class="tiny muted">${esc(t('ajustes.claveNota'))}</div></div>
         <div class="field"><label for="ia-modelo">${esc(t('ajustes.modelo'))}</label><input type="text" id="ia-modelo" value="${esc(S.ia.modelo)}"></div>
         <div class="row"><button class="btn primary" data-action="ia-guardar">${esc(t('comun.guardar'))}</button><button class="btn" data-action="ia-probar" ${S.iaEstado.prueba === 'trabajando' ? 'disabled' : ''}>${esc(t('ajustes.probar'))}</button><button class="btn" data-action="ia-olvidar">${esc(t('ajustes.olvidar'))}</button></div>
-        <div class="small" style="margin-top:6px">${esc(S.iaPrueba || '')}</div></div>
+        <div class="small" style="margin-top:6px">${esc(S.iaPrueba || '')}</div></div>` : ''}
       <div class="card"><h3>${esc(t('ajustes.vista'))}</h3>
         <div class="field"><label>${esc(t('idioma.titulo'))}</label><select data-change="lang"><option value="es" ${window.I18N.lang === 'es' ? 'selected' : ''}>Español</option><option value="en" ${window.I18N.lang === 'en' ? 'selected' : ''}>English</option></select></div>
-        <div class="field"><label>${esc(t('rol.vistaPara'))}</label><select data-change="rol">${['direccion', 'pmo', 'equipo'].map((r) => `<option value="${r}" ${S.role === r ? 'selected' : ''}>${esc(t('rol.' + r))}</option>`).join('')}</select></div>
         <div class="field"><label>${esc(t('ajustes.equipoPropio'))}</label><select data-change="equipo-propio">${eqs.map((e) => `<option value="${esc(e.nombre)}" ${S.team === e.nombre ? 'selected' : ''}>${esc(nombreEquipo(e.nombre))}</option>`).join('')}</select></div></div>
       <div class="card"><h3>${esc(t('ajustes.exportar'))}</h3><p class="small muted">${esc(t('ajustes.exportarTexto'))}</p>
         <div class="row"><button class="btn" data-action="exp-docx">${esc(t('ajustes.catalogoWord'))}</button><button class="btn" data-action="exp-md">${esc(t('ajustes.catalogoMd'))}</button><button class="btn" data-action="exp-modelo">${esc(t('ajustes.modeloMedida'))}</button><button class="btn" data-action="exp-paquete">${esc(t('ajustes.paquete'))}</button></div></div>
-      <div class="card"><h3>${esc(t('ajustes.carpeta'))}</h3><p class="small muted">${esc(t('ajustes.carpetaTexto'))}</p>
-        <div class="row"><button class="btn" data-action="carpeta-elegir" ${window.showDirectoryPicker ? '' : 'disabled'}>${esc(S.carpeta ? t('ajustes.carpetaOtra') : t('ajustes.carpetaElegir'))}</button>${S.carpeta ? `<button class="btn" data-action="carpeta-leer">${esc(t('ajustes.carpetaLeer'))}</button><span class="small">${esc(t('ajustes.carpetaUsando', { n: S.carpeta.name }))}</span>` : ''}</div>${window.showDirectoryPicker ? '' : `<div class="tiny muted">${esc(t('ajustes.carpetaNoNavegador'))}</div>`}
+      <div class="card"><h3>${esc(t(labs ? 'ajustes.carpeta' : 'ajustes.datosNavegador'))}</h3>${labs ? `<p class="small muted">${esc(t('ajustes.carpetaTexto'))}</p>
+        <div class="row"><button class="btn" data-action="carpeta-elegir" ${window.showDirectoryPicker ? '' : 'disabled'}>${esc(S.carpeta ? t('ajustes.carpetaOtra') : t('ajustes.carpetaElegir'))}</button>${S.carpeta ? `<button class="btn" data-action="carpeta-leer">${esc(t('ajustes.carpetaLeer'))}</button><span class="small">${esc(t('ajustes.carpetaUsando', { n: S.carpeta.name }))}</span>` : ''}</div>${window.showDirectoryPicker ? '' : `<div class="tiny muted">${esc(t('ajustes.carpetaNoNavegador'))}</div>`}` : ''}
         <div class="row" style="margin-top:12px"><button class="btn" data-action="clear-all">${esc(t('ajustes.borrar'))}</button></div><div class="tiny muted">${esc(t('ajustes.borrarTexto'))}</div></div>
+      <div class="card"><h3>${esc(t('recorrido.titulo'))}</h3><p class="small muted">${esc(t('recorrido.ajustes'))}</p><button class="btn" data-action="recorrido-ver">${esc(t('recorrido.ver'))}</button></div>
+      ${tarjetaLabs}
       <div class="card full"><h3>${esc(t('ajustes.copia'))}</h3><p class="small muted">${esc(t('ajustes.copiaTexto'))}</p>
         <div class="row"><button class="btn" data-action="cfg-exportar" ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaExportar'))}</button><label class="btn ${S.demo ? 'disabled' : ''}"><input type="file" accept=".json,application/json" data-change="cfg-importar" hidden ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaImportar'))}</label></div>
         <div class="tiny muted">${esc(t('ajustes.copiaNota'))}</div></div>
@@ -430,7 +451,8 @@
       .then(() => { S.iaEstado.prueba = 'hecho'; EP.render(); });
   });
   EP.cambio('lang', (el) => { window.I18N.fijar(el.value); EP.guardarPrefs(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); });
-  EP.cambio('rol', (el) => { S.role = el.value; S.recFilter = 'todos'; EP.guardarPrefs(); EP.render(); });
+  // Apagar Labs cierra también el asistente si estaba abierto
+  EP.cambio('labs', (el) => { S.prefs.labs = !!el.checked; if (!S.prefs.labs) S.chat.open = false; EP.guardarPrefs(); EP.render(); });
   EP.cambio('equipo-propio', (el) => { S.team = el.value; EP.guardarPrefs(); EP.render(); });
   // Copia de la configuración: para pasar de la web a una copia local (o a otro ordenador) sin perder lo hecho.
   // Lleva configuración, iniciativas, preferencias y cortes (cifras ya calculadas). Nunca los ficheros ni la clave.
@@ -514,7 +536,7 @@
     const vm = S.vm, eqs = equipo ? vm.equipos.filter((e) => e.nombre === equipo) : EP.visibles();
     const b1 = [], b2 = [], b3 = [];
     const alerta = eqs.filter((e) => e.cambios.length);
-    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
+    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: K.conUnidad(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
     // Recomendaciones de nivel alto en equipos sin cambios: no se dice que todo va bien
     eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
@@ -555,7 +577,7 @@
     if (n && n.texto) html += `<div class="narrative">${md(n.texto)}</div><div class="tiny muted">${esc(t('narr.deIa'))}</div>`;
     else html += resumenReglas(equipo).map(([h, ls]) => `<h4>${esc(h)}</h4>${md(ls.join('\n'))}`).join('') + `<div class="tiny muted">${esc(t('narr.deReglas'))}</div>`;
     if (n && n.error) html += `<div class="notice warn small">${esc(n.error)}</div>`;
-    html += hayIa() ? `<div class="row" style="margin-top:12px"><button class="btn" data-action="ia-resumen" data-team="${esc(equipo || '')}" ${n && n.trabajando ? 'disabled' : ''}>${esc(n && n.trabajando ? t('ia.trabajando') : t('narr.conIa'))}</button></div>` : `<div class="tiny muted" style="margin-top:12px">${esc(t('narr.sinClave'))}</div>`;
+    html += hayIa() ? `<div class="row" style="margin-top:12px"><button class="btn" data-action="ia-resumen" data-team="${esc(equipo || '')}" ${n && n.trabajando ? 'disabled' : ''}>${esc(n && n.trabajando ? t('ia.trabajando') : t('narr.conIa'))}</button></div>` : S.prefs && S.prefs.labs ? `<div class="tiny muted" style="margin-top:12px">${esc(t('narr.sinClave'))}</div>` : '';
     return [t('narr.titulo', { para: equipo ? nombreEquipo(equipo) : t('rol.' + S.role) }), html];
   }
   EP.accion('ia-resumen', (el) => {
