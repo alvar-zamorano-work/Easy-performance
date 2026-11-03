@@ -1014,9 +1014,11 @@
  "equipos.nuevos.n": "{n} equipos nuevos en este export, fuera de la medición: {lista}.",
  "equipos.nuevosAnadir": "Medirlos también",
  "equipos.nuevosNo": "No medirlos",
- "equipos.fuera": "Fuera de la medición: {lista} tareas.",
+ "equipos.fuera": "Fuera de la medición: {lista}.",
  "equipos.sinEquipo.1": "1 tarea sin equipo.",
  "equipos.sinEquipo.n": "{n} tareas sin equipo.",
- "cortes.desde": "Desde los datos del {f}: {m} equipos mejoran y {e} empeoran.",
- "cortes.verCambios": "Ver los cambios"
+ "cortes.desde": "Desde los datos del {f}. Mejoran: {m}. Empeoran: {e}.",
+ "cortes.verCambios": "Ver los cambios",
+ "equipos.tareas.1": "1 tarea",
+ "equipos.tareas.n": "{n} tareas"
 }

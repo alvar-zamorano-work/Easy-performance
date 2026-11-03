@@ -127,7 +127,7 @@
     const releer = lecturaDe(S.cfg) !== lecturaDe(nueva);
     S.cfg = nueva; S.cfgVersion = nueva.actualizada || null;
     // Si cambian las columnas elegidas, se vuelven a leer los ficheros; si no, basta con recalcular
-    if (S.lectura) enSegundoPlano(() => { if (releer && S.ficheros) procesar(S.ficheros); else recalcular(); render(); toast(t('pestanas.cambios')); });
+    if (S.lectura) enSegundoPlano(() => { deOtraPestana = true; try { if (releer && S.ficheros) procesar(S.ficheros); else recalcular(); } finally { deOtraPestana = false; } render(); toast(t('pestanas.cambios')); });
   }
   window.addEventListener('storage', (e) => {
     // "Borrar todo" en otra pestaña: esta vuelve a empezar, para no volver a escribir lo que se ha borrado
@@ -146,7 +146,7 @@
     if (m.de === PESTANA || m.tipo !== 'idb') return;
     if (m.clave === 'cortes' && EP.cortes) EP.cortes.releer().then(() => { if (S.vm) render(); });
     // Otra pestaña ha cargado datos nuevos: esta pasa a usarlos (si no está en la demo)
-    if (m.clave === 'ficheros' && !S.demo && S.onboarded && S.vm) idbGet('ficheros').then((fs) => { if (fs && fs.length) enSegundoPlano(() => { if (procesar(fs)) { render(); toast(t('pestanas.datos')); } }); });
+    if (m.clave === 'ficheros' && !S.demo && S.onboarded && S.vm) idbGet('ficheros').then((fs) => { if (fs && fs.length) enSegundoPlano(() => { Object.assign(S, { cargaPend: null, cargaBloqueada: null, pendienteGuardar: false }); if (procesar(fs)) { render(); toast(t('pestanas.datos')); } }); });
   };
 
   /**
@@ -256,15 +256,18 @@
    * navegador y se ofrece volver a ellos. Si después se arregla (por ejemplo, el mapeo de estados), se guardan entonces.
    */
   function aplicarCarga(fs) {
-    const antes = S.ficheros && S.ficheros.length && S.vm && !hayBloqueoDuro() ? S.ficheros : null;
+    // Los buenos son los de antes de esta carga; si ya había una carga sin guardar, los buenos siguen siendo los de entonces
+    const antes = !S.onboarded || S.demo ? null : S.cargaBloqueada ? S.cargaBloqueada.antes : S.ficheros && S.ficheros.length && S.vm && !hayBloqueoDuro() ? S.ficheros : null;
     if (!procesar(fs)) return;
     if (antes && hayBloqueoDuro()) { S.cargaBloqueada = { antes }; S.pendienteGuardar = true; S.view = 'resumen'; render(); window.scrollTo(0, 0); return; }
     S.cargaBloqueada = null; S.pendienteGuardar = false;
     trasCargar(fs);
   }
   /** Ficheros que se cargaron sin guardar (no se podían medir): se guardan en cuanto se pueden medir. */
+  let deOtraPestana = false;
   function guardarSiYaVale() {
-    if (!S.pendienteGuardar || hayBloqueoDuro() || !S.ficheros) return;
+    // Nunca en la demo ni por un cambio que llega de otra pestaña: solo lo que se arregla aquí
+    if (S.demo || deOtraPestana || !S.pendienteGuardar || hayBloqueoDuro() || !S.ficheros) return;
     S.pendienteGuardar = false; S.cargaBloqueada = null;
     idbSet('ficheros', S.ficheros); idbSet('origenFicheros', { manual: true, firmaCarpeta: firmaCarpeta() });
     if (EP.cortes && S.onboarded) EP.cortes.capturar();
@@ -288,7 +291,9 @@
     if (!csv.trim()) { toast(t('demo.noHay'), 'bad'); return false; }
     let dc = {}; try { dc = JSON.parse(byId('demo-cliente').textContent || '{}'); } catch (e) { dc = {}; }
     if (!S.demo) S.real = { team: S.team, lectura: S.lectura, det: S.det, ficheros: S.ficheros, cfg: S.cfg, r: S.r, vm: S.vm, contextoDocs: S.contextoDocs, extraIni: S.extraIni, onboarded: S.onboarded, view: S.view,
-      role: S.role, prefs: JSON.parse(JSON.stringify(S.prefs || { byRole: {} })), dismissed: Object.assign({}, S.dismissed) };
+      role: S.role, prefs: JSON.parse(JSON.stringify(S.prefs || { byRole: {} })), dismissed: Object.assign({}, S.dismissed),
+      cargaBloqueada: S.cargaBloqueada, pendienteGuardar: S.pendienteGuardar };
+    Object.assign(S, { cargaPend: null, cargaBloqueada: null, pendienteGuardar: false });
     S.demo = true;
     S.cfg = { nombre: dc.nombre, sector: dc.sector, equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {}, contexto: dc.preguntas };
     S.extraIni = dc.iniciativas || []; S.contextoDocs = dc.contexto || null;
@@ -306,6 +311,7 @@
     if (r.role) S.role = r.role;
     if (r.prefs) S.prefs = r.prefs;
     if (r.dismissed) S.dismissed = r.dismissed;
+    S.cargaBloqueada = r.cargaBloqueada || null; S.pendienteGuardar = !!r.pendienteGuardar;
     if (S.vm && (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team))) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
     if (!S.vm) S.ob.step = 'data';
     if (pintar !== false) render();
@@ -403,9 +409,11 @@
   accion('carga-sustituir', () => { const p = S.cargaPend; S.cargaPend = null; if (p) enSegundoPlano(() => aplicarCarga(p.fs), t('carga.leyendo')); });
   accion('carga-sumar', () => {
     const p = S.cargaPend; S.cargaPend = null; if (!p) return;
-    // Un fichero con el mismo nombre se sustituye; los demás se suman (las tareas repetidas se leen una vez)
-    const nombres = p.fs.map((f) => f.nombre);
-    enSegundoPlano(() => aplicarCarga((S.ficheros || []).filter((f) => nombres.indexOf(f.nombre) < 0).concat(p.fs)), t('carga.leyendo'));
+    // Jira descarga todos los exports con el mismo nombre: uno repetido se suma con otro nombre (las tareas repetidas se leen una vez)
+    const ya = (S.ficheros || []).map((f) => f.nombre);
+    const libre = (n) => { if (ya.indexOf(n) < 0) return n; const m = /^(.*?)(\.[^.]*)?$/.exec(n); let i = 2; while (ya.indexOf(m[1] + ' (' + i + ')' + (m[2] || '')) >= 0) i++; return m[1] + ' (' + i + ')' + (m[2] || ''); };
+    const nuevos = p.fs.map((f) => { const nombre = libre(f.nombre); ya.push(nombre); return nombre === f.nombre ? f : Object.assign({}, f, { nombre }); });
+    enSegundoPlano(() => aplicarCarga((S.ficheros || []).concat(nuevos)), t('carga.leyendo'));
   });
   accion('carga-cancelar', () => { S.cargaPend = null; render(); });
   accion('carga-volver', () => { const b = S.cargaBloqueada; S.cargaBloqueada = null; S.pendienteGuardar = false; if (b) enSegundoPlano(() => { if (procesar(b.antes)) { render(); toast(t('carga.vuelto')); } }); });
@@ -511,7 +519,7 @@
 
   window.EP = {
     S, N, P, t, tn, esc, lista, fmt, fecha, valor, formatoDe, nombreMedida, nombreEquipo, cat, toast, ocupado, enSegundoPlano,
-    guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
+    guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, aplicarCarga, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
     visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, idbActualizar, firmaCarpeta, arrancar, migrar: migrarAEspacio, vistas: {},
     CLAVES: { cfg: CLAVE_CFG, prefs: CLAVE_PREFS, idb: NOMBRE_IDB, espacio: ESPACIO }, leerLocal, guardarLocal, cargarPrefs,
   };

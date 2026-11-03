@@ -129,8 +129,9 @@
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);
     const vis = vm.iniciativas.filter((x) => x.ini.equipos.some((e) => nombres.indexOf(e) >= 0));
     // Iniciativas de equipos que ahora no se miden (renombrados, fuera del export o no elegidos): no se esconden sin decirlo
-    const fueraIni = S.role === 'equipo' ? [] : vm.iniciativas.filter((x) => !x.ini.equipos.some((e) => vm.equiposMedidos.indexOf(e) >= 0));
-    const avisoFuera = fueraIni.length ? `<div class="notice warn small">${esc(tn('ini.fueraDeMedicion', fueraIni.length, { lista: lista(fueraIni.map((x) => x.ini.nombre + ' (' + lista(x.ini.equipos) + ')')) }))}</div>` : '';
+    const enVista = vm.equipos.map((e) => e.nombre);
+    const fueraIni = S.role === 'equipo' ? [] : vm.iniciativas.filter((x) => !x.ini.equipos.some((e) => enVista.indexOf(e) >= 0));
+    const avisoFuera = fueraIni.length ? `<div class="notice warn small">${esc(tn('ini.fueraDeMedicion', fueraIni.length, { lista: lista(fueraIni.map((x) => x.ini.nombre + ' (' + lista(x.ini.equipos.map(nombreEquipo)) + ')')) }))}</div>` : '';
     const n = (est) => vis.filter((x) => x.s.estado === est).length;
     const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('ini.paso' + i + '.t'))}</b><div class="small muted">${esc(t('ini.paso' + i + '.d', { lat: N.LATENCIA_DIAS / 7 }))}</div></div></div>`).join('')}</div>`;
     const propias = (S.cfg.iniciativas || []).map((i) => i.id);
@@ -390,7 +391,9 @@
   EP.cambio('eq-incluir', () => aplicarCfg(() => {
     S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value);
     // Los que se dejan sin marcar a propósito no vuelven a salir como "equipos nuevos"
-    S.cfg.equiposDescartados = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:not(:checked)'), (c) => c.value);
+    // Se suman a los descartes de antes (un equipo descartado que no viene en este export sigue descartado)
+    const sin = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:not(:checked)'), (c) => c.value);
+    S.cfg.equiposDescartados = [...new Set((S.cfg.equiposDescartados || []).filter((e) => S.cfg.equipos.indexOf(e) < 0).concat(sin))];
   }));
   // Equipos nuevos en un export: se añaden a la medición o se descartan, desde el aviso del Resumen
   EP.accion('eq-nuevos-anadir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = (S.cfg.equipos || []).concat(S.vm.fuera.nuevos); }));

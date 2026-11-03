@@ -1014,9 +1014,11 @@
  "equipos.nuevos.n": "{n} new teams in this export, not measured: {lista}.",
  "equipos.nuevosAnadir": "Measure them too",
  "equipos.nuevosNo": "Do not measure them",
- "equipos.fuera": "Not measured: {lista} tasks.",
+ "equipos.fuera": "Not measured: {lista}.",
  "equipos.sinEquipo.1": "1 task without a team.",
  "equipos.sinEquipo.n": "{n} tasks without a team.",
- "cortes.desde": "Since the data of {f}: {m} teams improve and {e} get worse.",
- "cortes.verCambios": "See the changes"
+ "cortes.desde": "Since the data of {f}. Better: {m}. Worse: {e}.",
+ "cortes.verCambios": "See the changes",
+ "equipos.tareas.1": "1 task",
+ "equipos.tareas.n": "{n} tasks"
 }

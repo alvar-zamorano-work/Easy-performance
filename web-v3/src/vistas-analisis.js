@@ -50,7 +50,7 @@
     let html = '';
     if (f.nuevos.length) html += `<div class="notice warn small">${esc(tn('equipos.nuevos', f.nuevos.length, { lista: lista(f.nuevos.map(nombreEquipo)) }))} <button class="btn sm" data-action="eq-nuevos-anadir">${esc(t('equipos.nuevosAnadir'))}</button> <button class="link small" data-action="eq-nuevos-no">${esc(t('equipos.nuevosNo'))}</button></div>`;
     const pocos = f.fuera.filter((x) => x.poco || f.nuevos.indexOf(x.nombre) < 0);
-    if (pocos.length || f.sinEquipo) html += `<p class="tiny muted">${esc([pocos.length ? t('equipos.fuera', { lista: lista(pocos.map((x) => nombreEquipo(x.nombre) + ' (' + x.n + ')')) }) : '', f.sinEquipo ? tn('equipos.sinEquipo', f.sinEquipo) : ''].filter(Boolean).join(' '))}</p>`;
+    if (pocos.length || f.sinEquipo) html += `<p class="tiny muted">${esc([pocos.length ? t('equipos.fuera', { lista: lista(pocos.map((x) => nombreEquipo(x.nombre) + ' (' + tn('equipos.tareas', x.n) + ')')) }) : '', f.sinEquipo ? tn('equipos.sinEquipo', f.sinEquipo) : ''].filter(Boolean).join(' '))}</p>`;
     return html;
   }
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */

@@ -265,6 +265,8 @@
     }
     const fs = cp.ficheros;
     EP.enSegundoPlano(() => {
+      // Ya en la app, la carga pasa por la misma puerta que las demás (un export que no se puede medir no pisa el bueno)
+      if (!cp.revision && S.onboarded) { EP.guardarCfg(); EP.aplicarCarga(fs); EP.render(); return; }
       if (EP.procesar(fs)) { EP.guardarCfg(); EP.trasCargar(fs); return; }
       // Al revisar, una elección con la que no se lee ninguna tarea no se guarda: se vuelve a lo de antes
       if (cp.revision) { S.cfg.columnas = antes; if (estimAntes === undefined) delete S.cfg.columnaEstimacion; else S.cfg.columnaEstimacion = estimAntes; EP.procesar(fs); EP.toast(t('columnas.sinTareas'), 'bad'); }

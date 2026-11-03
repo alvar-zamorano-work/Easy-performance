@@ -25,7 +25,7 @@
     && !isNaN(Date.parse(c.fechaDatos)) && Array.isArray(c.ficheros) && c.fiabilidad && typeof c.fiabilidad === 'object' && c.equipos && typeof c.equipos === 'object' && !Array.isArray(c.equipos) && Array.isArray(c.kpis || []));
 
   /** La parte de la huella que depende solo de los datos (fecha, tareas, ficheros y campo de equipo), sin la configuración. */
-  const datosDe = (h) => String(h || '').split('@').slice(0, 4).join('@');
+  const datosDe = (h) => { h = String(h || ''); return h.slice(0, h.lastIndexOf('@')); };
   /** Huella de unos datos: misma fecha, mismas tareas y mismos ficheros dan el mismo corte. */
   function huella() {
     const inf = S.vm.informe;

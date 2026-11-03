@@ -39,6 +39,7 @@
       let docs = []; ctx.forEach((f) => { const d = parse(f.texto, 'contexto/' + f.nombre); if (d && d.documentos) docs = docs.concat(d.documentos); });
       S.contextoDocs = docs.length ? { documentos: docs } : S.contextoDocs;
       await new Promise((res) => setTimeout(res, 20));
+      Object.assign(S, { cargaPend: null, cargaBloqueada: null, pendienteGuardar: false });
       if (EP.procesar(fs)) {
         EP.idbSet('ficheros', fs);
         EP.idbSet('origenFicheros', { manual: false });

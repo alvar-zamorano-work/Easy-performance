@@ -1024,6 +1024,11 @@ const medirMaquetacion = () => {
   const pregunta = !!(await p.$('[data-action="carga-sumar"]'));
   await clic(p, '[data-action="carga-sumar"]');
   const sumados = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  // El mismo nombre de fichero (Jira descarga todos igual) se suma con otro nombre, no sustituye
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-04-06.csv')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sumar"]');
+  const mismoNombre = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  ok('sumar un fichero con el mismo nombre: se suma con otro nombre', mismoNombre.length === 3 && mismoNombre.indexOf('jira-2026-04-06 (2).csv') >= 0, JSON.stringify(mismoNombre));
   await p.setInputFiles('#file-input', join(DS, 'jira-2026-10-12-parte-a.csv')); await p.waitForTimeout(500); await quieto(p);
   await clic(p, '[data-action="carga-sustituir"]');
   const sustituido = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
@@ -1042,6 +1047,11 @@ const medirMaquetacion = () => {
   const antesIdb = await A(p, async () => (await window.EP.idbGet('ficheros')).map((f) => f.nombre));
   await p.setInputFiles('#file-input', comoFich('soloAbiertas')); await p.waitForTimeout(500); await quieto(p);
   await clic(p, '[data-action="carga-sustituir"]');
+  // Otro export malo seguido, y entrar y salir de la demo: los buenos siguen guardados
+  await p.setInputFiles('#file-input', comoFich('soloAbiertas').map((f) => Object.assign({}, f, { name: 'otro-' + f.name }))); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  await A(p, () => { const b = document.createElement('button'); b.dataset.action = 'demo'; document.body.appendChild(b); b.click(); b.remove(); }); await p.waitForTimeout(300); await quieto(p);
+  await clic(p, '[data-action="demo-exit"]');
   const malo = await A(p, async () => ({ aviso: !!document.querySelector('[data-action="carga-volver"]'), idb: (await window.EP.idbGet('ficheros')).map((f) => f.nombre), cortes: window.EP.S.cortes.length }));
   await ir(p, 'iniciativas'); await quieto(p);
   const iniVisible = await A(p, () => !!document.querySelector('#page [data-action="ini-nueva"], #page-actions [data-action="ini-nueva"]'));
@@ -1049,7 +1059,7 @@ const medirMaquetacion = () => {
   const vuelta = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
   ok('export que no se puede medir: no pisa los ficheros buenos ni deja corte, Iniciativas se ve y se vuelve a lo anterior', malo.aviso && JSON.stringify(malo.idb) === JSON.stringify(antesIdb) && malo.cortes === nCortes && iniVisible && JSON.stringify(vuelta) === JSON.stringify(antesIdb), JSON.stringify({ malo, antesIdb, iniVisible, vuelta }));
   // Equipos nuevos: con equipos elegidos, un equipo que llega después se avisa y se puede medir; sus iniciativas no se esconden
-  await A(p, () => { const S = window.EP.S; S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = S.vm.equiposMedidos.slice(0, 2); S.cfg.iniciativas = (S.cfg.iniciativas || []).concat([{ id: 'ini-fuera', nombre: 'De un equipo fuera', equipos: [S.vm.equiposMedidos[3]], fecha_inicio: '2026-08-03', fecha_fin: null, medidas_objetivo: [{ medida: 'ciclo', direccion: 'bajar' }], estado: 'planificada', origen: 'propia' }]); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
+  await A(p, () => { const S = window.EP.S; S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = S.vm.equiposMedidos.slice(0, 2); S.cfg.equiposDescartados = []; S.cfg.iniciativas = (S.cfg.iniciativas || []).concat([{ id: 'ini-fuera', nombre: 'De un equipo fuera', equipos: [S.vm.equiposMedidos[3]], fecha_inicio: '2026-08-03', fecha_fin: null, medidas_objetivo: [{ medida: 'ciclo', direccion: 'bajar' }], estado: 'planificada', origen: 'propia' }]); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
   await quieto(p);
   const nuevos = await A(p, () => ({ lista: window.EP.S.vm.fuera.nuevos, aviso: !!document.querySelector('[data-action="eq-nuevos-anadir"]') }));
   await ir(p, 'iniciativas'); await quieto(p);

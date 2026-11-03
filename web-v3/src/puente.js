@@ -81,9 +81,15 @@
     const actual = new Map(o.valores.map((v) => [claveNombre(v.valor), v.valor]));
     const nuevo = (n) => actual.get(claveNombre(n)) || n;
     let cambio = false;
-    if (Array.isArray(cfg.equipos)) {
-      const l = [...new Set(cfg.equipos.map(nuevo))];
-      if (JSON.stringify(l) !== JSON.stringify(cfg.equipos)) { cfg.equipos = l; cambio = true; }
+    ['equipos', 'equiposDescartados'].forEach((k) => {
+      if (!Array.isArray(cfg[k])) return;
+      const l = [...new Set(cfg[k].map(nuevo))];
+      if (JSON.stringify(l) !== JSON.stringify(cfg[k])) { cfg[k] = l; cambio = true; }
+    });
+    // Equipos elegidos antes de que existieran los descartes: los no elegidos de ahora cuentan como descartados
+    // (si no, todos saldrían como "equipos nuevos" la primera vez)
+    if (Array.isArray(cfg.equipos) && cfg.equipos.length && cfg.equiposDescartados === undefined && cfg.campoEquipo === campo(cfg, det)) {
+      cfg.equiposDescartados = o.valores.map((v) => v.valor).filter((v) => cfg.equipos.indexOf(v) < 0); cambio = true;
     }
     ['fte', 'coste', 'equiposInfo', 'fteOrigen', 'limites'].forEach((k) => {
       const m = cfg[k];
