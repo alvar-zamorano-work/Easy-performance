@@ -26,7 +26,8 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
-    const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
+    // Datos por revisar en un equipo, aunque además pida atención: el banner lo dice igual
+    const revisar = eqs.filter((e) => e.estado === 'revisar' || (e.estado === 'atencion' && e.revisarDato && e.revisarDato.length)), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
     const recs = recsActivas(eqs);
     // Con fiabilidad baja, lo primero que se lee es que no hay que decidir con estas cifras (auditoría UX, P0.1)
     const baja = vm.fiabilidad && vm.fiabilidad.nivel === 'baja';
@@ -79,8 +80,9 @@
       const revisar = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
       return [fuera.length ? t('resumen.cambio', { m: lista(fuera) }) : '', porLimite.length ? t('resumen.cambioLimite', { m: lista(porLimite) }) : '', revisar].filter(Boolean).join(' · ');
     }
-    if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
-    if (e.estado === 'atencion') return t('resumen.atencionPie', { r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)) });
+    const revisarPie = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
+    if (e.estado === 'atencion') return [t('resumen.atencionPie', { r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)) }), revisarPie].filter(Boolean).join(' · ');
+    if (revisarPie) return revisarPie;
     if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
     // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
     const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref && !m.sinHistorico; });

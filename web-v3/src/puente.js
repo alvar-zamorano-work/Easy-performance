@@ -274,10 +274,13 @@
     // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
     const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))
       .filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
-    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
+    // Un solo estado por equipo, el mismo en banner, tarjeta, ficha y presentación (auditoría UX, P0.3). Una recomendación
+    // urgente va por delante de un dato por revisar: no depende de ese dato (si dependiera, no se habría hecho).
+    const estadoSinGraves = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : 'estable';
+    const estado = (estadoSinGraves === 'poco_fiable' || estadoSinGraves === 'alerta' || !graves.length) ? estadoSinGraves : 'atencion';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, avisos, revisarDato, mejores, graves, gravesTodas: graves,
+      estado, estadoSinGraves, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, avisos, revisarDato, mejores, graves, gravesTodas: graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -363,14 +366,14 @@
 
   /**
    * Recomendaciones urgentes que siguen activas en cada equipo (sin las descartadas). Un equipo "Pide atención" solo
-   * mientras tenga alguna; si se descartan todas, vuelve a "Estable".
+   * mientras tenga alguna; si se descartan todas, vuelve a lo que diría sin ellas (estable, provisional o revisar el dato).
    */
   function ajustarAtencion(vm, descartadas) {
     const desc = descartadas || {};
     vm.equipos.forEach((e) => {
       e.graves = (e.gravesTodas || []).filter((id) => vm.recs.some((r) => r.id === id && r.equipos.indexOf(e.nombre) >= 0 && !desc[r.clave]));
-      if (e.estado === 'atencion' && !e.graves.length) e.estado = 'estable';
-      else if (e.estado === 'estable' && e.graves.length) e.estado = 'atencion';
+      const base = e.estadoSinGraves || (e.estado === 'atencion' ? 'estable' : e.estado);
+      e.estado = base === 'poco_fiable' || base === 'alerta' || !e.graves.length ? base : 'atencion';
     });
     return vm;
   }
