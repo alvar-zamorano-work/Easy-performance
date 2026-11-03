@@ -290,6 +290,8 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     if (est.lado) m.lado = est.lado;
     if (est.banda) m.estadoBanda = est.banda;
     if (est.revisar) m.revisar = est.revisar;
+    if (est.aviso) m.aviso = est.aviso;
+    if (est.margen != null) m.margen = est.margen;
     medidas[id] = m;
   });
 

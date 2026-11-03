@@ -55,8 +55,11 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
     add('mucha_espera', M.espera.valor > 0.65, f(M.espera.valor, 'pct') + Tx(' of lead time is waiting.', ' del tiempo de ciclo es espera.') + (top ? Tx(' Work stops most in "', ' Donde más se para el trabajo es en "') + top + '".' : ''), { parte: M.espera.valor, estado: top });
   }
   // 6 retrabajo
+  // Con línea base, no salta si el equipo está mejor que ella (un 22 % que baja de un 30 % habitual no es "mucho retrabajo");
+  // sí salta si está peor que su línea base, o alto y sin mejorar. Sin línea base, el umbral fijo del 20 %.
   const rt = M.retrabajo;
-  if (rt && rt.valor != null && (rt.valor >= 0.2 || (rt.ref && rt.valor > rt.ref.hi && rt.valor >= 0.12)))
+  const rtAlto = rt && rt.valor != null && (rt.ref ? (rt.valor > rt.ref.hi && rt.valor >= 0.12) || (rt.valor >= 0.2 && rt.valor >= rt.ref.lo) : rt.valor >= 0.2);
+  if (rt && rt.valor != null && rtAlto)
     add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (its baseline was ', ' (en su línea base era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
   // 7 los errores se comen la capacidad
   const er = M.errores;

@@ -51,7 +51,14 @@ function sinTextos<T>(x: T): T {
 function sinNovedades(m: unknown): unknown {
   type M = Record<string, Record<string, unknown>>;
   const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown>; calidad?: Record<string, unknown> }[] };
-  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; delete v.estadoBanda; });
+  // Nov 2026 (auditoría UX): con línea base manda la línea base y el límite fijo superado queda como aviso. La v0 daba el
+  // peor de los dos: para comparar, el estado se recompone con el aviso (mismas cifras, otra forma de enseñarlas).
+  const ORDEN: Record<string, number> = { bien: 0, atencion: 1, critico: 2 };
+  const conAviso = (v: Record<string, unknown>) => {
+    const a = v.aviso as { estado: string } | undefined;
+    if (a && ORDEN[a.estado] > (ORDEN[v.estado as string] ?? -1)) v.estado = a.estado;
+  };
+  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { conAviso(v); delete v.aviso; delete v.margen; delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; delete v.estadoBanda; });
   x.equipos.forEach((e) => {
     delete e.medidas.agent_readiness; delete e.series.agentReady;
     delete e.medidas.bugs; delete e.series.bugsEntrada; delete e.series.bugsMedia;
@@ -59,6 +66,14 @@ function sinNovedades(m: unknown): unknown {
     // Nov 2026: días con cierres masivos por equipo (dato nuevo; no cambia ninguna cifra)
     if (e.calidad) delete e.calidad.diasMasivos;
   });
+  return x;
+}
+
+/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su línea base. La regla nueva
+ *  se comprueba en v3-robustez.test.ts; aquí se quita el caso en los dos lados para seguir comparando todo lo demás. */
+function sinCasoRetrabajo(m: unknown): unknown {
+  const x = m as { equipos: { casos?: { id: string }[] }[] };
+  x.equipos.forEach((e) => { if (Array.isArray(e.casos)) e.casos = e.casos.filter((c) => c.id !== 'retrabajo'); });
   return x;
 }
 
@@ -132,7 +147,7 @@ for (const esc of escenarios()) {
         // v3: en la visión del área los sprints se cuentan por equipo de origen. La v0 los sumaba y daba los sprints
         // del área por no creíbles. Lo que depende de eso (arrastradas, sprints y casos) se comprueba en v3-nucleo.test.ts.
         const area = nombre === 'área unida con FTE';
-        assert.deepEqual(sinTextos(sinSprintsDelArea(sinNovedades(mN), area)), sinTextos(sinSprintsDelArea(json(mV), area)));
+        assert.deepEqual(sinTextos(sinCasoRetrabajo(sinSprintsDelArea(sinNovedades(mN), area))), sinTextos(sinCasoRetrabajo(sinSprintsDelArea(json(mV), area))));
       });
     }
   });

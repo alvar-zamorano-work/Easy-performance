@@ -37,8 +37,14 @@
     if (!m || !m.ref) return t('medida.sinBanda');
     return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
   }
+  /** Aviso de un límite fijo superado cuando manda la línea base: lo que dice el núcleo y que no cambia el estado. */
+  const avisoTexto = (m) => (m && m.aviso ? t('medida.avisoLimite', { texto: String(m.aviso.texto || '').replace(/\.$/, '') }) : '');
   /** Por qué tiene ese estado: la banda del equipo o un límite fijo (lo dice la tarjeta para que no parezca una contradicción). */
   function porque(id, m) {
+    const base = porqueBase(id, m);
+    return m && m.disponible && m.aviso ? [base, avisoTexto(m)].filter(Boolean).join(' ') : base;
+  }
+  function porqueBase(id, m) {
     if (!m || !m.disponible) return m && m.motivo ? m.motivo : t('medida.noDisponible');
     if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.limite != null && m.estado !== 'bien') {
       // Qué límite es y que no es un cambio frente a su rango habitual (que se enseña aparte para no confundirlo)
@@ -108,10 +114,16 @@
   /** Barra de baseline: la banda de lo normal y una marca donde está ahora. Escala desde cero. */
   function bala(id, m) {
     if (!m || !m.disponible || m.valor == null) return `<div class="bala vacia"></div>`;
-    const tope = techo([m.valor].concat(m.ref ? [m.ref.hi, m.ref.lo] : []));
+    const mg = m.ref && m.margen ? m.margen : 0, lim = m.aviso && m.aviso.limite != null ? m.aviso.limite : null;
+    const tope = techo([m.valor].concat(m.ref ? [m.ref.hi + mg, m.ref.lo] : [], lim != null ? [lim] : []));
     const pc = (v) => Math.max(0, Math.min(100, (v / tope) * 100)).toFixed(1);
+    // La zona clara alrededor de la franja es el margen: lo que cae ahí cuenta como normal, y se ve
+    const margen = mg ? `<i class="b-margen" style="left:${pc(Math.max(0, m.ref.lo - mg))}%;width:${Math.max(1.5, pc(m.ref.hi + mg) - pc(Math.max(0, m.ref.lo - mg)))}%"></i>` : '';
     const banda = m.ref ? `<i class="b-band" style="left:${pc(m.ref.lo)}%;width:${Math.max(1.5, pc(m.ref.hi) - pc(m.ref.lo))}%"></i>` : '';
-    return `<div class="bala" title="${esc(rangoBanda(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
+    // Un límite fijo superado (con línea base) es una marca aparte en la barra: no cambia el color de la cifra
+    const marcaLim = lim != null ? `<i class="b-lim tone-${TONO[m.aviso.estado] || 'warn'}" style="left:${pc(lim)}%"></i>` : '';
+    const titulo = [rangoBanda(id, m), avisoTexto(m)].filter(Boolean).join(' · ');
+    return `<div class="bala" title="${esc(titulo)}">${margen}${banda}${marcaLim}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
   }
   /**
    * Unidad de una medida, para que ninguna cifra salga sola: "tareas por semana", "de lo terminado"... En los plazos
@@ -183,7 +195,7 @@
       <div class="t-value">${m && m.disponible && m.valor != null ? esc(valor(id, m.valor)) : `<span class="muted">${esc(t('comun.sinDatos'))}</span>`}</div>
       ${m && m.disponible ? `<div class="t-unit">${esc([unidad(id), ventanaDe(m)].filter(Boolean).join(' · '))}</div>` : ''}
       <div class="t-foot"><span>${esc(m && m.disponible ? rango(id, m) : porque(id, m))}</span></div>
-      ${m && m.disponible && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? `<div class="t-why">${esc(porque(id, m))}</div>` : ''}
+      ${m && m.disponible && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? `<div class="t-why">${esc(porque(id, m))}</div>` : m && m.disponible && m.aviso ? `<div class="t-aviso">${esc(avisoTexto(m))}</div>` : ''}
       <div class="t-viz">${viz}</div></div>`;
   }
   /** Indicador de cartera: etiqueta, cifra, una línea y un visual opcional. */
@@ -232,6 +244,10 @@
   const paraQuien = (r) => (r.grupo ? r.grupoNombre + ' (' + equiposTexto(r.equipos) + ')' : equiposTexto(r.equipos) + (r.otros ? ' ' + window.EP.tn('recs.yOtros', r.otros) : ''));
   const primeraFrase = (txt) => { const m = /^(.*?[.!?])(\s|$)/.exec(String(txt || '').trim()); return m ? m[1] : String(txt || ''); };
   /** Fila de un cambio: la medida fuera de lo normal, con su valor y su banda. */
+  /** Fila de un aviso de límite fijo: no es un cambio frente a su línea base, se dice aparte y sin color de alerta. */
+  function avisoFila(eq, x) {
+    return `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(x.id)}" role="button" tabindex="0">${chip('neutral', t('estado.avisoLimite'))}<div class="rrow-t"><b>${esc(nombreMedida(x.id))}: ${esc(conUnidad(x.id, x.m.valor))}</b><div class="small muted">${esc([x.m.estadoTexto, avisoTexto(x.m)].filter(Boolean).join(' '))}</div></div><span class="go">›</span></div>`;
+  }
   function cambioFila(eq, x) {
     return `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(x.id)}" role="button" tabindex="0">${estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreMedida(x.id))}: ${esc(conUnidad(x.id, x.m.valor))}</b><div class="small muted">${esc(x.m.estadoPor === 'banda' ? porque(x.id, x.m) : rango(x.id, x.m) + ' · ' + porque(x.id, x.m))}</div></div><span class="go">›</span></div>`;
   }
@@ -239,5 +255,5 @@
 
   /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
   const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, avisoFila, avisoTexto, barra, fmt };
 })();

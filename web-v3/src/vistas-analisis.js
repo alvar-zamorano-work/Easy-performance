@@ -63,6 +63,12 @@
   }
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
   function pieFicha(e) {
+    const base = pieBase(e);
+    // Un límite fijo superado sin alerta (manda la línea base) se dice al final, sin cambiar lo que dice la línea base
+    const avisos = (e.avisos || []).filter((x) => K.destacados().indexOf(x.id) >= 0).map((x) => nombreMedida(x.id));
+    return avisos.length ? [base, t('resumen.avisoLimite', { m: lista(avisos) })].filter(Boolean).join(' · ') : base;
+  }
+  function pieBase(e) {
     if (e.cambios[0]) {
       // Lo que supera un límite fijo no está "fuera de lo normal" del equipo: puede estar incluso mejor que su franja
       const porLimite = e.cambios.filter((x) => x.m.estadoPor === 'limite' || x.m.estadoPor === 'limite_equipo').map((x) => nombreMedida(x.id));
@@ -81,7 +87,7 @@
     return t('resumen.fichaEstable');
   }
   /** Ficha de equipo sin cambios: lo mismo que el pie del Resumen, con la frase larga cuando de verdad todo es normal. */
-  function textoSinCambios(e) { const p = pieFicha(e); return p === t('resumen.fichaEstable') ? t('equipo.todoNormal') : p; }
+  function textoSinCambios(e) { const p = pieBase(e); return p === t('resumen.fichaEstable') ? t('equipo.todoNormal') : p; }
   /**
    * Preguntas de dirección: una por objetivo del Context. Cada una se responde con las medidas de ese objetivo
    * en los equipos visibles: qué equipos están fuera de lo normal. Una pregunta entra si su respuesta lleva a decidir algo.
@@ -150,7 +156,7 @@
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;
     const fCambios = K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>${K.chip(e.cambios.length ? 'bad' : 'neutral', e.cambios.length ? tn('equipo.senales', e.cambios.length) : t('equipo.sinCambios'))}`,
-      e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(textoSinCambios(e))}</p>`);
+      (e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(textoSinCambios(e))}</p>`) + (e.avisos || []).map((x) => K.avisoFila(e, x)).join(''));
     const recs = recsActivas([e]);
     const fRecs = K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>${K.chip(recs.length ? 'warn' : 'neutral', tn('recs.cuenta', recs.length))}`, recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`);
     return K.statusBar(e.cambios.length ? 'bad' : e.estado === 'estable' ? 'good' : 'warn', titular, items) + tiles

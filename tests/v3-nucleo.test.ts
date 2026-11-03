@@ -82,11 +82,12 @@ test('referencia: establecida con 12 semanas, provisional con 6 a 11, sin banda 
   assert.ok(corto.equipos.some((e) => e.medidas.entregas.referencia !== 'establecida'));
 });
 
-test('qué decide el semáforo: Rework del área en atención por el límite del 20 %, aunque esté por debajo de su banda', () => {
+test('qué decide el semáforo: el retrabajo del área por debajo de su banda es normal, con aviso del límite del 20 %', () => {
   const m = r.area.equipos[0].medidas.retrabajo;
-  assert.equal(m.estado, 'atencion');
-  assert.equal(m.estadoPor, 'limite');
-  assert.equal(m.limite, 0.2);
+  assert.equal(m.estado, 'bien');
+  assert.equal(m.estadoPor, 'banda');
+  assert.equal(m.aviso!.estado, 'atencion');
+  assert.equal(m.aviso!.limite, 0.2);
   assert.ok((m.valor as number) < m.ref!.lo, 'por debajo de su banda');
   const banda = eq('Risk').medidas.retrabajo;
   assert.equal(banda.estadoPor, 'banda');

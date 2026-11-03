@@ -4,7 +4,7 @@ import { Tx } from './idioma.ts';
 import { formatear } from './formato.ts';
 import { cuantil } from './util.ts';
 import type { DefSemaforo } from './catalogo.ts';
-import type { EstadoPor, EstadoReferencia, Limites, Rango, Revisar, Semaforo, Tendencia } from './tipos.ts';
+import type { AvisoLimite, EstadoPor, EstadoReferencia, Limites, Rango, Revisar, Semaforo, Tendencia } from './tipos.ts';
 
 /** Cambio mínimo con sentido para cada medida: evita que una variación mínima cambie el semáforo. */
 export const DELTA_MIN: Record<string, number> = {
@@ -23,7 +23,7 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
   return { sentido: mejora ? 'mejora' : 'empeora', cambio, sube };
 }
 
-interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar; banda?: Semaforo }
+interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar; banda?: Semaforo; aviso?: AvisoLimite; margen?: number }
 
 /** Medidas en las que cero quiere decir que no había actividad (no que todo fuera bien). */
 const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
@@ -68,7 +68,6 @@ export function inicioReferencia(entregas: number[], win: number): number {
 export function estadoMedida(id: string, v: number | null | undefined, ref: Rango | undefined, limEquipo: Limites | null, def: DefSemaforo): Resultado {
   if (v == null) return { estado: 'sin', texto: Tx('Not enough data in recent weeks.', 'Sin datos suficientes en las últimas semanas.') };
   if (!def.dir) return { estado: 'neutro', texto: '' };
-  const orden: Record<string, number> = { bien: 0, atencion: 1, critico: 2 };
   const fmt = (x: number) => formatear(x, def.formato);
   function absoluto(lim: Limites | null | undefined, por: EstadoPor): Resultado | null {
     if (!lim || (lim.atencion == null && lim.critico == null)) return null;
@@ -87,23 +86,26 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
-    // Fuera de la banda pero dentro del margen: no es una alerta, pero tampoco se dice "dentro" (el número no lo está)
+    // Fuera de la banda por el lado malo pero dentro del margen: no es una alerta, pero tampoco se dice "dentro" (el número no lo está)
     const enBorde = (arriba: boolean): Resultado => ({ estado: 'bien', texto: (arriba ? Tx('Slightly above ', 'Un poco por encima de ') : Tx('Slightly below ', 'Un poco por debajo de ')) + rango + Tx(', within the margin.', ', dentro del margen.'), por: 'banda', lado: 'borde' });
+    // Por el lado bueno y dentro del margen: es normal. "En el borde" se queda para el lado malo, donde sí hay que mirarlo.
+    const algoMejor = (): Resultado => ({ estado: 'bien', texto: Tx('Slightly better than ', 'Algo mejor que ') + rango + '.', por: 'banda' });
     if (def.dir === 'menos') {
       if (v < ref.lo - margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
       else if (v > ref.hi && v <= ref.hi + margen) rel = enBorde(true);
-      else if (v < ref.lo) rel = enBorde(false);
+      else if (v < ref.lo) rel = algoMejor();
       else if (v <= ref.hi + margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     } else {
       if (v > ref.hi + margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
       else if (v < ref.lo && v >= ref.lo - margen) rel = enBorde(false);
-      else if (v > ref.hi) rel = enBorde(true);
+      else if (v > ref.hi) rel = algoMejor();
       else if (v >= ref.lo - margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     }
+    rel.margen = margen;
   }
   // Un límite fijado para el equipo manda; se guarda también lo que dice su banda, para no contradecirla en el texto
   if (limEquipo) return { ...(absoluto(limEquipo, 'limite_equipo') || { estado: 'bien', texto: '', por: 'limite_equipo', limite: null }), ...(rel ? { banda: rel.estado } : {}) };
@@ -117,11 +119,12 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
       : Tx('More than three times its baseline (', 'Más del triple de su línea base (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
     return { estado: 'sin', texto, por: 'banda', revisar: rev };
   }
-  const cands = [rel, abs].filter((x): x is Resultado => !!x);
-  if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la línea base de este equipo.') };
-  // Gana el peor. Si empatan, manda la banda del equipo (es la que se ve en la tarjeta).
-  cands.sort((a, b) => orden[b.estado] - orden[a.estado] || (a.por === 'banda' ? -1 : 1));
-  return rel && cands[0] !== rel ? { ...cands[0], banda: rel.estado } : cands[0];
+  // Con línea base, manda la línea base del equipo: cada equipo se compara consigo mismo. Un límite fijo del catálogo
+  // superado no cambia el estado (un equipo que mejora no recibe una alerta): se guarda como aviso y se enseña aparte.
+  if (rel) return abs && abs.estado !== 'bien' ? { ...rel, aviso: { estado: abs.estado, limite: abs.limite ?? null, texto: abs.texto } } : rel;
+  // Sin línea base todavía, el límite fijo es la única referencia y sí da el estado
+  if (abs) return abs;
+  return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la línea base de este equipo.') };
 }
 
 /** Estado de la referencia: establecida con las semanas completas, provisional con banda pero menos semanas. */

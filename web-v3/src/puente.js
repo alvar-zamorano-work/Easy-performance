@@ -247,13 +247,15 @@
     // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
+    // Límite fijo superado con la línea base dentro o mejor: no es una alerta, se enseña aparte como aviso
+    const avisos = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => x.m && x.m.disponible && x.m.aviso && !malo(x.m));
     // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
     const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))
       .filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
     const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves, gravesTodas: graves,
+      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, avisos, revisarDato, mejores, graves, gravesTodas: graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
