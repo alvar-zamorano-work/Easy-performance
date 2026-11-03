@@ -70,8 +70,8 @@
     if (S.demo) return;
     const guardada = leerLocal(CLAVE_CFG);
     if (guardada && guardada.actualizada && guardada.actualizada !== S.cfgVersion) {
-      const mias = S.cfg.iniciativas || [], ids = mias.map((i) => i.id);
-      const deOtra = (guardada.iniciativas || []).filter((i) => ids.indexOf(i.id) < 0 && S.iniQuitadas.indexOf(i.id) < 0);
+      const mias = Array.isArray(S.cfg.iniciativas) ? S.cfg.iniciativas : [], ids = mias.map((i) => i.id);
+      const deOtra = (Array.isArray(guardada.iniciativas) ? guardada.iniciativas : []).filter((i) => ids.indexOf(i.id) < 0 && S.iniQuitadas.indexOf(i.id) < 0);
       if (deOtra.length) S.cfg.iniciativas = mias.concat(deOtra);
     }
     S.cfg.actualizada = new Date().toISOString();
@@ -81,7 +81,8 @@
   }
   /** Preferencias de quien usa la página. En la demo no se guarda nada: lo que se toca ahí no pasa a los datos reales. */
   function guardarPrefs() {
-    if (S.demo) return;
+    // En la demo solo se guardan el idioma y el modelo de IA, que no dependen de los datos
+    if (S.demo) { const p = leerLocal(CLAVE_PREFS); if (p) guardarLocal(CLAVE_PREFS, Object.assign(p, { lang: I.lang, modelo: S.ia.modelo })); return; }
     guardarLocal(CLAVE_PREFS, { lang: I.lang, role: S.role, team: S.team, onboarded: S.onboarded, prefs: S.prefs, dismissed: S.dismissed, modelo: S.ia.modelo });
   }
   function cargarPrefs() {
@@ -98,6 +99,20 @@
   function guardarClave(clave) { S.ia.clave = clave || ''; try { if (S.ia.clave) sessionStorage.setItem(CLAVE_IA, S.ia.clave); else sessionStorage.removeItem(CLAVE_IA); } catch (e) { } }
   // Los ficheros cargados se guardan en este navegador (IndexedDB) para no tener que volver a cargarlos. Nunca salen de él.
   function idb(nombre) { return new Promise((res, rej) => { try { const q = indexedDB.open(nombre || NOMBRE_IDB, 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (e) { rej(e); } }); }
+  /** Lee, cambia y guarda una clave en una sola transacción: dos pestañas a la vez no se pisan. */
+  async function idbActualizar(k, fn) {
+    try {
+      const db = await idb();
+      let nuevo;
+      await new Promise((res, rej) => {
+        const tx = db.transaction('kv', 'readwrite'), st = tx.objectStore('kv'), q = st.get(k);
+        q.onsuccess = () => { nuevo = fn(q.result); st.put(nuevo, k); };
+        tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+      });
+      avisarPestanas('idb', k);
+      return nuevo;
+    } catch (e) { return null; }
+  }
   async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); avisarPestanas('idb', k); } catch (e) { } }
 
   // ---------- varias pestañas ----------
@@ -115,8 +130,16 @@
     if (S.lectura) enSegundoPlano(() => { if (releer && S.ficheros) procesar(S.ficheros); else recalcular(); render(); toast(t('pestanas.cambios')); });
   }
   window.addEventListener('storage', (e) => {
+    // "Borrar todo" en otra pestaña: esta vuelve a empezar, para no volver a escribir lo que se ha borrado
+    if ((e.key === CLAVE_CFG || e.key === CLAVE_PREFS) && e.newValue === null) { try { location.reload(); } catch (x) { } return; }
     if (e.key === CLAVE_CFG) cfgDeOtraPestana();
-    if (e.key === CLAVE_PREFS && !S.demo) { const p = leerLocal(CLAVE_PREFS) || {}; S.prefs = p.prefs && typeof p.prefs === 'object' ? Object.assign({ byRole: {} }, p.prefs) : S.prefs; S.dismissed = p.dismissed || S.dismissed; if (S.vm) render(); }
+    if (e.key === CLAVE_PREFS) {
+      const p = leerLocal(CLAVE_PREFS) || {}, destino = S.demo ? S.real : S;
+      if (!destino) return;
+      if (p.prefs && typeof p.prefs === 'object') destino.prefs = Object.assign({ byRole: {} }, p.prefs);
+      if (p.dismissed) destino.dismissed = p.dismissed;
+      if (!S.demo && S.vm) render();
+    }
   });
   if (canal) canal.onmessage = (e) => {
     const m = e.data || {};
@@ -132,20 +155,23 @@
    */
   async function migrarAEspacio() {
     if (!ESPACIO) return;
+    // Una carpeta con su propio datos.js (carpeta compartida) es de un cliente concreto: no recoge datos de otro
+    if (window.EASY_PERFORMANCE_EXPORTS || window.EASY_PERFORMANCE_CONFIG) return;
     let reclamado = null; try { reclamado = localStorage.getItem(CLAVE_RECLAMADO); } catch (e) { }
     if (reclamado && reclamado !== ESPACIO) return;
     const propio = leerLocal(CLAVE_CFG) || leerLocal(CLAVE_PREFS) || (await idbGet('ficheros'));
     if (!reclamado && propio) { try { localStorage.setItem(CLAVE_RECLAMADO, ESPACIO); } catch (e) { } return; }
     if (reclamado === ESPACIO) return;
     const cfg = leerLocal(CLAVE_CFG_V2), prefs = leerLocal(CLAVE_PREFS_V3);
-    const [ficheros, cortes, carpeta] = await Promise.all(['ficheros', 'cortes', 'carpeta'].map((k) => idbGet(k, BASE_IDB)));
+    const [ficheros, cortes] = await Promise.all(['ficheros', 'cortes'].map((k) => idbGet(k, BASE_IDB)));
     if (!cfg && !prefs && !ficheros) return;
     if (cfg) guardarLocal(CLAVE_CFG, cfg);
     if (prefs) guardarLocal(CLAVE_PREFS, prefs);
     if (ficheros) await idbSet('ficheros', ficheros);
     if (cortes) await idbSet('cortes', cortes);
-    if (carpeta) await idbSet('carpeta', carpeta);
-    try { localStorage.setItem(CLAVE_RECLAMADO, ESPACIO); } catch (e) { }
+    // La carpeta compartida no se pasa: se vuelve a elegir, así nunca se escribe en la carpeta de otro cliente.
+    // La copia de antes (ficheros de Jira incluidos) se borra; la configuración de la v2 se queda para la v2.
+    try { localStorage.setItem(CLAVE_RECLAMADO, ESPACIO); localStorage.removeItem(CLAVE_PREFS_V3); indexedDB.deleteDatabase(BASE_IDB); } catch (e) { }
   }
   async function idbGet(k, nombre) { try { const db = await idb(nombre); return await new Promise((res, rej) => { const tx = db.transaction('kv', 'readonly'); const q = tx.objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
 
@@ -349,6 +375,8 @@
   accion('clear-all', () => {
     if (!window.confirm(t('ajustes.borrarConfirma'))) return;
     try { localStorage.removeItem(CLAVE_CFG); localStorage.removeItem(CLAVE_PREFS); sessionStorage.removeItem(CLAVE_IA); sessionStorage.removeItem('easyperformance.v3.chat'); } catch (e) { }
+    // Si este espacio recogió los datos de antes, también se borra lo que quedara de ellos
+    try { if (ESPACIO && localStorage.getItem(CLAVE_RECLAMADO) === ESPACIO) { localStorage.removeItem(CLAVE_CFG_V2); localStorage.removeItem(CLAVE_PREFS_V3); indexedDB.deleteDatabase(BASE_IDB); } } catch (e) { }
     idbSet('ficheros', null); idbSet('carpeta', null); idbSet('origenFicheros', null); if (EP.cortes) EP.cortes.borrarTodo();
     if (S.chat) S.chat = { open: false, msgs: [], busy: false, draft: '' };
     Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'data' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
@@ -394,7 +422,8 @@
     const ex = window.EASY_PERFORMANCE_EXPORTS;
     const lista = Array.isArray(ex) ? ex : ex && Array.isArray(ex.ficheros) ? ex.ficheros : null;
     if (!lista || !lista.length) return null;
-    return lista.map((f) => f.nombre + ':' + String(f.b64 != null ? f.b64.length : (f.texto || '').length)).join('|');
+    const huella = (s) => { s = String(s || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + '.' + (h >>> 0).toString(36); };
+    return lista.map((f) => f.nombre + ':' + huella(f.b64 != null ? f.b64 : f.texto)).join('|');
   }
   async function arrancar() {
     cargarPrefs();
@@ -438,7 +467,7 @@
   window.EP = {
     S, N, P, t, tn, esc, lista, fmt, fecha, valor, formatoDe, nombreMedida, nombreEquipo, cat, toast, ocupado, enSegundoPlano,
     guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
-    visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, arrancar, migrar: migrarAEspacio, vistas: {},
+    visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, idbActualizar, firmaCarpeta, arrancar, migrar: migrarAEspacio, vistas: {},
     CLAVES: { cfg: CLAVE_CFG, prefs: CLAVE_PREFS, idb: NOMBRE_IDB, espacio: ESPACIO }, leerLocal, guardarLocal, cargarPrefs,
   };
 })();

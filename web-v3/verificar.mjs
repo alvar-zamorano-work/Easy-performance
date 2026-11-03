@@ -720,6 +720,13 @@ const medirMaquetacion = () => {
     const cs = await fechasCortes(a);
     ok('dos pestañas: los cortes guardados en cada pestaña se conservan', cs.some((c) => c.startsWith('2026-04-06')) && cs.some((c) => c.startsWith('2026-10-12')), JSON.stringify(cs));
     ok('dos pestañas: sin errores', !a.errores.length && !b.errores.length, a.errores.concat(b.errores).join(' | '));
+    // Borrar todo en una pestaña: la otra vuelve a empezar y no reescribe lo borrado
+    await ir(a, 'ajustes'); await quieto(a);
+    await clic(a, '[data-action="clear-all"]');
+    await b.waitForTimeout(1500); await b.waitForFunction(() => window.EP && window.EP.S); await quieto(b);
+    await A(b, () => window.EP.guardarPrefs());
+    const trasBorrar = await A(b, () => ({ onboarded: window.EP.S.onboarded, prefs: localStorage.getItem(window.EP.CLAVES.prefs) && JSON.parse(localStorage.getItem(window.EP.CLAVES.prefs)).onboarded }));
+    ok('dos pestañas: borrar todo en una deja la otra como la primera vez', !trasBorrar.onboarded && !trasBorrar.prefs, JSON.stringify(trasBorrar));
     await ctx.close();
   }
 
@@ -751,6 +758,22 @@ const medirMaquetacion = () => {
     await b.setInputFiles('input[data-change="cfg-importar"]', ruta); await b.waitForTimeout(800); await quieto(b);
     const tras = await A(b, () => ({ ini: (window.EP.S.cfg.iniciativas || []).map((i) => i.nombre), cortes: window.EP.S.cortes.length, guardada: JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || '{}').iniciativas, error: window.EP.S.error }));
     ok('copia de la configuración: cargada en otra carpeta, trae las iniciativas y los cortes', tras.ini.indexOf('Ini cliente A') >= 0 && (tras.guardada || []).some((i) => i.nombre === 'Ini cliente A') && tras.cortes >= 1 && !tras.error, JSON.stringify(tras));
+    // Copias mal formadas: una que no vale no cambia nada; un corte roto no entra y lo demás sí
+    const conCopia = async (obj) => {
+      const ruta2 = join(COPIAS, 'copia-mala.json'); writeFileSync(ruta2, JSON.stringify(obj));
+      await b.setInputFiles('input[data-change="cfg-importar"]', ruta2); await b.waitForTimeout(800); await quieto(b);
+      return A(b, () => ({ nombre: window.EP.S.cfg.nombre || null, cortes: window.EP.S.cortes.length, err: window.EP.S.error }));
+    };
+    const antesMala = await A(b, () => ({ nombre: window.EP.S.cfg.nombre || null, cortes: window.EP.S.cortes.length }));
+    const r1 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: [] });
+    const r2 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: { nombre: 'X', iniciativas: 'no' } });
+    const r3 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: { nombre: 'Con corte roto', iniciativas: [] }, cortes: [{ id: 'c1', huella: 'h', fechaDatos: 5, creado: 'x', equipos: {} }, { id: 'c2', huella: 'h2', fechaDatos: '2026-01-05T00:00:00.000Z', creado: '2026-01-06T00:00:00.000Z', equipos: {} }] });
+    await ir(b, 'cortes'); await quieto(b);
+    ok('copia mal formada: no cambia nada; un corte roto no entra y no rompe la página', r1.nombre === antesMala.nombre && r2.nombre === antesMala.nombre && r3.nombre === 'Con corte roto' && r3.cortes === antesMala.cortes && !r3.err && !(await A(b, () => window.EP.S.error)), JSON.stringify({ antesMala, r1, r2, r3 }));
+    // Borrar todo en la carpeta que recogió los datos de antes: tampoco quedan los de antes
+    const a3 = await abrirEn(ctx, copia('clienteA'));
+    await ir(a3, 'ajustes'); await quieto(a3); await clic(a3, '[data-action="clear-all"]');
+    ok('borrar todo: también lo que quedaba de antes de los espacios', !(await A(a3, () => localStorage.getItem('easyperformance.config.v2') || localStorage.getItem('easyperformance.v3.prefs'))));
     ok('dos copias: sin errores', !a.errores.length && !b.errores.length && !a2.errores.length, a.errores.concat(b.errores, a2.errores).join(' | '));
     await ctx.close();
   }
@@ -759,7 +782,12 @@ const medirMaquetacion = () => {
   {
     const url = copia('carpeta', [ABRIL]);
     const ctx = await nuevoCtx();
+    const pre = await abrirEn(ctx, copia('previa2'));
+    await A(pre, () => { localStorage.clear(); localStorage.setItem('easyperformance.config.v2', JSON.stringify({ nombre: 'Cliente viejo', fte: { Pagos: 99 } })); });
+    await pre.close();
     const p = await abrirEn(ctx, url);
+    const mig = await A(p, () => ({ nombre: window.EP.S.cfg.nombre || null, reclamado: localStorage.getItem('easyperformance.v3.reclamado') }));
+    ok('carpeta con datos.js: no recoge la configuración de otro cliente', mig.nombre !== 'Cliente viejo' && !mig.reclamado, JSON.stringify(mig));
     if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
     await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
     await subir(p, COMPLETO);

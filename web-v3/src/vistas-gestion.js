@@ -428,9 +428,15 @@
   EP.cambio('cfg-importar', (el) => {
     const f = el.files && el.files[0]; el.value = '';
     if (!f || S.demo) return;
+    const objeto = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
     f.text().then((texto) => {
       let c = null; try { c = JSON.parse(texto); } catch (e) { c = null; }
-      if (!c || c.tipo !== TIPO_COPIA || !c.cfg || typeof c.cfg !== 'object') { EP.toast(t('ajustes.copiaMal'), 'bad'); return; }
+      // Todo se comprueba antes de tocar nada: una copia a medias no se aplica a medias
+      const iniOk = (i) => objeto(i) && typeof i.id === 'string' && typeof i.nombre === 'string' && Array.isArray(i.equipos);
+      const valida = objeto(c) && c.tipo === TIPO_COPIA && objeto(c.cfg) && (c.cfg.iniciativas == null || (Array.isArray(c.cfg.iniciativas) && c.cfg.iniciativas.every(iniOk)))
+        && (c.prefs == null || objeto(c.prefs)) && (c.cortes == null || Array.isArray(c.cortes));
+      if (!valida) { EP.toast(t('ajustes.copiaMal'), 'bad'); return; }
+      const cortes = (c.cortes || []).filter((x) => EP.cortes && EP.cortes.corteValido(x));
       if (!window.confirm(t('ajustes.copiaConfirma'))) return;
       // La copia sustituye la configuración de aquí; los cortes se suman
       const guardada = EP.leerLocal(EP.CLAVES.cfg);
@@ -438,11 +444,11 @@
       EP.guardarCfg();
       const p = c.prefs || {};
       if (p.role && EP.POR_ROL[p.role]) S.role = p.role;
-      if (p.team) S.team = p.team;
-      if (p.prefs && typeof p.prefs === 'object') S.prefs = Object.assign({ byRole: {} }, p.prefs);
-      if (p.dismissed && typeof p.dismissed === 'object') S.dismissed = p.dismissed;
+      if (typeof p.team === 'string') S.team = p.team;
+      if (objeto(p.prefs)) S.prefs = Object.assign({ byRole: {} }, p.prefs);
+      if (objeto(p.dismissed)) S.dismissed = p.dismissed;
       EP.guardarPrefs();
-      const n = EP.cortes ? EP.cortes.importar(Array.isArray(c.cortes) ? c.cortes : []) : 0;
+      const n = EP.cortes ? EP.cortes.importar(cortes) : 0;
       EP.enSegundoPlano(() => {
         // Las columnas elegidas a mano cambian la lectura: se vuelve a leer con la configuración nueva
         if (S.ficheros && S.ficheros.length) EP.procesar(S.ficheros); else if (S.lectura) EP.recalcular();

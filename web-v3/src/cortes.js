@@ -14,12 +14,15 @@
   /** Lee los cortes guardados (al arrancar y cuando otra pestaña guarda los suyos). */
   const releer = () => EP.idbGet('cortes').then((c) => { if (Array.isArray(c)) S.cortes = c.filter((x) => !quitados.has(x.id)); }).catch(() => { });
   /** Guarda sin pisar: suma los cortes que otra pestaña haya guardado mientras tanto, salvo los quitados aquí. */
-  const guardar = (vaciar) => (vaciar ? Promise.resolve(null) : EP.idbGet('cortes')).then((guardados) => {
+  const guardar = (vaciar) => (vaciar ? EP.idbSet('cortes', []) : EP.idbActualizar('cortes', (guardados) => {
     const ids = new Set(S.cortes.map((c) => c.id));
-    const deOtra = (Array.isArray(guardados) ? guardados : []).filter((c) => !ids.has(c.id) && !quitados.has(c.id));
+    const deOtra = (Array.isArray(guardados) ? guardados : []).filter((c) => corteValido(c) && !ids.has(c.id) && !quitados.has(c.id));
     if (deOtra.length) { S.cortes = ordenar(S.cortes.concat(deOtra)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); }
-    return EP.idbSet('cortes', S.cortes);
-  });
+    return S.cortes;
+  }));
+  /** Un corte bien formado (los que vienen de una copia de la configuración se comprueban antes de entrar). */
+  const corteValido = (c) => !!(c && typeof c === 'object' && typeof c.id === 'string' && typeof c.huella === 'string' && typeof c.fechaDatos === 'string' && typeof c.creado === 'string'
+    && !isNaN(Date.parse(c.fechaDatos)) && Array.isArray(c.ficheros) && c.fiabilidad && typeof c.fiabilidad === 'object' && c.equipos && typeof c.equipos === 'object' && !Array.isArray(c.equipos) && Array.isArray(c.kpis || []));
 
   /** Huella de unos datos: misma fecha, mismas tareas y mismos ficheros dan el mismo corte. */
   function huella() {
@@ -65,7 +68,7 @@
   /** Suma cortes que vienen de una copia de la configuración (los que ya están no se repiten). */
   function importar(lista) {
     const ids = new Set(S.cortes.map((c) => c.id));
-    const nuevos = (lista || []).filter((c) => c && c.id && c.huella && c.fechaDatos && c.creado && c.equipos && !ids.has(c.id));
+    const nuevos = (lista || []).filter((c) => corteValido(c) && !ids.has(c.id));
     nuevos.forEach((c) => quitados.delete(c.id));
     if (nuevos.length) { S.cortes = ordenar(S.cortes.concat(nuevos)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); guardar(); }
     return nuevos.length;
@@ -112,6 +115,6 @@
   EP.accion('corte-borrar', (el) => { borrar(el.dataset.id); EP.render(); });
   EP.accion('corte-guardar', () => { const c = capturar(false, true); EP.toast(c ? t('cortes.guardado', { f: fecha(c.fechaDatos) }) : t('cortes.yaHay')); EP.render(); });
 
-  EP.cortes = { releer, capturar, borrar, borrarTodo, importar, sentido };
+  EP.cortes = { releer, capturar, borrar, borrarTodo, importar, corteValido, sentido };
   Object.assign(EP.vistas, { cortes });
 })();

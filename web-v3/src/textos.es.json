@@ -975,7 +975,7 @@
  "ajustes.copiaTexto": "Para seguir en otro navegador, en otro ordenador o pasar de la web a la copia local. Lleva la configuración, las iniciativas, las preferencias y el histórico de cortes.",
  "ajustes.copiaExportar": "Descargar copia",
  "ajustes.copiaImportar": "Cargar una copia",
- "ajustes.copiaNota": "No lleva los exports de Jira ni la clave de la IA. Al cargarla, sustituye la configuración de aquí y suma los cortes.",
+ "ajustes.copiaNota": "No lleva los exports de Jira ni la clave de la IA. Al cargarla, sustituye la configuración de aquí y suma los cortes. Abierta como fichero, cada carpeta guarda sus datos aparte: antes de mover o renombrar la carpeta, descarga una copia.",
  "ajustes.copiaMal": "Ese fichero no es una copia de la configuración de easyperformance.",
  "ajustes.copiaConfirma": "La copia sustituye la configuración y las iniciativas de este navegador. ¿Seguir?",
  "ajustes.copiaHecha": "Copia cargada. Cortes nuevos: {n}.",

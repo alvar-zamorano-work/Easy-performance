@@ -41,6 +41,7 @@
       await new Promise((res) => setTimeout(res, 20));
       if (EP.procesar(fs)) {
         EP.idbSet('ficheros', fs);
+        EP.idbSet('origenFicheros', { manual: false });
         if (EP.cortes) EP.cortes.capturar(false, true);
         if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; } else S.ob.step = 'revision';
         EP.toast(tn('carpeta.leidos', fs.length));

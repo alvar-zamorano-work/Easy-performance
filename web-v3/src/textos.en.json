@@ -975,7 +975,7 @@
  "ajustes.copiaTexto": "To carry on in another browser or computer, or to move from the web to the local copy. It holds the configuration, initiatives, preferences and snapshot history.",
  "ajustes.copiaExportar": "Download copy",
  "ajustes.copiaImportar": "Load a copy",
- "ajustes.copiaNota": "It does not hold the Jira exports or the AI key. Loading it replaces the configuration here and adds the snapshots.",
+ "ajustes.copiaNota": "It does not hold the Jira exports or the AI key. Loading it replaces the configuration here and adds the snapshots. Opened as a file, each folder keeps its own data: download a copy before moving or renaming the folder.",
  "ajustes.copiaMal": "That file is not an easyperformance configuration copy.",
  "ajustes.copiaConfirma": "The copy replaces the configuration and initiatives in this browser. Continue?",
  "ajustes.copiaHecha": "Copy loaded. New snapshots: {n}.",
