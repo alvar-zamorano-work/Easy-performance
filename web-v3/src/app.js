@@ -392,7 +392,8 @@
       const enApp = S.onboarded && S.vm;
       ob.classList.toggle('hidden', !!enApp); app.classList.toggle('hidden', !enApp); pr.classList.toggle('hidden', !S.presenting);
       if (!S.vm || S.presenting) S.drill = null;
-      if (S.presenting) { pr.innerHTML = V.presentacion(); V.asistente(); return; }
+      // Al presentar se cierra cualquier panel lateral (Compartir, ayuda...): si no, tapa media diapositiva
+      if (S.presenting) { pr.innerHTML = V.presentacion(); V.cajon(); V.asistente(); return; }
       // Elegir columnas a mano: va por delante de todo, en la pantalla de la primera vez
       if (S.colPend && S.colPend.abierto) { ob.classList.remove('hidden'); app.classList.add('hidden'); S.drill = null; ob.innerHTML = V.columnas(); V.cajon(); V.asistente(); return; }
       if (!enApp) { ob.innerHTML = V.onboarding(); V.trasOnboarding(); V.cajon(); V.asistente(); return; }

@@ -200,10 +200,25 @@ async function recorrer(p, etiqueta) {
   await p.click('input[data-change="pref-tile"][value="ciclo"]'); await p.waitForTimeout(150);
   ok('personalizar quita un indicador', !(await A(p, () => window.EP.kit.destacados().includes('ciclo'))));
   await p.click('[data-action="pref-reset"]'); await p.keyboard.press('Escape');
+  // Compartir: sus opciones son filas de la página, no botones con el aspecto del navegador
+  await p.click('#page-actions [data-kind="compartir"]'); await p.waitForTimeout(150);
+  const filasCompartir = await A(p, () => [...document.querySelectorAll('#drawer button.compartir')].map((b) => { const s = getComputedStyle(b); return { borde: s.borderTopStyle, fondo: s.backgroundColor, fuente: s.fontFamily === getComputedStyle(document.body).fontFamily, izq: s.textAlign, ancho: Math.round(b.getBoundingClientRect().width) }; }));
+  ok('Compartir: filas con el estilo de la página, alineadas a la izquierda y del mismo ancho', filasCompartir.length === 4 && filasCompartir.every((f) => f.borde !== 'outset' && f.fuente && (f.izq === 'left' || f.izq === 'start') && f.ancho === filasCompartir[0].ancho), JSON.stringify(filasCompartir[0]));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(100);
   // Presentación
   await compartir(p, 'present');
+  ok('al presentar desde Compartir el panel se cierra', await A(p, () => document.getElementById('drawer').classList.contains('hidden')));
   const nDiap = await A(p, () => window.EP.visibles().length + 2);
   for (let i = 0; i < nDiap; i++) { await p.keyboard.press('ArrowRight'); await p.waitForTimeout(60); }
+  // El botón fijo "Salir" no tapa el estado del equipo en ninguna diapositiva
+  await A(p, () => { window.EP.S.slide = 0; window.EP.render(); });
+  const tapados = [];
+  for (let i = 0; i < nDiap; i++) {
+    const r = await A(p, () => { const c = document.querySelector('#present .slide-head .chip'); const b = document.querySelector('#present .present-close'); if (!c || !b) return null; const a = c.getBoundingClientRect(), z = b.getBoundingClientRect(); return !(a.right <= z.left || a.left >= z.right || a.bottom <= z.top || a.top >= z.bottom) ? c.textContent.trim() : null; });
+    if (r) tapados.push(i + 1 + ':' + r);
+    await p.keyboard.press('ArrowRight'); await p.waitForTimeout(60);
+  }
+  ok('presentación: el botón Salir no tapa el estado del equipo', !tapados.length, tapados.join(', '));
   ok('presentación hasta la última diapositiva', /Por dónde empezar/.test(await p.textContent('#present')) && !(await estado(p)).error);
   await p.screenshot({ path: join(SALIDA, '10-presentacion.png') });
   await p.keyboard.press('Escape');
