@@ -4,6 +4,7 @@
 import { Tx } from '../../nucleo/idioma.ts';
 import { interior, norm } from '../../nucleo/util.ts';
 import { leerCSV } from './csv.ts';
+import { buscarCabecera } from './cabecera.ts';
 
 export type MapaColumnas = Record<string, number | number[]>;
 
@@ -26,7 +27,15 @@ const PERSONAS = ['assignee', 'reporter', 'creator', 'watchers', 'persona asigna
   // Azure DevOps y GitLab
   'assigned to', 'asignado a', 'author', 'autor', 'author username', 'assignee username', 'reviewer', 'reviewers', 'revisor'];
 const TEXTO_CON_NOMBRES = ['comment', 'comments', 'comentario', 'comentarios', 'log work', 'registro de trabajo', 'attachment', 'archivo adjunto', 'adjuntos'];
-const PARECE_PERSONA = /\b(user|usuario|username|email|correo|account id|id de cuenta)\b|\b(by|por)$/;
+// Personas por su papel ("Team Lead", "Scrum Master", "Product Owner", "Approvers"...), sin confundir "Lead time"
+const PARECE_PERSONA = /\b(user|usuario|username|email|correo|account id|id de cuenta)\b|\b(by|por)$|\b(team|tech|project|product|delivery|qa|dev|engineering|test)\s+lead\b|\blead (engineer|developer|dev)\b|^lead$|\b(leader|manager|owner|lider|jefe|scrum master|developers?|testers?|approvers?|participants?|requester|requestor|solicitante|aprobador(es)?|desarrollador(es)?|revisor(es)?)\b/;
+
+/** Columna de personas o de texto libre con nombres: nunca se lee ni se enseña un ejemplo. */
+export function esColumnaPrivada(h: string): boolean {
+  const n = norm(h), x = interior(h);
+  const empieza = (p: string) => n === p || x === p || n.startsWith(p + ' ') || x.startsWith(p + ' ');
+  return PERSONAS.some(empieza) || PARECE_PERSONA.test(n) || PARECE_PERSONA.test(x) || TEXTO_CON_NOMBRES.some(empieza);
+}
 
 /** Campos de los que no se enseña un ejemplo: texto libre o valores ilegibles. */
 const SIN_EJEMPLO: Record<string, 1> = { resumen: 1, descripcion: 1, tis: 1 };
@@ -45,11 +54,38 @@ export interface ColumnaLeida {
   ejemplo: string | null;
 }
 
+/** Hasta `max` valores distintos de cada columna, para enseñarlos al elegir columnas. Nunca de personas ni de texto libre. */
+export function ejemplosDeColumnas(texto: string, mapearColumnas: (cab: string[]) => MapaColumnas, max = 3): Record<string, string[]> {
+  const leidas = leerCSV(texto.slice(0, 300000));
+  if (!leidas.length) return {};
+  const c = buscarCabecera(leidas, mapearColumnas);
+  const filas = leidas.slice(c.indice >= 0 ? c.indice : c.probable), cab = filas[0], out: Record<string, string[]> = {};
+  cab.forEach((h, i) => {
+    const nombre = String(h).trim();
+    if (!nombre || out[nombre] || esColumnaPrivada(nombre) || /^(description|descripcion|summary|resumen)$/.test(norm(nombre))) return;
+    const vals: string[] = [];
+    let largos = 0, vistos = 0;
+    for (let r = 1; r < filas.length && r < 400; r++) {
+      const v0 = String(filas[r][i] ?? '').trim();
+      if (!v0) continue;
+      vistos++; if (v0.length > 60 || /\n/.test(v0)) largos++;
+      const v = v0.replace(/\s+/g, ' ');
+      if (vals.length < max && vals.indexOf(v) < 0) vals.push(v.length > 40 ? v.slice(0, 39) + '…' : v);
+    }
+    // Texto libre (criterios, entorno, notas): puede llevar nombres; no se enseña
+    out[nombre] = vistos && largos / vistos > 0.2 ? [] : vals;
+  });
+  return out;
+}
+
 /** Describe columna a columna cómo se lee un export, con el mapa de columnas y los textos de su plataforma. */
 export function describir(texto: string, mapearColumnas: (cab: string[]) => MapaColumnas, queEs: (campo: string) => string): ColumnaLeida[] {
   // Basta con la cabecera y unas filas para los ejemplos
-  const filas = leerCSV(texto.slice(0, 200000));
-  if (!filas.length) return [];
+  const leidas = leerCSV(texto.slice(0, 200000));
+  if (!leidas.length) return [];
+  // La fila de títulos puede no ser la primera ("Displaying 2784 issues at ..." encima): la misma búsqueda que la lectura
+  const c = buscarCabecera(leidas, mapearColumnas);
+  const filas = leidas.slice(c.indice >= 0 ? c.indice : c.probable);
   const cab = filas[0];
   const mapa = mapearColumnas(cab);
   // Los ejemplos salen de tareas de trabajo, no de épicas ni subtareas
@@ -64,7 +100,7 @@ export function describir(texto: string, mapearColumnas: (cab: string[]) => Mapa
     const nombre = String(h).trim();
     if (vistas[nombre]) { vistas[nombre].veces++; return; }
     const n = norm(nombre), x = interior(nombre);
-    const persona = PERSONAS.some((p) => n === p || x === p || n.startsWith(p + ' ')) || PARECE_PERSONA.test(n);
+    const persona = PERSONAS.some((p) => n === p || x === p || n.startsWith(p + ' ') || x.startsWith(p + ' ')) || PARECE_PERSONA.test(n) || PARECE_PERSONA.test(x);
     const conNombres = TEXTO_CON_NOMBRES.some((p) => n === p || x === p || n.startsWith(p + ' '));
     const campo = persona || conNombres ? null : campoDe[i] || null;
     let ejemplo: string | null = null;

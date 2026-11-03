@@ -451,6 +451,53 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   await p.context().close();
 }
 
+// ---------- 7b. Campos de Jira: cualquier formato se lee y cualquier columna se puede revisar y asignar ----------
+{
+  const { variantes } = await import('../tests/variantes.ts');
+  const { formatos } = await import('../tests/formatos.ts');
+  const V = variantes(), FMT = formatos();
+  const cargarFich = async (p, fs) => {
+    await p.click('[data-action="ob-go"][data-step="data"]'); await quieto(p);
+    await p.setInputFiles('#file-input', fs.map((f) => ({ name: f.nombre, mimeType: 'application/octet-stream', buffer: Buffer.from(f.texto) })));
+    await p.waitForTimeout(400); await quieto(p);
+  };
+  // El "Excel" de Jira Server / Data Center (tabla HTML): equipos, sprints, etiquetas y épicas como en el CSV de Cloud
+  {
+    const p = await pagina(1280, 800);
+    await cargarFich(p, [{ nombre: 'dc-excel.xls', texto: FMT.dcExcel.texto }]);
+    const r = await A(p, () => { const T = window.EP.S.lectura.tareas; return { n: T.length, equipos: window.EP.S.det.equipoRecomendado, varios: T.filter((t) => t.sprints.length > 1).length, epica: T.filter((t) => t.padre_id).length }; });
+    ok('Excel de Jira Data Center: equipos, sprints y épicas como en Cloud', r.n > 1000 && r.equipos === 'equipo' && r.varios > 100 && r.epica > 1000, JSON.stringify(r));
+    await p.context().close();
+  }
+  // Columna rara: una fecha de inicio propia se avisa al cargar, se revisa y, elegida, da el tiempo de ciclo
+  {
+    const p = await pagina(1280, 800);
+    await cargarFich(p, V.conFechaInicio.ficheros);
+    const aviso = await A(p, () => { const x = document.querySelector('[data-tipo="columnas-raras"]'); return x ? x.innerText : ''; });
+    ok('columnas raras: se avisa al cargar de la fecha de inicio sin usar', /Start Date\)»: fecha de inicio/.test(aviso), aviso.slice(0, 160));
+    await clic(p, '[data-tipo="columnas-raras"] [data-action="col-revisar"]');
+    const form = await A(p, () => ({ campos: document.querySelectorAll('#form-col select').length, grupos: document.querySelectorAll('#form-col .col-grupo').length,
+      nombres: [...document.querySelectorAll('#form-col option')].some((o) => /Marta Ruiz|Jorge Gil/.test(o.textContent)), sugerida: /Start Date/.test(document.querySelector('#form-col select[name="empezada"]').closest('.field').innerText) }));
+    ok('revisión de columnas: todos los campos por grupos, la sugerencia junto a su campo y sin nombres de personas', form.campos >= 25 && form.grupos === 6 && form.sugerida && !form.nombres, JSON.stringify(form));
+    await p.selectOption('#form-col select[name="empezada"]', 'Custom field (Start Date)');
+    await clic(p, '[data-action="col-aplicar"]');
+    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]', '[data-step="rol"]']) await clic(p, s);
+    await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+    const r = await A(p, () => ({ guardada: (window.EP.S.cfg.columnas || {}).empezada, ciclo: window.EP.S.vm.equipos.filter((e) => e.medidas.ciclo && e.medidas.ciclo.disponible).length, n: window.EP.S.vm.equipos.length }));
+    ok('fecha de inicio elegida a mano: se guarda y todos los equipos tienen tiempo de ciclo', r.guardada === 'Custom field (Start Date)' && r.ciclo === r.n && r.n > 1, JSON.stringify(r));
+    // "No usar" el equipo desde Fuentes: todo pasa a ser un solo equipo, y se puede volver atrás
+    await ir(p, 'fuentes'); await quieto(p);
+    await clic(p, '#page [data-action="col-revisar"]');
+    await p.selectOption('#form-col select[name="equipo"]', '__no_usar__');
+    await clic(p, '[data-action="col-aplicar"]');
+    const sinEq = await A(p, () => ({ campo: window.EP.S.vm.campoEquipo, sinColumna: window.EP.S.lectura.tareas.every((t) => !t.agrupadores.equipo), nota: document.body.innerText.indexOf('No usar') >= 0 }));
+    // Sin la columna de equipo, los equipos se reconocen por lo siguiente que sirva (aquí, el componente)
+    ok('"No usar" la columna de equipo: deja de leerse, los equipos salen de otro campo y Fuentes lo dice', sinEq.sinColumna && sinEq.campo !== 'equipo' && sinEq.nota, JSON.stringify(sinEq));
+    ok('sin errores de consola al revisar columnas', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
+}
+
 // ---------- 8. Datos imperfectos (auditoría de noviembre de 2026): lo que no se puede medir no sale "normal" ----------
 {
   const { variantes, EQUIPO_SALTO } = await import('../tests/variantes.ts');

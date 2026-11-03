@@ -125,6 +125,9 @@ details.more[open] > summary { margin-bottom: 12px; }
 
 /* Shell de la aplicación */
 .app { display: flex; min-height: 100vh; }
+/* Revisión de columnas: un título por grupo de campos */
+.col-grupo { margin: 18px 0 8px; }
+.col-grupo:first-child { margin-top: 0; }
 .sidebar { width: 232px; flex: 0 0 232px; background: var(--navy); color: #fff; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
 .sb-brand { padding: 22px 20px 14px; display: flex; flex-direction: column; gap: 2px; }
 .sb-brand .logo { font-weight: 700; font-size: 1.4667rem; color: var(--lightblue); letter-spacing: -0.01em; }

@@ -32,15 +32,20 @@ export function buscarCabecera(filas: string[][], mapear: (cab: string[]) => Map
   return { indice: mejor, mapa: mejorMapa, probable: mejor >= 0 ? mejor : probable };
 }
 
+/** Valor de la elección manual que quita un campo: "no usar ninguna columna para esto". */
+export const NO_USAR = '__no_usar__';
+
 /** Aplica la elección manual de columnas (campo -> nombre de columna) sobre el mapa automático. */
-export function aplicarColumnas(mapa: MapaColumnas, cab: string[], columnas: Record<string, string> | undefined): MapaColumnas {
+export function aplicarColumnas(mapa: MapaColumnas, cab: string[], columnas: Record<string, string> | undefined, multiples: Record<string, 1> = {}): MapaColumnas {
   if (!columnas) return mapa;
   const out: MapaColumnas = { ...mapa };
   Object.keys(columnas).forEach((campo) => {
     const nombre = columnas[campo];
     if (!nombre) return; // sin elegir: se queda lo que haya detectado la página
-    const i = cab.findIndex((h) => String(h).trim() === nombre);
-    if (i >= 0) out[campo] = Array.isArray(out[campo]) ? [i] : i;
+    if (nombre === NO_USAR) { delete out[campo]; return; }
+    // Un campo de varias columnas (Sprint en Jira Cloud) toma todas las que se llaman así
+    const todas = cab.map((h, i) => (String(h).trim() === nombre ? i : -1)).filter((i) => i >= 0);
+    if (todas.length) out[campo] = multiples[campo] || Array.isArray(out[campo]) ? todas : todas[0];
   });
   return out;
 }

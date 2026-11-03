@@ -3,7 +3,9 @@
 
 import { leerJira, OBLIGATORIOS, RECOMENDADOS } from '../../adaptadores/jira/ingerir.ts';
 import { leerHoja, aCsv, detectarFormato } from '../../adaptadores/comun/hoja.ts';
-import { describirColumnas, mapearColumnas } from '../../adaptadores/jira/columnas.ts';
+import { describirColumnas, mapearColumnas, ejemplosColumnasJira } from '../../adaptadores/jira/columnas.ts';
+import { NO_USAR } from '../../adaptadores/comun/cabecera.ts';
+import { esColumnaPrivada } from '../../adaptadores/comun/describir.ts';
 import { detectar } from '../../nucleo/detectar.ts';
 import { formatear, fechaCorta, conPorcentaje } from '../../nucleo/formato.ts';
 import { CATALOGO } from '../../nucleo/catalogo.ts';
@@ -31,7 +33,7 @@ import { SEMANAS_RITMO_EPICA } from '../../nucleo/epicas.ts';
 import { vistaEpicas, repartoPorCampo } from '../../nucleo/epicas.ts';
 
 const Nucleo = {
-  leerJira, OBLIGATORIOS, RECOMENDADOS, leerHoja, aCsv, detectarFormato, mapearColumnas, describirColumnas, detectar, diagnosticar, NOMBRE_AREA, comprobarPaquete, conEfecto, MEDIDAS_INICIATIVA, LATENCIA_DIAS,
+  leerJira, OBLIGATORIOS, RECOMENDADOS, NO_USAR, ejemplosColumnasJira, esColumnaPrivada, leerHoja, aCsv, detectarFormato, mapearColumnas, describirColumnas, detectar, diagnosticar, NOMBRE_AREA, comprobarPaquete, conEfecto, MEDIDAS_INICIATIVA, LATENCIA_DIAS,
   RUBRICA, CRITERIOS_AR, MUESTRA_MINIMA, etapasV0AMapeo, etapaDe, definiciones, aDocx, aMarkdown, capacidadArea, costeDeGrupos, modeloDeMedida,
   fiabilidad, COMPROBACIONES_EQUIPO, seguimiento, detalleMedida, tiempoPorEtapa, fijarIdioma, idioma, formatear, fechaCorta, conPorcentaje, IA,
   aplicarReglasTipo, tiposDeOrigen, etiquetasDe, TIPOS_ELEGIBLES, columnasNumericas, completarDesdeHistorial,
