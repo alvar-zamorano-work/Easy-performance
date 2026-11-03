@@ -12,17 +12,27 @@
     // Una alerta manda sobre "revisar": no se esconde un "fuera de lo normal" detrás de un aviso de dato
     if (m.revisar && m.estado !== 'atencion' && m.estado !== 'critico') return chip('warn', t('estado.revisar'));
     const porLimite = m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo';
-    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : 'estado.bien'));
+    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : m.lado === 'borde' ? 'estado.borde' : 'estado.bien'));
     if (m.estado === 'atencion') return chip('warn', t(porLimite ? 'estado.limite.atencion' : 'estado.atencion'));
     if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
+    if (m.estado === 'neutro') return '';
     return chip('neutral', t('estado.sinBanda'));
   }
-  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' };
+  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' };
   const equipoChip = (e) => chip(ESTADO_EQUIPO[e.estado], t('equipo.estado.' + e.estado));
   const nivelChip = (nivel) => `<span class="chip level-${nivel}">${esc(t('nivel.' + nivel))}</span>`;
 
   /** Rango habitual en texto: "6 a 9 tareas por semana". */
   function rango(id, m) {
+    if (m && m.sinHistorico) return t('medida.sinHistorico');
+    // Marcada por un límite fijo: se dice el límite (con el texto del núcleo, que sabe si es por arriba o por abajo), no "lo normal"
+    if (m && m.limite != null && m.estado !== 'bien' && (m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.estadoTexto)
+      return String(m.estadoTexto).replace(/\.$/, '');
+    if (!m || !m.ref) return t('medida.sinBanda');
+    return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
+  }
+  /** Lo normal del equipo (su franja), aunque mande un límite fijo: para el cajón y la barra, que enseñan la franja. */
+  function rangoBanda(id, m) {
     if (m && m.sinHistorico) return t('medida.sinHistorico');
     if (!m || !m.ref) return t('medida.sinBanda');
     return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
@@ -30,8 +40,14 @@
   /** Por qué tiene ese estado: la banda del equipo o un límite fijo (lo dice la tarjeta para que no parezca una contradicción). */
   function porque(id, m) {
     if (!m || !m.disponible) return m && m.motivo ? m.motivo : t('medida.noDisponible');
-    if (m.estadoPor === 'limite' && m.limite != null && m.estado !== 'bien') return t('medida.porLimite', { limite: valor(id, m.limite) });
-    if (m.estadoPor === 'limite_equipo' && m.limite != null && m.estado !== 'bien') return t('medida.porLimiteEquipo', { limite: valor(id, m.limite) });
+    if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.limite != null && m.estado !== 'bien') {
+      // Qué límite es y que no es un cambio frente a su rango habitual (que se enseña aparte para no confundirlo)
+      const quien = t(m.estadoPor === 'limite' ? 'medida.limiteDeTodos' : 'medida.limiteDelEquipo');
+      if (!m.ref) return quien;
+      // Solo se dice que no es un cambio si su banda también dice que está bien; si no, se dice que además está fuera
+      const p = { quien, lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) };
+      return t(m.estadoBanda === 'atencion' || m.estadoBanda === 'critico' ? 'medida.porLimiteFuera' : m.estadoBanda === 'bien' ? 'medida.porLimiteRango' : 'medida.porLimiteSolo', p);
+    }
     if (m.revisar === 'masivo' && m.estado !== 'atencion' && m.estado !== 'critico') return t('medida.masivo', { dias: (m.diasMasivos || []).map((x) => t('medida.masivoDia', { n: x.n, f: window.Nucleo.fechaCorta(new Date(x.fecha)) })).join(', ') });
     return m.estadoTexto || '';
   }
@@ -95,8 +111,28 @@
     const tope = techo([m.valor].concat(m.ref ? [m.ref.hi, m.ref.lo] : []));
     const pc = (v) => Math.max(0, Math.min(100, (v / tope) * 100)).toFixed(1);
     const banda = m.ref ? `<i class="b-band" style="left:${pc(m.ref.lo)}%;width:${Math.max(1.5, pc(m.ref.hi) - pc(m.ref.lo))}%"></i>` : '';
-    return `<div class="bala" title="${esc(rango(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
+    return `<div class="bala" title="${esc(rangoBanda(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
   }
+  /**
+   * Unidad de una medida, para que ninguna cifra salga sola: "tareas por semana", "de lo terminado"... En los plazos
+   * se dice que es el de 85 de cada 100 tareas. Vacía si la cifra ya la lleva (días, horas).
+   */
+  const P85 = { ciclo: 1, total: 1, primera: 1 };
+  function unidad(id) {
+    const def = cat().medidas[id];
+    if (id === 'coste') return t('medida.unidadCoste');
+    const u = def && def.unidad && def.formato !== 'dias' && def.formato !== 'horas' ? def.unidad : '';
+    return [u, P85[id] ? t('medida.p85') : ''].filter(Boolean).join(' · ');
+  }
+  /** Cifra con su unidad en una frase: "5,3 tareas por semana", "30 % de lo terminado". */
+  const conUnidad = (id, v) => {
+    if (v == null || isNaN(v)) return valor(id, v);
+    const def = cat().medidas[id];
+    const u = id === 'coste' ? t('medida.unidadCoste') : !def || !def.unidad || def.formato === 'dias' || def.formato === 'horas' ? '' : def.unidad;
+    return valor(id, v) + (u ? ' ' + u : '');
+  };
+  /** Las semanas que mira la cifra de ahora (no todas las medidas miran las mismas). */
+  const ventanaDe = (m) => (m && m.ventana ? tn('medida.ventana', m.ventana) : '');
   /** Fila de baseline de un indicador: nombre, ahora, la barra y lo normal. */
   function filaBaseline(eq, id) {
     const m = eq.medidas[id];
@@ -106,15 +142,32 @@
       : m && m.disponible ? (m.sinHistorico ? t('medida.sinHistoricoCorto') : t('medida.sinBanda')) : m ? t('medida.noSeMide') : '';
     const motivo = m && !m.disponible ? porque(id, m) : m && m.sinHistorico ? t('medida.sinHistorico') : '';
     return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"${motivo ? ` title="${esc(motivo)}"` : ''}>
-      <span class="fb-n">${esc(nombreMedida(id))}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
+      <span class="fb-n">${esc(nombreMedida(id))}${(() => {
+        // En la fila, la unidad corta y la ventana (el texto entero, al pasar por encima)
+        const corta = [unidad(id).split(' · ').filter((x) => x !== t('medida.p85'))[0] || '', m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · ');
+        const larga = [unidad(id), m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · ');
+        return `<small class="fb-u" title="${esc(larga)}">${esc(corta)}</small>`;
+      })()}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
   }
 
   /** Indicadores destacados del rol: los elegidos en Personalizar o los cuatro primeros del Context. */
+  /** Una medida se puede destacar si algún equipo (o el área) la puede medir con estos datos. */
+  function medible(id) {
+    const vm = S.vm; if (!vm) return false;
+    if (id === 'coste' && !vm.hayCoste) return false;
+    const ok = (e) => { const m = e && (e.medidas[id] || (id === 'coste' && e.kpis && e.kpis.coste)); return !!(m && m.disponible); };
+    // Con lo que ve el rol: para el rol Equipo, solo su equipo
+    return (S.role !== 'equipo' && ok(vm.area)) || window.EP.visibles().some(ok);
+  }
+  /**
+   * Los cuatro indicadores destacados del rol. Uno elegido que no se puede medir con este export se queda (dice por qué
+   * no se puede y qué falta); en Personalizar sale marcado y se puede cambiar por otro.
+   */
   function destacados() {
-    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => cat().medidas[k] || k === 'coste') : null;
+    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => cat().medidas[k] || (k === 'coste' && S.vm.hayCoste)) : null;
     if (p && p.length) return p.slice(0, 4);
     const base = S.vm.kpis.slice();
-    // Si el Context da menos de cuatro, se completan con medidas que suelen estar
+    // Si el enfoque da menos de cuatro, se completan con medidas que suelen estar
     ['entregas', 'bugs', 'wip', 'edad', 'pendiente', 'errores'].forEach((k) => { if (base.length < 4 && base.indexOf(k) < 0) base.push(k); });
     return base.slice(0, 4);
   }
@@ -128,6 +181,7 @@
     return `<div class="tile clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
       <div class="t-label"><span>${esc(nombreMedida(id))}<span class="hint" title="${esc(ayuda)}">?</span></span>${m && m.disponible ? estadoChip(m) : ''}</div>
       <div class="t-value">${m && m.disponible && m.valor != null ? esc(valor(id, m.valor)) : `<span class="muted">${esc(t('comun.sinDatos'))}</span>`}</div>
+      ${m && m.disponible ? `<div class="t-unit">${esc([unidad(id), ventanaDe(m)].filter(Boolean).join(' · '))}</div>` : ''}
       <div class="t-foot"><span>${esc(m && m.disponible ? rango(id, m) : porque(id, m))}</span></div>
       ${m && m.disponible && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? `<div class="t-why">${esc(porque(id, m))}</div>` : ''}
       <div class="t-viz">${viz}</div></div>`;
@@ -154,20 +208,36 @@
   const ficha = (cab, cuerpo, pie, attrs) => `<div class="ficha"${attrs || ''}><div class="f-head">${cab}</div><div class="f-body">${cuerpo}</div>${pie ? `<div class="f-foot">${pie}</div>` : ''}</div>`;
   const tituloEquipo = (e) => `<button class="f-title link-plain" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button>`;
 
+  /**
+   * Una recomendación vista desde unos equipos: el nivel y la evidencia son los de esos equipos, no los del peor
+   * ni los de otro. Las de grupo (sin detalle por equipo) se quedan como están.
+   */
+  const RANGO_NIVEL = { alto: 0, medio: 1, bajo: 2 };
+  function recPara(r, nombres) {
+    if (!r.porEquipo || !nombres) return r;
+    const mios = r.equipos.filter((e) => nombres.indexOf(e) >= 0 && r.porEquipo[e]);
+    if (!mios.length || mios.length === r.equipos.length) return r;
+    const nivel = mios.map((e) => r.porEquipo[e].nivel).sort((a, b) => RANGO_NIVEL[a] - RANGO_NIVEL[b])[0];
+    return Object.assign({}, r, { nivel, equipos: mios, evidencias: mios.map((e) => [e, r.porEquipo[e].evidencia]), otros: r.equipos.length - mios.length, todos: r.equipos });
+  }
+  const ordenRecs = (a, b) => RANGO_NIVEL[a.nivel] - RANGO_NIVEL[b.nivel];
   /** Fila de recomendación: nivel, título, para quién y la primera evidencia. */
   function recFila(r) {
     const ev = r.evidencias[0] ? r.evidencias[0][1] : r.senal;
-    return `<div class="rrow clickable" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}" role="button" tabindex="0">${nivelChip(r.nivel)}<div class="rrow-t"><b>${esc(r.titulo)}</b><div class="small muted">${esc(paraQuien(r))} · ${esc(primeraFrase(ev))}</div></div><span class="go">›</span></div>`;
+    const equipo = r.todos && r.equipos.length === 1 ? ` data-team="${esc(r.equipos[0])}"` : '';
+    return `<div class="rrow clickable" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}"${equipo} role="button" tabindex="0">${nivelChip(r.nivel)}<div class="rrow-t"><b>${esc(r.titulo)}</b><div class="small muted">${esc(paraQuien(r))} · ${esc(primeraFrase(ev))}</div></div><span class="go">›</span></div>`;
   }
   /** Equipos de una recomendación en texto; con más de cuatro, los tres primeros y cuántos más. */
   const equiposTexto = (eqs) => (eqs.length > 4 ? t('recs.yMas', { lista: eqs.slice(0, 3).map(nombreEquipo).join(', '), n: eqs.length - 3 }) : window.EP.lista(eqs.map(nombreEquipo)));
-  const paraQuien = (r) => (r.grupo ? r.grupoNombre + ' (' + equiposTexto(r.equipos) + ')' : equiposTexto(r.equipos));
+  const paraQuien = (r) => (r.grupo ? r.grupoNombre + ' (' + equiposTexto(r.equipos) + ')' : equiposTexto(r.equipos) + (r.otros ? ' ' + window.EP.tn('recs.yOtros', r.otros) : ''));
   const primeraFrase = (txt) => { const m = /^(.*?[.!?])(\s|$)/.exec(String(txt || '').trim()); return m ? m[1] : String(txt || ''); };
   /** Fila de un cambio: la medida fuera de lo normal, con su valor y su banda. */
   function cambioFila(eq, x) {
-    return `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(x.id)}" role="button" tabindex="0">${estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreMedida(x.id))}: ${esc(valor(x.id, x.m.valor))}</b><div class="small muted">${esc(rango(x.id, x.m))} · ${esc(porque(x.id, x.m))}</div></div><span class="go">›</span></div>`;
+    return `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(x.id)}" role="button" tabindex="0">${estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreMedida(x.id))}: ${esc(conUnidad(x.id, x.m.valor))}</b><div class="small muted">${esc(x.m.estadoPor === 'banda' ? porque(x.id, x.m) : rango(x.id, x.m) + ' · ' + porque(x.id, x.m))}</div></div><span class="go">›</span></div>`;
   }
   const barra = (pct, tono) => `<div class="bar"><i class="tone-${tono}" style="width:${Math.max(2, Math.min(100, pct * 100)).toFixed(1)}%"></i></div>`;
 
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
+  const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

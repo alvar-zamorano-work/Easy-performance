@@ -25,6 +25,8 @@ export interface EntradaPaquete {
   modelo: Modelo;
   /** El área entera como un solo equipo (calcular con unirComo). */
   area: Modelo | null;
+  /** Equipos que no entran en el área porque aún no tienen su rango normal. */
+  areaSin?: string[];
   comparaciones: Comparacion[];
   casosGrupo: CasoGrupo[];
   casosAgentReady: CasoEquipoNuevo[];
@@ -95,6 +97,8 @@ export function generarPaquete(e: EntradaPaquete) {
     medidas: {
       equipos: Object.fromEntries(e.modelo.equipos.map((x) => [x.nombre, medidasEquipo(x)])),
       area: e.area && e.area.equipos[0] ? medidasEquipo(e.area.equipos[0]) : null,
+      // El área se calcula sin estos equipos (aún sin rango normal): no es "toda" el área
+      area_sin: e.areaSin || [],
     },
     casos_activos: [
       ...e.modelo.equipos.flatMap((x) => x.casos.map((c) => ({ equipo: x.nombre, caso: c.id, gravedad: c.gravedad, confianza: c.confianza, senal: cat.casos[c.id]?.senal ?? null, datos: soloNumeros(c.datos) }))),

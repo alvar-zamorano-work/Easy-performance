@@ -23,6 +23,7 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
     m.estadoTexto = est.texto;
     if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
     if (est.lado) m.lado = est.lado;
+    if (est.banda) m.estadoBanda = est.banda;
     if (est.revisar) m.revisar = est.revisar;
     return m;
   }

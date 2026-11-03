@@ -18,7 +18,7 @@
   const descodificar = (buf) => { const b = buf instanceof Uint8Array ? buf : new Uint8Array(buf); try { return new TextDecoder('utf-8', { fatal: true }).decode(b); } catch (e) { return new TextDecoder('windows-1252').decode(b); } };
 
   async function leer(h) {
-    h = h || S.carpeta; if (!h) return;
+    h = h || enUso(); if (!h) return;
     EP.salirDemo(false);
     EP.ocupado(true, t('carpeta.leyendo'));
     try {
@@ -39,8 +39,10 @@
       let docs = []; ctx.forEach((f) => { const d = parse(f.texto, 'contexto/' + f.nombre); if (d && d.documentos) docs = docs.concat(d.documentos); });
       S.contextoDocs = docs.length ? { documentos: docs } : S.contextoDocs;
       await new Promise((res) => setTimeout(res, 20));
+      Object.assign(S, { cargaPend: null, cargaBloqueada: null, pendienteGuardar: false });
       if (EP.procesar(fs)) {
         EP.idbSet('ficheros', fs);
+        EP.idbSet('origenFicheros', { manual: false });
         if (EP.cortes) EP.cortes.capturar(false, true);
         if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; } else S.ob.step = 'revision';
         EP.toast(tn('carpeta.leidos', fs.length));
@@ -55,9 +57,11 @@
       .then((h) => { S.carpeta = h; EP.idbSet('carpeta', h); return leer(h); })
       .catch((e) => { if (e && e.name !== 'AbortError') EP.toast(t('carpeta.noAbre'), 'bad'); });
   }
+  /** La carpeta solo se usa con Labs encendido: apagado, no se lee ni se escribe nada en ella. */
+  const enUso = () => (S.carpeta && S.prefs && S.prefs.labs ? S.carpeta : null);
   /** Escribe un fichero en una subcarpeta. Solo si hay carpeta, hay permiso ya concedido y no es la demo. */
   async function escribir(subc, nombre, datos) {
-    const h = S.carpeta;
+    const h = enUso();
     if (!h || !h.queryPermission || S.demo) return false;
     try {
       if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') return false;
@@ -68,7 +72,7 @@
   }
   /** Borra un fichero de una subcarpeta (por ejemplo, la iniciativa que se quita). */
   async function borrar(subc, nombre) {
-    const h = S.carpeta;
+    const h = enUso();
     if (!h || !h.queryPermission || S.demo) return false;
     try { if ((await h.queryPermission({ mode: 'readwrite' })) !== 'granted') return false; const d = await h.getDirectoryHandle(subc); await d.removeEntry(nombre); return true; } catch (e) { return false; }
   }
@@ -76,5 +80,5 @@
 
   EP.accion('carpeta-elegir', elegir);
   EP.accion('carpeta-leer', () => leer());
-  EP.carpeta = { elegir, leer, escribir, borrar, recordar };
+  EP.carpeta = { elegir, leer, escribir, borrar, recordar, enUso };
 })();

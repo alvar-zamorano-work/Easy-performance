@@ -23,7 +23,7 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
   return { sentido: mejora ? 'mejora' : 'empeora', cambio, sube };
 }
 
-interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor'; revisar?: Revisar }
+interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar; banda?: Semaforo }
 
 /** Medidas en las que cero quiere decir que no había actividad (no que todo fuera bien). */
 const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
@@ -81,40 +81,47 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
     }
     return { estado: 'bien', texto: Tx('Within the limits set for this team.', 'Dentro de los límites del equipo.'), por, limite: null };
   }
-  if (limEquipo) return absoluto(limEquipo, 'limite_equipo') || { estado: 'bien', texto: '', por: 'limite_equipo', limite: null };
   let rel: Resultado | null = null;
   if (ref) {
-    const rango = Tx('its usual range (', 'su rango habitual (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
+    const rango = Tx('its baseline (', 'su línea base (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
+    // Fuera de la banda pero dentro del margen: no es una alerta, pero tampoco se dice "dentro" (el número no lo está)
+    const enBorde = (arriba: boolean): Resultado => ({ estado: 'bien', texto: (arriba ? Tx('Slightly above ', 'Un poco por encima de ') : Tx('Slightly below ', 'Un poco por debajo de ')) + rango + Tx(', within the margin.', ', dentro del margen.'), por: 'banda', lado: 'borde' });
     if (def.dir === 'menos') {
       if (v < ref.lo - margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v > ref.hi && v <= ref.hi + margen) rel = enBorde(true);
+      else if (v < ref.lo) rel = enBorde(false);
       else if (v <= ref.hi + margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     } else {
       if (v > ref.hi + margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v < ref.lo && v >= ref.lo - margen) rel = enBorde(false);
+      else if (v > ref.hi) rel = enBorde(true);
       else if (v >= ref.lo - margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     }
   }
+  // Un límite fijado para el equipo manda; se guarda también lo que dice su banda, para no contradecirla en el texto
+  if (limEquipo) return { ...(absoluto(limEquipo, 'limite_equipo') || { estado: 'bien', texto: '', por: 'limite_equipo', limite: null }), ...(rel ? { banda: rel.estado } : {}) };
   const abs = absoluto(def.limites, 'limite');
   // Comparación dudosa: no da alerta por la banda. Un límite fijo superado sigue mandando.
   const rev = revisarComparacion(id, v, ref, def);
   if (rev) {
     if (abs && abs.estado !== 'bien') return abs;
     const texto = rev === 'cero'
-      ? Tx('Its normal was zero: in the reference weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Lo normal era cero: en las semanas de referencia el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
-      : Tx('More than three times its usual range (', 'Más del triple de su rango habitual (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
+      ? Tx('Its baseline was zero: in those weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Su línea base era cero: en esas semanas el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
+      : Tx('More than three times its baseline (', 'Más del triple de su línea base (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
     return { estado: 'sin', texto, por: 'banda', revisar: rev };
   }
   const cands = [rel, abs].filter((x): x is Resultado => !!x);
-  if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet to know what is normal for this team.', 'Aún no hay semanas suficientes para saber qué es lo habitual en este equipo.') };
+  if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la línea base de este equipo.') };
   // Gana el peor. Si empatan, manda la banda del equipo (es la que se ve en la tarjeta).
   cands.sort((a, b) => orden[b.estado] - orden[a.estado] || (a.por === 'banda' ? -1 : 1));
-  return cands[0];
+  return rel && cands[0] !== rel ? { ...cands[0], banda: rel.estado } : cands[0];
 }
 
 /** Estado de la referencia: establecida con las semanas completas, provisional con banda pero menos semanas. */

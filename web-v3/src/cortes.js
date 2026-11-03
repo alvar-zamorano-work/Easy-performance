@@ -8,9 +8,24 @@
   const MEDIDAS = ['entregas', 'ciclo', 'bugs', 'retrabajo', 'arrastradas', 'wip', 'errores'];
   S.cortes = []; S.cortesDemo = [];
 
-  const listo = EP.idbGet('cortes').then((c) => { if (Array.isArray(c)) S.cortes = c; }).catch(() => { });
-  const guardar = () => EP.idbSet('cortes', S.cortes);
+  // Cortes quitados en esta pestaña: al guardar no se recuperan de lo que haya guardado otra
+  const quitados = new Set();
+  const ordenar = (l) => l.sort((a, b) => a.fechaDatos.localeCompare(b.fechaDatos) || a.creado.localeCompare(b.creado));
+  /** Lee los cortes guardados (al arrancar y cuando otra pestaña guarda los suyos). */
+  const releer = () => EP.idbGet('cortes').then((c) => { if (Array.isArray(c)) S.cortes = c.filter((x) => !quitados.has(x.id)); }).catch(() => { });
+  /** Guarda sin pisar: suma los cortes que otra pestaña haya guardado mientras tanto, salvo los quitados aquí. */
+  const guardar = (vaciar) => (vaciar ? EP.idbSet('cortes', []) : EP.idbActualizar('cortes', (guardados) => {
+    const ids = new Set(S.cortes.map((c) => c.id));
+    const deOtra = (Array.isArray(guardados) ? guardados : []).filter((c) => corteValido(c) && !ids.has(c.id) && !quitados.has(c.id));
+    if (deOtra.length) { S.cortes = ordenar(S.cortes.concat(deOtra)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); }
+    return S.cortes;
+  }));
+  /** Un corte bien formado (los que vienen de una copia de la configuración se comprueban antes de entrar). */
+  const corteValido = (c) => !!(c && typeof c === 'object' && typeof c.id === 'string' && typeof c.huella === 'string' && typeof c.fechaDatos === 'string' && typeof c.creado === 'string'
+    && !isNaN(Date.parse(c.fechaDatos)) && Array.isArray(c.ficheros) && c.fiabilidad && typeof c.fiabilidad === 'object' && c.equipos && typeof c.equipos === 'object' && !Array.isArray(c.equipos) && Array.isArray(c.kpis || []));
 
+  /** La parte de la huella que depende solo de los datos (fecha, tareas, ficheros y campo de equipo), sin la configuración. */
+  const datosDe = (h) => { h = String(h || ''); return h.slice(0, h.lastIndexOf('@')); };
   /** Huella de unos datos: misma fecha, mismas tareas y mismos ficheros dan el mismo corte. */
   function huella() {
     const inf = S.vm.informe;
@@ -39,21 +54,35 @@
   function capturar(demo, silencio) {
     if (!S.vm) return null;
     if (demo || S.demo) { S.cortesDemo = [foto()]; return S.cortesDemo[0]; }
+    // Con un export que no se puede medir no hay cifras que guardar: sería un corte basura
+    if (S.vm.dataCheck && S.vm.dataCheck.bloqueos.some((b) => b.duro)) return null;
     const h = huella(), ya = S.cortes.filter((c) => c.huella === h)[0];
     if (ya) return null;
+    // Los mismos datos con otra configuración: se sustituye su corte en vez de sumar uno repetido
+    const mismosDatos = S.cortes.filter((c) => datosDe(c.huella) === datosDe(h));
+    mismosDatos.forEach((c) => quitados.add(c.id));
+    if (mismosDatos.length) S.cortes = S.cortes.filter((c) => mismosDatos.indexOf(c) < 0);
     const c = foto();
     S.cortes.push(c);
-    S.cortes.sort((a, b) => a.fechaDatos.localeCompare(b.fechaDatos) || a.creado.localeCompare(b.creado));
+    ordenar(S.cortes);
     if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX);
     guardar();
     if (EP.carpeta) EP.carpeta.escribir('historico', c.id + '.json', JSON.stringify(c, null, 1));
     if (!silencio) setTimeout(() => EP.toast(t('cortes.guardado', { f: fecha(c.fechaDatos) })), 5200);
     return c;
   }
-  function borrar(id) { S.cortes = S.cortes.filter((c) => c.id !== id); guardar(); }
-  function borrarTodo() { S.cortes = []; S.cortesDemo = []; guardar(); }
+  function borrar(id) { quitados.add(id); S.cortes = S.cortes.filter((c) => c.id !== id); guardar(); }
+  function borrarTodo() { S.cortes.forEach((c) => quitados.add(c.id)); S.cortes = []; S.cortesDemo = []; guardar(true); }
+  /** Suma cortes que vienen de una copia de la configuración (los que ya están no se repiten). */
+  function importar(lista) {
+    const ids = new Set(S.cortes.map((c) => c.id));
+    const nuevos = (lista || []).filter((c) => corteValido(c) && !ids.has(c.id));
+    nuevos.forEach((c) => quitados.delete(c.id));
+    if (nuevos.length) { S.cortes = ordenar(S.cortes.concat(nuevos)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); guardar(); }
+    return nuevos.length;
+  }
 
-  const RANGO = { estable: 0, provisional: 1, revisar: 1, alerta: 2, poco_fiable: 3 };
+  const RANGO = { estable: 0, provisional: 1, revisar: 1, atencion: 1, alerta: 2, poco_fiable: 3 };
   /** Sentido del cambio de una medida entre dos cortes según el catálogo: mejora, empeora o igual. */
   function sentido(id, antes, ahora) {
     if (antes == null || ahora == null) return null;
@@ -62,17 +91,30 @@
     if (Math.abs(rel) < 0.05) return 'igual';
     return (rel > 0) === (def.dir === 'mas') ? 'mejora' : 'empeora';
   }
-  function cortes() {
+  /** El corte de los datos cargados, el anterior (de un día anterior) y cuántos equipos visibles mejoran o empeoran. */
+  function comparar() {
     const lista = (S.demo ? S.cortesDemo : S.cortes).slice().sort((a, b) => b.fechaDatos.localeCompare(a.fechaDatos) || b.creado.localeCompare(a.creado));
-    // El actual es el de los datos cargados; el anterior, el último con datos de antes
-    const h = S.vm ? huella() : null, iAct = Math.max(0, lista.findIndex((c) => c.huella === h));
-    const act = lista[iAct], ant = lista.slice(iAct + 1).filter((c) => c.fechaDatos <= act.fechaDatos && c.huella !== act.huella)[0];
+    const h = S.vm ? huella() : null, iAct = lista.findIndex((c) => c.huella === h);
+    // El anterior es el último con datos de un día anterior (dos cortes del mismo día no se comparan entre sí)
+    const act = lista[iAct], ant = act ? lista.filter((c) => c.fechaDatos.slice(0, 10) < act.fechaDatos.slice(0, 10))[0] : null;
     const nombres = EP.visibles().map((e) => e.nombre);
-    const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('cortes.paso' + i + '.t'))}</b><div class="small muted">${esc(t('cortes.paso' + i + '.d'))}</div></div></div>`).join('')}</div>`;
-    if (!act) return K.statusBar('neutral', esc(t('cortes.ninguno')), [esc(t('cortes.ningunoItems'))]) + pasos + `<div class="ficha empty">${esc(t('cortes.vacio'))} <button class="btn sm" data-action="corte-guardar">${esc(t('cortes.guardarAhora'))}</button></div>`;
     const pares = ant ? nombres.map((n) => ({ n, a: ant.equipos[n], b: act.equipos[n] })).filter((x) => x.a && x.b) : [];
     const mejora = pares.filter((x) => RANGO[x.b.estado] < RANGO[x.a.estado] || (x.b.estado === x.a.estado && x.b.alertas.length < x.a.alertas.length)).length;
     const empeora = pares.filter((x) => RANGO[x.b.estado] > RANGO[x.a.estado] || (x.b.estado === x.a.estado && x.b.alertas.length > x.a.alertas.length)).length;
+    return { lista, act, ant, pares, mejora, empeora };
+  }
+  /** Una línea para el Resumen: qué ha cambiado desde la carga anterior (si la hay). */
+  function lineaResumen() {
+    // Cortes es de Labs: apagado, el Resumen no enlaza a una página que no está en el menú
+    if (S.demo || !(S.prefs && S.prefs.labs)) return '';
+    const c = comparar();
+    if (!c.ant) return '';
+    return `<p class="small">${esc(t('cortes.desde', { f: fecha(c.ant.fechaDatos), m: c.mejora, e: c.empeora }))} <button class="link small" data-action="go" data-view="cortes">${esc(t('cortes.verCambios'))}</button></p>`;
+  }
+  function cortes() {
+    const { lista, act, ant, pares, mejora, empeora } = comparar();
+    const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('cortes.paso' + i + '.t'))}</b><div class="small muted">${esc(t('cortes.paso' + i + '.d'))}</div></div></div>`).join('')}</div>`;
+    if (!lista.length) return K.statusBar('neutral', esc(t('cortes.ninguno')), [esc(t('cortes.ningunoItems'))]) + pasos + `<div class="ficha empty">${esc(t('cortes.vacio'))} <button class="btn sm" data-action="corte-guardar">${esc(t('cortes.guardarAhora'))}</button></div>`;
     const frente = ant ? t('cortes.frente', { f: fecha(ant.fechaDatos) }) : t('cortes.sinAnterior');
     const dest = K.destacados().filter((id) => id !== 'coste').slice(0, 3);
     const tarjetas = pares.map(({ n, a, b }) => {
@@ -84,8 +126,8 @@
       return K.ficha(`<button class="f-title link-plain" data-action="open-team" data-team="${esc(n)}">${esc(nombreEquipo(n))}</button>${K.equipoChip({ estado: b.estado })}`, `<div class="f-metrics">${filas}</div>`,
         `<span class="small muted">${esc(t('cortes.antesEstado', { e: t('equipo.estado.' + a.estado).toLowerCase() }))}</span>`);
     }).join('');
-    const filas = lista.map((c, i) => `<div class="rrow corte">${K.chip(c === act ? 'info' : 'neutral', c === act ? t('cortes.actual') : t('cortes.anterior'))}<div class="rrow-t"><b>${esc(t('cortes.datosHasta', { f: fecha(c.fechaDatos) }))}</b><div class="small muted">${esc(tn('cortes.ficheros', c.ficheros.length))} · ${esc(tn('cortes.tareas', c.tareas))} · ${esc(t('cortes.fiab', { nivel: t('fiab.nivel.' + c.fiabilidad.nivel).toLowerCase() }))} · ${esc(tn('cortes.conAlerta', Object.keys(c.equipos).filter((k) => c.equipos[k].estado === 'alerta').length))}</div><div class="tiny muted">${esc(t('cortes.congelado', { f: fecha(c.creado), h: new Date(c.creado).toLocaleTimeString(window.I18N && window.I18N.lang === 'en' ? 'en-GB' : 'es-ES', { hour: '2-digit', minute: '2-digit' }) }))}</div></div>${S.demo ? '' : `<button class="btn sm" data-action="corte-borrar" data-id="${esc(c.id)}">${esc(t('comun.borrar'))}</button>`}</div>`).join('');
-    const titular = ant ? t('cortes.titular', { f: fecha(ant.fechaDatos), m: mejora, e: empeora }) : t('cortes.primero');
+    const filas = lista.map((c, i) => `<div class="rrow corte">${K.chip(c === act ? 'info' : 'neutral', c === act ? t('cortes.actual') : t('cortes.anterior'))}<div class="rrow-t"><b>${esc(t('cortes.datosHasta', { f: fecha(c.fechaDatos) }))}</b><div class="small muted">${esc(tn('cortes.ficheros', c.ficheros.length))} · ${esc(tn('cortes.tareas', c.tareas))} · ${esc(t('cortes.fiab', { nivel: t('fiab.nivel.' + c.fiabilidad.nivel).toLowerCase() }))} · ${esc(tn('cortes.conAlerta', Object.keys(c.equipos).filter((k) => c.equipos[k].estado === 'alerta').length))}</div><div class="tiny muted">${esc(t('cortes.congelado', { f: fecha(c.creado), h: new Date(c.creado).toLocaleTimeString(window.I18N && window.I18N.lang === 'en' ? 'en-GB' : 'es-ES', { hour: '2-digit', minute: '2-digit' }) }))}</div></div>${S.demo || c === act ? '' : `<button class="btn sm" data-action="corte-borrar" data-id="${esc(c.id)}">${esc(t('comun.borrar'))}</button>`}</div>`).join('');
+    const titular = !act ? t('cortes.sinActual') : ant ? t('cortes.titular', { f: fecha(ant.fechaDatos), m: mejora, e: empeora }) : t('cortes.primero');
     return K.statusBar(empeora ? 'bad' : mejora ? 'good' : 'neutral', esc(titular), [esc(tn('cortes.cuenta', lista.length)), esc(t('cortes.soloCifras'))])
 
       + (ant ? K.sec(t('cortes.cambios'), `<span class="muted small">${esc(t('cortes.cambiosNota', { f: fecha(ant.fechaDatos) }))}</span>`) + `<div class="fichas">${tarjetas}</div>` : '')
@@ -94,6 +136,6 @@
   EP.accion('corte-borrar', (el) => { borrar(el.dataset.id); EP.render(); });
   EP.accion('corte-guardar', () => { const c = capturar(false, true); EP.toast(c ? t('cortes.guardado', { f: fecha(c.fechaDatos) }) : t('cortes.yaHay')); EP.render(); });
 
-  EP.cortes = { listo, capturar, borrar, borrarTodo, sentido };
+  EP.cortes = { lineaResumen, releer, capturar, borrar, borrarTodo, importar, corteValido, sentido };
   Object.assign(EP.vistas, { cortes });
 })();
