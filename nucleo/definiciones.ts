@@ -136,11 +136,11 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
   // 5. Medidas
   const medidas = cliente.medidas.filter((id) => cat.medidas[id]);
   h1(Tx('5. Measures', '5. Medidas'));
-  p(Tx('Each measure is compared with what is normal for the team itself, never with other teams. Normal is the range the measure sits in 7 weeks out of 10, looking at the ', 'Cada medida se compara con lo que es normal para el propio equipo, nunca con otros equipos. Lo normal es el rango en el que está la medida 7 semanas de cada 10, mirando las ') + (cfg.semanasReferencia || 12) + Tx(' weeks before the ones being measured.', ' semanas anteriores a las que se miden.'));
+  p(Tx('Each measure is compared with the team\'s own baseline, never with other teams. The baseline is the range the measure sits in 7 weeks out of 10, looking at the ', 'Cada medida se compara con la línea base del propio equipo, nunca con otros equipos. La línea base es el rango en el que está la medida 7 semanas de cada 10, mirando las ') + (cfg.semanasReferencia || 12) + Tx(' weeks before the ones being measured.', ' semanas anteriores a las que se miden.'));
   lista([
-    [{ b: Tx('Good. ', 'Bien. ') }, Tx('Within the usual range or better, with a 10% margin.', 'Dentro del rango habitual o mejor, con un margen del 10 %.')],
-    [{ b: Tx('Attention. ', 'Atención. ') }, Tx('Worse than usual, up to 25% beyond the margin.', 'Peor de lo habitual, hasta un 25 % más allá del margen.')],
-    [{ b: Tx('Critical. ', 'Crítico. ') }, Tx('Much worse than usual.', 'Mucho peor de lo habitual.')],
+    [{ b: Tx('Good. ', 'Bien. ') }, Tx('Within the baseline or better, with a 10% margin.', 'Dentro de la línea base o mejor, con un margen del 10 %.')],
+    [{ b: Tx('Attention. ', 'Atención. ') }, Tx('Worse than the baseline, up to 25% beyond the margin.', 'Peor que la línea base, hasta un 25 % más allá del margen.')],
+    [{ b: Tx('Critical. ', 'Crítico. ') }, Tx('Much worse than the baseline.', 'Mucho peor que la línea base.')],
     [{ b: Tx('Fixed limits. ', 'Límites fijos. ') }, Tx('Some measures also have an attention limit and a critical limit. If a team agrees its own limits, its limits apply.', 'Algunas medidas tienen además un límite de atención y uno crítico. Si un equipo acuerda sus propios límites, se aplican los suyos.')],
   ]);
   medidas.forEach((id) => {

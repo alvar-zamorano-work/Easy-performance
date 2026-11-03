@@ -322,6 +322,13 @@
               "$ref": "#/$defs/medidas"
             }
           ]
+        },
+        "area_sin": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Equipos que no entran en el área porque aún no tienen su rango normal."
         }
       }
     },

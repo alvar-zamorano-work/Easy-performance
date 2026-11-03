@@ -27,7 +27,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   const cicloRef = M.ciclo && M.ciclo.ref, entRef = M.entregas && M.entregas.ref;
   if (wipRef && cicloRef && entRef && M.ciclo.valor != null && wipAct > wipRef.hi * 1.2 && M.ciclo.valor > cicloRef.med * 1.2 && M.entregas.valor! <= entRef.med * 1.25)
     add('demasiado_a_la_vez', wipAct > wipRef.hi * 1.6,
-      Tx('Work in progress is at ', 'El trabajo en curso está en ') + f(wipAct, 'num') + Tx(' tasks (the usual was ', ' tareas (lo habitual era ') + f(wipRef.med, 'num') + Tx(') and lead time has gone from ', ') y el tiempo de ciclo ha pasado de ') + f(cicloRef.med, 'dias') + Tx(' to ', ' a ') + f(M.ciclo.valor, 'dias') + Tx(', with the same deliveries.', ', con las mismas entregas.'),
+      Tx('Work in progress is at ', 'El trabajo en curso está en ') + f(wipAct, 'num') + Tx(' tasks (its baseline was ', ' tareas (en su línea base era ') + f(wipRef.med, 'num') + Tx(') and lead time has gone from ', ') y el tiempo de ciclo ha pasado de ') + f(cicloRef.med, 'dias') + Tx(' to ', ' a ') + f(M.ciclo.valor, 'dias') + Tx(', with the same deliveries.', ', con las mismas entregas.'),
       { wip: wipAct, wipRef: wipRef.med, cicloAntes: cicloRef.med, cicloAhora: M.ciclo.valor });
   // 3 el sprint no se cumple
   const ult = eq.sprints.ultimos;
@@ -35,7 +35,8 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   if (eq.sprints.fiables && am != null && am > 0.3 && ult.every((x) => x.arrastre! > 0.2)) {
     add('sprint_no_cumple', am > 0.45, Tx('In the last three sprints an average of ', 'En los tres últimos sprints se arrastró de media el ') + f(am, 'pct') + Tx(' of the work was carried over (', ' del trabajo (') + ult.map((x) => x.nombre + ': ' + f(x.arrastre, 'pct')).join('; ') + ').', { media: am });
   }
-  // 4 el pendiente crece
+  // 4 el pendiente crece. Sin fechas de inicio la serie de antes sale inflada (lo que estaba en curso cuenta como
+  // pendiente), así que el crecimiento solo puede quedarse corto: si aun así salta, es real.
   if (L >= 8) {
     let semMas = 0;
     for (let w = L - 5; w <= L; w++) if (s.entradas[w] > s.salidas[w]) semMas++;
@@ -56,11 +57,11 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   // 6 retrabajo
   const rt = M.retrabajo;
   if (rt && rt.valor != null && (rt.valor >= 0.2 || (rt.ref && rt.valor > rt.ref.hi && rt.valor >= 0.12)))
-    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (the usual was ', ' (lo habitual era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
+    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (its baseline was ', ' (en su línea base era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
   // 7 los errores se comen la capacidad
   const er = M.errores;
   if (er && er.valor != null && er.valor >= 0.3 && (!er.ref || er.valor > er.ref.med))
-    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + Tx(' of the work done in the last 8 weeks is bugs', ' de lo terminado en las últimas 8 semanas son errores') + (er.ref ? Tx(' (the usual was ', ' (lo habitual era ') + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
+    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + Tx(' of the work done in the last 8 weeks is bugs', ' de lo terminado en las últimas 8 semanas son errores') + (er.ref ? Tx(' (its baseline was ', ' (en su línea base era ') + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
   // 8 todo llega al final del sprint
   if (eq.sprints.fiables && ult.length >= 3) {
     const fm = media(ult.map((x) => x.alFinal))!;

@@ -51,7 +51,7 @@ function sinTextos<T>(x: T): T {
 function sinNovedades(m: unknown): unknown {
   type M = Record<string, Record<string, unknown>>;
   const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown>; calidad?: Record<string, unknown> }[] };
-  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; });
+  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; delete v.estadoBanda; });
   x.equipos.forEach((e) => {
     delete e.medidas.agent_readiness; delete e.series.agentReady;
     delete e.medidas.bugs; delete e.series.bugsEntrada; delete e.series.bugsMedia;

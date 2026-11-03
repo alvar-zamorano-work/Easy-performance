@@ -4,7 +4,7 @@
 
 import { DIA } from './util.ts';
 import { RUBRICA } from './agent-readiness.ts';
-import type { Preparacion } from './calcular.ts';
+import { cerradaSinFecha, type Preparacion } from './calcular.ts';
 import type { Derivada } from './tipos.ts';
 
 export interface FilaDetalle {
@@ -84,7 +84,7 @@ export function detalleMedida(p: Preparacion, equipo: string, medida: string, op
     case 'wip': case 'edad': {
       // Lo que está en curso al cierre de la última semana, con su antigüedad
       criterio = 'detalle.enCurso';
-      filas = items.filter((d) => !d.descartada && d.inicio && d.inicio < hasta && d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta))
+      filas = items.filter((d) => !d.descartada && !cerradaSinFecha(d) && d.inicio && d.inicio < hasta && d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta))
         .map((d) => fila(d, (c.fechaRef.getTime() - d.inicio!.getTime()) / DIA, null)).sort(porDias);
       if (medida === 'edad') {
         criterio = 'detalle.atascadas';
@@ -95,7 +95,7 @@ export function detalleMedida(p: Preparacion, equipo: string, medida: string, op
     }
     case 'pendiente':
       criterio = 'detalle.sinEmpezar';
-      filas = items.filter((d) => d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta) && !(d.inicio && d.inicio < hasta))
+      filas = items.filter((d) => !cerradaSinFecha(d) && d.t.fechas.creada < hasta && (!d.t.fechas.terminada || d.t.fechas.terminada >= hasta) && !(d.inicio && d.inicio < hasta))
         .map((d) => fila(d, (hasta.getTime() - d.t.fechas.creada.getTime()) / DIA, null)).sort(porDias);
       return { medida, equipo, desde: hasta, hasta, criterio, filas };
     default:
