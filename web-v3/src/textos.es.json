@@ -89,8 +89,6 @@
  "medida.sinHistorico": "Sin histórico con el que comparar: el export no dice cuándo empezó el trabajo terminado",
  "medida.sinHistoricoCorto": "sin histórico",
  "medida.noSeMide": "no se puede medir",
- "medida.porLimite": "Se marca por superar el límite fijo de {limite}, no por su rango habitual.",
- "medida.porLimiteEquipo": "Se marca por superar el límite de {limite} fijado para este equipo.",
  "resumen.redactado": "Resumen redactado",
  "resumen.conAlerta.1": "1 equipo con alerta: {equipos}",
  "resumen.conAlerta.n": "{n} equipos con alerta: {equipos}",
@@ -859,8 +857,8 @@
  "dc.accion.datos": "Cargar otro export",
  "estado.mejor": "Mejor de lo normal",
  "estado.revisar": "Revisar el dato",
- "estado.limite.critico": "Supera el límite",
- "estado.limite.atencion": "Cerca del límite",
+ "estado.limite.critico": "Límite crítico",
+ "estado.limite.atencion": "Límite de atención",
  "equipo.estado.revisar": "Revisar el dato",
  "resumen.mejor": "Mejor de lo normal en {m}",
  "resumen.revisarDato": "Revisar el dato: {m}",
@@ -993,5 +991,11 @@
  "narr.atencion": "{e} tiene una recomendación urgente: {r}.",
  "narr.fiabilidadEquipo": "Dato del equipo: {bien} de {n} comprobaciones bien.",
  "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela.",
- "ref.areaSin": "Sin {equipos}: todavía no tienen su rango normal y moverían la cifra del área sin que nada cambie."
+ "ref.areaSin": "Sin {equipos}: todavía no tienen su rango normal y moverían la cifra del área sin que nada cambie.",
+ "estado.borde": "En el borde",
+ "medida.limiteCritico": "Supera el límite crítico fijo de {limite}",
+ "medida.limiteAtencion": "Llega al límite de atención fijo de {limite}",
+ "medida.limiteDeTodos": "Es un límite fijo igual para todos los equipos.",
+ "medida.limiteDelEquipo": "Es un límite fijado para este equipo.",
+ "medida.porLimiteRango": "{quien} No es un cambio frente a su rango habitual ({lo} a {hi})."
 }

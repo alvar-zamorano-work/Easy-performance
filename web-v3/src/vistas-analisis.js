@@ -253,7 +253,7 @@
   // ---------- Baseline ----------
   function referencias() {
     const vm = S.vm, eqs = EP.visibles(), dest = K.destacados();
-    const prov = eqs.filter((e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida'));
+    const prov = eqs.filter(K.baselineProvisional);
     const conArea = S.role === 'equipo' ? eqs : [vm.area].concat(eqs);
     const fichas = conArea.map((e) => {
       const refs = dest.map((id) => e.medidas[id]).filter((m) => m && m.disponible && m.ref);

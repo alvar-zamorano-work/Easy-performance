@@ -128,8 +128,11 @@ export interface MedidaCalculada {
   limite?: number | null;
   /** Referencia con 12 semanas (establecida), con 6 a 11 (provisional) o sin banda todavía. */
   referencia?: EstadoReferencia;
-  /** "mejor": el valor está claramente por el lado bueno de su banda (no es una alerta, pero tampoco es "lo normal"). */
-  lado?: 'mejor';
+  /**
+   * "mejor": el valor está claramente por el lado bueno de su banda (no es una alerta, pero tampoco es "lo normal").
+   * "borde": fuera de la banda por poco (dentro del margen): no es una alerta, pero tampoco se dice que esté dentro.
+   */
+  lado?: 'mejor' | 'borde';
   /**
    * La comparación no es de fiar y no da alerta: "cero" si lo normal era no tener actividad de este tipo,
    * "salto" si el valor es más del triple de lo normal por el lado bueno (típico de una limpieza del tablero).

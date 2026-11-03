@@ -12,7 +12,7 @@
     // Una alerta manda sobre "revisar": no se esconde un "fuera de lo normal" detrás de un aviso de dato
     if (m.revisar && m.estado !== 'atencion' && m.estado !== 'critico') return chip('warn', t('estado.revisar'));
     const porLimite = m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo';
-    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : 'estado.bien'));
+    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : m.lado === 'borde' ? 'estado.borde' : 'estado.bien'));
     if (m.estado === 'atencion') return chip('warn', t(porLimite ? 'estado.limite.atencion' : 'estado.atencion'));
     if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
     return chip('neutral', t('estado.sinBanda'));
@@ -24,14 +24,20 @@
   /** Rango habitual en texto: "6 a 9 tareas por semana". */
   function rango(id, m) {
     if (m && m.sinHistorico) return t('medida.sinHistorico');
+    // Marcada por un límite fijo: se dice el límite, no "lo normal" (el valor puede estar dentro o mejor que lo normal)
+    if (m && m.limite != null && m.estado !== 'bien' && (m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo'))
+      return t(m.estado === 'critico' ? 'medida.limiteCritico' : 'medida.limiteAtencion', { limite: valor(id, m.limite) });
     if (!m || !m.ref) return t('medida.sinBanda');
     return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
   }
   /** Por qué tiene ese estado: la banda del equipo o un límite fijo (lo dice la tarjeta para que no parezca una contradicción). */
   function porque(id, m) {
     if (!m || !m.disponible) return m && m.motivo ? m.motivo : t('medida.noDisponible');
-    if (m.estadoPor === 'limite' && m.limite != null && m.estado !== 'bien') return t('medida.porLimite', { limite: valor(id, m.limite) });
-    if (m.estadoPor === 'limite_equipo' && m.limite != null && m.estado !== 'bien') return t('medida.porLimiteEquipo', { limite: valor(id, m.limite) });
+    if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.limite != null && m.estado !== 'bien') {
+      // Qué límite es y que no es un cambio frente a su rango habitual (que se enseña aparte para no confundirlo)
+      const quien = t(m.estadoPor === 'limite' ? 'medida.limiteDeTodos' : 'medida.limiteDelEquipo');
+      return m.ref ? t('medida.porLimiteRango', { quien, lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) }) : quien;
+    }
     if (m.revisar === 'masivo' && m.estado !== 'atencion' && m.estado !== 'critico') return t('medida.masivo', { dias: (m.diasMasivos || []).map((x) => t('medida.masivoDia', { n: x.n, f: window.Nucleo.fechaCorta(new Date(x.fecha)) })).join(', ') });
     return m.estadoTexto || '';
   }
@@ -183,5 +189,7 @@
   }
   const barra = (pct, tono) => `<div class="bar"><i class="tone-${tono}" style="width:${Math.max(2, Math.min(100, pct * 100)).toFixed(1)}%"></i></div>`;
 
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
+  const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

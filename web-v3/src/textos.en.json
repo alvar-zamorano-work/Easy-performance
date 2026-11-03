@@ -89,8 +89,6 @@
  "medida.sinHistorico": "No history to compare with: the export does not say when the finished work started",
  "medida.sinHistoricoCorto": "no history",
  "medida.noSeMide": "cannot be measured",
- "medida.porLimite": "Flagged for going over the fixed {limite} limit, not for its usual range.",
- "medida.porLimiteEquipo": "Flagged for going over the {limite} limit set for this team.",
  "resumen.redactado": "Written summary",
  "resumen.conAlerta.1": "1 team with an alert: {equipos}",
  "resumen.conAlerta.n": "{n} teams with an alert: {equipos}",
@@ -859,8 +857,8 @@
  "dc.accion.datos": "Load another export",
  "estado.mejor": "Better than normal",
  "estado.revisar": "Check the data",
- "estado.limite.critico": "Over the limit",
- "estado.limite.atencion": "Near the limit",
+ "estado.limite.critico": "Critical limit",
+ "estado.limite.atencion": "Attention limit",
  "equipo.estado.revisar": "Check the data",
  "resumen.mejor": "Better than normal in {m}",
  "resumen.revisarDato": "Check the data: {m}",
@@ -993,5 +991,11 @@
  "narr.atencion": "{e} has an urgent recommendation: {r}.",
  "narr.fiabilidadEquipo": "Team data: {bien} of {n} checks fine.",
  "prev.revisar": "This team's deliveries need checking (for example, a bulk close). The forecast comes from them: treat it with care.",
- "ref.areaSin": "Without {equipos}: they do not have their normal range yet and would move the area figure without any real change."
+ "ref.areaSin": "Without {equipos}: they do not have their normal range yet and would move the area figure without any real change.",
+ "estado.borde": "On the edge",
+ "medida.limiteCritico": "Over the fixed critical limit of {limite}",
+ "medida.limiteAtencion": "At the fixed attention limit of {limite}",
+ "medida.limiteDeTodos": "It is a fixed limit, the same for every team.",
+ "medida.limiteDelEquipo": "It is a limit set for this team.",
+ "medida.porLimiteRango": "{quien} It is not a change from its usual range ({lo} to {hi})."
 }

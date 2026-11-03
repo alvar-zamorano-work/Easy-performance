@@ -23,7 +23,7 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
   return { sentido: mejora ? 'mejora' : 'empeora', cambio, sube };
 }
 
-interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor'; revisar?: Revisar }
+interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar }
 
 /** Medidas en las que cero quiere decir que no había actividad (no que todo fuera bien). */
 const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
@@ -88,13 +88,19 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
+    // Fuera de la banda pero dentro del margen: no es una alerta, pero tampoco se dice "dentro" (el número no lo está)
+    const enBorde = (arriba: boolean): Resultado => ({ estado: 'bien', texto: (arriba ? Tx('Slightly above ', 'Un poco por encima de ') : Tx('Slightly below ', 'Un poco por debajo de ')) + rango + Tx(', within the margin.', ', dentro del margen.'), por: 'banda', lado: 'borde' });
     if (def.dir === 'menos') {
       if (v < ref.lo - margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v > ref.hi && v <= ref.hi + margen) rel = enBorde(true);
+      else if (v < ref.lo) rel = enBorde(false);
       else if (v <= ref.hi + margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v <= ref.hi + margen + tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     } else {
       if (v > ref.hi + margen) rel = { estado: 'bien', texto: Tx('Better than ', 'Mejor que ') + rango + '.', por: 'banda', lado: 'mejor' };
+      else if (v < ref.lo && v >= ref.lo - margen) rel = enBorde(false);
+      else if (v > ref.hi) rel = enBorde(true);
       else if (v >= ref.lo - margen) rel = { estado: 'bien', texto: Tx('Within ', 'Dentro de ') + rango + '.', por: 'banda' };
       else if (v >= ref.lo - margen - tol) rel = { estado: 'atencion', texto: Tx('Worse than ', 'Peor que ') + rango + '.', por: 'banda' };
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };

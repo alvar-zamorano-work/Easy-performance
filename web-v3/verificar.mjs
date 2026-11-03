@@ -960,6 +960,50 @@ const medirMaquetacion = () => {
   }
 }
 
+// ---------- 13. Semáforo y textos: el chip y el texto dicen lo mismo; un límite fijo no se enseña como "lo normal" ----------
+{
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+  const r = await A(p, () => {
+    const EP = window.EP, S = EP.S, K = EP.kit, mal = [], t = EP.t;
+    S.vm.equipos.forEach((e) => Object.keys(e.medidas).forEach((id) => {
+      const m = e.medidas[id];
+      if (!m || !m.disponible || m.valor == null) return;
+      const chip = K.estadoChip(m), rango = K.rango(id, m), porque = K.porque(id, m);
+      // "Normal" solo si el valor está dentro de su franja
+      if (m.ref && chip.indexOf('>' + t('estado.bien') + '<') >= 0 && (m.valor < m.ref.lo - 1e-9 || m.valor > m.ref.hi + 1e-9)) mal.push(e.nombre + ' ' + id + ': Normal fuera de la franja');
+      // Marcada por un límite fijo: ni "Lo normal" en el rango ni "Cerca" con un texto de superar
+      if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.estado !== 'bien') {
+        if (/Lo normal/.test(rango)) mal.push(e.nombre + ' ' + id + ': límite con "Lo normal"');
+        if (m.estado === 'atencion' && /Supera/.test(rango + porque)) mal.push(e.nombre + ' ' + id + ': atención con "Supera"');
+      }
+    }));
+    return mal;
+  });
+  ok('semáforo: "Normal" solo dentro de la franja; un límite fijo se enseña como límite', !r.length, r.slice(0, 4).join(' | '));
+  ok('semáforo: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+{
+  // El menú y la página de Baseline cuentan lo mismo (con un equipo que empezó tarde y otro con alerta)
+  const { variantes } = await import('../tests/variantes.ts');
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', variantes().equipoTardio.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+  await ir(p, 'referencias'); await quieto(p);
+  const b = await A(p, () => {
+    const enMenu = (document.querySelector('#nav [data-view="referencias"]') || {}).textContent || '';
+    const n = window.EP.visibles().filter(window.EP.kit.baselineProvisional).length;
+    return { enMenu: enMenu.replace(/\s+/g, ' ').trim(), n };
+  });
+  ok('Baseline: el menú cuenta los mismos equipos provisionales que la página', b.n > 0 && new RegExp('(^|\\D)' + b.n + '(\\D|$)').test(b.enMenu), JSON.stringify(b));
+  ok('Baseline: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);

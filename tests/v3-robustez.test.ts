@@ -86,6 +86,18 @@ test('cierre masivo: las entregas se marcan para revisar y no salen como "normal
   r.modelo.equipos.filter((x) => x.nombre !== EQUIPO_SALTO).forEach((x) => assert.equal(x.medidas.entregas.valor, entregasPorEquipo(base.modelo)[x.nombre], x.nombre));
 });
 
+test('semáforo: fuera de la banda por poco no se dice "dentro" (borde), y dentro de verdad sí', () => {
+  const def = CATALOGO.medidas.ciclo; // menos es mejor
+  const ref = { lo: 6, hi: 9, med: 7.5, n: 12 };
+  const dentro = estadoMedida('ciclo', 8, ref, null, def);
+  assert.equal(dentro.estado, 'bien'); assert.equal(dentro.lado, undefined); assert.match(dentro.texto, /Dentro de|Within/);
+  const encima = estadoMedida('ciclo', 9.4, ref, null, def);
+  assert.equal(encima.estado, 'bien'); assert.equal(encima.lado, 'borde'); assert.doesNotMatch(encima.texto, /Dentro de|Within/);
+  const ent = CATALOGO.medidas.entregas; // más es mejor
+  const debajo = estadoMedida('entregas', 5.6, ref, null, ent);
+  assert.equal(debajo.estado, 'bien'); assert.equal(debajo.lado, 'borde');
+});
+
 test('semáforo: mejor de lo normal no es "normal", y un límite fijo superado manda aunque la banda diga mejor', () => {
   const def = CATALOGO.medidas.entregas;
   const ref = { lo: 6, hi: 9, med: 7.5, n: 12 };

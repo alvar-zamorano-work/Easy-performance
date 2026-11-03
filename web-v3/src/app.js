@@ -329,7 +329,7 @@
         recomendaciones: S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => vt.indexOf(e) >= 0)).length,
         iniciativas: S.vm.iniciativas.filter((x) => x.ini.equipos.some((e) => vt.indexOf(e) >= 0)).length,
         calidad: S.vm.fiabilidad.revisar,
-        referencias: visibles().filter((e) => e.estado === 'provisional').length,
+        referencias: visibles().filter(EP.kit.baselineProvisional).length,
       };
       document.querySelectorAll('#nav button').forEach((b) => {
         const v = b.dataset.view, c = cuentas[v];
