@@ -550,7 +550,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     await cargar(p, 'salto'); await terminar(p);
     const f = await A(p, (n) => { const e = window.EP.S.vm.equipos.find((x) => x.nombre === n); return { estado: e.estado, pie: window.EP.vistas.pieFicha(e), chip: [...document.querySelectorAll('.ficha')].filter((x) => x.textContent.indexOf(n) >= 0).map((x) => x.textContent).join(' ').slice(0, 400) }; }, EQUIPO_SALTO);
     // El equipo puede tener además otra alerta: el pie dice las dos cosas, y nunca "normal" o "mejor"
-    ok('cierre masivo: la ficha pide revisar el dato', (f.estado === 'revisar' || f.estado === 'alerta') && /Revisar el dato: Entregas/.test(f.pie) && !/Mejor de lo normal|Todo dentro de lo normal/.test(f.pie), JSON.stringify({ estado: f.estado, pie: f.pie }));
+    // Con la fiabilidad en cada cifra (auditoría UX) pueden salir más medidas por revisar: Entregas tiene que estar entre ellas
+    ok('cierre masivo: la ficha pide revisar el dato', (f.estado === 'revisar' || f.estado === 'alerta') && /Revisar el dato: [^·]*Entregas/.test(f.pie) && !/Mejor de lo normal|Todo dentro de lo normal/.test(f.pie), JSON.stringify({ estado: f.estado, pie: f.pie }));
     await p.context().close();
   }
   // Un cierre masivo de hace 9 semanas no marca las entregas de ahora
@@ -603,7 +604,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     ok('sin cambios de estado: el tiempo de ciclo dice en el baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
     await p.context().close();
   }
-  // Datos de ejemplo: lo que supera un límite fijo lo dice así, y nada mejor que su franja sale "Fuera de rango"
+  // Datos de ejemplo: sin línea base, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
+  // Con línea base manda la línea base (auditoría UX): el límite superado es un aviso y no pone chip de límite.
   {
     const p = await pagina(1280, 800);
     await clic(p, '[data-action="demo"]');
@@ -612,9 +614,11 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
       window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.critico')) >= 0) malas.push(e.nombre + ' ' + id); }));
       // Lo marcado por un límite crítico fijo lleva el chip de límite, nunca "Fuera de rango"
       const conLimite = window.EP.S.vm.equipos.some((e) => Object.values(e.medidas).some((m) => m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.limite.critico')) >= 0));
-      return { malas, limite: conLimite };
+      const avisos = [], avisoConChip = [];
+      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (!m || !m.disponible || !m.aviso) return; avisos.push(e.nombre + ' ' + id); const c = window.EP.kit.estadoChip(m); if (c.indexOf(window.EP.t('estado.limite.critico')) >= 0 || c.indexOf(window.EP.t('estado.limite.atencion')) >= 0) avisoConChip.push(e.nombre + ' ' + id); }));
+      return { malas, limite: conLimite, avisos: avisos.length, avisoConChip };
     });
-    ok('datos de ejemplo: "Límite crítico" en vez de "Fuera de rango" cuando manda un límite fijo', r.limite && !r.malas.length, JSON.stringify(r));
+    ok('datos de ejemplo: con línea base, un límite fijo superado es un aviso sin chip de límite; sin ella, "Límite crítico" y nunca "Fuera de rango"', r.avisos > 0 && !r.avisoConChip.length && !r.malas.length, JSON.stringify(r));
     await p.context().close();
   }
 }
@@ -913,11 +917,11 @@ const medirMaquetacion = () => {
       EP.openDrill({ kind: 'caso', id: r.clave, team: eqs[1].nombre });
       const cajon = document.querySelector('#drawer').textContent; EP.openDrill(null);
       // Un equipo estable con un caso grave: "Pide atención"; descartada la recomendación, vuelve a "Estable"
-      const e = S.vm.equipos.filter((x) => x.nombre === eqs[1].nombre)[0], antes = { estado: e.estado, todas: e.gravesTodas };
-      e.estado = 'estable'; e.gravesTodas = ['todo_urgente'];
+      const e = S.vm.equipos.filter((x) => x.nombre === eqs[1].nombre)[0], antes = { estado: e.estado, todas: e.gravesTodas, sinGraves: e.estadoSinGraves };
+      e.estado = 'estable'; e.estadoSinGraves = 'estable'; e.gravesTodas = ['todo_urgente'];
       EP.P.ajustarAtencion(S.vm, S.dismissed); const con = e.estado;
       S.dismissed[r.clave] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); const sin = e.estado;
-      delete S.dismissed[r.clave]; e.estado = antes.estado; e.gravesTodas = antes.todas; EP.P.ajustarAtencion(S.vm, S.dismissed);
+      delete S.dismissed[r.clave]; e.estado = antes.estado; e.estadoSinGraves = antes.sinGraves; e.gravesTodas = antes.todas; EP.P.ajustarAtencion(S.vm, S.dismissed);
       return { clave: r.clave, esperada: 'todo_urgente|' + orden.join(','), cajonLeve: cajon.indexOf('Evidencia leve de ' + eqs[1].nombre) >= 0, cajonGrave: cajon.indexOf('Evidencia grave de') >= 0, con, sin };
     });
     ok('recomendaciones: la clave sigue el orden del modelo, el cajón de un equipo es suyo y descartar quita "Pide atención"', otros.clave === otros.esperada && otros.cajonLeve && !otros.cajonGrave && otros.con === 'atencion' && otros.sin === 'estable', JSON.stringify(otros));
@@ -982,8 +986,11 @@ const medirMaquetacion = () => {
       const m = e.medidas[id];
       if (!m || !m.disponible || m.valor == null) return;
       const chip = K.estadoChip(m), rango = K.rango(id, m), porque = K.porque(id, m);
-      // "Normal" solo si el valor está dentro de su franja
-      if (m.ref && chip.indexOf('>' + t('estado.bien') + '<') >= 0 && (m.valor < m.ref.lo - 1e-9 || m.valor > m.ref.hi + 1e-9)) mal.push(e.nombre + ' ' + id + ': Normal fuera de la franja');
+      // "Normal" dentro de su franja, o algo mejor que ella dentro del margen (que la barra pinta). Por el lado malo, nunca.
+      const dir = EP.cat().medidas[id] ? EP.cat().medidas[id].dir : null, mg = m.margen || 0;
+      const fuera = m.ref && (m.valor < m.ref.lo - 1e-9 || m.valor > m.ref.hi + 1e-9);
+      const algoMejor = m.ref && dir && (dir === 'menos' ? m.valor < m.ref.lo && m.valor >= m.ref.lo - mg - 1e-9 : m.valor > m.ref.hi && m.valor <= m.ref.hi + mg + 1e-9);
+      if (fuera && !algoMejor && chip.indexOf('>' + t('estado.bien') + '<') >= 0) mal.push(e.nombre + ' ' + id + ': Normal fuera de la franja');
       // Marcada por un límite fijo: ni "Lo normal" en el rango ni "Cerca" con un texto de superar
       if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.estado !== 'bien') {
         if (/Lo normal/.test(rango)) mal.push(e.nombre + ' ' + id + ': límite con "Lo normal"');
@@ -1199,6 +1206,71 @@ const medirMaquetacion = () => {
   ok('pestañas: Iniciativas se marca, conserva el foco y lleva el título de Qué hacer', foco.v === 'iniciativas' && foco.foco === 'iniciativas' && foco.actual === 'iniciativas' && foco.titulo === 'Qué hacer', JSON.stringify(foco));
   ok('navegación: sin errores', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.join(' | '));
   await p.context().close();
+}
+
+// ---------- 18. Auditoría UX (P0): manda la línea base, la fiabilidad llega a cada cifra y un estado por equipo ----------
+{
+  const abrir = async (ruta) => {
+    const p = await pagina(1440, 900);
+    await p.setInputFiles('#file-input', ruta); await p.waitForTimeout(500); await quieto(p);
+    const veredicto = await p.textContent('#onboarding [data-tipo="veredicto"]');
+    await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+    await A(p, () => { const b = document.querySelector('[data-action="recorrido-fin"]'); if (b) b.click(); }); await quieto(p);
+    return { p, veredicto };
+  };
+  // Lo que se ve de cada equipo en el Resumen: el chip, y el tono y el texto de cada fila
+  const filas = (p) => A(p, () => [...document.querySelectorAll('#page .ficha')].filter((f) => f.querySelector('.fbs')).map((f) => ({
+    equipo: (f.querySelector('.f-title') || {}).textContent, chip: (f.querySelector('.f-head .chip') || {}).textContent || '',
+    filas: [...f.querySelectorAll('.fb')].map((r) => ({ medida: r.dataset.medida, tono: (r.querySelector('.fb-v').className.match(/t-(\w+)/) || [])[1], lim: !!r.querySelector('.b-lim'), margen: !!r.querySelector('.b-margen') })),
+  })));
+  {
+    const { p } = await abrir(join(RAIZ, 'datos-sinteticos', 'aseguradora', 'jira-aseguradora.csv'));
+    const vm = await A(p, () => window.EP.S.vm.equipos.map((e) => ({ nombre: e.nombre, estado: e.estado, graves: e.graves.length, ret: e.medidas.retrabajo && { v: e.medidas.retrabajo.valor, lo: e.medidas.retrabajo.ref && e.medidas.retrabajo.ref.lo, estado: e.medidas.retrabajo.estado, aviso: !!e.medidas.retrabajo.aviso } })));
+    // Una mejora frente a su línea base no es una alerta: Digital Channel baja su retrabajo al 22 % (línea base 25 % a 35 %)
+    const dc = vm.find((e) => e.nombre === 'Digital Channel');
+    ok('auditoría: un retrabajo que mejora frente a su línea base sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
+    const res = await filas(p);
+    const dcFila = res.find((x) => x.equipo === 'Digital Channel').filas.find((f) => f.medida === 'retrabajo');
+    ok('auditoría: en la barra, el límite fijo es una marca aparte y la cifra no sale en ámbar', dcFila.lim && dcFila.tono !== 'warn' && dcFila.tono !== 'bad', JSON.stringify(dcFila));
+    ok('auditoría: la barra pinta el margen alrededor de la línea base', res.every((x) => x.filas.filter((f) => f.tono !== 'neutral').every((f) => f.margen)), JSON.stringify(res.map((x) => x.equipo + ':' + x.filas.filter((f) => !f.margen).map((f) => f.medida).join('/'))));
+    // "Mucho retrabajo" no salta en un equipo que mejora frente a su línea base
+    const recs = await A(p, () => window.EP.S.vm.recs.filter((r) => r.id === 'retrabajo').map((r) => r.equipos));
+    ok('auditoría: "Mucho retrabajo" solo en el equipo que empeora (Policies), no en Digital Channel', recs.length === 1 && recs[0].indexOf('Policies') >= 0 && recs[0].indexOf('Digital Channel') < 0, JSON.stringify(recs));
+    // Un estado por equipo: con una recomendación urgente, nunca "Estable"; el mismo chip en el Resumen y en la presentación
+    ok('auditoría: ningún equipo con una recomendación urgente sale "Estable"', vm.every((e) => !e.graves || e.estado !== 'estable'), JSON.stringify(vm.map((e) => e.nombre + ':' + e.estado + ':' + e.graves)));
+    const chipsResumen = Object.fromEntries(res.filter((x) => x.chip).map((x) => [x.equipo, x.chip]));
+    await A(p, () => { window.EP.S.presenting = true; window.EP.S.slide = 0; window.EP.render(); });
+    const chipsPres = {};
+    for (let i = 0; i < 8; i++) {
+      const r = await A(p, () => ({ t: (document.querySelector('#present .slide-head h1') || {}).textContent, c: (document.querySelector('#present .slide-head .chip') || {}).textContent }));
+      if (r.t && r.c) chipsPres[r.t] = r.c;
+      await p.keyboard.press('ArrowRight'); await p.waitForTimeout(60);
+    }
+    await p.keyboard.press('Escape');
+    const distintos = Object.keys(chipsPres).filter((k) => chipsResumen[k] && chipsResumen[k] !== chipsPres[k]);
+    ok('auditoría: el estado de cada equipo es el mismo en el Resumen y en la presentación', Object.keys(chipsPres).length >= 5 && !distintos.length, JSON.stringify({ chipsResumen, chipsPres }));
+    // Épicas: sin fechas de vencimiento, ni un 0 ni en verde
+    await ir(p, 'epicas'); await quieto(p);
+    const riesgo = await A(p, () => { const t = [...document.querySelectorAll('#page .tiles > *')].find((x) => /VENCIDAS|vencidas/i.test(x.innerText)); return t ? { texto: t.innerText, verde: !!t.querySelector('.tone-good, .t-good, .good') } : null; });
+    ok('auditoría: Épicas sin vencimientos no enseña un 0 en verde', riesgo && /sin datos/.test(riesgo.texto) && !riesgo.verde, JSON.stringify(riesgo));
+    ok('sin errores de consola en la sección de la auditoría (aseguradora)', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
+  {
+    const { p, veredicto } = await abrir(join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv'));
+    ok('auditoría: con fiabilidad baja, el veredicto es "Se puede mirar, no decidir"', /Se puede mirar, no decidir/.test(veredicto), veredicto.slice(0, 80));
+    ok('auditoría: con fiabilidad baja, el titular del Resumen lo dice', /no decidir/.test(await p.textContent('#page .status')), '');
+    // Lo que depende de una comprobación que falla no sale en verde ni "mejor": Payments salta el en curso en 1 de cada 3 tareas
+    const dud = await A(p, () => window.EP.S.vm.equipos.flatMap((e) => Object.values(e.medidas).filter((m) => m && m.revisar === 'dato').map((m) => ({ e: e.nombre, id: m.id, estado: m.estado, lado: m.lado || null, tono: window.EP.kit.tonoDe(m) }))));
+    const pay = dud.filter((x) => x.e === 'Payments').map((x) => x.id);
+    ok('auditoría: en Payments, tiempo de ciclo y retrabajo salen "Revisar el dato"', pay.indexOf('ciclo') >= 0 && pay.indexOf('retrabajo') >= 0, JSON.stringify(pay));
+    ok('auditoría: ninguna cifra dudosa sale en verde', dud.length > 0 && dud.every((x) => x.tono !== 'good'), JSON.stringify(dud.filter((x) => x.tono === 'good')));
+    const pregs = await A(p, () => [...document.querySelectorAll('#page details.preg')].map((d) => d.querySelector('summary .chip').textContent));
+    ok('auditoría: con datos por revisar en equipos de la pregunta, "¿Vamos al ritmo de siempre?" no responde "Sí"', pregs.length && pregs[0] !== 'Sí', JSON.stringify(pregs));
+    ok('sin errores de consola en la sección de la auditoría (export con fallos)', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
 }
 
 await navegador.close();
