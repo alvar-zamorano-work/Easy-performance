@@ -654,3 +654,35 @@ tr.dudoso td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
 /* Preguntas de dirección: el título completo, aunque ocupe dos líneas */
 .ficha[data-tipo="pregunta"] .f-head { flex-wrap: wrap; row-gap: 6px; }
 .ficha[data-tipo="pregunta"] .f-title { white-space: normal; overflow: visible; text-overflow: clip; }
+
+/* ---------- onboarding en tres pantallas ---------- */
+/* La cabecera queda siempre a la misma altura y con el mismo ancho: no salta al cambiar de paso */
+#onboarding { align-items: flex-start; padding-top: 56px; }
+.ob, .ob.wide { max-width: 1080px; }
+.ob .ob-drop { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 40px 34px; }
+.ob .ob-drop b { color: #fff; font-size: 19px; font-weight: 500; }
+.ob-under { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+.ob .link.ob-link, .ob .ob-aviso .link { color: var(--lightblue); }
+.ob-priv { margin-top: 28px; }
+.ob .ob-h3 { font-size: 15px; font-weight: 700; margin: 22px 0 10px; }
+.ob > .ob-h3 { color: #fff; }
+.ob .panel .ob-h3 { color: var(--text); margin-top: 18px; }
+.ob .panel > [data-tipo="veredicto"] + .notice, .ob .panel .notice { margin-top: 12px; }
+.ob-limites { margin: 10px 0 0 18px; color: var(--muted); }
+.ob .panel .tiles { margin-top: 16px; }
+.tiles.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ob-att { display: flex; align-items: center; gap: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+.ob-att .grow { flex: 1; min-width: 0; }
+.ob-mejorar { margin-top: 14px; color: var(--muted); }
+.ob-mejorar ul { margin: 6px 0 0 18px; }
+.ob-mejorar b { color: var(--text); }
+.ob-links { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 16px; }
+.ob-sec { margin-top: 16px; }
+.choice.cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ob-aviso { margin-top: 10px; color: rgba(255, 255, 255, 0.8); }
+.ob-kpis { margin-top: 12px; }
+.ob-trabajo { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 8px; color: rgba(255, 255, 255, 0.75); }
+.ob-equipo { margin-top: 14px; }
+.ob-equipo .row { margin-top: 8px; flex-wrap: wrap; }
+.ob .tiles.cols-3 .t-viz:empty { display: none; }
+@media (max-width: 900px) { .choice.cols-5, .tiles.cols-3 { grid-template-columns: 1fr; } .ob-att { flex-wrap: wrap; } .ob-att .grow { flex: 1 1 calc(100% - 24px); } #onboarding { padding-top: 24px; } }

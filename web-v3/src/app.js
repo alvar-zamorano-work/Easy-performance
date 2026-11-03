@@ -10,7 +10,7 @@
 
   const S = {
     lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, contextoDocs: null, extraIni: [],
-    demo: false, real: null, onboarded: false, ob: { step: 'welcome' },
+    demo: false, real: null, onboarded: false, ob: { step: 'data' },
     role: 'direccion', team: null, teamCompare: false, view: 'resumen', drill: null,
     prefs: { byRole: {} }, dismissed: {}, recFilter: 'todos', recLevel: null, fuentesTab: 'ficheros', iniForm: null,
     ia: { modelo: N.IA.MODELO_POR_DEFECTO, clave: '' }, iaRecs: null, iaRecsDe: null, iaDescartadas: 0, iaImpacto: null, iaEstado: {}, iaError: {},
@@ -161,7 +161,7 @@
     // Nada de la demo se queda: equipo elegido, filtros, textos de IA y panel abierto
     Object.assign(S, { team: r.team || null, recFilter: 'todos', recLevel: null, narrativas: {}, iaRecs: null, iaRecsDe: null, iaImpacto: null, drill: null, iniForm: null });
     if (S.vm && (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team))) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
-    if (!S.vm) S.ob.step = 'welcome';
+    if (!S.vm) S.ob.step = 'data';
     if (pintar !== false) render();
   }
 
@@ -265,7 +265,7 @@
     try { localStorage.removeItem(CLAVE_CFG); localStorage.removeItem(CLAVE_PREFS); sessionStorage.removeItem(CLAVE_IA); sessionStorage.removeItem('easyperformance.v3.chat'); } catch (e) { }
     idbSet('ficheros', null); idbSet('carpeta', null); if (EP.cortes) EP.cortes.borrarTodo();
     if (S.chat) S.chat = { open: false, msgs: [], busy: false, draft: '' };
-    Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'welcome' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
+    Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'data' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
       extraIni: [], contextoDocs: null, carpeta: null, team: null, recFilter: 'todos', recLevel: null, iniForm: null, drill: null });
     guardarClave(''); render();
   });
