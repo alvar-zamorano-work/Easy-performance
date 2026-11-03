@@ -133,6 +133,8 @@ export interface MedidaCalculada {
    * "borde": fuera de la banda por poco (dentro del margen): no es una alerta, pero tampoco se dice que esté dentro.
    */
   lado?: 'mejor' | 'borde';
+  /** Cuando manda un límite fijo: lo que diría la banda de lo normal del equipo (para no contradecirla en el texto). */
+  estadoBanda?: Semaforo;
   /**
    * La comparación no es de fiar y no da alerta: "cero" si lo normal era no tener actividad de este tipo,
    * "salto" si el valor es más del triple de lo normal por el lado bueno (típico de una limpieza del tablero).

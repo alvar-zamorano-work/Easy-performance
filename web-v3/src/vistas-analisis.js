@@ -257,7 +257,8 @@
     const conArea = S.role === 'equipo' ? eqs : [vm.area].concat(eqs);
     const fichas = conArea.map((e) => {
       const refs = dest.map((id) => e.medidas[id]).filter((m) => m && m.disponible && m.ref);
-      const establecida = refs.length && refs.every((m) => m.referencia === 'establecida');
+      // La misma regla que el recuento del menú y del titular: entregas y errores con sus semanas completas
+      const establecida = refs.length && !K.baselineProvisional(e);
       const corta = refs.filter((m) => m.referencia !== 'establecida')[0];
       const cab = (e === vm.area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e)) + K.chip(establecida ? 'good' : 'warn', establecida ? t('ref.establecida') : t('ref.provisional'));
       const graficos = dest.map((id) => { const m = e.medidas[id]; return `<div class="bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"><div class="bl-cab"><span>${esc(nombreMedida(id))}</span>${m && m.disponible ? K.estadoChip(m) : ''}</div><div class="bl-cifras"><b>${esc(m && m.disponible ? valor(id, m.valor) : t('comun.sinDatos'))}</b><span class="small muted">${esc(m && m.disponible ? K.rango(id, m) : K.porque(id, m))}</span>${m && m.disponible && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? `<span class="t-why">${esc(K.porque(id, m))}</span>` : ''}</div>${m && m.disponible ? K.grafico(id, m, { h: 52, sinEje: true }) : ''}</div>`; }).join('');
@@ -322,7 +323,7 @@
     if (!m) return [titulo, `<p class="muted">${esc(t('medida.noDisponible'))}</p>`, ''];
     let html = (def && def.pregunta ? `<p class="small muted">${esc(def.pregunta)}</p>` : '') + `<p>${esc(def ? def.como : t('medida.costeComo'))}</p>`;
     if (def && def.decision) html += `<div class="ficha-4"><div><span class="tiny muted">${esc(t('cajon.decision'))}</span><b class="small">${esc(def.decision)}</b></div><div><span class="tiny muted">${esc(t('cajon.quien'))}</span><b class="small">${esc(def.quien || '')}</b></div></div>`;
-    if (m.disponible) html += `<div class="kv"><div><span>${esc(t('cajon.valor'))}</span><b>${esc(valor(id, m.valor))}</b></div><div><span>${esc(t('cajon.normal'))}</span><b>${esc(K.rango(id, m))}</b></div><div><span>${esc(t('cajon.estado'))}</span>${K.estadoChip(m)}</div><div><span>${esc(t('cajon.referencia'))}</span><b>${esc(t('ref.' + (m.referencia || 'sin')))}</b></div></div><p class="small">${esc(K.porque(id, m))}</p>`;
+    if (m.disponible) html += `<div class="kv"><div><span>${esc(t('cajon.valor'))}</span><b>${esc(valor(id, m.valor))}</b></div><div><span>${esc(t('cajon.normal'))}</span><b>${esc(K.rangoBanda(id, m))}</b></div><div><span>${esc(t('cajon.estado'))}</span>${K.estadoChip(m)}</div><div><span>${esc(t('cajon.referencia'))}</span><b>${esc(t('ref.' + (m.referencia || 'sin')))}</b></div></div><p class="small">${esc(K.porque(id, m))}</p>`;
     else html += `<div class="notice warn small">${esc(m.motivo || t('medida.noDisponible'))}</div>`;
     if (m.serie) html += `<div class="ficha" style="margin:10px 0">${K.spark(m.serie.slice(-26), m.ref, { tone: K.tonoDe(m), h: 70, label: nombreMedida(id) })}<div class="tiny muted">${esc(t('cajon.serie'))}</div></div>`;
     let extra = '';

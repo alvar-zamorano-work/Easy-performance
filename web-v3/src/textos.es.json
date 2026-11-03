@@ -993,9 +993,9 @@
  "prev.revisar": "Las entregas de este equipo están por revisar (por ejemplo, un cierre en bloque). La previsión sale de ellas: tómala con cautela.",
  "ref.areaSin": "Sin {equipos}: todavía no tienen su rango normal y moverían la cifra del área sin que nada cambie.",
  "estado.borde": "En el borde",
- "medida.limiteCritico": "Supera el límite crítico fijo de {limite}",
- "medida.limiteAtencion": "Llega al límite de atención fijo de {limite}",
  "medida.limiteDeTodos": "Es un límite fijo igual para todos los equipos.",
  "medida.limiteDelEquipo": "Es un límite fijado para este equipo.",
- "medida.porLimiteRango": "{quien} No es un cambio frente a su rango habitual ({lo} a {hi})."
+ "medida.porLimiteRango": "{quien} No es un cambio frente a su rango habitual ({lo} a {hi}).",
+ "medida.porLimiteFuera": "{quien} Además está fuera de su rango habitual ({lo} a {hi}).",
+ "medida.porLimiteSolo": "{quien}"
 }

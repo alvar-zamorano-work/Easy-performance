@@ -24,9 +24,15 @@
   /** Rango habitual en texto: "6 a 9 tareas por semana". */
   function rango(id, m) {
     if (m && m.sinHistorico) return t('medida.sinHistorico');
-    // Marcada por un límite fijo: se dice el límite, no "lo normal" (el valor puede estar dentro o mejor que lo normal)
-    if (m && m.limite != null && m.estado !== 'bien' && (m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo'))
-      return t(m.estado === 'critico' ? 'medida.limiteCritico' : 'medida.limiteAtencion', { limite: valor(id, m.limite) });
+    // Marcada por un límite fijo: se dice el límite (con el texto del núcleo, que sabe si es por arriba o por abajo), no "lo normal"
+    if (m && m.limite != null && m.estado !== 'bien' && (m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.estadoTexto)
+      return String(m.estadoTexto).replace(/\.$/, '');
+    if (!m || !m.ref) return t('medida.sinBanda');
+    return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
+  }
+  /** Lo normal del equipo (su franja), aunque mande un límite fijo: para el cajón y la barra, que enseñan la franja. */
+  function rangoBanda(id, m) {
+    if (m && m.sinHistorico) return t('medida.sinHistorico');
     if (!m || !m.ref) return t('medida.sinBanda');
     return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
   }
@@ -36,7 +42,10 @@
     if ((m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo') && m.limite != null && m.estado !== 'bien') {
       // Qué límite es y que no es un cambio frente a su rango habitual (que se enseña aparte para no confundirlo)
       const quien = t(m.estadoPor === 'limite' ? 'medida.limiteDeTodos' : 'medida.limiteDelEquipo');
-      return m.ref ? t('medida.porLimiteRango', { quien, lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) }) : quien;
+      if (!m.ref) return quien;
+      // Solo se dice que no es un cambio si su banda también dice que está bien; si no, se dice que además está fuera
+      const p = { quien, lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) };
+      return t(m.estadoBanda === 'atencion' || m.estadoBanda === 'critico' ? 'medida.porLimiteFuera' : m.estadoBanda === 'bien' ? 'medida.porLimiteRango' : 'medida.porLimiteSolo', p);
     }
     if (m.revisar === 'masivo' && m.estado !== 'atencion' && m.estado !== 'critico') return t('medida.masivo', { dias: (m.diasMasivos || []).map((x) => t('medida.masivoDia', { n: x.n, f: window.Nucleo.fechaCorta(new Date(x.fecha)) })).join(', ') });
     return m.estadoTexto || '';
@@ -101,7 +110,7 @@
     const tope = techo([m.valor].concat(m.ref ? [m.ref.hi, m.ref.lo] : []));
     const pc = (v) => Math.max(0, Math.min(100, (v / tope) * 100)).toFixed(1);
     const banda = m.ref ? `<i class="b-band" style="left:${pc(m.ref.lo)}%;width:${Math.max(1.5, pc(m.ref.hi) - pc(m.ref.lo))}%"></i>` : '';
-    return `<div class="bala" title="${esc(rango(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
+    return `<div class="bala" title="${esc(rangoBanda(id, m))}">${banda}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
   }
   /** Fila de baseline de un indicador: nombre, ahora, la barra y lo normal. */
   function filaBaseline(eq, id) {
@@ -191,5 +200,5 @@
 
   /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
   const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

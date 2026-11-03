@@ -23,7 +23,7 @@ export function tendencia(actual: number | null | undefined, previo: number | nu
   return { sentido: mejora ? 'mejora' : 'empeora', cambio, sube };
 }
 
-interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar }
+interface Resultado { estado: Semaforo; texto: string; por?: EstadoPor; limite?: number | null; lado?: 'mejor' | 'borde'; revisar?: Revisar; banda?: Semaforo }
 
 /** Medidas en las que cero quiere decir que no había actividad (no que todo fuera bien). */
 const ACTIVIDAD: Record<string, 1> = { entregas: 1, velocidad: 1, throughput: 1 };
@@ -81,7 +81,6 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
     }
     return { estado: 'bien', texto: Tx('Within the limits set for this team.', 'Dentro de los límites del equipo.'), por, limite: null };
   }
-  if (limEquipo) return absoluto(limEquipo, 'limite_equipo') || { estado: 'bien', texto: '', por: 'limite_equipo', limite: null };
   let rel: Resultado | null = null;
   if (ref) {
     const rango = Tx('its usual range (', 'su rango habitual (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
@@ -106,6 +105,8 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
       else rel = { estado: 'critico', texto: Tx('Much worse than ', 'Bastante peor que ') + rango + '.', por: 'banda' };
     }
   }
+  // Un límite fijado para el equipo manda; se guarda también lo que dice su banda, para no contradecirla en el texto
+  if (limEquipo) return { ...(absoluto(limEquipo, 'limite_equipo') || { estado: 'bien', texto: '', por: 'limite_equipo', limite: null }), ...(rel ? { banda: rel.estado } : {}) };
   const abs = absoluto(def.limites, 'limite');
   // Comparación dudosa: no da alerta por la banda. Un límite fijo superado sigue mandando.
   const rev = revisarComparacion(id, v, ref, def);
@@ -120,7 +121,7 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
   if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet to know what is normal for this team.', 'Aún no hay semanas suficientes para saber qué es lo habitual en este equipo.') };
   // Gana el peor. Si empatan, manda la banda del equipo (es la que se ve en la tarjeta).
   cands.sort((a, b) => orden[b.estado] - orden[a.estado] || (a.por === 'banda' ? -1 : 1));
-  return cands[0];
+  return rel && cands[0] !== rel ? { ...cands[0], banda: rel.estado } : cands[0];
 }
 
 /** Estado de la referencia: establecida con las semanas completas, provisional con banda pero menos semanas. */

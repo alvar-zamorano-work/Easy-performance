@@ -993,9 +993,9 @@
  "prev.revisar": "This team's deliveries need checking (for example, a bulk close). The forecast comes from them: treat it with care.",
  "ref.areaSin": "Without {equipos}: they do not have their normal range yet and would move the area figure without any real change.",
  "estado.borde": "On the edge",
- "medida.limiteCritico": "Over the fixed critical limit of {limite}",
- "medida.limiteAtencion": "At the fixed attention limit of {limite}",
  "medida.limiteDeTodos": "It is a fixed limit, the same for every team.",
  "medida.limiteDelEquipo": "It is a limit set for this team.",
- "medida.porLimiteRango": "{quien} It is not a change from its usual range ({lo} to {hi})."
+ "medida.porLimiteRango": "{quien} It is not a change from its usual range ({lo} to {hi}).",
+ "medida.porLimiteFuera": "{quien} It is also outside its usual range ({lo} to {hi}).",
+ "medida.porLimiteSolo": "{quien}"
 }

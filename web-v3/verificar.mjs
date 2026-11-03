@@ -603,9 +603,11 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     const r = await A(p, () => {
       const malas = [];
       window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && /Fuera de rango/.test(window.EP.kit.estadoChip(m))) malas.push(e.nombre + ' ' + id); }));
-      return { malas, limite: document.body.innerText.indexOf('Supera el límite') >= 0 };
+      // Lo marcado por un límite crítico fijo lleva el chip de límite, nunca "Fuera de rango"
+      const conLimite = window.EP.S.vm.equipos.some((e) => Object.values(e.medidas).some((m) => m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.limite.critico')) >= 0));
+      return { malas, limite: conLimite };
     });
-    ok('datos de ejemplo: "Supera el límite" en vez de "Fuera de rango" cuando manda un límite fijo', r.limite && !r.malas.length, JSON.stringify(r));
+    ok('datos de ejemplo: "Límite crítico" en vez de "Fuera de rango" cuando manda un límite fijo', r.limite && !r.malas.length, JSON.stringify(r));
     await p.context().close();
   }
 }
