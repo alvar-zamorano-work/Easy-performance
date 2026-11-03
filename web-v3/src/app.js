@@ -227,7 +227,9 @@
       if (S.demo) banda.innerHTML = `<span>${esc(t('demo.banda'))}</span><button class="link" data-action="demo-exit">${esc(t('demo.salir'))}</button>`;
       const cab = V.cabecera(S.view);
       byId('page-title').textContent = cab.titulo; byId('page-sub').textContent = cab.sub; byId('page-actions').innerHTML = cab.acciones || '';
-      byId('page').innerHTML = (V[S.view] || V.resumen)();
+      // Sin entregas medibles, las páginas de análisis no enseñan cifras: solo por qué y cómo arreglarlo
+      const bloqueo = V.bloqueoDuro ? V.bloqueoDuro() : '';
+      byId('page').innerHTML = bloqueo && ['fuentes', 'ajustes', 'calidad'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)();
       V.cajon(); V.asistente();
     } catch (e) {
       console.error(e);

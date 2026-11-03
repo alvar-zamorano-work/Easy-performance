@@ -23,20 +23,42 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
+    const revisar = eqs.filter((e) => e.estado === 'revisar');
     const recs = recsActivas(eqs);
-    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length ? 'warn' : 'good';
-    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t('resumen.sinAlertas'));
+    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length ? 'warn' : 'good';
+    // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso
+    const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional' || e.estado === 'revisar');
+    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
     const f = vm.fiabilidad;
     const items = [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
     if (pocoFiables.length) items.push(esc(t('resumen.pocoFiables', { equipos: lista(pocoFiables.map((e) => nombreEquipo(e.nombre))) })));
+    if (revisar.length) items.push(esc(t('resumen.revisarEn', { equipos: lista(revisar.map((e) => nombreEquipo(e.nombre))) })));
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
     const dest = K.destacados();
     const fichas = eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
-      `<span class="small muted">${esc(e.cambios[0] ? t('resumen.cambio', { m: nombreMedida(e.cambios[0].id) }) : t('resumen.fichaEstable'))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
+      `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
     return K.statusBar(tono, titular, items) + preguntas()
       + K.sec(t('resumen.baselineEquipos'), `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span>`) + `<div class="fichas cols-2">${fichas}</div>`
       + K.sec(t('resumen.primero'), `<button class="link" data-action="go" data-view="recomendaciones">${esc(t('comun.verTodas'))}</button>`) + `<div class="ficha list">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
   }
+  /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
+  function pieFicha(e) {
+    if (e.cambios[0]) {
+      // Lo que supera un límite fijo no está "fuera de lo normal" del equipo: puede estar incluso mejor que su franja
+      const porLimite = e.cambios.filter((x) => x.m.estadoPor === 'limite' || x.m.estadoPor === 'limite_equipo').map((x) => nombreMedida(x.id));
+      const fuera = e.cambios.filter((x) => x.m.estadoPor !== 'limite' && x.m.estadoPor !== 'limite_equipo').map((x) => nombreMedida(x.id));
+      const revisar = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
+      return [fuera.length ? t('resumen.cambio', { m: lista(fuera) }) : '', porLimite.length ? t('resumen.cambioLimite', { m: lista(porLimite) }) : '', revisar].filter(Boolean).join(' · ');
+    }
+    if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
+    if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
+    // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
+    const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref; });
+    if (sinRango.length) return t('resumen.sinRango', { m: lista(sinRango.map(nombreMedida)) });
+    return t('resumen.fichaEstable');
+  }
+  /** Ficha de equipo sin cambios: lo mismo que el pie del Resumen, con la frase larga cuando de verdad todo es normal. */
+  function textoSinCambios(e) { const p = pieFicha(e); return p === t('resumen.fichaEstable') ? t('equipo.todoNormal') : p; }
   /**
    * Preguntas de dirección: una por objetivo del Context. Cada una se responde con las medidas de ese objetivo
    * en los equipos visibles: qué equipos están fuera de lo normal. Una pregunta entra si su respuesta lleva a decidir algo.
@@ -46,15 +68,27 @@
     const tarjetas = P.OBJETIVOS.filter((o) => c.objetivos.indexOf(o.id) >= 0).map((o) => {
       const kpis = o.kpis.filter((k) => cols.indexOf(k) >= 0);
       if (!kpis.length) return '';
-      const malos = []; let conDato = false;
-      eqs.forEach((e) => kpis.forEach((k) => { const m = e.medidas[k]; if (m && m.disponible) { conDato = true; if (m.estado === 'atencion' || m.estado === 'critico') malos.push({ e, k, m }); } }));
+      const malos = [], revisar = new Set(), mejores = new Set(); let conDato = false;
+      eqs.forEach((e) => kpis.forEach((k) => {
+        const m = e.medidas[k];
+        if (!m || !m.disponible) return;
+        conDato = true;
+        if (m.estado === 'atencion' || m.estado === 'critico') malos.push({ e, k, m });
+        else if (m.revisar) revisar.add(nombreEquipo(e.nombre));
+        else if (m.estado === 'bien' && m.lado === 'mejor') mejores.add(nombreEquipo(e.nombre));
+      }));
+      // Una medida de la pregunta sin datos en ningún equipo: la respuesta es parcial, nunca un "Sí" entero
+      const faltan = kpis.filter((k) => !eqs.some((e) => { const m = e.medidas[k]; return m && m.disponible && m.valor != null; }));
       malos.sort((a, b) => (b.m.estado === 'critico' ? 1 : 0) - (a.m.estado === 'critico' ? 1 : 0));
-      const tono = !conDato ? 'neutral' : malos.some((x) => x.m.estado === 'critico') ? 'bad' : malos.length ? 'warn' : 'good';
+      const parcial = conDato && !malos.length && (faltan.length || revisar.size);
+      const tono = !conDato ? 'neutral' : malos.some((x) => x.m.estado === 'critico') ? 'bad' : malos.length || parcial ? 'warn' : 'good';
       const nEq = new Set(malos.map((x) => x.e.nombre)).size;
-      const resp = !conDato ? t('preg.sinDatos') : malos.length ? tn('preg.revisar', nEq) : t('preg.bien');
+      const resp = !conDato ? t('preg.sinDatos') : malos.length ? tn('preg.revisar', nEq) : parcial ? t('preg.enParte') : t('preg.bien');
+      const detalleBien = [faltan.length ? t('preg.enParteDetalle', { m: lista(faltan.map(nombreMedida)) }) : (mejores.size ? t('preg.mejorDetalle', { equipos: lista([...mejores]) }) : t('preg.bienDetalle')),
+        revisar.size ? t('preg.revisarDato', { equipos: lista([...revisar]) }) : ''].filter(Boolean).join(' ');
       const cuerpo = malos.length ? malos.slice(0, 4).map((x) => `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(x.e.nombre)}" data-medida="${esc(x.k)}" role="button" tabindex="0">${K.estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreEquipo(x.e.nombre))}</b><div class="small muted">${esc(nombreMedida(x.k))}: ${esc(valor(x.k, x.m.valor))} · ${esc(K.rango(x.k, x.m))}</div></div><span class="go">›</span></div>`).join('')
         + (malos.length > 4 ? `<div class="tiny muted">${esc(tn('preg.mas', malos.length - 4))}</div>` : '')
-        : `<p class="small muted">${esc(conDato ? t('preg.bienDetalle') : t('preg.sinDatosDetalle'))}</p>`;
+        : `<p class="small muted">${esc(conDato ? detalleBien : t('preg.sinDatosDetalle'))}</p>`;
       return K.ficha(`<div class="f-title">${esc(t('preg.' + o.id))}</div>${K.chip(tono, resp)}`, cuerpo, `<span class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</span>`, ' data-tipo="pregunta"');
     }).filter(Boolean);
     return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="fichas">${tarjetas.join('')}</div>` : '';
@@ -64,7 +98,7 @@
   // ---------- Equipos ----------
   function pestanas() {
     if (S.role === 'equipo') return '';
-    return `<div class="tabs">${S.vm.equipos.map((e) => `<button class="tab ${!S.teamCompare && S.team === e.nombre ? 'on' : ''}" data-action="team-tab" data-team="${esc(e.nombre)}"><i class="tone-${{ poco_fiable: 'bad', alerta: 'bad', provisional: 'warn', estable: 'good' }[e.estado]}"></i>${esc(nombreEquipo(e.nombre))}</button>`).join('')}<button class="tab ${S.teamCompare ? 'on' : ''}" data-action="team-tab" data-team="__comparar">${esc(t('comparar.pestana'))}</button></div>`;
+    return `<div class="tabs">${S.vm.equipos.map((e) => `<button class="tab ${!S.teamCompare && S.team === e.nombre ? 'on' : ''}" data-action="team-tab" data-team="${esc(e.nombre)}"><i class="tone-${{ poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado]}"></i>${esc(nombreEquipo(e.nombre))}</button>`).join('')}<button class="tab ${S.teamCompare ? 'on' : ''}" data-action="team-tab" data-team="__comparar">${esc(t('comparar.pestana'))}</button></div>`;
   }
   function equipos() {
     if (S.teamCompare && S.role !== 'equipo') return pestanas() + comparar();
@@ -80,7 +114,7 @@
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;
     const fCambios = K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>${K.chip(e.cambios.length ? 'bad' : 'neutral', e.cambios.length ? tn('equipo.senales', e.cambios.length) : t('equipo.sinCambios'))}`,
-      e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(t('equipo.todoNormal'))}</p>`);
+      e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(textoSinCambios(e))}</p>`);
     const recs = recsActivas([e]);
     const fRecs = K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>${K.chip(recs.length ? 'warn' : 'neutral', tn('recs.cuenta', recs.length))}`, recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`);
     return K.statusBar(e.cambios.length ? 'bad' : e.estado === 'estable' ? 'good' : 'warn', titular, items) + tiles
@@ -326,5 +360,20 @@
     return [t('ayuda.titulo'), html];
   }
 
-  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas });
+  /**
+   * Datos con los que no se puede medir (sin entregas): se dice arriba de cada página de análisis y no se enseñan cifras.
+   * Devuelve '' si se puede medir.
+   */
+  function bloqueoDuro() {
+    const dc = S.vm && S.vm.dataCheck, duros = dc ? dc.bloqueos.filter((b) => b.duro) : [];
+    if (!duros.length) return '';
+    const acciones = [...new Set(duros.map((b) => b.accion))].map((a) => a === 'estados'
+      ? `<button class="btn primary" data-action="bloqueo-estados">${esc(t('dc.accion.estados'))}</button>`
+      : `<button class="btn primary" data-action="import">${esc(t('dc.accion.datos'))}</button>`).join('');
+    return K.statusBar('bad', esc(t('dc.bloqueo.titulo')), [])
+      + `<div class="ficha" data-tipo="bloqueo"><div class="f-body"><ul class="small">${duros.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul><div class="row" style="margin-top:10px">${acciones}</div></div></div>`;
+  }
+  EP.accion('bloqueo-estados', () => { if (!S.onboarded) { S.ob.step = 'mapeo'; EP.render(); window.scrollTo(0, 0); } else { S.fuentesTab = 'mapeo'; EP.go('fuentes'); } });
+
+  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
 })();

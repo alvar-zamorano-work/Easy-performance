@@ -4,10 +4,19 @@
   const { S, t, tn, esc, valor, nombreMedida, nombreEquipo, fmt, cat } = window.EP;
 
   const TONO = { bien: 'good', atencion: 'warn', critico: 'bad', sin: 'neutral', neutro: 'neutral' };
-  const tonoDe = (m) => (!m || !m.disponible ? 'neutral' : TONO[m.estado] || 'neutral');
+  const tonoDe = (m) => (!m || !m.disponible ? 'neutral' : m.revisar ? 'warn' : TONO[m.estado] || 'neutral');
   const chip = (tono, texto, title) => `<span class="chip ${tono}"${title ? ` title="${esc(title)}"` : ''}>${esc(texto)}</span>`;
-  const estadoChip = (m) => (!m || !m.disponible ? chip('neutral', t('estado.sin')) : m.estado === 'bien' ? chip('good', t('estado.bien')) : m.estado === 'atencion' ? chip('warn', t('estado.atencion')) : m.estado === 'critico' ? chip('bad', t('estado.critico')) : chip('neutral', t('estado.sinBanda')));
-  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', provisional: 'warn', estable: 'good' };
+  /** Etiqueta de una medida. Mejor de lo normal no es "normal", y un límite fijo superado no es "fuera de rango". */
+  function estadoChip(m) {
+    if (!m || !m.disponible) return chip('neutral', t('estado.sin'));
+    if (m.revisar) return chip('warn', t('estado.revisar'));
+    const porLimite = m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo';
+    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : 'estado.bien'));
+    if (m.estado === 'atencion') return chip('warn', t(porLimite ? 'estado.limite.atencion' : 'estado.atencion'));
+    if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
+    return chip('neutral', t('estado.sinBanda'));
+  }
+  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' };
   const equipoChip = (e) => chip(ESTADO_EQUIPO[e.estado], t('equipo.estado.' + e.estado));
   const nivelChip = (nivel) => `<span class="chip level-${nivel}">${esc(t('nivel.' + nivel))}</span>`;
 
@@ -21,6 +30,7 @@
     if (!m || !m.disponible) return m && m.motivo ? m.motivo : t('medida.noDisponible');
     if (m.estadoPor === 'limite' && m.limite != null && m.estado !== 'bien') return t('medida.porLimite', { limite: valor(id, m.limite) });
     if (m.estadoPor === 'limite_equipo' && m.limite != null && m.estado !== 'bien') return t('medida.porLimiteEquipo', { limite: valor(id, m.limite) });
+    if (m.revisar === 'masivo') return t('medida.masivo', { dias: (m.diasMasivos || []).map((x) => t('medida.masivoDia', { n: x.n, f: window.Nucleo.fechaCorta(new Date(x.fecha)) })).join(', ') });
     return m.estadoTexto || '';
   }
 

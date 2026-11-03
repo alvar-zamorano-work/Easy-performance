@@ -451,6 +451,68 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   await p.context().close();
 }
 
+// ---------- 8. Datos imperfectos (auditoría de noviembre de 2026): lo que no se puede medir no sale "normal" ----------
+{
+  const { variantes, EQUIPO_SALTO } = await import('../tests/variantes.ts');
+  const V = variantes();
+  const cargar = async (p, nombre) => {
+    await p.click('[data-action="ob-go"][data-step="data"]'); await quieto(p);
+    await p.setInputFiles('#file-input', V[nombre].ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) })));
+    await p.waitForTimeout(400); await quieto(p);
+  };
+  const terminar = async (p) => {
+    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]', '[data-step="rol"]']) await clic(p, s);
+    await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  };
+  // Estados que no se reconocen: se para nada más cargar y en el data check no se puede "seguir de todos modos"
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'estadosAleman');
+    ok('estados sin reconocer: aviso de que no se puede medir nada más cargar', /no se puede medir/.test(await p.textContent('#onboarding')) && !!(await p.$('[data-tipo="bloqueo"]')));
+    for (const s of ['[data-action="ob-go"][data-step="mapeo"]', '[data-action="ob-mapeo-ok"]', '[data-action="ob-context-ok"]']) await clic(p, s);
+    const dc = await A(p, () => ({ seguir: !!document.querySelector('#onboarding [data-step="rol"].btn'), revisar: !!document.querySelector('#onboarding [data-action="ob-go"][data-step="mapeo"].primary'), texto: document.getElementById('onboarding').innerText }));
+    ok('estados sin reconocer: el data check manda a revisar los estados, sin "seguir de todos modos"', !dc.seguir && dc.revisar && /ningún estado se reconoce como terminado/.test(dc.texto), JSON.stringify({ seguir: dc.seguir, revisar: dc.revisar }));
+    ok('sin errores de consola con estados sin reconocer', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
+  // Solo trabajo abierto: lo dice al cargar
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'soloAbiertas');
+    ok('solo trabajo abierto: se dice al cargar', /solo trae trabajo abierto/.test(await p.textContent('#onboarding')));
+    await p.context().close();
+  }
+  // Cierre masivo: la ficha del equipo pide revisar el dato, no dice "normal" ni "mejor"
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'salto'); await terminar(p);
+    const f = await A(p, (n) => { const e = window.EP.S.vm.equipos.find((x) => x.nombre === n); return { estado: e.estado, pie: window.EP.vistas.pieFicha(e), chip: [...document.querySelectorAll('.ficha')].filter((x) => x.textContent.indexOf(n) >= 0).map((x) => x.textContent).join(' ').slice(0, 400) }; }, EQUIPO_SALTO);
+    // El equipo puede tener además otra alerta: el pie dice las dos cosas, y nunca "normal" o "mejor"
+    ok('cierre masivo: la ficha pide revisar el dato', (f.estado === 'revisar' || f.estado === 'alerta') && /Revisar el dato: Entregas/.test(f.pie) && !/Mejor de lo normal|Todo dentro de lo normal/.test(f.pie), JSON.stringify({ estado: f.estado, pie: f.pie }));
+    await p.context().close();
+  }
+  // Sin tiempo en cada estado: la pregunta de ritmo responde "En parte", nunca "Sí"
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'sinTiempos'); await terminar(p); await ir(p, 'resumen'); await quieto(p);
+    const pr = await A(p, () => [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((x) => x.innerText.replace(/\s+/g, ' ')).find((x) => /ritmo de siempre/.test(x)) || '');
+    ok('sin tiempo en cada estado: "¿Vamos al ritmo de siempre?" responde "En parte"', /En parte/.test(pr) && /Sin datos de Tiempo de ciclo/.test(pr), pr.slice(0, 160));
+    await p.context().close();
+  }
+  // Datos de ejemplo: lo que supera un límite fijo lo dice así, y nada mejor que su franja sale "Fuera de rango"
+  {
+    const p = await pagina(1280, 800);
+    await clic(p, '[data-action="demo"]');
+    const r = await A(p, () => {
+      const malas = [];
+      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && /Fuera de rango/.test(window.EP.kit.estadoChip(m))) malas.push(e.nombre + ' ' + id); }));
+      return { malas, limite: document.body.innerText.indexOf('Supera el límite') >= 0 };
+    });
+    ok('datos de ejemplo: "Supera el límite" en vez de "Fuera de rango" cuando manda un límite fijo', r.limite && !r.malas.length, JSON.stringify(r));
+    await p.context().close();
+  }
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);
