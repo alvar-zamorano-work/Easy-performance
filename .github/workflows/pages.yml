@@ -1,0 +1,52 @@
+name: Comprobar y publicar en GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests y tipos
+        run: npm run comprobar
+      - name: Recorrido en el navegador
+        run: CHROME="$(command -v google-chrome)" npm run verificar-web-v3
+      - name: Montar el sitio
+        run: |
+          mkdir -p _site/exports
+          cp dist/EasyPerformance-v3/EasyPerformance.html _site/index.html
+          cp dist/EasyPerformance-v3/exports/datos.js _site/exports/datos.js
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  publicar:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4

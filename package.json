@@ -1,8 +1,8 @@
 {
-  "name": "easy-performance-acelerador",
+  "name": "easy-performance",
   "version": "0.1.0",
   "private": true,
-  "description": "Easy Performance v1: acelerador del consultor para medir y mejorar la productividad de equipos de desarrollo",
+  "description": "Easy Performance v3: medir equipos de desarrollo desde exports de Jira, Azure DevOps y GitLab, con baseline por equipo",
   "type": "module",
   "engines": {
     "node": ">=22.18"
