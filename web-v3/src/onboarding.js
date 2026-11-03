@@ -71,7 +71,7 @@
     const inf = S.vm.informe, det = S.vm.det;
     const campo = det.opcionesEquipo.filter((o) => o.id === S.vm.campoEquipo)[0];
     const resumen = `<div class="tiles">${K.stat(t('fuentes.tile.tareas'), String(inf.tareas), esc(t('fuentes.tile.tareasPie', { f: inf.filasLeidas })), '')}${K.stat(t('ob.rev.equipos'), String(S.vm.equipos.length), esc(campo && campo.id !== 'todos' ? t('ob.rev.campo', { c: t('campo.' + campo.id) }) : t('ob.rev.sinCampo')), '')}${K.stat(t('ob.rev.semanas'), String(S.vm.semanas.N), esc(t('ob.rev.hasta', { f: fecha(S.vm.fechaDatos) })), '')}${K.stat(t('ob.rev.estados'), String(det.estados.length), esc(tn('mapeo.porRevisar', P.porRevisar(S.cfg, det).length)), '')}</div>`;
-    return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p>${avisoBloqueo()}<div class="panel">${resumen}
+    return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p>${avisoBloqueo()}<div class="panel">${avisoColumnasRaras()}${resumen}
       ${EP.vistas.fuentesEquipos()}
       ${pie('data', continuar('mapeo'), `<button class="btn" data-action="import">${esc(t('fuentes.anadir'))}</button>`)}</div></div>`;
   }
@@ -124,34 +124,121 @@
   EP.accion('ob-team', (el) => { S.team = el.dataset.team; EP.render(); });
   EP.accion('ob-finish', () => { S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg(); if (EP.cortes) EP.cortes.capturar(S.demo); EP.render(); window.scrollTo(0, 0); });
 
-  // ---------- elegir columnas a mano ----------
-  /** Solo aparece si un fichero no trae una columna que hace falta: se elige de entre sus títulos y se guarda. */
+  // ---------- elegir o revisar columnas a mano ----------
+  /** Todos los campos que se pueden leer de un export, en el orden en que se revisan. */
+  const GRUPOS_COLUMNAS = [
+    ['obligatorios', ['clave', 'creada']],
+    ['basicos', ['resumen', 'tipo', 'estado', 'resuelta', 'resolucion', 'equipo', 'actualizada']],
+    ['flujo', ['tis', 'cambioCategoria', 'empezada', 'categoria', 'primera']],
+    ['plan', ['sprint', 'puntos', 'padreClave', 'epicLink', 'padre', 'epicNombre', 'vence']],
+    ['agrupar', ['componentes', 'etiquetas', 'proyecto', 'prioridad']],
+    ['otros', ['descripcion', 'enlacesLista', 'idTarea']],
+  ];
+  const nombreCampo = (c) => (c === 'fecha' ? t('columnas.campo.fecha') : t('columnas.campo.' + c));
+  /** Columnas con datos sin usar que podrían servir, en una frase: «Start Date» (fecha de inicio), «EpicLinkKey» (épica, clave)... */
+  const comillas = (x) => (window.I18N && window.I18N.lang === 'en' ? '"' + x + '"' : '«' + x + '»');
+  const textoSugeridas = (lista) => lista.map((x) => comillas(x.columna) + ': ' + nombreCampo(x.campo).toLowerCase()).join('; ');
+  /** Sugerencias que nadie ha descartado ("no volver a avisar"). */
+  const sugerenciasPendientes = () => {
+    const inf = S.lectura && S.lectura.informe, vistas = S.cfg.sugerenciasVistas || [];
+    return ((inf && inf.columnasSugeridas) || []).filter((x) => vistas.indexOf(x.columna) < 0);
+  };
+  /** Aviso de columnas raras: lo dice y lleva a revisarlas. Vacío si no hay ninguna. */
+  function avisoColumnasRaras() {
+    const lista = sugerenciasPendientes();
+    if (!lista.length || S.demo) return '';
+    return `<div class="notice warn small" data-tipo="columnas-raras" style="margin-bottom:12px">${esc(tn('columnas.raras', lista.length, { c: textoSugeridas(lista.slice(0, 6)) + (lista.length > 6 ? '…' : '') }))} <button class="btn sm" data-action="col-revisar">${esc(t('columnas.revisar'))}</button> <button class="link small" data-action="col-ignorar">${esc(t('columnas.ignorar'))}</button></div>`;
+  }
+  /**
+   * Elegir columnas: aparece sola si a un fichero le falta una columna obligatoria, y se abre a mano desde Fuentes
+   * (o desde el aviso de columnas raras) para revisar de qué columna sale cada dato. Lo elegido se guarda por cliente.
+   */
   function columnas() {
-    const cp = S.colPend, titulos = [];
-    cp.pendientes.forEach((p) => p.cabecera.forEach((h) => { if (titulos.indexOf(h) < 0) titulos.push(h); }));
+    const cp = S.colPend, rev = !!cp.revision, titulos = [];
+    // Las columnas de personas no se ofrecen: no se leen nunca
+    cp.pendientes.forEach((p) => p.cabecera.forEach((h) => { if (h && titulos.indexOf(h) < 0 && !N.esColumnaPrivada(h)) titulos.push(h); }));
+    const f0 = cp.pendientes[0].fichero;
+    const usadas = (rev && S.lectura && S.lectura.informe.columnasUsadas && S.lectura.informe.columnasUsadas[f0]) || {};
     const auto = N.mapearColumnas(cp.pendientes[0].cabecera);
-    const elegida = (campo) => { const g = S.cfg.columnas && S.cfg.columnas[campo]; if (g && titulos.indexOf(g) >= 0) return g; const i = auto[campo]; const j = Array.isArray(i) ? i[0] : i; return j != null ? cp.pendientes[0].cabecera[j] : ''; };
-    const campos = N.OBLIGATORIOS.concat(['resumen'], N.RECOMENDADOS);
-    const fila = (campo) => { const ob = N.OBLIGATORIOS.indexOf(campo) >= 0, v = elegida(campo);
-      return `<div class="field col-campo"><label>${esc(t('columnas.campo.' + campo))}${ob ? ` <span class="t-bad">${esc(t('columnas.obligatoria'))}</span>` : ''}</label><select name="${esc(campo)}"><option value="">${esc(t('columnas.noEsta'))}</option>${titulos.map((h) => `<option value="${esc(h)}" ${h === v ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select><div class="tiny muted">${esc(t('columnas.ayuda.' + campo))}${campo === 'resuelta' ? ' ' + esc(t('columnas.ayuda.resueltaNecesaria')) : ''}</div></div>`; };
-    return `<div class="ob wide">${cabeza('data')}<h1>${esc(t('columnas.titulo'))}</h1><p class="lead">${esc(t('columnas.lead', { f: cp.pendientes.map((p) => p.fichero).join(', ') }))}</p>
-      <div class="panel"><form id="form-col" class="grid cols-2" onsubmit="return false">${campos.map(fila).join('')}</form>
+    const elegida = (campo) => {
+      // La estimación tiene su propia elección (también en Contexto): una sola fuente
+      if (campo === 'puntos' && S.cfg.columnaEstimacion != null) return S.cfg.columnaEstimacion === '' ? N.NO_USAR : S.cfg.columnaEstimacion;
+      const g = S.cfg.columnas && S.cfg.columnas[campo];
+      if (g === N.NO_USAR) return g;
+      if (g && titulos.indexOf(g) >= 0) return g;
+      if (usadas[campo]) return usadas[campo];
+      const i = auto[campo]; const j = Array.isArray(i) ? i[0] : i; return j != null ? cp.pendientes[0].cabecera[j] : '';
+    };
+    const fichero = (cp.ficheros || []).filter((x) => x.nombre === f0)[0];
+    const ejemplos = fichero ? N.ejemplosColumnasJira(fichero.texto) : {};
+    const sugeridas = rev ? sugerenciasPendientes().filter((x) => x.fichero === f0) : [];
+    const opcion = (h, v) => { const ej = ejemplos[h] && ejemplos[h].length ? ' · ' + ejemplos[h].join(', ') : ''; const txt = (h + ej).length > 80 ? (h + ej).slice(0, 79) + '…' : h + ej; return `<option value="${esc(h)}" ${h === v ? 'selected' : ''}>${esc(txt)}</option>`; };
+    const fila = (campo) => {
+      const ob = N.OBLIGATORIOS.indexOf(campo) >= 0, v = elegida(campo);
+      const sug = sugeridas.filter((x) => x.campo === campo).map((x) => '«' + x.columna + '»');
+      return `<div class="field col-campo"><label>${esc(t('columnas.campo.' + campo))}${ob ? ` <span class="t-bad">${esc(t('columnas.obligatoria'))}</span>` : ''}</label>
+        <select name="${esc(campo)}"><option value="">${esc(rev && v ? t('columnas.automatica') : t('columnas.noEsta'))}</option>${ob ? '' : `<option value="${N.NO_USAR}" ${v === N.NO_USAR ? 'selected' : ''}>${esc(t('columnas.noUsar'))}</option>`}${titulos.map((h) => opcion(h, v)).join('')}</select>
+        <div class="tiny muted">${esc(t('columnas.ayuda.' + campo))}${campo === 'resuelta' ? ' ' + esc(t('columnas.ayuda.resueltaNecesaria')) : ''}</div>
+        ${sug.length ? `<div class="tiny t-warn">${esc(t('columnas.sugerida', { c: sug.join(', ') }))}</div>` : ''}</div>`;
+    };
+    // Al revisar se enseñan todos los campos por grupos; si solo faltan columnas, los de siempre
+    const cuerpo = rev
+      ? GRUPOS_COLUMNAS.map(([g, cs]) => `<h4 class="col-grupo">${esc(t('columnas.grupo.' + g))}</h4><div class="grid cols-2">${cs.map(fila).join('')}</div>`).join('')
+      : `<div class="grid cols-2">${N.OBLIGATORIOS.concat(['resumen'], N.RECOMENDADOS).map(fila).join('')}</div>`;
+    const fechas = sugeridas.filter((x) => x.campo === 'fecha');
+    return `<div class="ob wide">${cabeza('data')}<h1>${esc(t(rev ? 'columnas.tituloRevision' : 'columnas.titulo'))}</h1><p class="lead">${esc(t(rev ? 'columnas.leadRevision' : 'columnas.lead', { f: cp.pendientes.map((p) => p.fichero).join(', ') }))}</p>
+      <div class="panel">${fechas.length ? `<div class="notice warn small" style="margin-bottom:12px">${esc(t('columnas.fechasSinUsar', { c: fechas.map((x) => '«' + x.columna + '»').join(', ') }))}</div>` : ''}
+      <form id="form-col" onsubmit="return false">${cuerpo}</form>
       <p class="tiny muted" style="margin-top:10px">${esc(t('columnas.nota'))}</p>
       ${pie('', `<button class="btn primary" data-action="col-aplicar">${esc(t('columnas.aplicar'))}</button>`, `<button class="btn" data-action="col-cancelar">${esc(t('comun.cancelar'))}</button>`)}</div></div>`;
   }
+  /** Abre la revisión de columnas del primer fichero cargado, con todos los campos. */
+  EP.accion('col-revisar', () => {
+    if (!S.ficheros || !S.ficheros[0]) return;
+    // El primer fichero que se ha leído bien (uno pendiente se elige con su propio aviso)
+    const usadas = (S.lectura && S.lectura.informe.columnasUsadas) || {};
+    const f = S.ficheros.filter((x) => usadas[x.nombre])[0] || S.ficheros[0];
+    const cabecera = N.describirColumnas(f.texto).map((c) => c.columna);
+    S.colPend = { ficheros: S.ficheros, pendientes: [{ fichero: f.nombre, cabecera, faltan: [] }], abierto: true, revision: true, previo: S.colPend };
+    EP.render(); window.scrollTo(0, 0);
+  });
+  EP.accion('col-ignorar', () => {
+    S.cfg.sugerenciasVistas = (S.cfg.sugerenciasVistas || []).concat(sugerenciasPendientes().map((x) => x.columna));
+    EP.guardarCfg(); EP.render();
+  });
   EP.accion('col-abrir', () => { if (S.colPend) { S.colPend.abierto = true; EP.render(); window.scrollTo(0, 0); } });
-  EP.accion('col-cancelar', () => { if (S.colPend && S.vm) S.colPend.abierto = false; else S.colPend = null; EP.render(); });
+  EP.accion('col-cancelar', () => { if (S.colPend && S.colPend.revision) S.colPend = S.colPend.previo || null; else if (S.colPend && S.vm) S.colPend.abierto = false; else S.colPend = null; EP.render(); });
   EP.accion('col-aplicar', () => {
     const form = document.getElementById('form-col'), sel = {};
     [].forEach.call(form.querySelectorAll('select'), (s) => { sel[s.name] = s.value; });
     const faltan = N.OBLIGATORIOS.filter((c) => !sel[c]);
     if (faltan.length) { EP.toast(t('columnas.faltan', { c: faltan.map((c) => t('columnas.campo.' + c)).join(', ') }), 'bad'); return; }
-    // Se guarda lo elegido: con el mismo cliente no hay que volver a hacerlo
-    Object.keys(sel).forEach((k) => { if (!sel[k]) delete sel[k]; });
-    S.cfg.columnas = Object.assign({}, S.cfg.columnas || {}, sel); EP.guardarCfg();
-    const fs = S.colPend.ficheros;
-    EP.enSegundoPlano(() => { if (EP.procesar(fs)) EP.trasCargar(fs); else EP.render(); }, t('carga.leyendo'));
+    // Se guarda lo elegido: con el mismo cliente no hay que volver a hacerlo. Al revisar, solo lo que cambia
+    // respecto a lo que usó la lectura (y lo que ya se había elegido a mano), para que lo demás siga siendo automático
+    const cp = S.colPend, antes = S.cfg.columnas || {}, estimAntes = S.cfg.columnaEstimacion;
+    // La estimación va a su propia elección (una sola fuente para la lectura)
+    if ('puntos' in sel) { if (sel.puntos === N.NO_USAR) S.cfg.columnaEstimacion = ''; else if (sel.puntos) S.cfg.columnaEstimacion = sel.puntos; else delete S.cfg.columnaEstimacion; delete sel.puntos; }
+    if (cp.revision) {
+      const usadas = (S.lectura && S.lectura.informe.columnasUsadas && S.lectura.informe.columnasUsadas[cp.pendientes[0].fichero]) || {};
+      const titulos = cp.pendientes[0].cabecera;
+      const out = {};
+      // Lo elegido a mano para columnas de otros ficheros se conserva
+      Object.keys(antes).forEach((k) => { if (antes[k] !== N.NO_USAR && titulos.indexOf(antes[k]) < 0) out[k] = antes[k]; });
+      Object.keys(sel).forEach((k) => { const v = sel[k]; if (v && (v === antes[k] || v !== (usadas[k] || ''))) out[k] = v; });
+      S.cfg.columnas = out;
+    } else {
+      Object.keys(sel).forEach((k) => { if (!sel[k]) delete sel[k]; });
+      S.cfg.columnas = Object.assign({}, antes, sel);
+    }
+    const fs = cp.ficheros;
+    EP.enSegundoPlano(() => {
+      if (EP.procesar(fs)) { EP.guardarCfg(); EP.trasCargar(fs); return; }
+      // Al revisar, una elección con la que no se lee ninguna tarea no se guarda: se vuelve a lo de antes
+      if (cp.revision) { S.cfg.columnas = antes; if (estimAntes === undefined) delete S.cfg.columnaEstimacion; else S.cfg.columnaEstimacion = estimAntes; EP.procesar(fs); EP.toast(t('columnas.sinTareas'), 'bad'); }
+      else EP.guardarCfg();
+      EP.render();
+    }, t('carga.leyendo'));
   });
 
-  Object.assign(EP.vistas, { onboarding, trasOnboarding, formularioContexto, columnas });
+  Object.assign(EP.vistas, { onboarding, trasOnboarding, formularioContexto, columnas, avisoColumnasRaras });
 })();

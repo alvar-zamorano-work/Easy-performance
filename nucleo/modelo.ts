@@ -105,7 +105,12 @@ export interface EstadoOrigen { nombre: string; categoria: string }
 
 export interface Aviso { tipo: 'aviso' | 'error'; texto: string }
 
-export interface FicheroEntrada { nombre: string; texto: string }
+export interface FicheroEntrada {
+  nombre: string;
+  texto: string;
+  /** Formato original (csv, xlsx, xls, html). En las hojas de Excel, Jira Server / Data Center junta varios valores en una celda. */
+  formato?: string;
+}
 
 export interface InformeIngesta {
   plataforma: string;
@@ -130,6 +135,10 @@ export interface InformeIngesta {
   equiposUnidos?: number;
   /** Columna de la que salen los equipos en cada fichero (por nombre de fichero). */
   columnaEquipo?: Record<string, string>;
+  /** Columna de la que sale cada campo, por fichero (campo -> título de la columna). */
+  columnasUsadas?: Record<string, Record<string, string>>;
+  /** Columnas con datos que no se usan y podrían servir para un campo (para revisarlas a mano). */
+  columnasSugeridas?: { fichero: string; columna: string; campo: string }[];
 }
 
 /** Una épica del origen. No se mide como trabajo: sirve para la vista de épicas (avance por sus hijas, vencimiento). */

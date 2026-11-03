@@ -162,6 +162,16 @@ export function variantes(): Record<string, Variante> {
   ['Custom field ([CHART] Time in Status)', 'Status category changed'].forEach((n) => { const i = col(sinCambios, n); sinCambios.cab.splice(i, 1); sinCambios.filas.forEach((f) => f.splice(i, 1)); });
   out.sinCambiosEstado = v('sin-cambios-estado', 'Sin tiempo por estado ni fecha de cambio de estado', sinCambios);
 
+  // Sin cambios de estado, pero con una columna propia de fecha de inicio (no la reconoce ningún nombre: se elige a mano)
+  const conInicio = copia(sinCambios), iResI = col(conInicio, 'Resolved'), iCreI = col(conInicio, 'Created');
+  conInicio.cab.push('Custom field (Start Date)', 'Custom field (Team Lead)');
+  conInicio.filas.forEach((f, k) => {
+    const r = fechaJira(f[iResI]), c = fechaJira(f[iCreI])!;
+    const ini = r ? new Date(Math.max(c.getTime(), r.getTime() - 3 * 864e5)) : null;
+    f.push(ini ? jira(ini) : '', ['Marta Ruiz', 'Jorge Gil', 'Ana García'][k % 3]);
+  });
+  out.conFechaInicio = v('con-fecha-inicio', 'Sin cambios de estado y con una columna "Start Date" propia', conInicio);
+
   // Lo mismo que "todos los campos", con un solo equipo en el export y con un fichero por equipo
   const iEqT = col(todos, 'Custom field (Assigned Team)');
   out.unEquipoTodosCampos = v('un-equipo-todos-los-campos', 'Todos los campos y un solo equipo en el export', { cab: todos.cab, filas: todos.filas.filter((f) => f[iEqT] === EQUIPO_SALTO) });

@@ -2,7 +2,7 @@
 
 import { Tx, idioma } from '../../nucleo/idioma.ts';
 import { interior, norm } from '../../nucleo/util.ts';
-import { describir, type ColumnaLeida } from '../comun/describir.ts';
+import { describir, ejemplosDeColumnas, type ColumnaLeida } from '../comun/describir.ts';
 import { aplicarColumnas } from '../comun/cabecera.ts';
 export type { ColumnaLeida, AccionColumna } from '../comun/describir.ts';
 
@@ -30,7 +30,106 @@ export const ALIAS: Record<string, string[]> = {
   padreClave: ['parent key', 'clave del principal', 'clave principal', 'clave del elemento principal'],
   proyecto: ['project name', 'nombre del proyecto', 'proyecto', 'project'],
   vence: ['due date', 'fecha de vencimiento', 'vencimiento', 'fecha limite', 'fecha de entrega'],
+  // Jira Server / Data Center: la épica va en "Epic Link" (la clave en el CSV, el nombre en el Excel) y los enlaces en una lista
+  epicLink: ['epic link', 'enlace de epica', 'enlace a la epica', 'vinculo de epica'],
+  epicNombre: ['epic name', 'nombre de epica', 'nombre de la epica'],
+  idTarea: ['issue id', 'work item id', 'id de la incidencia', 'id de incidencia', 'id del elemento de trabajo'],
+  enlacesLista: ['linked issues', 'linked work items', 'incidencias enlazadas', 'elementos de trabajo vinculados'],
+  // Fecha en que empezó el trabajo: ningún export de Jira la trae con un nombre fijo; solo se usa si se elige a mano
+  empezada: [],
 };
+
+/** Clave de una tarea de Jira (PROJ-123). */
+export const esClaveJira = (v: unknown): boolean => /^[A-Z][A-Z0-9_]*-\d+$/i.test(String(v ?? '').trim());
+
+/**
+ * Separadores de los campos con varios valores cuando vienen en una sola celda (Jira Server / Data Center los junta
+ * con comas en el Excel; Jira Cloud pone una columna por valor). Las etiquetas de Jira no llevan espacios.
+ */
+const SEPARADOR: Record<string, RegExp> = { sprint: /,\s+/, componentes: /,\s+/, etiquetas: /[,;\s]+/ };
+export function partirValores(campo: string, v: string, unaCelda = true): string[] {
+  const t = v.trim();
+  // Export "Data pipeline" de Jira Data Center: los valores múltiples van como una lista JSON en la celda
+  if (t.startsWith('[') && t.endsWith(']')) {
+    try {
+      const j = JSON.parse(t);
+      if (Array.isArray(j)) return j.filter((x) => x != null).map((x) => String(typeof x === 'object' ? (x.name ?? x.value ?? '') : x).trim()).filter(Boolean);
+    } catch { /* no es JSON ("[Q3] Sprint 1"): se trata como texto */ }
+  }
+  // En un CSV cada valor va en su columna: una coma es parte del nombre ("Sprint 12 (Oct 1, 2026)")
+  const sep = unaCelda ? SEPARADOR[campo] : undefined;
+  return (sep ? t.split(sep) : [t]).map((x) => x.trim()).filter(Boolean);
+}
+
+/** Clave de tarea en una lista de enlaces ("A-2, A-3", "[C-4]"). */
+export const clavesEnTexto = (v: string): string[] => String(v || '').split(/[\s,;\[\]()]+/).filter(esClaveJira).map((x) => x.toUpperCase());
+
+/** Columna con datos que no se usa y podría servir para un campo: se avisa para que alguien decida. */
+export interface ColumnaSugerida { columna: string; campo: string }
+
+/** Pistas por el título: a qué campo podría ir una columna que no se ha reconocido. */
+const PISTAS: [RegExp, string][] = [
+  [/time in status|tiempo en estado|status history|historial de estados|transition/, 'tis'],
+  [/status category chang|cambio de categoria|last status change|ultimo cambio de estado/, 'cambioCategoria'],
+  [/first response|primera respuesta/, 'primera'],
+  [/\b(start|started|begin|inicio|comienzo|in progress|en curso|commit\w*)\b/, 'empezada'],
+  [/\b(resolved|resolution date|done date|closed|completed|fecha de fin|terminad\w*|cerrad\w*)\b/, 'resuelta'],
+  [/epic|epica|\bparent\b|\bpadre\b|\bprincipal\b/, 'padreClave'],
+  [/\b(sprint|sprints|iteration|iteracion)\b/, 'sprint'],
+  [/story ?points?|\bestimat\w*|\bestimacion\b|\bpuntos\b|\beffort\b|\besfuerzo\b/, 'puntos'],
+  [/\b(team|teams|equipo|equipos|squad|squads)\b/, 'equipo'],
+  [/\b(issue type|work type|tipo)\b/, 'tipo'],
+  [/\b(status|estado)\b/, 'estado'],
+];
+/** Fechas que no son del flujo de trabajo: no se sugieren. */
+const FECHA_IGNORADA = /last viewed|ultima vista|ultima visualizacion|\bbirth|nacimiento/;
+
+/**
+ * Columnas con datos que no se usan y, por su título o por lo que traen, podrían servir para un campo que la lectura
+ * no tiene (o tiene vacío). Nunca columnas de personas o de texto libre. Las fechas sin pista clara se sugieren
+ * como "fecha" sin campo: alguien tiene que decir si alguna es, por ejemplo, la fecha real de inicio.
+ */
+/** Fechas planificadas: no son el inicio real del trabajo, así que no se proponen como fecha de inicio. */
+const PLANIFICADA = /target|planned|planificad|baseline|objetivo|\bdue\b|vencimiento|sprint start|inicio del sprint|forecast|previst|bigpicture|roadmap|plan\b/;
+/** Tiempos en segundos de Jira (estimación original, restante, imputado): no son puntos de historia. */
+const NO_ES_ESTIMACION = /original estimate|remaining estimate|time spent|tiempo invertido|estimacion original|estimacion restante|work ratio|progress|σ|\bsum\b/;
+
+export function sugerirColumnas(cab: string[], filas: string[][], mapa: MapaColumnas, esPrivada: (h: string) => boolean, esFecha: (v: string) => boolean, excluir: Set<string> = new Set()): ColumnaSugerida[] {
+  const usadas = new Set<number>(); Object.values(mapa).forEach((v) => ([] as number[]).concat(v).forEach((i) => usadas.add(i)));
+  const conValor = (i: number) => filas.slice(1).some((f) => String(f[i] ?? '').trim() && !valorVacio(f[i]));
+  const campoVacio = (campo: string) => mapa[campo] == null || !([] as number[]).concat(mapa[campo]).some(conValor);
+  const out: ColumnaSugerida[] = [];
+  cab.forEach((h, i) => {
+    const titulo = String(h).trim();
+    // Una columna repetida con el mismo título que una que ya se usa (dos "Due Date") no es un campo nuevo
+    if (!titulo || usadas.has(i) || [...usadas].some((u) => String(cab[u]).trim() === titulo) || esPrivada(titulo) || !conValor(i)) return;
+    const x = interior(titulo);
+    const muestra = filas.slice(1).map((f) => String(f[i] ?? '').trim()).filter((v) => v && !valorVacio(v)).slice(0, 200);
+    const fechas = muestra.filter(esFecha).length / muestra.length >= 0.8;
+    const numeros = muestra.filter((v) => /^-?\d+([.,]\d+)?$/.test(v)).length / muestra.length >= 0.8;
+    const claves = muestra.filter(esClaveJira).length / muestra.length >= 0.6;
+    for (const [re, campo] of PISTAS) {
+      if (!re.test(x)) continue;
+      // Campo que alguien ha dicho que no se use: no se vuelve a proponer
+      if (excluir.has(campo) || (campo === 'padreClave' && excluir.has('epicLink'))) return;
+      if (campo === 'tis' && !muestra.some((v) => v.includes('_*:*_'))) continue;
+      if (campo === 'empezada' && PLANIFICADA.test(x)) break;
+      if (campo === 'puntos' && NO_ES_ESTIMACION.test(x)) break;
+      // Que lo que trae encaje con el campo: fechas para las fechas, números para la estimación, claves para la épica
+      if (['empezada', 'resuelta', 'cambioCategoria', 'primera'].includes(campo) && !fechas) continue;
+      if (campo === 'puntos' && !numeros) continue;
+      if (campo === 'padreClave' && claves) { if (mapa.padreClave == null) out.push({ columna: titulo, campo }); return; }
+      if (campo === 'padreClave' && !claves) { if (!fechas && !numeros && campoVacio('padreClave') && campoVacio('epicLink')) out.push({ columna: titulo, campo: 'epicLink' }); return; }
+      if (campo === 'equipo' && (numeros || fechas)) continue;
+      if (campo !== 'empezada' && !campoVacio(campo)) return;
+      if (campo === 'empezada' && mapa.empezada != null) return;
+      out.push({ columna: titulo, campo });
+      return;
+    }
+    if (fechas && !FECHA_IGNORADA.test(x)) out.push({ columna: titulo, campo: 'fecha' });
+  });
+  return out;
+}
 
 /** Campos que pueden venir en varias columnas con el mismo nombre (por ejemplo, Sprint). */
 export const MULTIPLES: Record<string, 1> = { componentes: 1, etiquetas: 1, sprint: 1 };
@@ -107,7 +206,8 @@ const QUE_ES: Record<string, string> = {
   resolucion: 'Resolution: separates discarded from done', prioridad: 'Priority', componentes: 'Component', etiquetas: 'Labels',
   sprint: 'Sprints it went through: joined into a list', puntos: 'Estimate', equipo: 'Team field', tis: 'Time in each status',
   primera: 'Date of first response', padre: 'Epic it belongs to (title)', padreClave: 'Epic it belongs to (key)', proyecto: 'Project',
-  vence: 'Due date: for the epics view',
+  vence: 'Due date: for the epics view', epicLink: 'Epic it belongs to (key or name)', epicNombre: 'Name of the epic: to find it from its tasks',
+  enlacesLista: 'Linked tasks: counted', empezada: 'Date the work started: chosen by hand', idTarea: 'Internal id: to find the epic when Epic Link brings it',
 };
 const QUE_ES_ES: Record<string, string> = {
   clave: 'Clave de la tarea', resumen: 'Título: solo en memoria, no sale en el paquete', descripcion: 'Descripción: solo para ver si el ticket está bien definido',
@@ -116,7 +216,8 @@ const QUE_ES_ES: Record<string, string> = {
   resolucion: 'Resolución: separa lo descartado de lo terminado', prioridad: 'Prioridad', componentes: 'Componente', etiquetas: 'Etiquetas',
   sprint: 'Sprints por los que pasó: se juntan en una lista', puntos: 'Estimación', equipo: 'Campo de equipo', tis: 'Tiempo en cada estado',
   primera: 'Fecha de la primera respuesta', padre: 'Épica a la que pertenece (título)', padreClave: 'Épica a la que pertenece (clave)', proyecto: 'Proyecto',
-  vence: 'Fecha de vencimiento: para la vista de épicas',
+  vence: 'Fecha de vencimiento: para la vista de épicas', epicLink: 'Épica a la que pertenece (clave o nombre)', epicNombre: 'Nombre de la épica: para encontrarla desde sus tareas',
+  enlacesLista: 'Tareas enlazadas: se cuentan', empezada: 'Fecha en que empezó el trabajo: elegida a mano', idTarea: 'Id interno: para encontrar la épica cuando Epic Link trae el id',
 };
 const queEs = (campo: string) => (idioma() === 'es' ? QUE_ES_ES[campo] : QUE_ES[campo]);
 /** Describe columna a columna cómo se lee un export de Jira: qué es, si se usa, se descarta o se ignora. */
@@ -124,3 +225,6 @@ export function describirColumnas(texto: string, columnas?: Record<string, strin
   // Con las columnas que ha usado la lectura (elegidas a mano o la de equipo que se eligió por sus datos)
   return describir(texto, (cab) => aplicarColumnas(mapearColumnas(cab), cab, columnas), queEs);
 }
+
+/** Ejemplos de los valores de cada columna de un export de Jira (para la revisión de columnas). */
+export const ejemplosColumnasJira = (texto: string) => ejemplosDeColumnas(texto, mapearColumnas);

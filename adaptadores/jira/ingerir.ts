@@ -5,7 +5,9 @@
 import { Tx, regional } from '../../nucleo/idioma.ts';
 import { leerCSV } from '../comun/csv.ts';
 import { limpiarLectura } from '../comun/limpieza.ts';
-import { mapearColumnas, columnasDeEnlaces, elegirColumnaEquipo, valorVacio } from './columnas.ts';
+import { mapearColumnas, columnasDeEnlaces, elegirColumnaEquipo, valorVacio, esClaveJira, partirValores, sugerirColumnas, clavesEnTexto, MULTIPLES } from './columnas.ts';
+import { NO_USAR } from '../comun/cabecera.ts';
+import { esColumnaPrivada } from '../comun/describir.ts';
 import { ordenFechas, leerFechaOrden, hayNumericas, type OrdenFechas } from '../comun/fechas.ts';
 import { buscarCabecera, aplicarColumnas } from '../comun/cabecera.ts';
 import { nombreDeId, nombresDeEstado, unidadTiempo, type TiempoJira } from './tiempos.ts';
@@ -30,7 +32,8 @@ export function tipoDe(t: unknown): TipoTarea {
   const n = norm(t);
   if (/epic|epica/.test(n)) return 'epica';
   if (/sub/.test(n)) return 'subtarea';
-  if (/bug|error|defect|defecto|fallo|incidente/.test(n)) return 'error';
+  // "incidencia" en castellano es cualquier tarea de Jira, no un fallo: solo "incident" o "incidente"
+  if (/bug|error|defect|defecto|fallo|\bincident(e|es|s)?\b/.test(n)) return 'error';
   if (/story|historia/.test(n)) return 'historia';
   if (/task|tarea/.test(n)) return 'tarea';
   return 'otro';
@@ -75,6 +78,10 @@ interface FilaJira {
   proyecto: string;
   padre: string;
   padreClave: string;
+  epicNombre: string;
+  epicLink: string;
+  idOrigen: string;
+  empezada: Date | null;
   enlaces: number;
   tis: TiempoJira[];
   primera: Date | null;
@@ -98,7 +105,7 @@ export interface OpcionesLectura {
 export const OBLIGATORIOS = ['clave', 'creada'];
 /** Campos que conviene tener: sin ellos se miden menos cosas. */
 export const RECOMENDADOS = ['tipo', 'estado', 'resuelta', 'equipo', 'actualizada', 'sprint'];
-const CAMPOS_FECHA = ['creada', 'actualizada', 'resuelta', 'primera', 'cambioCategoria', 'vence'];
+const CAMPOS_FECHA = ['creada', 'actualizada', 'resuelta', 'primera', 'cambioCategoria', 'vence', 'empezada'];
 
 export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura = {}): Lectura {
   const informe: InformeIngesta = {
@@ -117,7 +124,16 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
       informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(': the column titles are on row ', ': los títulos de las columnas están en la fila ') + (ic + 1) + Tx('. The rows above them were skipped.', '. Se han saltado las filas de encima.') });
       filas = filas.slice(ic);
     }
-    const cab = filas[0], mapa = aplicarColumnas(mapearColumnas(cab), cab, opciones.columnas), enlacesIdx = columnasDeEnlaces(cab);
+    const cab = filas[0], mapa = aplicarColumnas(mapearColumnas(cab), cab, opciones.columnas, MULTIPLES), enlacesIdx = columnasDeEnlaces(cab);
+    // Una columna de personas no se lee nunca, ni elegida a mano
+    Object.keys(opciones.columnas || {}).forEach((campo) => {
+      const v = mapa[campo];
+      if (v == null) return;
+      const titulo = String(cab[([] as number[]).concat(v)[0]]).trim();
+      if (esColumnaPrivada(titulo)) { delete mapa[campo]; informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(': the column "', ': la columna «') + titulo + Tx('" is about people and is never read.', '» es de personas y no se lee nunca.') }); }
+    });
+    // En las hojas de Excel de Jira Server / Data Center varios valores van en una celda separados por comas; en un CSV, cada uno en su columna
+    const unaCelda = !!f.formato && f.formato !== 'csv';
     if (opciones.columnaEstimacion === '') delete mapa.puntos;
     else if (opciones.columnaEstimacion) {
       const i = cab.findIndex((h) => String(h).trim() === opciones.columnaEstimacion);
@@ -131,7 +147,8 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     const n = filas.length - 1;
     if (n < 1) { informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' only has the header row: it has no tasks.', ' solo tiene la fila de títulos: no trae tareas.') }); return; }
     // Equipo: si la columna que da el nombre viene vacía ("None"), la que de verdad trae los equipos (salvo elección a mano)
-    if (!(opciones.columnas && opciones.columnas.equipo && cab.some((h) => String(h).trim() === opciones.columnas!.equipo))) {
+    const eqManual = opciones.columnas && opciones.columnas.equipo;
+    if (!(eqManual && (eqManual === NO_USAR || cab.some((h) => String(h).trim() === eqManual)))) {
       const eq = elegirColumnaEquipo(cab, filas, mapa.equipo as number | undefined, { clave: mapa.clave as number | undefined, tipo: mapa.tipo as number | undefined });
       if (eq.i != null && eq.i !== mapa.equipo) {
         mapa.equipo = eq.i;
@@ -156,6 +173,18 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     const orden: OrdenFechas = ordenFechas(muestras);
     if (hayNumericas(muestras)) informe.ordenFechas = orden;
     const leerFecha = (v: string) => leerFechaOrden(v, orden);
+    // Qué columna da cada campo, y columnas con datos sin usar que podrían servir (para revisarlas a mano)
+    (informe.columnasUsadas = informe.columnasUsadas || {})[f.nombre] = Object.fromEntries(Object.entries(mapa).map(([k, v]) => [k, String(cab[([] as number[]).concat(v)[0]]).trim()]));
+    // Para sugerir, una fecha tiene que parecerlo (12/Oct/26, 2026-10-12, 12/10/2026...), no basta con que se pueda leer
+    const pareceFecha = (v: string) => /^(\d{1,2}[/\- ](\d{1,2}|[a-zA-Z\u00e9]{3,5})\.?[/\- ]\d{2,4}|\d{1,2}\.\d{1,2}\.\d{4}|\d{4}-\d{2}-\d{2})/.test(v.trim()) && !!leerFecha(v);
+    const noUsar = new Set(Object.keys(opciones.columnas || {}).filter((k) => opciones.columnas![k] === NO_USAR));
+    const auto = mapearColumnas(cab);
+    const descartadas = [...noUsar].flatMap((k) => (auto[k] == null ? [] : ([] as number[]).concat(auto[k])));
+    const conOtras: Record<string, number | number[]> = { ...mapa, enlaces: enlacesIdx, descartadas, ...(iReparto >= 0 ? { reparto: iReparto } : {}) };
+    sugerirColumnas(cab, filas, conOtras, esColumnaPrivada, pareceFecha, noUsar).forEach((x) => {
+      const lista = (informe.columnasSugeridas = informe.columnasSugeridas || []);
+      if (!lista.some((y) => y.columna === x.columna)) lista.push({ fichero: f.nombre, ...x });
+    });
     Object.keys(mapa).forEach((k) => {
       const idx = ([] as number[]).concat(mapa[k]);
       if (idx.some((i) => conDatos[i])) informe.campos[k] = true;
@@ -167,10 +196,11 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
       return i == null ? '' : (fila[i] || '').trim();
     };
     const vals = (fila: string[], campo: string): string[] => {
-      const idx = mapa[campo] as number[] | undefined;
-      if (idx == null) return [];
+      if (mapa[campo] == null) return [];
       const out: string[] = [];
-      idx.forEach((i) => { const v = (fila[i] || '').trim(); if (v && out.indexOf(v) < 0) out.push(v); });
+      // Varias columnas (Jira Cloud) o varios valores en una celda separados por comas (Jira Server / Data Center)
+      const idx = ([] as number[]).concat(mapa[campo]);
+      idx.forEach((i) => partirValores(campo, String(fila[i] || ''), unaCelda && idx.length === 1).forEach((v) => { if (out.indexOf(v) < 0) out.push(v); }));
       return out;
     };
     for (let k = 1; k < filas.length; k++) {
@@ -202,9 +232,16 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
         puntos: null,
         equipoCampo: valorVacio(val(fila, 'equipo')) ? '' : val(fila, 'equipo'),
         proyecto: val(fila, 'proyecto'),
+        // Épica: "Parent key" / "Parent summary" (Cloud) o "Epic Link" (Server / Data Center, con la clave, el nombre o el id):
+        // "Epic Link" se resuelve cuando ya se han leído todas las filas
         padre: val(fila, 'padre'),
         padreClave: val(fila, 'padreClave'),
-        enlaces: enlacesIdx.filter((i) => (fila[i] || '').trim()).length,
+        epicNombre: val(fila, 'epicNombre'),
+        epicLink: val(fila, 'epicLink'),
+        idOrigen: val(fila, 'idTarea'),
+        empezada: leerFecha(val(fila, 'empezada')),
+        // Tareas enlazadas distintas, vengan de columnas de vínculo (Cloud) o de "Linked Issues" (Server / Data Center)
+        enlaces: new Set(enlacesIdx.flatMap((i) => { const v = String(fila[i] || '').trim(); const k = clavesEnTexto(v); return k.length ? k : v ? [v] : []; }).concat(clavesEnTexto(val(fila, 'enlacesLista')))).size,
         tis: [],
         primera: leerFecha(val(fila, 'primera')),
         cambioCategoria: leerFecha(val(fila, 'cambioCategoria')),
@@ -239,6 +276,42 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     if (!t.creada) { informe.sinFecha = (informe.sinFecha || 0) + 1; return; }
     filas.push(t as FilaJira & { creada: Date });
   });
+  // Épica desde "Epic Link" (Server / Data Center): puede traer la clave, el id numérico o el nombre de la épica.
+  // Un nombre que se repite en dos épicas no se adivina: se deja sin épica y se avisa.
+  const clavesPorMayus = new Map<string, string>(), porId = new Map<string, string>();
+  const porNombreCorto = new Map<string, Set<string>>(), porResumen = new Map<string, Set<string>>();
+  const anota = (m: Map<string, Set<string>>, nombre: string, clave: string) => { if (!nombre) return; const k = norm(nombre); m.set(k, (m.get(k) || new Set()).add(clave)); };
+  porClave.forEach((t) => {
+    clavesPorMayus.set(t.clave.toUpperCase(), t.clave);
+    if (t.idOrigen) porId.set(t.idOrigen, t.clave);
+    if (t.tipo === 'epica') { anota(porNombreCorto, t.epicNombre, t.clave); anota(porResumen, t.resumen, t.clave); }
+  });
+  const clavePorNombre = (nombre: string): string | null | 'ambigua' => {
+    for (const m of [porNombreCorto, porResumen]) { const s = m.get(norm(nombre)); if (s && s.size === 1) return [...s][0]; if (s && s.size > 1) return 'ambigua'; }
+    return null;
+  };
+  // Clave de verdad: con el proyecto en mayúsculas (PLAT-6), no un nombre con guion ("Phase-2")
+  const claveEstricta = (v: string) => /^[A-Z][A-Z0-9_]+-\d+$/.test(v);
+  let sinEpicaEncontrada = 0, epicaAmbigua = 0;
+  filas.forEach((t) => {
+    if (t.padreClave) { t.padreClave = clavesPorMayus.get(t.padreClave.toUpperCase()) || t.padreClave; return; }
+    const v = t.epicLink || t.padre;
+    if (!v) return;
+    const conocida = clavesPorMayus.get(v.toUpperCase());
+    if (conocida && esClaveJira(v)) { t.padreClave = conocida; return; }
+    if (/^\d+$/.test(v) && porId.has(v)) { t.padreClave = porId.get(v)!; return; }
+    const r = clavePorNombre(v);
+    if (r === 'ambigua') { epicaAmbigua++; return; }
+    if (r) { t.padreClave = r; if (!t.padre) t.padre = v; return; }
+    // Clave de una épica que no está en el export (de otro proyecto): se agrupa por ella igualmente
+    if (t.epicLink && claveEstricta(t.epicLink)) { t.padreClave = t.epicLink; return; }
+    sinEpicaEncontrada++;
+  });
+  if (sinEpicaEncontrada) informe.avisos.push({ tipo: 'aviso', texto: sinEpicaEncontrada.toLocaleString(regional()) + Tx(' tasks name an epic that is not in the export: they are left without epic. Export the epics too, or choose the column with the epic key.', ' tareas nombran una épica que no está en el export: se quedan sin épica. Exporta también las épicas o elige la columna con la clave de la épica.') });
+  if (epicaAmbigua) informe.avisos.push({ tipo: 'aviso', texto: epicaAmbigua.toLocaleString(regional()) + Tx(' tasks name an epic whose name is shared by several epics: they are left without epic. Choose the column with the epic key.', ' tareas nombran una épica cuyo nombre tienen varias épicas: se quedan sin épica. Elige la columna con la clave de la épica.') });
+  if (filas.some((t) => t.padreClave)) informe.campos.padreClave = true;
+  // Si "Epic Link" ya se ha resuelto entera, no hace falta proponer otra columna de épica
+  if (!sinEpicaEncontrada && !epicaAmbigua && informe.columnasSugeridas) informe.columnasSugeridas = informe.columnasSugeridas.filter((x) => x.campo !== 'padreClave' || !filas.some((t) => t.epicLink));
   informe.tareas = filas.length;
   if (informe.sinClave) informe.avisos.push({ tipo: 'aviso', texto: informe.sinClave.toLocaleString(regional()) + Tx(' rows have data but no task key and were left out.', ' filas tienen datos pero no clave de tarea y se han dejado fuera.') });
   if (informe.sinFecha) informe.avisos.push({ tipo: 'aviso', texto: informe.sinFecha.toLocaleString(regional()) + Tx(' tasks have no readable creation date and were left out.', ' tareas no tienen una fecha de creación legible y se han dejado fuera.') });
@@ -288,7 +361,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     fechas: {
       creada: t.creada,
       actualizada: t.actualizada,
-      empezada: null,
+      empezada: t.empezada,
       terminada: t.resuelta,
       cambio_estado: t.cambioCategoria,
       primera_respuesta: t.primera,
