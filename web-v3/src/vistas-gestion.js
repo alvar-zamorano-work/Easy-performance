@@ -128,6 +128,9 @@
   function iniciativas() {
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);
     const vis = vm.iniciativas.filter((x) => x.ini.equipos.some((e) => nombres.indexOf(e) >= 0));
+    // Iniciativas de equipos que ahora no se miden (renombrados, fuera del export o no elegidos): no se esconden sin decirlo
+    const fueraIni = S.role === 'equipo' ? [] : vm.iniciativas.filter((x) => !x.ini.equipos.some((e) => vm.equiposMedidos.indexOf(e) >= 0));
+    const avisoFuera = fueraIni.length ? `<div class="notice warn small">${esc(tn('ini.fueraDeMedicion', fueraIni.length, { lista: lista(fueraIni.map((x) => x.ini.nombre + ' (' + lista(x.ini.equipos) + ')')) }))}</div>` : '';
     const n = (est) => vis.filter((x) => x.s.estado === est).length;
     const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('ini.paso' + i + '.t'))}</b><div class="small muted">${esc(t('ini.paso' + i + '.d', { lat: N.LATENCIA_DIAS / 7 }))}</div></div></div>`).join('')}</div>`;
     const propias = (S.cfg.iniciativas || []).map((i) => i.id);
@@ -145,7 +148,7 @@
     const estIa = S.iaEstado.impacto;
     const iaFila = vis.length && hayIa() ? `<div class="row" style="margin:8px 0"><button class="btn sm" data-action="ia-impacto" ${estIa === 'trabajando' ? 'disabled' : ''}>${esc(estIa === 'trabajando' ? t('ia.trabajando') : t('ini.leerIa'))}</button>${estIa === 'error' ? `<span class="small t-warn">${esc(t('ia.error', { e: S.iaError.impacto || '' }))}</span>` : ''}</div>` : '';
     const status = K.statusBar(n('empeora') ? 'bad' : n('funciona') ? 'good' : 'neutral', esc(vis.length ? tn('ini.titular', vis.length, { m: n('midiendo'), f: n('funciona') }) : t('ini.ninguna')), [esc(t('ini.items1')), esc(t('ini.items2'))]);
-    return status + (S.iniForm ? formulario() : '') + iaFila
+    return status + avisoFuera + (S.iniForm ? formulario() : '') + iaFila
       + (vis.length ? `<div class="fichas cols-2">${tarjetas}</div>` : `<div class="ficha empty">${esc(t('ini.vacio'))}</div>`) + `<details class="mas"><summary>${esc(t('ini.como'))}</summary>${pasos}</details>`;
   }
   function formulario() {
@@ -384,7 +387,14 @@
   }
   const info = (eq) => { S.cfg.equiposInfo = S.cfg.equiposInfo || {}; S.cfg.equiposInfo[eq] = S.cfg.equiposInfo[eq] || { tipo: 'interno', proveedor: null, area: null }; return S.cfg.equiposInfo[eq]; };
   EP.cambio('eq-campo', (el) => aplicarCfg(() => { S.cfg.campoEquipo = el.value; delete S.cfg.equipos; }));
-  EP.cambio('eq-incluir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value); }));
+  EP.cambio('eq-incluir', () => aplicarCfg(() => {
+    S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value);
+    // Los que se dejan sin marcar a propósito no vuelven a salir como "equipos nuevos"
+    S.cfg.equiposDescartados = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:not(:checked)'), (c) => c.value);
+  }));
+  // Equipos nuevos en un export: se añaden a la medición o se descartan, desde el aviso del Resumen
+  EP.accion('eq-nuevos-anadir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = (S.cfg.equipos || []).concat(S.vm.fuera.nuevos); }));
+  EP.accion('eq-nuevos-no', () => aplicarCfg(() => { S.cfg.equiposDescartados = (S.cfg.equiposDescartados || []).concat(S.vm.fuera.nuevos); }));
   EP.cambio('eq-tipo', (el) => aplicarCfg(() => { const i = info(el.dataset.eq); i.tipo = el.value; if (el.value !== 'proveedor') i.proveedor = null; else i.proveedor = i.proveedor || t('equipo.proveedorEj'); }));
   EP.cambio('eq-proveedor', (el) => aplicarCfg(() => { info(el.dataset.eq).proveedor = el.value.trim() || null; }));
   EP.cambio('eq-area', (el) => aplicarCfg(() => { info(el.dataset.eq).area = el.value.trim() || null; }));

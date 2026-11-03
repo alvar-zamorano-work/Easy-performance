@@ -1006,6 +1006,67 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
+// ---------- 14. Cargar datos: otro export desde cualquier rol, sustituir o sumar, y un export malo no pisa el bueno ----------
+{
+  const { variantes } = await import('../tests/variantes.ts');
+  const V = variantes();
+  const DS = join(RAIZ, 'datos-sinteticos');
+  const comoFich = (nombre) => V[nombre].ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }));
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-04-06.csv')); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  const boton = async () => A(p, () => { const b = document.querySelector('.sb-foot [data-action="import"]'); return !!b && b.offsetParent !== null; });
+  const vDir = await boton(); await fijarRol(p, 'equipo'); const vEq = await boton(); await fijarRol(p, 'pmo');
+  ok('cargar otro export: el botón está en todos los roles', vDir && vEq, JSON.stringify({ vDir, vEq }));
+  // Segundo export: se pregunta; "sumar" junta los dos, "sustituir" deja solo el nuevo
+  await p.setInputFiles('#file-input', join(DS, 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
+  const pregunta = !!(await p.$('[data-action="carga-sumar"]'));
+  await clic(p, '[data-action="carga-sumar"]');
+  const sumados = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-10-12-parte-a.csv')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  const sustituido = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  await ir(p, 'resumen'); await quieto(p);
+  const desde = await A(p, () => /Desde los datos del/.test(document.querySelector('#page').textContent));
+  ok('Resumen: dice qué ha cambiado desde la carga anterior', desde);
+  ok('otro export: se pregunta, "sumar" junta y "sustituir" deja solo el nuevo', pregunta && sumados.length === 2 && sustituido.length === 1 && /parte-a/.test(sustituido[0]), JSON.stringify({ sumados, sustituido }));
+  // Los mismos datos con otra configuración no crean un corte repetido; el corte actual no se puede borrar
+  const nCortes = await A(p, () => window.EP.S.cortes.length);
+  await A(p, () => { const S = window.EP.S; S.cfg.fte = Object.assign({}, S.cfg.fte, { Pagos: 4 }); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.cortes.capturar(false, true); });
+  const nCortes2 = await A(p, () => window.EP.S.cortes.length);
+  await ir(p, 'cortes'); await quieto(p);
+  const borrarActual = await A(p, () => [...document.querySelectorAll('.rrow.corte')].filter((r) => r.querySelector('.chip.info')).some((r) => r.querySelector('[data-action="corte-borrar"]')));
+  ok('cortes: otra configuración no crea un corte repetido y el actual no se borra', nCortes2 === nCortes && !borrarActual, JSON.stringify({ nCortes, nCortes2, borrarActual }));
+  // Un export que no se puede medir: no se guarda, no deja corte, no tapa Iniciativas y se puede volver a los datos de antes
+  const antesIdb = await A(p, async () => (await window.EP.idbGet('ficheros')).map((f) => f.nombre));
+  await p.setInputFiles('#file-input', comoFich('soloAbiertas')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  const malo = await A(p, async () => ({ aviso: !!document.querySelector('[data-action="carga-volver"]'), idb: (await window.EP.idbGet('ficheros')).map((f) => f.nombre), cortes: window.EP.S.cortes.length }));
+  await ir(p, 'iniciativas'); await quieto(p);
+  const iniVisible = await A(p, () => !!document.querySelector('#page [data-action="ini-nueva"], #page-actions [data-action="ini-nueva"]'));
+  await clic(p, '[data-action="carga-volver"]');
+  const vuelta = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  ok('export que no se puede medir: no pisa los ficheros buenos ni deja corte, Iniciativas se ve y se vuelve a lo anterior', malo.aviso && JSON.stringify(malo.idb) === JSON.stringify(antesIdb) && malo.cortes === nCortes && iniVisible && JSON.stringify(vuelta) === JSON.stringify(antesIdb), JSON.stringify({ malo, antesIdb, iniVisible, vuelta }));
+  // Equipos nuevos: con equipos elegidos, un equipo que llega después se avisa y se puede medir; sus iniciativas no se esconden
+  await A(p, () => { const S = window.EP.S; S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = S.vm.equiposMedidos.slice(0, 2); S.cfg.iniciativas = (S.cfg.iniciativas || []).concat([{ id: 'ini-fuera', nombre: 'De un equipo fuera', equipos: [S.vm.equiposMedidos[3]], fecha_inicio: '2026-08-03', fecha_fin: null, medidas_objetivo: [{ medida: 'ciclo', direccion: 'bajar' }], estado: 'planificada', origen: 'propia' }]); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
+  await quieto(p);
+  const nuevos = await A(p, () => ({ lista: window.EP.S.vm.fuera.nuevos, aviso: !!document.querySelector('[data-action="eq-nuevos-anadir"]') }));
+  await ir(p, 'iniciativas'); await quieto(p);
+  const avisoIni = await A(p, () => /De un equipo fuera/.test(document.querySelector('#page').textContent));
+  await ir(p, 'resumen'); await quieto(p);
+  await clic(p, '[data-action="eq-nuevos-anadir"]');
+  const medidos = await A(p, () => window.EP.S.vm.equiposMedidos.length);
+  ok('equipos nuevos: se avisan, se pueden medir y sus iniciativas no se esconden', nuevos.lista.length >= 1 && nuevos.aviso && avisoIni && medidos >= 3, JSON.stringify({ nuevos, avisoIni, medidos }));
+  // Lo que queda fuera de la medición se dice (equipos no medidos y tareas sin equipo)
+  await A(p, () => { const S = window.EP.S, fuera = S.vm.equiposMedidos[S.vm.equiposMedidos.length - 1]; S.cfg.equipos = S.vm.equiposMedidos.slice(0, -1); S.cfg.equiposDescartados = [fuera]; window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
+  await quieto(p);
+  const fueraTxt = await A(p, () => ({ f: window.EP.S.vm.fuera, txt: /Fuera de la medición/.test(document.querySelector('#page').textContent), nuevo: !!document.querySelector('[data-action="eq-nuevos-anadir"]') }));
+  ok('fuera de la medición: se dice qué equipos no se miden y no se ofrecen como nuevos si se descartaron', fueraTxt.txt && !fueraTxt.nuevo && fueraTxt.f.fuera.length === 1, JSON.stringify(fueraTxt));
+  ok('cargar datos: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);

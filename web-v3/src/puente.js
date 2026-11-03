@@ -343,6 +343,19 @@
     });
     return vm;
   }
+  /**
+   * Equipos que se ven en el export y no se miden: los de menos del 2 % (o no elegidos) y las tareas sin equipo.
+   * "Nuevos" son los que han llegado con un export después de elegir equipos y no se han descartado.
+   */
+  function fueraDeMedicion(cfg, det, tareas) {
+    const cp = campo(cfg, det), o = opcion(det, cp), medidos = equipos(cfg, det);
+    if (!o || o.id === 'todos') return { fuera: [], sinEquipo: 0, nuevos: [] };
+    const total = tareas || o.valores.reduce((s, v) => s + v.n, 0), conEquipo = o.valores.reduce((s, v) => s + v.n, 0);
+    const elegidos = !!(cfg.equipos && cfg.equipos.length && cfg.campoEquipo === cp);
+    const descartados = cfg.equiposDescartados || [];
+    const fuera = o.valores.filter((v) => medidos.indexOf(v.valor) < 0).map((v) => ({ nombre: v.valor, n: v.n, poco: v.n / Math.max(1, conEquipo) < 0.02 }));
+    return { fuera, sinEquipo: Math.max(0, total - conEquipo), nuevos: elegidos ? fuera.filter((v) => !v.poco && descartados.indexOf(v.nombre) < 0).map((v) => v.nombre) : [] };
+  }
   /** La vista-modelo completa. */
   function construirVM(r, entrada) {
     const { det, cfg } = entrada, lectura = lecturaCalculo(entrada.lectura, cfg);
@@ -357,6 +370,7 @@
       recs: recomendaciones(r, cfg, det, equiposVM), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
       comparaciones: r.comparaciones, casosGrupo: r.casosGrupo, iniciativas: inis, paquete: r.paquete, problemasPaquete: r.problemas,
       informe: lectura.informe, det, campoEquipo: campo(cfg, det), equiposMedidos: equipos(cfg, det), mapeo: mapeo(cfg, det),
+      fuera: fueraDeMedicion(cfg, det, (lectura.tareas || []).length),
       hayCoste: hayCoste(cfg), hayProveedores: hayProveedores(cfg),
       epicas: N.vistaEpicas(r.preparacion, lectura.epicas || []),
     }, entrada.descartadas);

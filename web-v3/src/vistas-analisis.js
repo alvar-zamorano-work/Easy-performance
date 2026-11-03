@@ -7,7 +7,7 @@
   function cabecera(view) {
     const vm = S.vm;
     // Con un bloqueo duro no hay resumen redactado, ni personalizar, ni presentar: no hay cifras de las que hablar
-    if (bloqueoDuro() && ['fuentes', 'ajustes', 'calidad'].indexOf(view) < 0) return { titulo: t('nav.' + view), sub: t('dc.bloqueo.titulo') };
+    if (bloqueoDuro() && ['fuentes', 'ajustes', 'calidad', 'iniciativas', 'cortes'].indexOf(view) < 0) return { titulo: t('nav.' + view), sub: t('dc.bloqueo.titulo') };
     const btn = (label, action, extra, primary) => `<button class="btn${primary ? ' primary' : ''}" data-action="${action}"${extra || ''}>${esc(label)}</button>`;
     const sub = t('cabecera.datosHasta', { fecha: fecha(vm.fechaDatos), n: vm.equipos.length, k: vm.semanas.K });
     if (view === 'resumen') return { titulo: t('nav.resumen'), sub, acciones: btn(t('resumen.redactado'), 'drill', ' data-kind="resumen"') + btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') + btn(t('presentar.abrir'), 'present', '', true) };
@@ -40,9 +40,18 @@
     const dest = K.destacados();
     const fichas = eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
       `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
-    return K.statusBar(tono, titular, items) + preguntas()
+    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos() + preguntas()
       + K.sec(t('resumen.baselineEquipos'), `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span>`) + `<div class="fichas cols-2">${fichas}</div>`
       + K.sec(t('resumen.primero'), `<button class="link" data-action="go" data-view="recomendaciones">${esc(t('comun.verTodas'))}</button>`) + `<div class="ficha list">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
+  }
+  /** Equipos nuevos en este export (se ofrece medirlos) y qué queda fuera de la medición (equipos pequeños y tareas sin equipo). */
+  function avisoEquipos() {
+    const f = S.vm.fuera; if (!f || S.role === 'equipo') return '';
+    let html = '';
+    if (f.nuevos.length) html += `<div class="notice warn small">${esc(tn('equipos.nuevos', f.nuevos.length, { lista: lista(f.nuevos.map(nombreEquipo)) }))} <button class="btn sm" data-action="eq-nuevos-anadir">${esc(t('equipos.nuevosAnadir'))}</button> <button class="link small" data-action="eq-nuevos-no">${esc(t('equipos.nuevosNo'))}</button></div>`;
+    const pocos = f.fuera.filter((x) => x.poco || f.nuevos.indexOf(x.nombre) < 0);
+    if (pocos.length || f.sinEquipo) html += `<p class="tiny muted">${esc([pocos.length ? t('equipos.fuera', { lista: lista(pocos.map((x) => nombreEquipo(x.nombre) + ' (' + x.n + ')')) }) : '', f.sinEquipo ? tn('equipos.sinEquipo', f.sinEquipo) : ''].filter(Boolean).join(' '))}</p>`;
+    return html;
   }
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
   function pieFicha(e) {

@@ -182,6 +182,7 @@
     if (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team)) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
     if (S.iaRecsDe && S.iaRecsDe !== S.lectura) { S.iaRecs = null; S.iaImpacto = null; S.iaRecsDe = null; }
     S.narrativas = {};
+    guardarSiYaVale();
   }
   function descodificar(buf) {
     const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
@@ -241,11 +242,44 @@
           if (variasHojas.length) S.avisosCarga = variasHojas.map((x) => t('carga.primeraHoja', { f: x.nombre, h: x.hoja, n: x.hojas }));
           else S.avisosCarga = [];
           if (!fs.length) return;
-          if (!procesar(fs)) return;
-          trasCargar(fs);
+          // Ya había datos: se pregunta si el export nuevo sustituye a lo cargado o se suma
+          if (S.onboarded && S.ficheros && S.ficheros.length && !S.demo) { S.cargaPend = { fs }; render(); window.scrollTo(0, 0); return; }
+          aplicarCarga(fs);
         } catch (e) { S.error = { message: e.message, stack: e.stack }; render(); } finally { ocupado(false); }
       }, 20))
       .catch(() => { ocupado(false); toast(t('carga.error'), 'bad'); });
+  }
+
+  const hayBloqueoDuro = () => !!(S.vm && S.vm.dataCheck && S.vm.dataCheck.bloqueos.some((b) => b.duro));
+  /**
+   * Aplica unos ficheros. Si con ellos no se puede medir y antes sí se podía, no se guardan: los buenos siguen en el
+   * navegador y se ofrece volver a ellos. Si después se arregla (por ejemplo, el mapeo de estados), se guardan entonces.
+   */
+  function aplicarCarga(fs) {
+    const antes = S.ficheros && S.ficheros.length && S.vm && !hayBloqueoDuro() ? S.ficheros : null;
+    if (!procesar(fs)) return;
+    if (antes && hayBloqueoDuro()) { S.cargaBloqueada = { antes }; S.pendienteGuardar = true; S.view = 'resumen'; render(); window.scrollTo(0, 0); return; }
+    S.cargaBloqueada = null; S.pendienteGuardar = false;
+    trasCargar(fs);
+  }
+  /** Ficheros que se cargaron sin guardar (no se podían medir): se guardan en cuanto se pueden medir. */
+  function guardarSiYaVale() {
+    if (!S.pendienteGuardar || hayBloqueoDuro() || !S.ficheros) return;
+    S.pendienteGuardar = false; S.cargaBloqueada = null;
+    idbSet('ficheros', S.ficheros); idbSet('origenFicheros', { manual: true, firmaCarpeta: firmaCarpeta() });
+    if (EP.cortes && S.onboarded) EP.cortes.capturar();
+  }
+  /** Aviso arriba de la página: la pregunta de sustituir o sumar, o el export que no se ha guardado. */
+  function avisoCarga() {
+    if (S.cargaPend) {
+      const nuevos = S.cargaPend.fs.map((f) => f.nombre).join(', '), ya = (S.ficheros || []).map((f) => f.nombre).join(', ');
+      return `<div class="ficha" data-tipo="carga"><div class="f-head"><div class="f-title">${esc(t('carga.pregunta'))}</div></div><div class="f-body">
+        <p class="small">${esc(t('carga.preguntaTexto', { nuevos, ya }))}</p>
+        <div class="row"><button class="btn primary" data-action="carga-sustituir">${esc(t('carga.sustituir'))}</button><button class="btn" data-action="carga-sumar">${esc(t('carga.sumar'))}</button><button class="link" data-action="carga-cancelar">${esc(t('comun.cancelar'))}</button></div>
+        <p class="tiny muted">${esc(t('carga.preguntaNota'))}</p></div></div>`;
+    }
+    if (S.cargaBloqueada && hayBloqueoDuro()) return `<div class="notice warn small">${esc(t('carga.noGuardado'))} <button class="btn sm" data-action="carga-volver">${esc(t('carga.volver'))}</button></div>`;
+    return '';
   }
 
   // ---------- datos de ejemplo ----------
@@ -344,7 +378,8 @@
       byId('page-title').textContent = cab.titulo; byId('page-sub').textContent = cab.sub; byId('page-actions').innerHTML = cab.acciones || '';
       // Sin entregas medibles, las páginas de análisis no enseñan cifras: solo por qué y cómo arreglarlo
       const bloqueo = V.bloqueoDuro ? V.bloqueoDuro() : '';
-      byId('page').innerHTML = bloqueo && ['fuentes', 'ajustes', 'calidad'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)();
+      // Un export que no se puede medir no tapa lo que no depende de sus cifras: iniciativas, cortes y configuración
+      byId('page').innerHTML = avisoCarga() + (bloqueo && ['fuentes', 'ajustes', 'calidad', 'iniciativas', 'cortes'].indexOf(S.view) < 0 ? bloqueo : bloqueo + (V[S.view] || V.resumen)());
       V.cajon(); V.asistente();
     } catch (e) {
       console.error(e);
@@ -364,6 +399,16 @@
   accion('toast-close', () => document.querySelector('.toast').classList.add('hidden'));
   accion('retry', () => { S.error = null; try { if (S.lectura) recalcular(); } catch (e) { S.error = { message: e.message, stack: e.stack }; } render(); });
   accion('import', () => byId('file-input').click());
+  // Otro export con datos ya cargados: sustituir, sumar o cancelar; y volver a los datos buenos
+  accion('carga-sustituir', () => { const p = S.cargaPend; S.cargaPend = null; if (p) enSegundoPlano(() => aplicarCarga(p.fs), t('carga.leyendo')); });
+  accion('carga-sumar', () => {
+    const p = S.cargaPend; S.cargaPend = null; if (!p) return;
+    // Un fichero con el mismo nombre se sustituye; los demás se suman (las tareas repetidas se leen una vez)
+    const nombres = p.fs.map((f) => f.nombre);
+    enSegundoPlano(() => aplicarCarga((S.ficheros || []).filter((f) => nombres.indexOf(f.nombre) < 0).concat(p.fs)), t('carga.leyendo'));
+  });
+  accion('carga-cancelar', () => { S.cargaPend = null; render(); });
+  accion('carga-volver', () => { const b = S.cargaBloqueada; S.cargaBloqueada = null; S.pendienteGuardar = false; if (b) enSegundoPlano(() => { if (procesar(b.antes)) { render(); toast(t('carga.vuelto')); } }); });
   accion('demo', () => { enSegundoPlano(() => { if (verDemo()) { S.onboarded = true; S.role = S.role || 'direccion'; S.view = INICIO_ROL[S.role]; if (EP.cortes) EP.cortes.capturar(true); } render(); window.scrollTo(0, 0); }, t('carga.leyendo')); });
   accion('demo-exit', () => salirDemo(true));
   accion('drill', (el) => openDrill({ kind: el.dataset.kind, team: el.dataset.team || null, medida: el.dataset.medida || null, id: el.dataset.id || null }));
@@ -382,7 +427,7 @@
     Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'data' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
       extraIni: [], contextoDocs: null, carpeta: null, team: null, recFilter: 'todos', recLevel: null, iniForm: null, drill: null,
       // También lo que estaba en memoria: rol, indicadores destacados, la versión leída y las iniciativas quitadas
-      role: 'direccion', prefs: { byRole: {} }, cfgVersion: null, iniQuitadas: [], colPend: null, view: 'resumen' });
+      role: 'direccion', prefs: { byRole: {} }, cfgVersion: null, iniQuitadas: [], colPend: null, view: 'resumen', cargaPend: null, cargaBloqueada: null, pendienteGuardar: false });
     guardarClave(''); render();
   });
 
