@@ -184,7 +184,7 @@ async function recorrer(p, etiqueta) {
   await ir(p, 'resumen'); await p.waitForTimeout(100);
   const filasBl = await p.$$eval('#page .fb', (x) => x.length), nEq = await A(p, () => window.EP.visibles().length), nK = await A(p, () => window.EP.kit.destacados().length);
   ok('resumen: la baseline de cada equipo', filasBl === nEq * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
-  ok('el menú dice Baseline', /Baseline/.test(await p.textContent('#nav')) && !/Referencias/.test(await p.textContent('#nav')));
+  ok('el menú dice Línea base', /Línea base/.test(await p.textContent('#nav')) && !/Referencias|Baseline/.test(await p.textContent('#nav')));
   // Gráficos con el eje desde cero: el punto más bajo nunca toca el techo por ruido
   await ir(p, 'referencias'); await p.waitForTimeout(100);
   ok('página Baseline con un gráfico por indicador', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nEq * nK);
@@ -602,7 +602,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     await clic(p, '[data-action="demo"]');
     const r = await A(p, () => {
       const malas = [];
-      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && /Fuera de rango/.test(window.EP.kit.estadoChip(m))) malas.push(e.nombre + ' ' + id); }));
+      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.critico')) >= 0) malas.push(e.nombre + ' ' + id); }));
       // Lo marcado por un límite crítico fijo lleva el chip de límite, nunca "Fuera de rango"
       const conLimite = window.EP.S.vm.equipos.some((e) => Object.values(e.medidas).some((m) => m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.limite.critico')) >= 0));
       return { malas, limite: conLimite };
@@ -1112,6 +1112,38 @@ const medirMaquetacion = () => {
   const equiposForm = await A(p, () => [...document.querySelectorAll('#form-ini input[name="equipos"]')].map((x) => x.value));
   ok('rol Equipo: no sale "Comparar equipos" y la iniciativa solo puede ser de su equipo', !/Comparar/.test(titulo) && equiposForm.length === 1, JSON.stringify({ titulo, equiposForm }));
   ok('Personalizar y roles: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// ---------- 16. Lenguaje: un solo término (línea base), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
+{
+  const p = await pagina(1280, 720);
+  await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  // Ninguna página dice "lo normal", "Baseline", "rango habitual", "franja", "Context" ni "KPI"
+  const malas = [];
+  for (const rol of ['direccion', 'pmo', 'equipo']) {
+    await fijarRol(p, rol);
+    for (const v of await A(p, () => window.EP.POR_ROL[window.EP.S.role])) {
+      await ir(p, v); await quieto(p);
+      const txt = await A(p, () => document.querySelector('.content').innerText);
+      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|franja|Context|KPI)\b.{0,30}/);
+      if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
+    }
+  }
+  ok('lenguaje: un solo término (línea base) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
+  await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
+  const unidades = await A(p, () => [...document.querySelectorAll('.tile[data-medida]')].map((x) => ({ id: x.dataset.medida, u: (x.querySelector('.t-unit') || {}).textContent || '' })));
+  ok('cifras con unidad y con las semanas que miran', unidades.length > 0 && unidades.every((x) => /semana/.test(x.u)), JSON.stringify(unidades));
+  await A(p, () => window.EP.openDrill({ kind: 'ayuda' }));
+  const ayuda = await A(p, () => ({ pregunta: /Esta página responde/.test(document.querySelector('#drawer').textContent), etiquetas: document.querySelectorAll('#drawer .leyenda > div').length }));
+  await A(p, () => window.EP.openDrill(null));
+  ok('"Cómo leerlo": qué responde la página y todas las etiquetas', ayuda.pregunta && ayuda.etiquetas >= 10, JSON.stringify(ayuda));
+  await ir(p, 'resumen'); await quieto(p);
+  const pantalla = await A(p, () => ({ equipos: document.querySelector('.fichas.cols-2').getBoundingClientRect().top, fab: !document.getElementById('assistant-fab').classList.contains('hidden') }));
+  ok('Resumen: los equipos empiezan en la primera pantalla (1280 x 720) y sin clave de IA no hay botón Preguntar', pantalla.equipos < 720 && !pantalla.fab, JSON.stringify(pantalla));
+  ok('lenguaje: sin errores', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.join(' | '));
   await p.context().close();
 }
 

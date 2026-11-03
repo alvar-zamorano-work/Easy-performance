@@ -101,12 +101,15 @@
       const resp = !conDato ? t('preg.sinDatos') : malos.length ? tn('preg.revisar', nEq) : parcial ? t('preg.enParte') : t('preg.bien');
       const detalleBien = [faltan.length ? t('preg.enParteDetalle', { m: lista(faltan.map(nombreMedida)) }) : (mejores.size ? t('preg.mejorDetalle', { equipos: lista([...mejores]) }) : t('preg.bienDetalle')),
         revisar.size ? t('preg.revisarDato', { equipos: lista([...revisar]) }) : ''].filter(Boolean).join(' ');
-      const cuerpo = malos.length ? malos.slice(0, 4).map((x) => `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(x.e.nombre)}" data-medida="${esc(x.k)}" role="button" tabindex="0">${K.estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreEquipo(x.e.nombre))}</b><div class="small muted">${esc(nombreMedida(x.k))}: ${esc(valor(x.k, x.m.valor))} · ${esc(K.rango(x.k, x.m))}</div></div><span class="go">›</span></div>`).join('')
+      const cuerpo = malos.length ? malos.slice(0, 4).map((x) => `<div class="rrow clickable" data-action="drill" data-kind="medida" data-team="${esc(x.e.nombre)}" data-medida="${esc(x.k)}" role="button" tabindex="0">${K.estadoChip(x.m)}<div class="rrow-t"><b>${esc(nombreEquipo(x.e.nombre))}</b><div class="small muted">${esc(nombreMedida(x.k))}: ${esc(K.conUnidad(x.k, x.m.valor))} · ${esc(K.rango(x.k, x.m))}</div></div><span class="go">›</span></div>`).join('')
         + (malos.length > 4 ? `<div class="tiny muted">${esc(tn('preg.mas', malos.length - 4))}</div>` : '')
         : `<p class="small muted">${esc(conDato ? detalleBien : t('preg.sinDatosDetalle'))}</p>`;
-      return K.ficha(`<div class="f-title">${esc(t('preg.' + o.id))}</div>${K.chip(tono, resp)}`, cuerpo, `<span class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</span>`, ' data-tipo="pregunta"');
+      // Una línea por pregunta (respuesta y qué equipos); el detalle, al abrirla. Así el Resumen cabe en una pantalla.
+      const quienes = malos.length ? lista([...new Set(malos.map((x) => nombreEquipo(x.e.nombre)))]) : (conDato ? detalleBien : t('preg.sinDatosDetalle'));
+      return `<details class="preg" data-tipo="pregunta"><summary>${K.chip(tono, resp)}<b>${esc(t('preg.' + o.id))}</b><span class="small muted preg-quien">${esc(quienes)}</span></summary>
+        <div class="preg-cuerpo">${cuerpo}<div class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</div></div></details>`;
     }).filter(Boolean);
-    return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="fichas">${tarjetas.join('')}</div>` : '';
+    return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="ficha list preguntas">${tarjetas.join('')}</div>` : '';
   }
   /** Recomendaciones de unos equipos, cada una con el nivel y la evidencia de esos equipos, de más a menos urgente. */
   function recsActivas(eqs) {
@@ -386,10 +389,14 @@
     S.prefs.byRole = by; S.prefs.byRole[S.role] = guardados; EP.guardarPrefs(); EP.render();
   });
   EP.accion('pref-reset', () => { if (S.prefs.byRole) delete S.prefs.byRole[S.role]; EP.guardarPrefs(); EP.render(); });
+  /** Ayuda de la página: primero qué responde esta página, después cómo se compara y todas las etiquetas que pueden salir. */
+  const LEYENDA = [['good', 'estado.bien'], ['good', 'estado.borde'], ['good', 'estado.mejor'], ['warn', 'estado.atencion'], ['bad', 'estado.critico'],
+    ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
   function cajonAyuda() {
-    const vm = S.vm;
-    const html = ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, { k: vm.semanas.K, kp: vm.semanas.KP, r: vm.semanas.R }))}</p>`).join('')
-      + `<div class="legend">${['bien', 'atencion', 'critico', 'sin'].map((s) => K.chip(K.TONO[s] || 'neutral', t('estado.' + s))).join(' ')}</div>`;
+    const vm = S.vm, p = { k: vm.semanas.K, kp: vm.semanas.KP, r: vm.semanas.R };
+    const html = `<p><b>${esc(t('ayuda.pagina.' + (S.view || 'resumen'), p))}</b></p>`
+      + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
+      + `<h4>${esc(t('ayuda.etiquetas'))}</h4><div class="leyenda">${LEYENDA.map(([tono, k]) => `<div class="small">${K.chip(tono, t(k))} ${esc(t('ayuda.e.' + k.replace(/^estado\./, '')))}</div>`).join('')}</div>`;
     return [t('ayuda.titulo'), html];
   }
 

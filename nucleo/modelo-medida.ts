@@ -154,7 +154,7 @@ export function modeloDeMedida(opciones: { catalogo?: Catalogo; generado?: Date 
     reglas: [
       Tx('Only teams are measured. Never people: the model has no people fields.', 'Solo se mide a equipos. Nunca a personas: el modelo no tiene campos de personas.'),
       Tx('Each measure is compared with the history of the team itself: last 4 weeks for lead times and deliveries, 8 for percentages, against the 12 weeks before.', 'Cada medida se compara con la historia del propio equipo: últimas 4 semanas para plazos y entregas, 8 para porcentajes, frente a las 12 semanas anteriores.'),
-      Tx('Good: within the usual range (percentiles 15 to 85) with a 10% margin. Attention: up to 25% worse. Critical: beyond that.', 'Bien: dentro de lo habitual (percentiles 15 a 85) con un margen del 10%. Atención: hasta un 25% peor. Crítico: más.'),
+      Tx('Good: within the baseline (percentiles 15 to 85) with a 10% margin. Attention: up to 25% worse. Critical: beyond that.', 'Bien: dentro de lo habitual (percentiles 15 a 85) con un margen del 10%. Atención: hasta un 25% peor. Crítico: más.'),
       Tx('Area figures come from all its tasks together, never from averages of teams.', 'Las cifras del área salen de todas sus tareas juntas, nunca de medias de equipos.'),
       Tx('A definition changes first in the signed definitions document and then in the model.', 'Una definición se cambia primero en el documento de definiciones firmado y después en el modelo.'),
     ],

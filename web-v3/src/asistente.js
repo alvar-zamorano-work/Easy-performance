@@ -29,7 +29,8 @@
   function asistente() {
     const el = document.getElementById('assistant'), fab = document.getElementById('assistant-fab');
     const enApp = !!(S.onboarded && S.vm && !S.presenting && !S.error);
-    if (fab) fab.classList.toggle('hidden', !enApp || S.chat.open);
+    // Sin clave de IA el botón no sale: no tapa contenido para algo que no se puede usar
+    if (fab) fab.classList.toggle('hidden', !enApp || S.chat.open || !S.ia.clave);
     if (!el) return;
     if (!enApp || !S.chat.open) { el.classList.add('hidden'); el.innerHTML = ''; return; }
     el.classList.remove('hidden');

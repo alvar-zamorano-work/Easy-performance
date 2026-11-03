@@ -528,7 +528,7 @@
     const vm = S.vm, eqs = equipo ? vm.equipos.filter((e) => e.nombre === equipo) : EP.visibles();
     const b1 = [], b2 = [], b3 = [];
     const alerta = eqs.filter((e) => e.cambios.length);
-    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
+    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: K.conUnidad(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
     // Recomendaciones de nivel alto en equipos sin cambios: no se dice que todo va bien
     eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
