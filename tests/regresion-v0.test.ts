@@ -51,7 +51,14 @@ function sinTextos<T>(x: T): T {
 function sinNovedades(m: unknown): unknown {
   type M = Record<string, Record<string, unknown>>;
   const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown>; calidad?: Record<string, unknown> }[] };
-  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; delete v.estadoBanda; });
+  // Nov 2026 (auditoría UX): con línea base manda la línea base y el límite fijo superado queda como aviso. La v0 daba el
+  // peor de los dos: para comparar, el estado se recompone con el aviso (mismas cifras, otra forma de enseñarlas).
+  const ORDEN: Record<string, number> = { bien: 0, atencion: 1, critico: 2 };
+  const conAviso = (v: Record<string, unknown>) => {
+    const a = v.aviso as { estado: string } | undefined;
+    if (a && ORDEN[a.estado] > (ORDEN[v.estado as string] ?? -1)) v.estado = a.estado;
+  };
+  const limpiar = (ms: M) => Object.values(ms || {}).forEach((v) => { conAviso(v); delete v.aviso; delete v.margen; delete v.estadoPor; delete v.limite; delete v.referencia; delete v.lado; delete v.revisar; delete v.estadoBanda; });
   x.equipos.forEach((e) => {
     delete e.medidas.agent_readiness; delete e.series.agentReady;
     delete e.medidas.bugs; delete e.series.bugsEntrada; delete e.series.bugsMedia;
@@ -60,6 +67,21 @@ function sinNovedades(m: unknown): unknown {
     if (e.calidad) delete e.calidad.diasMasivos;
   });
   return x;
+}
+
+/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su línea base (20 % o más, pero
+ *  por debajo de su franja). Solo en esos equipos cambia algo frente a la v0: ahí se quita el caso en los dos lados, y en
+ *  todos los demás se sigue comparando. La regla nueva se comprueba también en aseguradora.test.ts. */
+type ConCasos = { equipos: { nombre: string; medidas: Record<string, { valor?: number | null; ref?: { lo: number } }>; casos?: { id: string }[] }[] };
+function retrabajoMejorQueSuBase(m: unknown): Set<string> {
+  return new Set((m as ConCasos).equipos.filter((e) => {
+    const rt = e.medidas.retrabajo;
+    return !!(rt && rt.ref && rt.valor != null && rt.valor >= 0.2 && rt.valor < rt.ref.lo);
+  }).map((e) => e.nombre));
+}
+function sinCasoRetrabajo(m: unknown, equipos: Set<string>): unknown {
+  (m as ConCasos).equipos.forEach((e) => { if (equipos.has(e.nombre) && Array.isArray(e.casos)) e.casos = e.casos.filter((c) => c.id !== 'retrabajo'); });
+  return m;
 }
 
 function sinSprintsDelArea(m: unknown, area: boolean): unknown {
@@ -132,7 +154,10 @@ for (const esc of escenarios()) {
         // v3: en la visión del área los sprints se cuentan por equipo de origen. La v0 los sumaba y daba los sprints
         // del área por no creíbles. Lo que depende de eso (arrastradas, sprints y casos) se comprueba en v3-nucleo.test.ts.
         const area = nombre === 'área unida con FTE';
-        assert.deepEqual(sinTextos(sinSprintsDelArea(sinNovedades(mN), area)), sinTextos(sinSprintsDelArea(json(mV), area)));
+        const mejores = retrabajoMejorQueSuBase(json(mN));
+        // Donde cambia la regla, el núcleo nuevo no da "mucho retrabajo"
+        mN.equipos.filter((e) => mejores.has(e.nombre)).forEach((e) => assert.ok(!(e.casos || []).some((c) => c.id === 'retrabajo'), 'sin mucho retrabajo en ' + e.nombre));
+        assert.deepEqual(sinTextos(sinCasoRetrabajo(sinSprintsDelArea(sinNovedades(mN), area), mejores)), sinTextos(sinCasoRetrabajo(sinSprintsDelArea(json(mV), area), mejores)));
       });
     }
   });

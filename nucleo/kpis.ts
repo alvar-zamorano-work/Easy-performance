@@ -25,12 +25,14 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
     if (est.lado) m.lado = est.lado;
     if (est.banda) m.estadoBanda = est.banda;
     if (est.revisar) m.revisar = est.revisar;
+    if (est.aviso) m.aviso = est.aviso;
+    if (est.margen != null) m.margen = est.margen;
     return m;
   }
   function copia(id: string, base: string): MedidaCalculada {
     const b = M[base];
     if (!b || !b.disponible) return { id, disponible: false, motivo: b ? b.motivo : Tx('Not available with this data.', 'No disponible con estos datos.') };
-    return { id, disponible: true, serie: b.serie, valor: b.valor, ref: b.ref, ventana: b.ventana, estado: b.estado, estadoTexto: b.estadoTexto, estadoPor: b.estadoPor, limite: b.limite, referencia: b.referencia, ...(b.lado ? { lado: b.lado } : {}), ...(b.revisar ? { revisar: b.revisar } : {}) };
+    return { id, disponible: true, serie: b.serie, valor: b.valor, ref: b.ref, ventana: b.ventana, estado: b.estado, estadoTexto: b.estadoTexto, estadoPor: b.estadoPor, limite: b.limite, referencia: b.referencia, ...(b.lado ? { lado: b.lado } : {}), ...(b.revisar ? { revisar: b.revisar } : {}), ...(b.aviso ? { aviso: b.aviso } : {}), ...(b.margen != null ? { margen: b.margen } : {}) };
   }
 
   // Throughput / FTE: tareas terminadas al mes (media de 4 semanas) entre las personas equivalentes del equipo.

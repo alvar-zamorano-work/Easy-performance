@@ -202,6 +202,21 @@
     demasiado_a_la_vez: ['wip', 'ciclo', 'entregas'], sprint_no_cumple: ['arrastradas'], pendiente_crece: ['pendiente'], mucha_espera: ['espera'],
     retrabajo: ['retrabajo'], errores_capacidad: ['errores'], entregas_irregulares: ['regularidad', 'entregas'], estimaciones_no_predicen: ['estimacion'],
   };
+  /**
+   * Qué medidas vuelve dudosas cada comprobación de fiabilidad cuando falla en un equipo (o en el área). Una cifra que
+   * depende de un dato mal registrado no puede salir "normal" ni "mejor": sale "Revisar el dato" (auditoría UX, P0.1).
+   * - tiempos: sin el tiempo en cada estado no se saben el tiempo de ciclo, la espera ni el retrabajo.
+   * - flujo: si las tareas saltan de pendiente a hecho, el ciclo sale corto, el retrabajo a cero y el trabajo en curso bajo.
+   * - registro: si se crean al terminar, el tiempo total, la primera respuesta, el ciclo y el pendiente no son reales.
+   * - estimacion: sin estimar las historias, la velocidad y la precisión de la estimación no cuentan todo.
+   * - sprints: sin sprints creíbles, ni lo arrastrado ni la fiabilidad del sprint.
+   */
+  const DUDOSO_POR = {
+    tiempos: ['ciclo', 'espera', 'retrabajo'], flujo: ['ciclo', 'espera', 'retrabajo', 'wip'], registro: ['ciclo', 'total', 'primera', 'pendiente'],
+    estimacion: ['velocidad', 'estimacion'], sprints: ['arrastradas', 'fiabilidad'],
+  };
+  /** En el área, parte mínima de las tareas en equipos donde falla una comprobación para que sus cifras salgan por revisar. */
+  const DUDOSO_PARTE_AREA = 0.25;
   const casoSobreDatoDudoso = (id, eq) => (MEDIDAS_CASO[id] || []).some((k) => { const m = med(eq, k); return !!(m && m.disponible && m.revisar); });
 
   /**
@@ -223,10 +238,13 @@
     return filas.length ? { campo: cfg.columnaReparto, filas } : null;
   }
 
+  /** Estado con las recomendaciones urgentes: "Pide atención" pasa por delante de revisar el dato y de estable, no de los demás. */
+  const conGraves = (sinGraves, nGraves) => (nGraves && (sinGraves === 'revisar' || sinGraves === 'estable') ? 'atencion' : sinGraves);
   /** Ficha de un equipo (o del área). */
   function fichaEquipo(r, eq, cols, fiab, cfg, det, esArea) {
     const info = (cfg.equiposInfo || {})[eq.nombre] || {};
-    const fe = fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
+    // El área no tiene comprobaciones propias por equipo (aunque se llame como uno): sus cifras miran las del área
+    const fe = !esArea && fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
     const bien = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado === 'bien').length : null;
     const medibles = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado !== 'sin').length : null;
     // Un cierre masivo en las semanas que se miden: las entregas de esas semanas no son de fiar, se marcan para revisar
@@ -238,6 +256,39 @@
       // Las medidas que cuentan lo terminado: entregas y velocidad (puntos terminados)
       ['entregas', 'velocidad'].forEach((id) => { const m = eq.medidas[id]; if (m && m.disponible && !m.revisar) medidasEq[id] = Object.assign({}, m, { revisar: 'masivo', diasMasivos: masivos }); });
     }
+    // Comprobaciones de fiabilidad que fallan en este equipo: sus medidas salen por revisar (dudosoPor dice cuáles)
+    const dudosas = {};
+    if (fe) {
+      const fallan = Object.keys(DUDOSO_POR).filter((k) => fe.valores[k] && fe.valores[k].estado === 'revisar');
+      fallan.forEach((k) => DUDOSO_POR[k].forEach((id) => { (dudosas[id] = dudosas[id] || { por: [] }).por.push(k); }));
+    } else if (esArea && fiab) {
+      // En el área, una cifra es dudosa si los equipos donde esa cifra es dudosa suman el 25 % de las tareas o más: un
+      // equipo pequeño apenas la mueve, varios equipos con fallos distintos sí. Si una comprobación falla en el área sin
+      // fallar en ningún equipo, lo que depende de ella es dudoso en el área entera. Se guarda la parte de las tareas.
+      const pe = r.preparacion.porEquipo, n = (nombre) => (pe[nombre] || []).length;
+      const total = fiab.porEquipo.reduce((s, x) => s + n(x.equipo), 0);
+      const fallaArea = (k) => fiab.comprobaciones.some((c) => c.id === k && c.estado === 'revisar');
+      const fallaEn = (x, k) => !!(x.valores[k] && x.valores[k].estado === 'revisar');
+      [...new Set([].concat(...Object.values(DUDOSO_POR)))].forEach((id) => {
+        const ks = Object.keys(DUDOSO_POR).filter((k) => DUDOSO_POR[k].indexOf(id) >= 0 && fallaArea(k));
+        if (!ks.length) return;
+        const enTodo = ks.filter((k) => !fiab.porEquipo.some((x) => fallaEn(x, k)));
+        const malos = fiab.porEquipo.filter((x) => ks.some((k) => fallaEn(x, k)));
+        const parte = total ? malos.reduce((s, x) => s + n(x.equipo), 0) / total : 0;
+        if (enTodo.length) dudosas[id] = { por: ks, parte: 1, area: true };
+        else if (parte >= DUDOSO_PARTE_AREA) dudosas[id] = { por: ks.filter((k) => malos.some((x) => fallaEn(x, k))), parte };
+      });
+    }
+    if (Object.keys(dudosas).length) {
+      if (medidasEq === eq.medidas) medidasEq = Object.assign({}, eq.medidas);
+      // Una alerta se queda (no se esconde un "peor de lo normal"); lo que saldría normal o mejor pasa a "Revisar el dato".
+      // Sin cifra no hay nada que leer mal: una medida sin valor se queda como está.
+      Object.keys(dudosas).forEach((id) => {
+        const m = medidasEq[id], d = dudosas[id];
+        if (!m || !m.disponible || m.valor == null || m.revisar || malo(m)) return;
+        medidasEq[id] = Object.assign({}, m, { revisar: 'dato', dudosoPor: d.por }, esArea ? { dudosoParte: d.parte, dudosoArea: !!d.area } : {});
+      });
+    }
     eq = Object.assign({}, eq, { medidas: medidasEq });
     const cambios = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => malo(x.m))
       .sort((a, b) => (b.m.estado === 'critico' ? 1 : 0) - (a.m.estado === 'critico' ? 1 : 0));
@@ -247,13 +298,20 @@
     // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
+    // Límite fijo superado con la línea base dentro o mejor: no es una alerta, se enseña aparte como aviso
+    const avisos = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => x.m && x.m.disponible && x.m.aviso && !malo(x.m));
     // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
     const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))
       .filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
-    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
+    // Un solo estado por equipo, el mismo en banner, tarjeta, ficha y presentación (auditoría UX, P0.3). Orden: poco fiable,
+    // alerta, provisional (afecta a todas sus cifras), pide atención, revisar el dato, estable. Una recomendación urgente va
+    // por delante de un dato por revisar: no depende de ese dato (si dependiera, no se habría hecho). El banner y el pie
+    // dicen también lo que el estado no enseña (una recomendación urgente o un dato por revisar en un equipo provisional).
+    const estadoSinGraves = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : provisional ? 'provisional' : revisarDato.length ? 'revisar' : 'estable';
+    const estado = conGraves(estadoSinGraves, graves.length);
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves, gravesTodas: graves,
+      estado, estadoSinGraves, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, avisos, revisarDato, mejores, graves, gravesTodas: graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -332,20 +390,21 @@
     if (c.proveedores && !hayProveedores(cfg)) limites.push({ kpi: null, clave: 'dc.limite.proveedores' });
     if (c.coste && !hayCoste(cfg)) limites.push({ kpi: null, clave: 'dc.limite.coste' });
     const avisos = fiab.comprobaciones.filter((x) => x.estado === 'revisar');
-    const veredicto = bloqueos.length ? 'not_ready' : (limites.some((l) => !l.parcial) || fiab.nivel !== 'alta') ? 'limits' : 'ready';
+    // Con fiabilidad baja se puede mirar, pero no decidir: las cifras afectadas salen "Revisar el dato"
+    const veredicto = bloqueos.length ? 'not_ready' : fiab.nivel === 'baja' ? 'look_only' : (limites.some((l) => !l.parcial) || fiab.nivel !== 'alta') ? 'limits' : 'ready';
     return { veredicto, bloqueos, limites, avisos, kpis: cols };
   }
 
   /**
    * Recomendaciones urgentes que siguen activas en cada equipo (sin las descartadas). Un equipo "Pide atención" solo
-   * mientras tenga alguna; si se descartan todas, vuelve a "Estable".
+   * mientras tenga alguna; si se descartan todas, vuelve a lo que diría sin ellas (estable, provisional o revisar el dato).
    */
   function ajustarAtencion(vm, descartadas) {
     const desc = descartadas || {};
     vm.equipos.forEach((e) => {
       e.graves = (e.gravesTodas || []).filter((id) => vm.recs.some((r) => r.id === id && r.equipos.indexOf(e.nombre) >= 0 && !desc[r.clave]));
-      if (e.estado === 'atencion' && !e.graves.length) e.estado = 'estable';
-      else if (e.estado === 'estable' && e.graves.length) e.estado = 'atencion';
+      const base = e.estadoSinGraves || (e.estado === 'atencion' ? 'estable' : e.estado);
+      e.estado = conGraves(base, e.graves.length);
     });
     return vm;
   }
@@ -368,7 +427,7 @@
     const cols = columnas(cfg, det);
     const fiab = N.fiabilidad(lectura, det, r.preparacion, r.modelo, cfgCalculo(cfg, det));
     const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg, det));
-    const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg, det, true);
+    const area = fichaEquipo(r, r.area.equipos[0], cols, fiab, cfg, det, true);
     const inis = r.iniciativas.map((x) => ({ ini: x.iniciativa, ev: x.evaluacion, s: N.seguimiento(x.iniciativa, x.evaluacion, r.preparacion) }));
     return ajustarAtencion({
       fechaDatos: det.fechaRef, semanaFin: r.modelo.semanaFin, semanas: { K: r.preparacion.ctx.K, KP: r.preparacion.ctx.KP, R: r.preparacion.ctx.R, N: r.modelo.semanas.length },

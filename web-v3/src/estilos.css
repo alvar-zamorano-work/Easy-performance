@@ -661,6 +661,10 @@ td select.sm { max-width: 130px; }
 .bala { position: relative; height: 12px; background: var(--grey1); border-radius: 6px; min-width: 60px; }
 .bala.vacia { background: transparent; }
 .bala .b-band { position: absolute; top: 0; bottom: 0; background: #c9dcf1; border-radius: 6px; }
+.bala .b-margen { position: absolute; top: 0; bottom: 0; background: #e3edf8; border-radius: 6px; }
+.bala .b-lim { position: absolute; top: -2px; bottom: -2px; width: 0; margin-left: -1px; border-left: 2px dashed var(--warn); }
+.bala .b-lim.tone-bad { border-left-color: var(--bad); }
+.tile .t-aviso { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
 .bala .b-now { position: absolute; top: -3px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
 .bala .b-now.tone-bad { background: var(--bad); } .bala .b-now.tone-warn { background: var(--warn); } .bala .b-now.tone-good { background: var(--ok); }
 .fbs { display: flex; flex-direction: column; }

@@ -26,14 +26,19 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
-    const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
+    // Datos por revisar en un equipo, aunque además pida atención o sea provisional: el banner lo dice igual
+    const revisar = eqs.filter((e) => ['revisar', 'atencion', 'provisional'].indexOf(e.estado) >= 0 && e.revisarDato && e.revisarDato.length), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
     const recs = recsActivas(eqs);
-    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
+    // Con fiabilidad baja, lo primero que se lee es que no hay que decidir con estas cifras (auditoría UX, P0.1)
+    const baja = vm.fiabilidad && vm.fiabilidad.nivel === 'baja';
+    const tono = alerta.length || pocoFiables.length || baja ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
     // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso
     const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional');
-    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
+    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) }))
+      : baja ? esc(t('resumen.mirar')) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
     const f = vm.fiabilidad;
-    const items = [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
+    // Con fiabilidad baja y alertas, el titular son las alertas: que no se decida con ellas va en la primera línea
+    const items = baja ? (alerta.length ? [esc(t('resumen.mirar'))] : []) : [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
     if (pocoFiables.length) items.push(esc(t('resumen.pocoFiables', { equipos: lista(pocoFiables.map((e) => nombreEquipo(e.nombre))) })));
     if (revisar.length) items.push(esc(t('resumen.revisarEn', { equipos: lista(revisar.map((e) => nombreEquipo(e.nombre))) })));
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
@@ -63,6 +68,12 @@
   }
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
   function pieFicha(e) {
+    const base = pieBase(e);
+    // Un límite fijo superado sin alerta (manda la línea base) se dice al final, sin cambiar lo que dice la línea base
+    const avisos = (e.avisos || []).filter((x) => K.destacados().indexOf(x.id) >= 0).map((x) => nombreMedida(x.id));
+    return avisos.length ? [base, t('resumen.avisoLimite', { m: lista(avisos) })].filter(Boolean).join(' · ') : base;
+  }
+  function pieBase(e) {
     if (e.cambios[0]) {
       // Lo que supera un límite fijo no está "fuera de lo normal" del equipo: puede estar incluso mejor que su franja
       const porLimite = e.cambios.filter((x) => x.m.estadoPor === 'limite' || x.m.estadoPor === 'limite_equipo').map((x) => nombreMedida(x.id));
@@ -70,8 +81,16 @@
       const revisar = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
       return [fuera.length ? t('resumen.cambio', { m: lista(fuera) }) : '', porLimite.length ? t('resumen.cambioLimite', { m: lista(porLimite) }) : '', revisar].filter(Boolean).join(' · ');
     }
+    const resto = pieSinCambios(e);
+    if (!e.graves || !e.graves.length) return resto;
+    // Con una recomendación urgente: "dentro de su línea base" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
+    const r = lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id));
+    if (resto === t('resumen.fichaEstable')) return t('resumen.atencionPie', { r });
+    return [t('resumen.atencionPieSolo', { r }), resto].join(' · ');
+  }
+  /** El pie sin alertas ni recomendaciones urgentes: dato por revisar, mejor de lo normal, sin rango o estable. */
+  function pieSinCambios(e) {
     if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
-    if (e.estado === 'atencion') return t('resumen.atencionPie', { r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)) });
     if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
     // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
     const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref && !m.sinHistorico; });
@@ -81,7 +100,7 @@
     return t('resumen.fichaEstable');
   }
   /** Ficha de equipo sin cambios: lo mismo que el pie del Resumen, con la frase larga cuando de verdad todo es normal. */
-  function textoSinCambios(e) { const p = pieFicha(e); return p === t('resumen.fichaEstable') ? t('equipo.todoNormal') : p; }
+  function textoSinCambios(e) { const p = pieBase(e); return p === t('resumen.fichaEstable') ? t('equipo.todoNormal') : p; }
   /**
    * Preguntas de dirección: una por objetivo del Context. Cada una se responde con las medidas de ese objetivo
    * en los equipos visibles: qué equipos están fuera de lo normal. Una pregunta entra si su respuesta lleva a decidir algo.
@@ -150,7 +169,7 @@
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;
     const fCambios = K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>${K.chip(e.cambios.length ? 'bad' : 'neutral', e.cambios.length ? tn('equipo.senales', e.cambios.length) : t('equipo.sinCambios'))}`,
-      e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(textoSinCambios(e))}</p>`);
+      (e.cambios.length ? e.cambios.map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(textoSinCambios(e))}</p>`) + (e.avisos || []).map((x) => K.avisoFila(e, x)).join(''));
     const recs = recsActivas([e]);
     const fRecs = K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>${K.chip(recs.length ? 'warn' : 'neutral', tn('recs.cuenta', recs.length))}`, recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`);
     return K.statusBar(e.cambios.length ? 'bad' : e.estado === 'estable' ? 'good' : 'warn', titular, items) + tiles
@@ -210,8 +229,11 @@
     if (par) partes.push(tn('epicas.paradas', par));
     if (riesgo) partes.push(tn('epicas.enRiesgo', riesgo));
     const pctSin = v.tareas ? v.sinEpica / v.tareas : 0;
+    // Vencimientos de las épicas abiertas que se ven (no del export entero): si ninguna tiene fecha, no hay riesgo que contar
+    const hayVenc = abiertas.some((x) => !!x.vence);
     const tiles = `<div class="tiles">${K.stat(t('epicas.tile.abiertas'), String(abiertas.length), esc(tn('epicas.tile.abiertasPie', terminadas.length)), '')}`
-      + `${K.stat(t('epicas.tile.riesgo'), String(venc + riesgo), esc(v.hayVencimientos ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : 'good' })}`
+      // Sin fechas de vencimiento no se sabe si alguna llega tarde: "sin datos", nunca un 0 en verde (auditoría UX, P0.5)
+      + `${K.stat(t('epicas.tile.riesgo'), hayVenc || venc + riesgo ? String(venc + riesgo) : t('comun.sinDatos'), esc(hayVenc ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : hayVenc ? 'good' : 'neutral' })}`
       + `${K.stat(t('epicas.tile.paradas'), String(par), esc(t('epicas.tile.paradasPie', { s: v.semanasRitmo })), '', { tone: par ? 'bad' : 'good' })}`
       + `${K.stat(t('epicas.tile.sinEpica'), N.conPorcentaje(Math.round(pctSin * 100)), esc(t('epicas.tile.sinEpicaPie', { n: v.sinEpica, de: v.tareas })), '', { tone: pctSin > 0.2 ? 'warn' : 'good' })}</div>`;
     const fila = (x) => `<tr${x.situacion === 'vencida' || x.situacion === 'parada' ? ' class="dudoso"' : ''}><td><b>${esc(x.clave)}</b><div class="small">${esc(x.titulo)}</div>${x.estadoDescuadrado ? `<div class="tiny t-warn" title="${esc(t('epicas.descuadradoTitle'))}">${esc(t('epicas.descuadrado', { e: x.estado }))}</div>` : ''}</td>
@@ -286,7 +308,7 @@
       ${K.stat(t('calidad.tile.revisar'), String(f.revisar), esc(f.revisar ? t('calidad.tile.revisarPie') : t('calidad.tile.revisarNada')), '', { tone: f.revisar ? 'warn' : 'good' })}
       ${K.stat(t('calidad.tile.estados'), String(porConfirmar.length), esc(t('calidad.tile.estadosPie')), `<button class="link small" data-action="fuentes-mapeo">${esc(t('calidad.revisarMapeo'))}</button>`, { tone: porConfirmar.length ? 'warn' : 'good' })}
     </div>`;
-    const ver = { ready: 'good', limits: 'warn', not_ready: 'bad' }[dc.veredicto];
+    const ver = { ready: 'good', limits: 'warn', look_only: 'bad', not_ready: 'bad' }[dc.veredicto];
     const dcHtml = K.ficha(`<div class="f-title">${esc(t('ob.dc.kpis'))}</div>${K.chip(ver, t('dc.veredicto.' + dc.veredicto))}`,
       (dc.bloqueos.length ? `<ul class="small">${dc.bloqueos.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul>` : '')
       + `<div class="filas">${dc.kpis.map((id) => { const l = dc.limites.filter((x) => x.kpi === id)[0]; return `<div class="fila-dot"><span class="s-dot tone-${!l ? 'good' : l.parcial ? 'warn' : 'bad'}"></span><span class="small"><b>${esc(nombreMedida(id))}</b>${l ? ' · ' + esc(l.parcial ? t('dc.soloPara', { equipos: lista(l.equipos) }) : (l.motivo || t('medida.noDisponible'))) : ''}</span></div>`; }).join('')}
@@ -394,12 +416,12 @@
   EP.accion('pref-reset', () => { if (S.prefs.byRole) delete S.prefs.byRole[S.role]; EP.guardarPrefs(); EP.render(); });
   /** Ayuda de la página: primero qué responde esta página, después cómo se compara y todas las etiquetas que pueden salir. */
   const LEYENDA = [['good', 'estado.bien'], ['good', 'estado.borde'], ['good', 'estado.mejor'], ['warn', 'estado.atencion'], ['bad', 'estado.critico'],
-    ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
+    ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['neutral', 'estado.avisoLimite'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
   function cajonAyuda() {
     const vm = S.vm, p = { k: vm.semanas.K, kp: vm.semanas.KP, r: vm.semanas.R };
     const pag = S.view === 'equipos' && S.teamCompare && S.role !== 'equipo' ? 'comparar' : (S.view || 'resumen');
     const html = `<p><b>${esc(t('ayuda.pagina.' + pag, p))}</b></p>`
-      + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
+      + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p3b', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
       + `<h4>${esc(t('ayuda.etiquetas'))}</h4><div class="leyenda">${LEYENDA.map(([tono, k]) => `<div class="small">${K.chip(tono, t(k))} ${esc(t('ayuda.e.' + k.replace(/^estado\./, '')))}</div>`).join('')}</div>`;
     return [t('ayuda.titulo'), html];
   }

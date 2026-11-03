@@ -88,7 +88,7 @@
     const inf = S.vm.informe, det = S.vm.det, dc = S.vm.dataCheck, f = S.vm.fiabilidad;
     const campo = det.opcionesEquipo.filter((o) => o.id === S.vm.campoEquipo)[0];
     const duro = dc.bloqueos.some((b) => b.duro);
-    const tono = { ready: 'good', limits: 'warn', not_ready: 'bad' }[dc.veredicto];
+    const tono = { ready: 'good', limits: 'warn', look_only: 'bad', not_ready: 'bad' }[dc.veredicto];
     const veredicto = `<div data-tipo="veredicto">${K.statusBar(tono, esc(t('dc.veredicto.' + dc.veredicto) + '. ' + t('ob.dc.texto.' + dc.veredicto)), [esc(t('fiab.bienDe', { bien: f.bien, n: f.comprobaciones.length })), esc(t('calidad.tile.nivel') + ' ' + t('fiab.nivel.' + f.nivel).toLowerCase())])}</div>`;
     const blandos = dc.bloqueos.filter((b) => !b.duro);
     const limites = dc.kpis.map((id) => { const l = dc.limites.filter((x) => x.kpi === id)[0]; return l ? `<li><b>${esc(EP.nombreMedida(id))}</b>: ${esc(l.parcial ? t('dc.soloPara', { equipos: lista(l.equipos) }) : (l.motivo || t('medida.noDisponible')))}</li>` : ''; }).join('')
