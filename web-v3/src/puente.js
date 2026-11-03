@@ -202,6 +202,19 @@
     demasiado_a_la_vez: ['wip', 'ciclo', 'entregas'], sprint_no_cumple: ['arrastradas'], pendiente_crece: ['pendiente'], mucha_espera: ['espera'],
     retrabajo: ['retrabajo'], errores_capacidad: ['errores'], entregas_irregulares: ['regularidad', 'entregas'], estimaciones_no_predicen: ['estimacion'],
   };
+  /**
+   * Qué medidas vuelve dudosas cada comprobación de fiabilidad cuando falla en un equipo (o en el área). Una cifra que
+   * depende de un dato mal registrado no puede salir "normal" ni "mejor": sale "Revisar el dato" (auditoría UX, P0.1).
+   * - tiempos: sin el tiempo en cada estado no se saben el tiempo de ciclo, la espera ni el retrabajo.
+   * - flujo: si las tareas saltan de pendiente a hecho, el ciclo sale corto, el retrabajo a cero y el trabajo en curso bajo.
+   * - registro: si se crean al terminar, el tiempo total, la primera respuesta, el ciclo y el pendiente no son reales.
+   * - estimacion: sin estimar las historias, la velocidad y la precisión de la estimación no cuentan todo.
+   * - sprints: sin sprints creíbles, ni lo arrastrado ni la fiabilidad del sprint.
+   */
+  const DUDOSO_POR = {
+    tiempos: ['ciclo', 'espera', 'retrabajo'], flujo: ['ciclo', 'espera', 'retrabajo', 'wip'], registro: ['ciclo', 'total', 'primera', 'pendiente'],
+    estimacion: ['velocidad', 'estimacion'], sprints: ['arrastradas', 'fiabilidad'],
+  };
   const casoSobreDatoDudoso = (id, eq) => (MEDIDAS_CASO[id] || []).some((k) => { const m = med(eq, k); return !!(m && m.disponible && m.revisar); });
 
   /**
@@ -237,6 +250,15 @@
       medidasEq = Object.assign({}, eq.medidas);
       // Las medidas que cuentan lo terminado: entregas y velocidad (puntos terminados)
       ['entregas', 'velocidad'].forEach((id) => { const m = eq.medidas[id]; if (m && m.disponible && !m.revisar) medidasEq[id] = Object.assign({}, m, { revisar: 'masivo', diasMasivos: masivos }); });
+    }
+    // Comprobaciones de fiabilidad que fallan en este equipo (en el área, las del área): sus medidas salen por revisar
+    const fallan = Object.keys(DUDOSO_POR).filter((k) => (fe ? fe.valores[k] && fe.valores[k].estado === 'revisar'
+      : esArea && fiab ? fiab.comprobaciones.some((c) => c.id === k && c.estado === 'revisar') : false));
+    if (fallan.length) {
+      if (medidasEq === eq.medidas) medidasEq = Object.assign({}, eq.medidas);
+      const ids = [...new Set([].concat(...fallan.map((k) => DUDOSO_POR[k])))];
+      // Una alerta se queda (no se esconde un "peor de lo normal"); lo que saldría normal o mejor pasa a "Revisar el dato"
+      ids.forEach((id) => { const m = medidasEq[id]; if (m && m.disponible && !m.revisar && !malo(m)) medidasEq[id] = Object.assign({}, m, { revisar: 'dato', dudosoPor: fallan.filter((k) => DUDOSO_POR[k].indexOf(id) >= 0) }); });
     }
     eq = Object.assign({}, eq, { medidas: medidasEq });
     const cambios = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => malo(x.m))
@@ -334,7 +356,8 @@
     if (c.proveedores && !hayProveedores(cfg)) limites.push({ kpi: null, clave: 'dc.limite.proveedores' });
     if (c.coste && !hayCoste(cfg)) limites.push({ kpi: null, clave: 'dc.limite.coste' });
     const avisos = fiab.comprobaciones.filter((x) => x.estado === 'revisar');
-    const veredicto = bloqueos.length ? 'not_ready' : (limites.some((l) => !l.parcial) || fiab.nivel !== 'alta') ? 'limits' : 'ready';
+    // Con fiabilidad baja se puede mirar, pero no decidir: las cifras afectadas salen "Revisar el dato"
+    const veredicto = bloqueos.length ? 'not_ready' : fiab.nivel === 'baja' ? 'mirar' : (limites.some((l) => !l.parcial) || fiab.nivel !== 'alta') ? 'limits' : 'ready';
     return { veredicto, bloqueos, limites, avisos, kpis: cols };
   }
 

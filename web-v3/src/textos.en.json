@@ -1060,5 +1060,9 @@
  "resumen.queHacerSinAltas.n": "{n} recommendations, none high level.",
  "medida.avisoLimite": "{texto}, a fixed limit that is the same for every team. It does not change its status: its baseline decides.",
  "estado.avisoLimite": "Fixed limit",
- "resumen.avisoLimite": "Over the fixed limit, no alert: {m}"
+ "resumen.avisoLimite": "Over the fixed limit, no alert: {m}",
+ "dc.veredicto.mirar": "You can look, not decide",
+ "ob.dc.texto.mirar": "Data reliability is low: figures that depend on what fails show as “Check the data”. Fix what Data quality says first.",
+ "medida.dudoso": "Doubtful figure: it depends on {c}, which fails for this team. Fix it in the tool before reading this figure.",
+ "resumen.mirar": "Low data reliability: you can look, but not decide with these figures"
 }

@@ -1060,5 +1060,9 @@
  "resumen.queHacerSinAltas.n": "{n} recomendaciones, ninguna de nivel alto.",
  "medida.avisoLimite": "{texto}, un límite fijo igual para todos los equipos. No cambia su estado: manda su línea base.",
  "estado.avisoLimite": "Límite fijo",
- "resumen.avisoLimite": "Sobre el límite fijo, sin alerta: {m}"
+ "resumen.avisoLimite": "Sobre el límite fijo, sin alerta: {m}",
+ "dc.veredicto.mirar": "Se puede mirar, no decidir",
+ "ob.dc.texto.mirar": "La fiabilidad del dato es baja: las cifras que dependen de lo que falla salen como «Revisar el dato». Arregla primero lo que dice Calidad del dato.",
+ "medida.dudoso": "Dato dudoso: depende de {c}, que falla en este equipo. Arréglalo en la captura antes de leer esta cifra.",
+ "resumen.mirar": "Fiabilidad del dato baja: se puede mirar, pero no decidir con estas cifras"
 }

@@ -28,12 +28,15 @@
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
     const revisar = eqs.filter((e) => e.estado === 'revisar'), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
     const recs = recsActivas(eqs);
-    const tono = alerta.length || pocoFiables.length ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
+    // Con fiabilidad baja, lo primero que se lee es que no hay que decidir con estas cifras (auditoría UX, P0.1)
+    const baja = vm.fiabilidad && vm.fiabilidad.nivel === 'baja';
+    const tono = alerta.length || pocoFiables.length || baja ? 'bad' : prov.length || revisar.length || atencion.length ? 'warn' : 'good';
     // "Ningún equipo fuera de lo normal" solo si hay con qué comparar: sin ninguna baseline fiable, se dice eso
     const sinComparar = eqs.length && eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional');
-    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) })) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
+    const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) }))
+      : baja ? esc(t('resumen.mirar')) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
     const f = vm.fiabilidad;
-    const items = [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
+    const items = baja && !alerta.length ? [] : [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
     if (pocoFiables.length) items.push(esc(t('resumen.pocoFiables', { equipos: lista(pocoFiables.map((e) => nombreEquipo(e.nombre))) })));
     if (revisar.length) items.push(esc(t('resumen.revisarEn', { equipos: lista(revisar.map((e) => nombreEquipo(e.nombre))) })));
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
@@ -217,7 +220,8 @@
     if (riesgo) partes.push(tn('epicas.enRiesgo', riesgo));
     const pctSin = v.tareas ? v.sinEpica / v.tareas : 0;
     const tiles = `<div class="tiles">${K.stat(t('epicas.tile.abiertas'), String(abiertas.length), esc(tn('epicas.tile.abiertasPie', terminadas.length)), '')}`
-      + `${K.stat(t('epicas.tile.riesgo'), String(venc + riesgo), esc(v.hayVencimientos ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : 'good' })}`
+      // Sin fechas de vencimiento no se sabe si alguna llega tarde: "sin datos", nunca un 0 en verde (auditoría UX, P0.5)
+      + `${K.stat(t('epicas.tile.riesgo'), v.hayVencimientos || venc + riesgo ? String(venc + riesgo) : t('comun.sinDatos'), esc(v.hayVencimientos ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : v.hayVencimientos ? 'good' : 'neutral' })}`
       + `${K.stat(t('epicas.tile.paradas'), String(par), esc(t('epicas.tile.paradasPie', { s: v.semanasRitmo })), '', { tone: par ? 'bad' : 'good' })}`
       + `${K.stat(t('epicas.tile.sinEpica'), N.conPorcentaje(Math.round(pctSin * 100)), esc(t('epicas.tile.sinEpicaPie', { n: v.sinEpica, de: v.tareas })), '', { tone: pctSin > 0.2 ? 'warn' : 'good' })}</div>`;
     const fila = (x) => `<tr${x.situacion === 'vencida' || x.situacion === 'parada' ? ' class="dudoso"' : ''}><td><b>${esc(x.clave)}</b><div class="small">${esc(x.titulo)}</div>${x.estadoDescuadrado ? `<div class="tiny t-warn" title="${esc(t('epicas.descuadradoTitle'))}">${esc(t('epicas.descuadrado', { e: x.estado }))}</div>` : ''}</td>
@@ -292,7 +296,7 @@
       ${K.stat(t('calidad.tile.revisar'), String(f.revisar), esc(f.revisar ? t('calidad.tile.revisarPie') : t('calidad.tile.revisarNada')), '', { tone: f.revisar ? 'warn' : 'good' })}
       ${K.stat(t('calidad.tile.estados'), String(porConfirmar.length), esc(t('calidad.tile.estadosPie')), `<button class="link small" data-action="fuentes-mapeo">${esc(t('calidad.revisarMapeo'))}</button>`, { tone: porConfirmar.length ? 'warn' : 'good' })}
     </div>`;
-    const ver = { ready: 'good', limits: 'warn', not_ready: 'bad' }[dc.veredicto];
+    const ver = { ready: 'good', limits: 'warn', mirar: 'bad', not_ready: 'bad' }[dc.veredicto];
     const dcHtml = K.ficha(`<div class="f-title">${esc(t('ob.dc.kpis'))}</div>${K.chip(ver, t('dc.veredicto.' + dc.veredicto))}`,
       (dc.bloqueos.length ? `<ul class="small">${dc.bloqueos.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul>` : '')
       + `<div class="filas">${dc.kpis.map((id) => { const l = dc.limites.filter((x) => x.kpi === id)[0]; return `<div class="fila-dot"><span class="s-dot tone-${!l ? 'good' : l.parcial ? 'warn' : 'bad'}"></span><span class="small"><b>${esc(nombreMedida(id))}</b>${l ? ' · ' + esc(l.parcial ? t('dc.soloPara', { equipos: lista(l.equipos) }) : (l.motivo || t('medida.noDisponible'))) : ''}</span></div>`; }).join('')}
