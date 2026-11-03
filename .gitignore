@@ -4,3 +4,5 @@ node_modules/
 datos-cliente/
 *.cliente.csv
 dist/
+_site/
+.env*
