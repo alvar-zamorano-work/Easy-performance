@@ -888,7 +888,7 @@
  "ob.rev.semanasN": "{n} semanas",
  "ob.rev.cambiar": "Cambiar",
  "ob.rev.atencion": "Necesita tu confirmación",
- "ob.rev.sinAtencion": "Nada que confirmar: todos los estados se reconocen por su nombre.",
+ "ob.rev.sinAtencion": "Nada que confirmar: todos los estados están reconocidos o confirmados.",
  "ob.rev.estadoDudoso": "No se reconoce por su nombre. Elige su estado común o da por buena la propuesta.",
  "ob.rev.pasan.1": "1 tarea ha pasado por aquí",
  "ob.rev.pasan.n": "{n} tareas han pasado por aquí",
@@ -901,7 +901,6 @@
  "ob.rev.verComprobaciones.n": "Ver las {n} comprobaciones",
  "ob.rev.verEquipos": "Equipos, proveedores y coste",
  "ob.rev.comprobaciones": "Comprobaciones de fiabilidad",
- "ob.rev.ocultar": "Ocultar",
  "ob.enf.titulo": "¿Qué quieres mirar primero?",
  "ob.enf.lead": "Ya viene marcado lo más habitual. La vista se cambia después en la barra lateral.",
  "ob.enf.mejorar": "Qué quieres mejorar",
@@ -911,5 +910,8 @@
  "ob.enf.trabajoVisto": "visto en el export",
  "ob.enf.sinCoste": "Para medir el coste hace falta el coste mensual de cada equipo.",
  "ob.enf.ponerCoste": "Poner el coste de cada equipo",
- "ob.enf.entrar": "Ver el análisis"
+ "ob.enf.entrar": "Ver el análisis",
+ "ob.rev.ocultarEstados": "Ocultar los estados",
+ "ob.rev.ocultarComprobaciones": "Ocultar las comprobaciones",
+ "ob.rev.ocultarEquipos": "Ocultar equipos, proveedores y coste"
 }

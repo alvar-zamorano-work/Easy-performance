@@ -75,7 +75,7 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   altos.push(await alto());
   await p.screenshot({ path: join(SALIDA, '01-revision.png'), fullPage: true });
   await clic(p, '[data-action="ob-abrir"][data-que="estados"]');
-  ok('revisión: la tabla de estados, a un clic', await p.$$eval('select[data-change="map-estado"]', (x) => x.length) > 0);
+  ok('revisión: la tabla de estados, a un clic', await p.$$eval('#ob-estados select[data-change="map-estado"]', (x) => x.length) > 0);
   await p.screenshot({ path: join(SALIDA, '02-revision-estados.png'), fullPage: true });
   await clic(p, '[data-action="ob-rev-ok"]');
   ok('paso Qué mirar', /Qué quieres mirar primero/.test(await p.textContent('#onboarding')));
@@ -93,6 +93,9 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   const cfg = await A(p, () => JSON.parse(localStorage.getItem('easyperformance.config.v2') || 'null'));
   ok('configuración guardada con la clave de la v2', cfg && cfg.contexto && cfg.contexto.hecho && cfg.mapeoEstados && !cfg.contexto.objetivos.includes('predictability'));
   ok('un corte guardado', (await A(p, () => window.EP.S.cortes.length)) === 1);
+  // Proveedores marcados después del onboarding: la comparación se activa sin volver a contestar el Context
+  const prov = await A(p, () => { const S = window.EP.S, P = window.EP.P, antes = P.contexto(S.cfg, S.det).proveedores; const eq = S.vm.equipos[0].nombre; S.cfg.equiposInfo = Object.assign({}, S.cfg.equiposInfo, { [eq]: { tipo: 'proveedor' } }); const despues = P.contexto(S.cfg, S.det).proveedores; delete S.cfg.equiposInfo[eq]; return { antes, despues, guardado: JSON.parse(localStorage.getItem('easyperformance.config.v2')).contexto.proveedores }; });
+  ok('proveedores marcados después: se activa la comparación y no se guarda un sí que nadie ha dicho', prov.antes === false && prov.despues === true && prov.guardado === false, JSON.stringify(prov));
   // Recarga: abre directamente con los ficheros guardados en el navegador
   await p.reload(); await p.waitForTimeout(1500); await quieto(p);
   const e2 = await estado(p);

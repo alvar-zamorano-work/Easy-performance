@@ -35,8 +35,14 @@
       <div class="notice info small"><b>${esc(t('context.kpis'))}</b> ${esc(lista(kpis.map(EP.nombreMedida)))}${c.objetivos.indexOf('cost') >= 0 && !P.hayCoste(S.cfg) ? `<div>${esc(t('context.sinCoste'))}</div>` : ''}</div>
     </div></div>`;
   }
+  // Se guarda lo que la persona ha dicho, no lo deducido: "proveedores" solo es sí si lo ha marcado (P.contexto añade
+  // los equipos marcados al leer), y se recuerda si la forma de trabajar salió del export o la eligió alguien.
   const guardarContexto = (fn) => {
-    const c = Object.assign({}, P.contexto(S.cfg, S.det)); c.objetivos = c.objetivos.slice(); fn(c); c.hecho = true;
+    const antes = S.cfg.contexto && S.cfg.contexto.hecho ? S.cfg.contexto : null;
+    const c = Object.assign({}, P.contexto(S.cfg, S.det)); c.objetivos = c.objetivos.slice();
+    c.proveedores = antes ? !!antes.proveedores : false;
+    c.trabajoDe = antes ? antes.trabajoDe : 'export';
+    fn(c); c.hecho = true;
     if (c.objetivos.indexOf('cost') >= 0) c.coste = true; else c.coste = false;
     S.cfg.contexto = c; EP.guardarCfg(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); });
   };
@@ -45,7 +51,7 @@
     if (el.checked && i < 0) c.objetivos.push(el.value);
     if (!el.checked && i >= 0) { if (c.objetivos.length === 1) { el.checked = true; EP.toast(t('context.alMenosUno'), 'bad'); return; } c.objetivos.splice(i, 1); }
   }));
-  EP.cambio('ctx-trabajo', (el) => guardarContexto((c) => { c.trabajo = el.value; }));
+  EP.cambio('ctx-trabajo', (el) => guardarContexto((c) => { c.trabajo = el.value; c.trabajoDe = 'usuario'; }));
   EP.cambio('ctx-prov', (el) => guardarContexto((c) => { c.proveedores = el.value === 'si'; }));
 
   // ---------- 1. Datos: la bienvenida y la carga en una pantalla ----------
@@ -77,7 +83,7 @@
       <select class="sm" data-change="map-estado" data-estado="${esc(e.nombre)}" aria-label="${esc(t('mapeo.col.comun') + ': ' + e.nombre)}">${Object.keys(est).map((c) => `<option value="${c}" ${S.vm.mapeo[e.nombre] === c ? 'selected' : ''}>${esc(est[c].nombre)}</option>`).join('')}</select>
       <button class="btn sm" data-action="map-uno" data-estado="${esc(e.nombre)}">${esc(t('mapeo.confirmarUno'))}</button></div>`;
   }
-  const enlace = (que, texto) => `<button class="link" data-action="ob-abrir" data-que="${que}" aria-expanded="${abierto(que)}">${esc(abierto(que) ? t('ob.rev.ocultar') + ': ' + texto : texto)}</button>`;
+  const enlace = (que, texto, ocultar) => `<button class="link" data-action="ob-abrir" data-que="${que}" aria-expanded="${abierto(que)}">${esc(abierto(que) ? ocultar : texto)}</button>`;
   function revision() {
     const inf = S.vm.informe, det = S.vm.det, dc = S.vm.dataCheck, f = S.vm.fiabilidad;
     const campo = det.opcionesEquipo.filter((o) => o.id === S.vm.campoEquipo)[0];
@@ -93,7 +99,7 @@
     const mejorar = f.comprobaciones.filter((c) => c.estado === 'revisar' && c.id !== 'estados');
     const consejos = mejorar.length ? `<div class="ob-mejorar small"><b>${esc(t('ob.rev.mejorar'))}</b><ul>${mejorar.map((c) => `<li><b>${esc(c.nombre)}</b> (${esc(c.valor)}): ${esc(c.arreglo)}</li>`).join('')}</ul></div>` : '';
     const todas = `<div class="filas">${f.comprobaciones.map((c) => `<div class="fila-dot"><span class="s-dot tone-${c.estado === 'revisar' ? 'warn' : c.estado === 'sin' ? 'neutral' : 'good'}"></span><span class="small"><b>${esc(c.nombre)}</b> · ${esc(c.valor)}${c.estado === 'revisar' ? `<div class="muted">${esc(c.arreglo)}</div>` : ''}</span></div>`).join('')}</div>`;
-    const enlaces = `<div class="ob-links small">${enlace('estados', tn('ob.rev.verEstados', det.estados.length))}${enlace('comprobaciones', tn('ob.rev.verComprobaciones', f.comprobaciones.length))}${enlace('equipos', t('ob.rev.verEquipos'))}</div>`;
+    const enlaces = `<div class="ob-links small">${enlace('estados', tn('ob.rev.verEstados', det.estados.length), t('ob.rev.ocultarEstados'))}${enlace('comprobaciones', tn('ob.rev.verComprobaciones', f.comprobaciones.length), t('ob.rev.ocultarComprobaciones'))}${enlace('equipos', t('ob.rev.verEquipos'), t('ob.rev.ocultarEquipos'))}</div>`;
     const detalle = (abierto('estados') ? `<div class="ob-sec" id="ob-estados">${EP.vistas.fuentesMapeo()}</div>` : '')
       + (abierto('comprobaciones') ? `<div class="ob-sec" id="ob-comprobaciones">${K.ficha(`<div class="f-title">${esc(t('ob.rev.comprobaciones'))}</div>`, todas)}</div>` : '')
       + (abierto('equipos') ? `<div class="ob-sec" id="ob-equipos">${EP.vistas.fuentesEquipos()}</div>` : '');
@@ -101,7 +107,7 @@
     return `<div class="ob wide">${cabeza('revision')}<h1>${esc(t('ob.rev.titulo'))}</h1><p class="lead">${esc(t('ob.rev.lead'))}</p><div class="panel">
       ${veredicto}${avisoBloqueo()}${blandos.length ? `<div class="notice warn small"><ul>${blandos.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul></div>` : ''}${limites ? `<ul class="small ob-limites">${limites}</ul>` : ''}
       ${tiles}${atencion}${consejos}${enlaces}${detalle}
-      ${pie('data', siguiente, `<button class="btn" data-action="import">${esc(t('fuentes.anadir'))}</button>`)}</div></div>`;
+      ${pie('data', siguiente, duro && dc.bloqueos.some((b) => b.duro && b.accion !== 'estados') ? '' : `<button class="btn" data-action="import">${esc(t('fuentes.anadir'))}</button>`)}</div></div>`;
   }
 
   // ---------- 3. Qué mirar: qué mejorar y para quién es la vista ----------
@@ -110,7 +116,8 @@
     const obj = ['speed', 'quality', 'predictability', 'cost', 'ai'];
     const objetivos = `<div class="choice cols-5">${obj.map((o) => `<label class="opt ${c.objetivos.indexOf(o) >= 0 ? 'on' : ''}"><input type="checkbox" data-change="ctx-obj" value="${o}" ${c.objetivos.indexOf(o) >= 0 ? 'checked' : ''}><b>${esc(t('context.obj.' + o))}</b><div>${esc(t('context.obj.' + o + '.d'))}</div></label>`).join('')}</div>`;
     const sinCoste = c.objetivos.indexOf('cost') >= 0 && !P.hayCoste(S.cfg) ? `<div class="small ob-aviso">${esc(t('ob.enf.sinCoste'))} <button class="link" data-action="ob-coste">${esc(t('ob.enf.ponerCoste'))}</button></div>` : '';
-    const deducido = S.det && c.trabajo === (S.det.haySprints ? 'sprints' : 'flujo');
+    const raw = S.cfg.contexto;
+    const deducido = S.det && (!raw || !raw.hecho || raw.trabajoDe === 'export') && c.trabajo === (S.det.haySprints ? 'sprints' : 'flujo');
     const trabajo = `<div class="ob-trabajo small"><span>${esc(t('ob.enf.trabajo'))}${deducido ? ' (' + esc(t('ob.enf.trabajoVisto')) + ')' : ''}:</span>${P.TRABAJO.map((x) => `<label class="check"><input type="radio" name="ctx-trabajo" data-change="ctx-trabajo" value="${x}" ${c.trabajo === x ? 'checked' : ''}> ${esc(t('context.trabajo.' + x))}</label>`).join('')}</div>`;
     const eqs = S.vm.equipos;
     const elegirEquipo = S.role === 'equipo' ? `<div class="ob-equipo"><b>${esc(t('ob.rol.cualEquipo'))}</b><div class="small muted">${esc(t('ob.rol.cualEquipoAyuda'))}</div>
@@ -142,12 +149,11 @@
   EP.accion('ob-rev-ok', () => { P.fijarConfirmados(S.cfg, P.confirmarReconocidos(S.cfg, S.det)); EP.guardarCfg(); S.ob.step = 'enfoque'; EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); window.scrollTo(0, 0); }); });
   EP.accion('ob-role', (el) => { S.role = el.dataset.role; EP.render(); });
   EP.accion('ob-team', (el) => { S.team = el.dataset.team; EP.render(); });
-  // Al entrar se guarda el Context: lo que no se ha preguntado sale del export (sprints) y de los equipos marcados (proveedores)
+  // Al entrar se guarda el Context si nadie lo ha tocado: lo de por defecto, con la forma de trabajar del export.
+  // Un Context ya guardado (también el de la v2) no se reescribe. Proveedores no se pregunta: lo añaden los equipos marcados.
   EP.accion('ob-finish', () => {
-    const c = Object.assign({}, P.contexto(S.cfg, S.det), { hecho: true });
-    if (P.hayProveedores(S.cfg)) c.proveedores = true;
-    c.coste = c.objetivos.indexOf('cost') >= 0;
-    S.cfg.contexto = c; S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg();
+    if (!S.cfg.contexto || !S.cfg.contexto.hecho) S.cfg.contexto = Object.assign({}, P.contexto(S.cfg, S.det), { hecho: true, proveedores: false, trabajoDe: 'export' });
+    S.onboarded = true; S.view = EP.INICIO_ROL[S.role]; S.drill = null; EP.guardarPrefs(); EP.guardarCfg();
     EP.enSegundoPlano(() => { EP.recalcular(); if (EP.cortes) EP.cortes.capturar(S.demo); EP.render(); window.scrollTo(0, 0); });
   });
 

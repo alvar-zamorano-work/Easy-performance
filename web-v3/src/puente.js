@@ -20,10 +20,12 @@
   const hayCoste = (cfg) => !!(cfg.coste && Object.keys(cfg.coste).some((k) => cfg.coste[k] > 0));
   const hayProveedores = (cfg) => { const i = cfg.equiposInfo || {}; return Object.keys(i).some((k) => i[k] && i[k].tipo === 'proveedor'); };
 
-  /** Respuestas del Context: las guardadas o las de por defecto (Speed, Quality y Predictability). */
+  /** Respuestas del Context: las guardadas o las de por defecto (Speed, Quality y Predictability).
+   *  Un equipo marcado como proveedor activa la comparación aunque no se haya dicho en el Context:
+   *  el onboarding ya no lo pregunta y los proveedores se pueden marcar después. */
   function contexto(cfg, det) {
     const c = cfg.contexto;
-    if (c && c.hecho) return c;
+    if (c && c.hecho) return !c.proveedores && hayProveedores(cfg) ? Object.assign({}, c, { proveedores: true }) : c;
     return { objetivos: ['speed', 'quality', 'predictability'], trabajo: det && det.haySprints ? 'sprints' : 'flujo', proveedores: hayProveedores(cfg), coste: hayCoste(cfg), hecho: false };
   }
   /** Medidas visibles según el Context, en orden. */

@@ -888,7 +888,7 @@
  "ob.rev.semanasN": "{n} weeks",
  "ob.rev.cambiar": "Change",
  "ob.rev.atencion": "Needs your confirmation",
- "ob.rev.sinAtencion": "Nothing to confirm: every status is recognised by its name.",
+ "ob.rev.sinAtencion": "Nothing to confirm: every status is recognised or confirmed.",
  "ob.rev.estadoDudoso": "Not recognised by its name. Pick its common status or accept the proposal.",
  "ob.rev.pasan.1": "1 task went through it",
  "ob.rev.pasan.n": "{n} tasks went through it",
@@ -901,7 +901,6 @@
  "ob.rev.verComprobaciones.n": "See the {n} checks",
  "ob.rev.verEquipos": "Teams, vendors and cost",
  "ob.rev.comprobaciones": "Reliability checks",
- "ob.rev.ocultar": "Hide",
  "ob.enf.titulo": "What do you want to look at first?",
  "ob.enf.lead": "The usual choices are already selected. You can change the view later in the sidebar.",
  "ob.enf.mejorar": "What you want to improve",
@@ -911,5 +910,8 @@
  "ob.enf.trabajoVisto": "seen in the export",
  "ob.enf.sinCoste": "Measuring cost needs the monthly cost of each team.",
  "ob.enf.ponerCoste": "Add each team's cost",
- "ob.enf.entrar": "See the analysis"
+ "ob.enf.entrar": "See the analysis",
+ "ob.rev.ocultarEstados": "Hide the statuses",
+ "ob.rev.ocultarComprobaciones": "Hide the checks",
+ "ob.rev.ocultarEquipos": "Hide teams, vendors and cost"
 }
