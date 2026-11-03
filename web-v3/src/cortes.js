@@ -8,8 +8,18 @@
   const MEDIDAS = ['entregas', 'ciclo', 'bugs', 'retrabajo', 'arrastradas', 'wip', 'errores'];
   S.cortes = []; S.cortesDemo = [];
 
-  const listo = EP.idbGet('cortes').then((c) => { if (Array.isArray(c)) S.cortes = c; }).catch(() => { });
-  const guardar = () => EP.idbSet('cortes', S.cortes);
+  // Cortes quitados en esta pestaña: al guardar no se recuperan de lo que haya guardado otra
+  const quitados = new Set();
+  const ordenar = (l) => l.sort((a, b) => a.fechaDatos.localeCompare(b.fechaDatos) || a.creado.localeCompare(b.creado));
+  /** Lee los cortes guardados (al arrancar y cuando otra pestaña guarda los suyos). */
+  const releer = () => EP.idbGet('cortes').then((c) => { if (Array.isArray(c)) S.cortes = c.filter((x) => !quitados.has(x.id)); }).catch(() => { });
+  /** Guarda sin pisar: suma los cortes que otra pestaña haya guardado mientras tanto, salvo los quitados aquí. */
+  const guardar = (vaciar) => (vaciar ? Promise.resolve(null) : EP.idbGet('cortes')).then((guardados) => {
+    const ids = new Set(S.cortes.map((c) => c.id));
+    const deOtra = (Array.isArray(guardados) ? guardados : []).filter((c) => !ids.has(c.id) && !quitados.has(c.id));
+    if (deOtra.length) { S.cortes = ordenar(S.cortes.concat(deOtra)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); }
+    return EP.idbSet('cortes', S.cortes);
+  });
 
   /** Huella de unos datos: misma fecha, mismas tareas y mismos ficheros dan el mismo corte. */
   function huella() {
@@ -43,15 +53,23 @@
     if (ya) return null;
     const c = foto();
     S.cortes.push(c);
-    S.cortes.sort((a, b) => a.fechaDatos.localeCompare(b.fechaDatos) || a.creado.localeCompare(b.creado));
+    ordenar(S.cortes);
     if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX);
     guardar();
     if (EP.carpeta) EP.carpeta.escribir('historico', c.id + '.json', JSON.stringify(c, null, 1));
     if (!silencio) setTimeout(() => EP.toast(t('cortes.guardado', { f: fecha(c.fechaDatos) })), 5200);
     return c;
   }
-  function borrar(id) { S.cortes = S.cortes.filter((c) => c.id !== id); guardar(); }
-  function borrarTodo() { S.cortes = []; S.cortesDemo = []; guardar(); }
+  function borrar(id) { quitados.add(id); S.cortes = S.cortes.filter((c) => c.id !== id); guardar(); }
+  function borrarTodo() { S.cortes.forEach((c) => quitados.add(c.id)); S.cortes = []; S.cortesDemo = []; guardar(true); }
+  /** Suma cortes que vienen de una copia de la configuración (los que ya están no se repiten). */
+  function importar(lista) {
+    const ids = new Set(S.cortes.map((c) => c.id));
+    const nuevos = (lista || []).filter((c) => c && c.id && c.huella && c.fechaDatos && c.creado && c.equipos && !ids.has(c.id));
+    nuevos.forEach((c) => quitados.delete(c.id));
+    if (nuevos.length) { S.cortes = ordenar(S.cortes.concat(nuevos)); if (S.cortes.length > MAX) S.cortes = S.cortes.slice(-MAX); guardar(); }
+    return nuevos.length;
+  }
 
   const RANGO = { estable: 0, provisional: 1, revisar: 1, alerta: 2, poco_fiable: 3 };
   /** Sentido del cambio de una medida entre dos cortes según el catálogo: mejora, empeora o igual. */
@@ -94,6 +112,6 @@
   EP.accion('corte-borrar', (el) => { borrar(el.dataset.id); EP.render(); });
   EP.accion('corte-guardar', () => { const c = capturar(false, true); EP.toast(c ? t('cortes.guardado', { f: fecha(c.fechaDatos) }) : t('cortes.yaHay')); EP.render(); });
 
-  EP.cortes = { listo, capturar, borrar, borrarTodo, sentido };
+  EP.cortes = { releer, capturar, borrar, borrarTodo, importar, sentido };
   Object.assign(EP.vistas, { cortes });
 })();

@@ -4,9 +4,25 @@
   const N = window.Nucleo, P = window.Puente, I = window.I18N;
   const t = I.t, tn = I.tn;
 
-  const CLAVE_CFG = 'easyperformance.config.v2';          // la misma que la v2: un cliente montado en la v2 abre aquí
-  const CLAVE_PREFS = 'easyperformance.v3.prefs';
+  // Espacio de datos: abierto como fichero (file://), cada carpeta tiene los suyos. Sin esto, todas las copias del HTML del
+  // ordenador comparten configuración, iniciativas, ficheros y cortes, y dos clientes se mezclan. En una web, el sitio ya separa.
+  const ESPACIO = (() => {
+    try {
+      if (location.protocol !== 'file:') return '';
+      const carpeta = decodeURIComponent(location.pathname).replace(/[^/\\]*$/, '');
+      let h = 0; for (let i = 0; i < carpeta.length; i++) h = (h * 31 + carpeta.charCodeAt(i)) | 0;
+      return 'c' + (h >>> 0).toString(36);
+    } catch (e) { return ''; }
+  })();
+  const conEspacio = (k) => (ESPACIO ? k + '@' + ESPACIO : k);
+  const CLAVE_CFG_V2 = 'easyperformance.config.v2';       // la de la v2 (y la de antes de los espacios): se lee una vez y se pasa al espacio
+  const CLAVE_PREFS_V3 = 'easyperformance.v3.prefs';
+  const CLAVE_RECLAMADO = 'easyperformance.v3.reclamado'; // qué espacio se quedó con los datos de antes (solo uno)
+  const CLAVE_CFG = conEspacio(CLAVE_CFG_V2);
+  const CLAVE_PREFS = conEspacio(CLAVE_PREFS_V3);
   const CLAVE_IA = 'easyperformance.v3.ia';               // solo en sessionStorage
+  const BASE_IDB = 'easyperformance-v3', NOMBRE_IDB = conEspacio(BASE_IDB);
+  const PESTANA = Math.random().toString(36).slice(2);    // para no reaccionar a los avisos que manda esta misma pestaña
 
   const S = {
     lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, contextoDocs: null, extraIni: [],
@@ -15,6 +31,8 @@
     prefs: { byRole: {} }, dismissed: {}, recFilter: 'todos', recLevel: null, fuentesTab: 'ficheros', iniForm: null,
     ia: { modelo: N.IA.MODELO_POR_DEFECTO, clave: '' }, iaRecs: null, iaRecsDe: null, iaDescartadas: 0, iaImpacto: null, iaEstado: {}, iaError: {},
     narrativas: {}, presenting: false, slide: 0, error: null, carpeta: null, cargadoEn: null,
+    // Versión de la configuración que se leyó o se escribió por última vez, e iniciativas quitadas en esta pestaña
+    cfgVersion: null, iniQuitadas: [],
   };
 
   // ---------- utilidades ----------
@@ -44,15 +62,27 @@
   function enSegundoPlano(fn, texto) { ocupado(true, texto || t('comun.calculando')); setTimeout(() => { try { fn(); } catch (e) { S.error = { message: e.message, stack: e.stack }; render(); } finally { ocupado(false); } }, 20); }
 
   // ---------- persistencia ----------
+  /**
+   * Guarda la configuración. Si otra pestaña la ha guardado desde que esta la leyó, no se pisa: sus iniciativas nuevas se
+   * conservan (salvo las que esta pestaña ha quitado). Lo demás es lo que acaba de cambiar aquí.
+   */
   function guardarCfg() {
     if (S.demo) return;
+    const guardada = leerLocal(CLAVE_CFG);
+    if (guardada && guardada.actualizada && guardada.actualizada !== S.cfgVersion) {
+      const mias = S.cfg.iniciativas || [], ids = mias.map((i) => i.id);
+      const deOtra = (guardada.iniciativas || []).filter((i) => ids.indexOf(i.id) < 0 && S.iniQuitadas.indexOf(i.id) < 0);
+      if (deOtra.length) S.cfg.iniciativas = mias.concat(deOtra);
+    }
     S.cfg.actualizada = new Date().toISOString();
+    S.cfgVersion = S.cfg.actualizada;
     guardarLocal(CLAVE_CFG, S.cfg);
     if (EP.carpeta) EP.carpeta.escribir('configuracion', 'cliente.json', JSON.stringify(S.cfg, null, 2));
   }
+  /** Preferencias de quien usa la página. En la demo no se guarda nada: lo que se toca ahí no pasa a los datos reales. */
   function guardarPrefs() {
-    if (S.demo && !S.onboarded) return;
-    guardarLocal(CLAVE_PREFS, { lang: I.lang, role: S.role, team: S.team, onboarded: S.onboarded && !S.demo, prefs: S.prefs, dismissed: S.dismissed, modelo: S.ia.modelo });
+    if (S.demo) return;
+    guardarLocal(CLAVE_PREFS, { lang: I.lang, role: S.role, team: S.team, onboarded: S.onboarded, prefs: S.prefs, dismissed: S.dismissed, modelo: S.ia.modelo });
   }
   function cargarPrefs() {
     const p = leerLocal(CLAVE_PREFS) || {};
@@ -63,12 +93,61 @@
     S.ia.modelo = p.modelo || N.IA.MODELO_POR_DEFECTO;
     try { S.ia.clave = sessionStorage.getItem(CLAVE_IA) || ''; } catch (e) { S.ia.clave = ''; }
     S.cfg = leerLocal(CLAVE_CFG) || {};
+    S.cfgVersion = S.cfg.actualizada || null;
   }
   function guardarClave(clave) { S.ia.clave = clave || ''; try { if (S.ia.clave) sessionStorage.setItem(CLAVE_IA, S.ia.clave); else sessionStorage.removeItem(CLAVE_IA); } catch (e) { } }
   // Los ficheros cargados se guardan en este navegador (IndexedDB) para no tener que volver a cargarlos. Nunca salen de él.
-  function idb() { return new Promise((res, rej) => { try { const q = indexedDB.open('easyperformance-v3', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (e) { rej(e); } }); }
-  async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); } catch (e) { } }
-  async function idbGet(k) { try { const db = await idb(); return await new Promise((res, rej) => { const tx = db.transaction('kv', 'readonly'); const q = tx.objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
+  function idb(nombre) { return new Promise((res, rej) => { try { const q = indexedDB.open(nombre || NOMBRE_IDB, 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); } catch (e) { rej(e); } }); }
+  async function idbSet(k, v) { try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); avisarPestanas('idb', k); } catch (e) { } }
+
+  // ---------- varias pestañas ----------
+  // Lo que guarda una pestaña lo ven las demás: la configuración por el evento "storage" y los ficheros y cortes por un canal.
+  // Así una pestaña que se dejó abierta no pisa con su copia vieja lo que se ha hecho en otra.
+  const canal = (() => { try { return new BroadcastChannel(NOMBRE_IDB); } catch (e) { return null; } })();
+  function avisarPestanas(tipo, clave) { try { if (canal) canal.postMessage({ tipo, clave, de: PESTANA }); } catch (e) { } }
+  function cfgDeOtraPestana() {
+    const nueva = leerLocal(CLAVE_CFG) || {};
+    if (S.demo) { if (S.real) S.real.cfg = nueva; return; }
+    const lecturaDe = (c) => JSON.stringify([c.columnas || null, c.columnaEstimacion == null ? null : c.columnaEstimacion, c.columnaReparto || null]);
+    const releer = lecturaDe(S.cfg) !== lecturaDe(nueva);
+    S.cfg = nueva; S.cfgVersion = nueva.actualizada || null;
+    // Si cambian las columnas elegidas, se vuelven a leer los ficheros; si no, basta con recalcular
+    if (S.lectura) enSegundoPlano(() => { if (releer && S.ficheros) procesar(S.ficheros); else recalcular(); render(); toast(t('pestanas.cambios')); });
+  }
+  window.addEventListener('storage', (e) => {
+    if (e.key === CLAVE_CFG) cfgDeOtraPestana();
+    if (e.key === CLAVE_PREFS && !S.demo) { const p = leerLocal(CLAVE_PREFS) || {}; S.prefs = p.prefs && typeof p.prefs === 'object' ? Object.assign({ byRole: {} }, p.prefs) : S.prefs; S.dismissed = p.dismissed || S.dismissed; if (S.vm) render(); }
+  });
+  if (canal) canal.onmessage = (e) => {
+    const m = e.data || {};
+    if (m.de === PESTANA || m.tipo !== 'idb') return;
+    if (m.clave === 'cortes' && EP.cortes) EP.cortes.releer().then(() => { if (S.vm) render(); });
+    // Otra pestaña ha cargado datos nuevos: esta pasa a usarlos (si no está en la demo)
+    if (m.clave === 'ficheros' && !S.demo && S.onboarded && S.vm) idbGet('ficheros').then((fs) => { if (fs && fs.length) enSegundoPlano(() => { if (procesar(fs)) { render(); toast(t('pestanas.datos')); } }); });
+  };
+
+  /**
+   * Datos de antes de los espacios (una sola clave para todas las copias): se los queda el primer espacio que se abre
+   * y no tiene nada propio. Los demás empiezan vacíos y pueden cargar una copia de la configuración.
+   */
+  async function migrarAEspacio() {
+    if (!ESPACIO) return;
+    let reclamado = null; try { reclamado = localStorage.getItem(CLAVE_RECLAMADO); } catch (e) { }
+    if (reclamado && reclamado !== ESPACIO) return;
+    const propio = leerLocal(CLAVE_CFG) || leerLocal(CLAVE_PREFS) || (await idbGet('ficheros'));
+    if (!reclamado && propio) { try { localStorage.setItem(CLAVE_RECLAMADO, ESPACIO); } catch (e) { } return; }
+    if (reclamado === ESPACIO) return;
+    const cfg = leerLocal(CLAVE_CFG_V2), prefs = leerLocal(CLAVE_PREFS_V3);
+    const [ficheros, cortes, carpeta] = await Promise.all(['ficheros', 'cortes', 'carpeta'].map((k) => idbGet(k, BASE_IDB)));
+    if (!cfg && !prefs && !ficheros) return;
+    if (cfg) guardarLocal(CLAVE_CFG, cfg);
+    if (prefs) guardarLocal(CLAVE_PREFS, prefs);
+    if (ficheros) await idbSet('ficheros', ficheros);
+    if (cortes) await idbSet('cortes', cortes);
+    if (carpeta) await idbSet('carpeta', carpeta);
+    try { localStorage.setItem(CLAVE_RECLAMADO, ESPACIO); } catch (e) { }
+  }
+  async function idbGet(k, nombre) { try { const db = await idb(nombre); return await new Promise((res, rej) => { const tx = db.transaction('kv', 'readonly'); const q = tx.objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); } catch (e) { return null; } }
 
   // ---------- cálculo ----------
   function recalcular() {
@@ -113,6 +192,8 @@
   /** Lo que pasa después de leer bien unos ficheros: se guardan en el navegador, corte y a la página que toca. */
   function trasCargar(fs) {
     idbSet('ficheros', fs);
+    // Cargados a mano: si la carpeta compartida no cambia, al volver se usan estos y no los de la carpeta
+    idbSet('origenFicheros', { manual: true, firmaCarpeta: firmaCarpeta() });
     // El corte se guarda con la configuración ya confirmada: al terminar la primera vez, o ahora si ya estaba hecha
     if (EP.cortes && S.onboarded) EP.cortes.capturar();
     if (S.onboarded) { S.view = 'fuentes'; S.fuentesTab = 'ficheros'; toast(tn('carga.hecho', fs.length)); }
@@ -146,7 +227,8 @@
     const csv = (byId('demo-csv') || {}).textContent || '';
     if (!csv.trim()) { toast(t('demo.noHay'), 'bad'); return false; }
     let dc = {}; try { dc = JSON.parse(byId('demo-cliente').textContent || '{}'); } catch (e) { dc = {}; }
-    if (!S.demo) S.real = { team: S.team, lectura: S.lectura, det: S.det, ficheros: S.ficheros, cfg: S.cfg, r: S.r, vm: S.vm, contextoDocs: S.contextoDocs, extraIni: S.extraIni, onboarded: S.onboarded, view: S.view };
+    if (!S.demo) S.real = { team: S.team, lectura: S.lectura, det: S.det, ficheros: S.ficheros, cfg: S.cfg, r: S.r, vm: S.vm, contextoDocs: S.contextoDocs, extraIni: S.extraIni, onboarded: S.onboarded, view: S.view,
+      role: S.role, prefs: JSON.parse(JSON.stringify(S.prefs || { byRole: {} })), dismissed: Object.assign({}, S.dismissed) };
     S.demo = true;
     S.cfg = { nombre: dc.nombre, sector: dc.sector, equiposInfo: dc.equiposInfo || {}, fte: dc.fte || {}, fteOrigen: dc.fteOrigen || {}, coste: dc.coste || {}, contexto: dc.preguntas };
     S.extraIni = dc.iniciativas || []; S.contextoDocs = dc.contexto || null;
@@ -160,6 +242,10 @@
     S.onboarded = !!(r.onboarded && S.vm); S.view = r.view || 'resumen'; S.real = null;
     // Nada de la demo se queda: equipo elegido, filtros, textos de IA y panel abierto
     Object.assign(S, { team: r.team || null, recFilter: 'todos', recLevel: null, narrativas: {}, iaRecs: null, iaRecsDe: null, iaImpacto: null, drill: null, iniForm: null });
+    // Rol, indicadores destacados y descartes vuelven a los de antes de la demo
+    if (r.role) S.role = r.role;
+    if (r.prefs) S.prefs = r.prefs;
+    if (r.dismissed) S.dismissed = r.dismissed;
     if (S.vm && (!S.team || !S.vm.equipos.some((e) => e.nombre === S.team))) S.team = S.vm.equipos[0] ? S.vm.equipos[0].nombre : null;
     if (!S.vm) S.ob.step = 'data';
     if (pintar !== false) render();
@@ -246,7 +332,7 @@
   function accion(nombre, fn) { acciones[nombre] = fn; }
   accion('go', (el) => go(el.dataset.view));
   accion('open-team', (el) => openTeam(el.dataset.team));
-  accion('team-tab', (el) => { if (el.dataset.team === '__comparar') { S.teamCompare = true; } else { S.team = el.dataset.team; S.teamCompare = false; } S.drill = null; render(); });
+  accion('team-tab', (el) => { if (el.dataset.team === '__comparar') { S.teamCompare = true; } else { S.team = el.dataset.team; S.teamCompare = false; guardarPrefs(); } S.drill = null; render(); });
   accion('set-role', (el) => { S.role = el.dataset.role; S.recFilter = 'todos'; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
   accion('set-lang', (el) => { I.fijar(el.dataset.lang); guardarPrefs(); if (S.vm) enSegundoPlano(() => { recalcular(); render(); }); else render(); });
   accion('toast-close', () => document.querySelector('.toast').classList.add('hidden'));
@@ -263,10 +349,12 @@
   accion('clear-all', () => {
     if (!window.confirm(t('ajustes.borrarConfirma'))) return;
     try { localStorage.removeItem(CLAVE_CFG); localStorage.removeItem(CLAVE_PREFS); sessionStorage.removeItem(CLAVE_IA); sessionStorage.removeItem('easyperformance.v3.chat'); } catch (e) { }
-    idbSet('ficheros', null); idbSet('carpeta', null); if (EP.cortes) EP.cortes.borrarTodo();
+    idbSet('ficheros', null); idbSet('carpeta', null); idbSet('origenFicheros', null); if (EP.cortes) EP.cortes.borrarTodo();
     if (S.chat) S.chat = { open: false, msgs: [], busy: false, draft: '' };
     Object.assign(S, { lectura: null, det: null, ficheros: null, cfg: {}, r: null, vm: null, demo: false, real: null, onboarded: false, ob: { step: 'data' }, error: null, dismissed: {}, iaRecs: null, iaImpacto: null, narrativas: {},
-      extraIni: [], contextoDocs: null, carpeta: null, team: null, recFilter: 'todos', recLevel: null, iniForm: null, drill: null });
+      extraIni: [], contextoDocs: null, carpeta: null, team: null, recFilter: 'todos', recLevel: null, iniForm: null, drill: null,
+      // También lo que estaba en memoria: rol, indicadores destacados, la versión leída y las iniciativas quitadas
+      role: 'direccion', prefs: { byRole: {} }, cfgVersion: null, iniQuitadas: [], colPend: null, view: 'resumen' });
     guardarClave(''); render();
   });
 
@@ -301,6 +389,13 @@
   const csvCelda = (v) => { const s = v == null ? '' : String(v); return /[",;\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   function descargarCsv(nombre, cabecera, filas) { descargar(nombre, '﻿' + [cabecera, ...filas].map((f) => f.map(csvCelda).join(',')).join('\n'), 'text/csv'); }
 
+  /** Firma de los exports de la carpeta compartida (datos.js): nombres y tamaños. Cambia cuando se deja un export nuevo. */
+  function firmaCarpeta() {
+    const ex = window.EASY_PERFORMANCE_EXPORTS;
+    const lista = Array.isArray(ex) ? ex : ex && Array.isArray(ex.ficheros) ? ex.ficheros : null;
+    if (!lista || !lista.length) return null;
+    return lista.map((f) => f.nombre + ':' + String(f.b64 != null ? f.b64.length : (f.texto || '').length)).join('|');
+  }
   async function arrancar() {
     cargarPrefs();
     // Si hay exports de la carpeta (actualizar.ps1), se cargan primero; si no, los últimos ficheros guardados en el navegador
@@ -308,7 +403,10 @@
     const ex = window.EASY_PERFORMANCE_EXPORTS;
     const lista = Array.isArray(ex) ? ex : ex && Array.isArray(ex.ficheros) ? ex.ficheros : null;
     let fs = null, deCarpeta = false;
-    if (lista && lista.length) {
+    // Si después de abrir la carpeta se cargaron ficheros a mano y la carpeta no ha cambiado, mandan los cargados a mano
+    const origen = await idbGet('origenFicheros');
+    const mandaManual = !!(lista && lista.length && origen && origen.manual && origen.firmaCarpeta === firmaCarpeta());
+    if (lista && lista.length && !mandaManual) {
       // Cada export en base64: CSV o Excel, se distingue por sus primeros bytes
       try {
         fs = await Promise.all(lista.map(async (f) => {
@@ -320,11 +418,15 @@
         }));
         deCarpeta = true;
       } catch (e) { toast(t('carga.datosJsMal'), 'bad'); fs = null; }
+    }
+    // Configuración, iniciativas y contexto de la carpeta: valen aunque manden los ficheros cargados a mano
+    if (lista && lista.length) {
       if (window.EASY_PERFORMANCE_CONFIG && !leerLocal(CLAVE_CFG)) S.cfg = window.EASY_PERFORMANCE_CONFIG;
       if (window.EASY_PERFORMANCE_INICIATIVAS) S.extraIni = [].concat(window.EASY_PERFORMANCE_INICIATIVAS).filter(Boolean);
       if (window.EASY_PERFORMANCE_CONTEXTO && window.EASY_PERFORMANCE_CONTEXTO.documentos) S.contextoDocs = window.EASY_PERFORMANCE_CONTEXTO;
     }
     if (!fs) fs = await idbGet('ficheros');
+    if (mandaManual && fs && fs.length) setTimeout(() => toast(t('carga.usandoManual')), 600);
     if (fs && fs.length) { try { if (procesar(fs) && EP.cortes && S.onboarded) EP.cortes.capturar(false, !deCarpeta); } catch (e) { S.error = { message: e.message, stack: e.stack }; } }
     if (!S.vm) S.onboarded = false;
     // Datos cargados pero primera vez sin terminar: se sigue por la revisión
@@ -336,6 +438,7 @@
   window.EP = {
     S, N, P, t, tn, esc, lista, fmt, fecha, valor, formatoDe, nombreMedida, nombreEquipo, cat, toast, ocupado, enSegundoPlano,
     guardarCfg, guardarPrefs, guardarClave, recalcular, procesar, trasCargar, cargarFicheros, verDemo, salirDemo, go, openTeam, openDrill, render,
-    visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, arrancar, vistas: {},
+    visibles, POR_ROL, INICIO_ROL, accion, cambio, descargar, descargarCsv, idbGet, idbSet, arrancar, migrar: migrarAEspacio, vistas: {},
+    CLAVES: { cfg: CLAVE_CFG, prefs: CLAVE_PREFS, idb: NOMBRE_IDB, espacio: ESPACIO }, leerLocal, guardarLocal, cargarPrefs,
   };
 })();

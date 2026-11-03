@@ -970,5 +970,17 @@
  "ob.enf.entrar": "Ver el análisis",
  "ob.rev.ocultarEstados": "Ocultar los estados",
  "ob.rev.ocultarComprobaciones": "Ocultar las comprobaciones",
- "ob.rev.ocultarEquipos": "Ocultar equipos, proveedores y coste"
+ "ob.rev.ocultarEquipos": "Ocultar equipos, proveedores y coste",
+ "ajustes.copia": "Copia de la configuración",
+ "ajustes.copiaTexto": "Para seguir en otro navegador, en otro ordenador o pasar de la web a la copia local. Lleva la configuración, las iniciativas, las preferencias y el histórico de cortes.",
+ "ajustes.copiaExportar": "Descargar copia",
+ "ajustes.copiaImportar": "Cargar una copia",
+ "ajustes.copiaNota": "No lleva los exports de Jira ni la clave de la IA. Al cargarla, sustituye la configuración de aquí y suma los cortes.",
+ "ajustes.copiaMal": "Ese fichero no es una copia de la configuración de easyperformance.",
+ "ajustes.copiaConfirma": "La copia sustituye la configuración y las iniciativas de este navegador. ¿Seguir?",
+ "ajustes.copiaHecha": "Copia cargada. Cortes nuevos: {n}.",
+ "ajustes.ficheroCopia": "configuracion-easyperformance",
+ "pestanas.cambios": "Se han aplicado los cambios hechos en otra pestaña.",
+ "pestanas.datos": "Se han cargado los datos nuevos de otra pestaña.",
+ "carga.usandoManual": "Se usan los ficheros cargados a mano. Los de la carpeta no han cambiado."
 }

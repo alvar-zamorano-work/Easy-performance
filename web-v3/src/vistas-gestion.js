@@ -166,6 +166,7 @@
   EP.accion('ini-del', (el) => {
     if (!window.confirm(t('ini.quitarConfirma'))) return;
     S.cfg.iniciativas = (S.cfg.iniciativas || []).filter((i) => i.id !== el.dataset.id);
+    if (S.iniQuitadas.indexOf(el.dataset.id) < 0) S.iniQuitadas.push(el.dataset.id);
     S.extraIni = (S.extraIni || []).filter((i) => i.id !== el.dataset.id); EP.guardarCfg();
     if (EP.carpeta) EP.carpeta.borrar('iniciativas', el.dataset.id + '.json');
     EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); });
@@ -397,6 +398,9 @@
       <div class="card"><h3>${esc(t('ajustes.carpeta'))}</h3><p class="small muted">${esc(t('ajustes.carpetaTexto'))}</p>
         <div class="row"><button class="btn" data-action="carpeta-elegir" ${window.showDirectoryPicker ? '' : 'disabled'}>${esc(S.carpeta ? t('ajustes.carpetaOtra') : t('ajustes.carpetaElegir'))}</button>${S.carpeta ? `<button class="btn" data-action="carpeta-leer">${esc(t('ajustes.carpetaLeer'))}</button><span class="small">${esc(t('ajustes.carpetaUsando', { n: S.carpeta.name }))}</span>` : ''}</div>${window.showDirectoryPicker ? '' : `<div class="tiny muted">${esc(t('ajustes.carpetaNoNavegador'))}</div>`}
         <div class="row" style="margin-top:12px"><button class="btn" data-action="clear-all">${esc(t('ajustes.borrar'))}</button></div><div class="tiny muted">${esc(t('ajustes.borrarTexto'))}</div></div>
+      <div class="card full"><h3>${esc(t('ajustes.copia'))}</h3><p class="small muted">${esc(t('ajustes.copiaTexto'))}</p>
+        <div class="row"><button class="btn" data-action="cfg-exportar" ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaExportar'))}</button><label class="btn ${S.demo ? 'disabled' : ''}"><input type="file" accept=".json,application/json" data-change="cfg-importar" hidden ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaImportar'))}</label></div>
+        <div class="tiny muted">${esc(t('ajustes.copiaNota'))}</div></div>
       <div class="card full"><h3>${esc(t('ajustes.queMide'))}</h3><div class="table-wrap"><table><tr><th>${esc(t('ajustes.col.medida'))}</th><th>${esc(t('ajustes.col.pregunta'))}</th><th>${esc(t('ajustes.col.como'))}</th></tr>${cat().ordenMedidas.map((id) => { const m = cat().medidas[id]; return `<tr><td><b>${esc(m.nombre)}</b>${S.vm.kpis.indexOf(id) >= 0 ? ` ${K.chip('info', t('ajustes.enLinea'))}` : ''}</td><td class="small">${esc(m.pregunta)}</td><td class="small">${esc(m.como)}</td></tr>`; }).join('')}</table></div></div>
     </div>`;
   }
@@ -412,6 +416,40 @@
   EP.cambio('lang', (el) => { window.I18N.fijar(el.value); EP.guardarPrefs(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); });
   EP.cambio('rol', (el) => { S.role = el.value; S.recFilter = 'todos'; EP.guardarPrefs(); EP.render(); });
   EP.cambio('equipo-propio', (el) => { S.team = el.value; EP.guardarPrefs(); EP.render(); });
+  // Copia de la configuración: para pasar de la web a una copia local (o a otro ordenador) sin perder lo hecho.
+  // Lleva configuración, iniciativas, preferencias y cortes (cifras ya calculadas). Nunca los ficheros ni la clave.
+  const TIPO_COPIA = 'easyperformance-configuracion';
+  EP.accion('cfg-exportar', () => {
+    if (S.demo) return;
+    const copia = { tipo: TIPO_COPIA, version: 1, creada: new Date().toISOString(), cfg: S.cfg,
+      prefs: { role: S.role, team: S.team, prefs: S.prefs, dismissed: S.dismissed }, cortes: S.cortes || [] };
+    EP.descargar(`${t('ajustes.ficheroCopia')}-${slug(S.cfg.nombre)}-${hoy()}.json`, JSON.stringify(copia, null, 2));
+  });
+  EP.cambio('cfg-importar', (el) => {
+    const f = el.files && el.files[0]; el.value = '';
+    if (!f || S.demo) return;
+    f.text().then((texto) => {
+      let c = null; try { c = JSON.parse(texto); } catch (e) { c = null; }
+      if (!c || c.tipo !== TIPO_COPIA || !c.cfg || typeof c.cfg !== 'object') { EP.toast(t('ajustes.copiaMal'), 'bad'); return; }
+      if (!window.confirm(t('ajustes.copiaConfirma'))) return;
+      // La copia sustituye la configuración de aquí; los cortes se suman
+      const guardada = EP.leerLocal(EP.CLAVES.cfg);
+      S.cfg = c.cfg; S.iniQuitadas = []; S.cfgVersion = guardada ? guardada.actualizada || null : null;
+      EP.guardarCfg();
+      const p = c.prefs || {};
+      if (p.role && EP.POR_ROL[p.role]) S.role = p.role;
+      if (p.team) S.team = p.team;
+      if (p.prefs && typeof p.prefs === 'object') S.prefs = Object.assign({ byRole: {} }, p.prefs);
+      if (p.dismissed && typeof p.dismissed === 'object') S.dismissed = p.dismissed;
+      EP.guardarPrefs();
+      const n = EP.cortes ? EP.cortes.importar(Array.isArray(c.cortes) ? c.cortes : []) : 0;
+      EP.enSegundoPlano(() => {
+        // Las columnas elegidas a mano cambian la lectura: se vuelve a leer con la configuración nueva
+        if (S.ficheros && S.ficheros.length) EP.procesar(S.ficheros); else if (S.lectura) EP.recalcular();
+        EP.render(); EP.toast(t('ajustes.copiaHecha', { n }));
+      });
+    }).catch(() => EP.toast(t('ajustes.copiaMal'), 'bad'));
+  });
   const hoy = () => new Date().toISOString().slice(0, 10);
   const slug = (s) => String(s || 'cliente').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cliente';
   function documentoDefiniciones() { return N.definiciones(EP.P.lecturaCalculo(S.lectura, S.cfg), EP.P.clienteDe(S.cfg, S.det), { config: EP.P.cfgCalculo(S.cfg, S.det), det: S.det, modelo: S.r.modelo, generado: new Date() }); }

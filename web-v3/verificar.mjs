@@ -90,11 +90,11 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await clic(p, '[data-action="ob-finish"]');
   const e = await estado(p);
   ok('entra en la app con la vista del rol', e.vista === 'calidad' && !e.error, JSON.stringify(e));
-  const cfg = await A(p, () => JSON.parse(localStorage.getItem('easyperformance.config.v2') || 'null'));
-  ok('configuración guardada con la clave de la v2', cfg && cfg.contexto && cfg.contexto.hecho && cfg.mapeoEstados && !cfg.contexto.objetivos.includes('predictability'));
+  const cfg = await A(p, () => JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || 'null'));
+  ok('configuración guardada (en el espacio de esta carpeta)', cfg && cfg.contexto && cfg.contexto.hecho && cfg.mapeoEstados && !cfg.contexto.objetivos.includes('predictability'));
   ok('un corte guardado', (await A(p, () => window.EP.S.cortes.length)) === 1);
   // Proveedores marcados después del onboarding: la comparación se activa sin volver a contestar el Context
-  const prov = await A(p, () => { const S = window.EP.S, P = window.EP.P, antes = P.contexto(S.cfg, S.det).proveedores; const eq = S.vm.equipos[0].nombre; S.cfg.equiposInfo = Object.assign({}, S.cfg.equiposInfo, { [eq]: { tipo: 'proveedor' } }); const despues = P.contexto(S.cfg, S.det).proveedores; delete S.cfg.equiposInfo[eq]; return { antes, despues, guardado: JSON.parse(localStorage.getItem('easyperformance.config.v2')).contexto.proveedores }; });
+  const prov = await A(p, () => { const S = window.EP.S, P = window.EP.P, antes = P.contexto(S.cfg, S.det).proveedores; const eq = S.vm.equipos[0].nombre; S.cfg.equiposInfo = Object.assign({}, S.cfg.equiposInfo, { [eq]: { tipo: 'proveedor' } }); const despues = P.contexto(S.cfg, S.det).proveedores; delete S.cfg.equiposInfo[eq]; return { antes, despues, guardado: JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg)).contexto.proveedores }; });
   ok('proveedores marcados después: se activa la comparación y no se guarda un sí que nadie ha dicho', prov.antes === false && prov.despues === true && prov.guardado === false, JSON.stringify(prov));
   // Recarga: abre directamente con los ficheros guardados en el navegador
   await p.reload(); await p.waitForTimeout(1500); await quieto(p);
@@ -125,7 +125,7 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await p.selectOption('#form-col select[name="clave"]', 'Ticket'); await p.selectOption('#form-col select[name="creada"]', 'Alta');
   await p.selectOption('#form-col select[name="tipo"]', 'Clase'); await p.selectOption('#form-col select[name="estado"]', 'Situación');
   await clic(p, '[data-action="col-aplicar"]'); await quieto(p);
-  const r = await A(p, () => ({ tareas: window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0, cfg: JSON.parse(localStorage.getItem('easyperformance.config.v2') || '{}').columnas }));
+  const r = await A(p, () => ({ tareas: window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0, cfg: JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || '{}').columnas }));
   ok('con las columnas elegidas se lee y se guarda la elección', r.tareas === 360 && r.cfg && r.cfg.clave === 'Ticket', JSON.stringify(r));
   await p.reload(); await p.waitForTimeout(1200); await quieto(p);
   ok('al volver, se lee sin preguntar otra vez', (await A(p, () => window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0)) === 360 && !(await p.$('#form-col')));
@@ -213,7 +213,7 @@ async function recorrer(p, etiqueta) {
   ok('formulario de iniciativa con la recomendación', await p.$('#form-ini') && (await p.inputValue('#form-ini input[name="nombre"]')).length > 3);
   await clic(p, '[data-action="ini-guardar"]');
   ok('iniciativa creada y medida', (await A(p, () => window.EP.S.vm.iniciativas.length)) === nIni + 1 && /Iniciativa guardada/.test(await p.textContent('.toast')));
-  ok('en la demo no se guarda la configuración', !(await A(p, () => localStorage.getItem('easyperformance.config.v2'))));
+  ok('en la demo no se guarda la configuración', !(await A(p, () => localStorage.getItem(window.EP.CLAVES.cfg) || localStorage.getItem('easyperformance.config.v2'))));
   await p.screenshot({ path: join(SALIDA, '11-iniciativas.png'), fullPage: true });
   ok('sin errores de consola en la demo', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
@@ -655,6 +655,154 @@ const medirMaquetacion = () => {
     ok(`maquetación a ${w} x ${h}: sin textos que se pisan, sin contenido cortado y con el panel lateral entero`, !mal.length, mal.slice(0, 3).join(' | '));
   }
   await p.context().close();
+}
+
+// ---------- 10. Persistencia: varias pestañas, varias copias, carpeta compartida, demo y borrar todo ----------
+{
+  const DS = join(RAIZ, 'datos-sinteticos');
+  const COMPLETO = join(DS, 'jira-ejemplo-completo-2026-10-12.csv'), PARTE_A = join(DS, 'jira-2026-10-12-parte-a.csv'), ABRIL = join(DS, 'jira-2026-04-06.csv');
+  const COPIAS = join(SALIDA, 'copias');
+  const copia = (nombre, datosJs) => {
+    const dir = join(COPIAS, nombre); mkdirSync(join(dir, 'exports'), { recursive: true });
+    writeFileSync(join(dir, 'EasyPerformance.html'), readFileSync(join(RAIZ, 'dist', 'EasyPerformance-v3', 'EasyPerformance.html')));
+    if (datosJs) writeFileSync(join(dir, 'exports', 'datos.js'), 'window.EASY_PERFORMANCE_EXPORTS = ' + JSON.stringify(datosJs.map((r) => ({ nombre: r.split('/').pop(), b64: readFileSync(r).toString('base64') }))) + ';');
+    return 'file://' + join(dir, 'EasyPerformance.html');
+  };
+  const abrirEn = async (ctx, url) => {
+    const p = await ctx.newPage(); p.errores = [];
+    p.on('pageerror', (e) => p.errores.push('pageerror: ' + e.message)); p.on('dialog', (d) => d.accept());
+    await p.goto(url); await p.waitForFunction(() => window.EP && window.EP.S && document.getElementById('busy')); await p.waitForTimeout(700); await quieto(p);
+    return p;
+  };
+  const recargar = async (p) => { await p.reload(); await p.waitForFunction(() => window.EP && window.EP.S); await p.waitForTimeout(800); await quieto(p); };
+  const subir = async (p, f) => { await p.setInputFiles('#file-input', f); await p.waitForTimeout(700); await quieto(p); await p.waitForTimeout(200); };
+  const empezar = async (p, f, rol = 'pmo') => {
+    await subir(p, f);
+    if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, `[data-action="ob-role"][data-role="${rol}"]`); await clic(p, '[data-action="ob-finish"]');
+  };
+  const nuevaIni = async (p, nombre) => {
+    await ir(p, 'iniciativas'); await quieto(p);
+    await clic(p, '#page-actions [data-action="ini-nueva"]');
+    await p.fill('#form-ini input[name=nombre]', nombre);
+    await p.check('#form-ini input[name=equipos][value="Pagos"]');
+    await clic(p, '#form-ini [data-action="ini-guardar"]');
+  };
+  const cfgGuardada = (p) => A(p, () => JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || '{}'));
+  const fechasCortes = (p) => A(p, () => window.EP.S.cortes.map((c) => c.fechaDatos.slice(0, 10)));
+  const nuevoCtx = () => navegador.newContext({ viewport: { width: 1280, height: 900 }, locale: 'es-ES', acceptDownloads: true, reducedMotion: 'reduce' });
+
+  // Dos pestañas a la vez: lo que hace una no lo pisa la otra
+  {
+    const url = copia('pestanas');
+    const ctx = await nuevoCtx();
+    const a = await abrirEn(ctx, url);
+    await empezar(a, COMPLETO);
+    const b = await abrirEn(ctx, url);
+    await nuevaIni(a, 'Creada en A');
+    await b.waitForTimeout(600); await quieto(b);
+    const enB = await A(b, () => (window.EP.S.cfg.iniciativas || []).map((i) => i.nombre));
+    ok('dos pestañas: la otra pestaña ve la iniciativa nueva sin recargar', enB.indexOf('Creada en A') >= 0, JSON.stringify(enB));
+    // B cambia otra cosa de la configuración con su copia (incluso si no le llegó el aviso, la iniciativa de A se conserva)
+    await A(b, () => { const S = window.EP.S; S.cfgVersion = 'vieja'; S.cfg.iniciativas = []; S.cfg.fte = Object.assign({}, S.cfg.fte, { Datos: 3 }); window.EP.guardarCfg(); });
+    const g = await cfgGuardada(a);
+    ok('dos pestañas: guardar con una copia vieja no borra la iniciativa de la otra', (g.iniciativas || []).some((i) => i.nombre === 'Creada en A') && g.fte && g.fte.Datos === 3, JSON.stringify({ ini: (g.iniciativas || []).map((i) => i.nombre), fte: g.fte }));
+    // Una iniciativa quitada en una pestaña no vuelve
+    const id = await A(a, () => window.EP.S.cfg.iniciativas.filter((i) => i.nombre === 'Creada en A')[0].id);
+    await A(a, (id) => { const b = document.createElement('button'); b.dataset.action = 'ini-del'; b.dataset.id = id; document.body.appendChild(b); b.click(); b.remove(); }, id);
+    await a.waitForTimeout(400); await quieto(a);
+    await A(b, () => { const S = window.EP.S; S.cfgVersion = 'vieja'; window.EP.guardarCfg(); });
+    ok('dos pestañas: una iniciativa quitada no la resucita la otra pestaña', !((await cfgGuardada(a)).iniciativas || []).some((i) => i.id === id));
+    // Cortes: cada pestaña carga un export distinto y se guardan los dos
+    await subir(a, ABRIL);
+    await subir(b, PARTE_A);
+    await recargar(a);
+    const cs = await fechasCortes(a);
+    ok('dos pestañas: los cortes guardados en cada pestaña se conservan', cs.some((c) => c.startsWith('2026-04-06')) && cs.some((c) => c.startsWith('2026-10-12')), JSON.stringify(cs));
+    ok('dos pestañas: sin errores', !a.errores.length && !b.errores.length, a.errores.concat(b.errores).join(' | '));
+    await ctx.close();
+  }
+
+  // Dos copias del HTML en carpetas distintas: cada una con sus datos. Y los datos de antes van a la primera que se abre
+  {
+    const ctx = await nuevoCtx();
+    const pre = await abrirEn(ctx, copia('previa'));
+    // Datos guardados con las claves de antes de los espacios
+    await A(pre, () => { localStorage.clear(); localStorage.setItem('easyperformance.config.v2', JSON.stringify({ nombre: 'Antes', iniciativas: [{ id: 'ini-antes', nombre: 'De antes', equipos: ['Pagos'], inicio: '2026-01-01' }] })); localStorage.setItem('easyperformance.v3.prefs', JSON.stringify({ role: 'pmo', onboarded: false })); });
+    await pre.close();
+    const a = await abrirEn(ctx, copia('clienteA'));
+    const ca = await A(a, () => ({ cfg: window.EP.S.cfg.nombre, role: window.EP.S.role, espacio: window.EP.CLAVES.espacio }));
+    ok('datos de antes: los recoge la primera copia que se abre', ca.cfg === 'Antes' && ca.role === 'pmo' && !!ca.espacio, JSON.stringify(ca));
+    await empezar(a, COMPLETO);
+    await nuevaIni(a, 'Ini cliente A');
+    await a.close();
+    const b = await abrirEn(ctx, copia('clienteB'));
+    const sb = await A(b, () => ({ tareas: window.EP.S.lectura ? window.EP.S.lectura.tareas.length : 0, ini: (window.EP.S.cfg.iniciativas || []).length, cortes: window.EP.S.cortes.length, nombre: window.EP.S.cfg.nombre || null }));
+    ok('otra carpeta: no ve los datos, las iniciativas ni los cortes de la primera', !sb.tareas && !sb.ini && !sb.cortes && !sb.nombre, JSON.stringify(sb));
+    // Copia de la configuración: se descarga en A y se carga en B
+    const a2 = await abrirEn(ctx, copia('clienteA'));
+    await ir(a2, 'ajustes'); await quieto(a2);
+    const [desc] = await Promise.all([a2.waitForEvent('download'), a2.click('[data-action="cfg-exportar"]')]);
+    const ruta = join(COPIAS, 'copia-config.json'); await desc.saveAs(ruta);
+    const copiaJson = JSON.parse(readFileSync(ruta, 'utf8'));
+    ok('copia de la configuración: lleva configuración, iniciativas y cortes, y nunca ficheros ni clave', copiaJson.tipo === 'easyperformance-configuracion' && copiaJson.cfg.iniciativas.some((i) => i.nombre === 'Ini cliente A') && copiaJson.cortes.length >= 1 && !/"(texto|b64|clave)"/.test(readFileSync(ruta, 'utf8')) && copiaJson.cortes.every((c) => c.ficheros.every((f) => Object.keys(f).join() === 'nombre,filas')), Object.keys(copiaJson).join(','));
+    await empezar(b, COMPLETO);
+    await ir(b, 'ajustes'); await quieto(b);
+    await b.setInputFiles('input[data-change="cfg-importar"]', ruta); await b.waitForTimeout(800); await quieto(b);
+    const tras = await A(b, () => ({ ini: (window.EP.S.cfg.iniciativas || []).map((i) => i.nombre), cortes: window.EP.S.cortes.length, guardada: JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || '{}').iniciativas, error: window.EP.S.error }));
+    ok('copia de la configuración: cargada en otra carpeta, trae las iniciativas y los cortes', tras.ini.indexOf('Ini cliente A') >= 0 && (tras.guardada || []).some((i) => i.nombre === 'Ini cliente A') && tras.cortes >= 1 && !tras.error, JSON.stringify(tras));
+    ok('dos copias: sin errores', !a.errores.length && !b.errores.length && !a2.errores.length, a.errores.concat(b.errores, a2.errores).join(' | '));
+    await ctx.close();
+  }
+
+  // Carpeta compartida (datos.js) y una carga a mano después: al volver manda la carga a mano mientras la carpeta no cambie
+  {
+    const url = copia('carpeta', [ABRIL]);
+    const ctx = await nuevoCtx();
+    const p = await abrirEn(ctx, url);
+    if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+    await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
+    await subir(p, COMPLETO);
+    await recargar(p);
+    const f1 = await A(p, () => window.EP.S.lectura.informe.ficheros.map((f) => f.nombre));
+    ok('carpeta compartida: la carga a mano sobrevive a la recarga', f1.length === 1 && f1[0].startsWith('jira-ejemplo-completo'), JSON.stringify(f1));
+    // Deja un export nuevo en la carpeta: ahora manda la carpeta
+    copia('carpeta', [PARTE_A]);
+    await recargar(p);
+    const f2 = await A(p, () => window.EP.S.lectura.informe.ficheros.map((f) => f.nombre));
+    ok('carpeta compartida: un export nuevo en la carpeta vuelve a mandar', f2.length === 1 && f2[0].indexOf('parte-a') >= 0, JSON.stringify(f2));
+    ok('carpeta compartida: sin errores', !p.errores.length, p.errores.join(' | '));
+    await ctx.close();
+  }
+
+  // Demo y borrar todo: la demo no toca las preferencias reales; borrar todo deja todo como la primera vez
+  {
+    const url = copia('demo');
+    const ctx = await nuevoCtx();
+    const p = await abrirEn(ctx, url);
+    await empezar(p, COMPLETO, 'direccion');
+    await A(p, () => { const S = window.EP.S; S.prefs.byRole.direccion = { kpis: ['entregas', 'ciclo'] }; window.EP.guardarPrefs(); });
+    const antes = await A(p, () => localStorage.getItem(window.EP.CLAVES.prefs));
+    await A(p, () => { const b = document.createElement('button'); b.dataset.action = 'demo'; document.body.appendChild(b); b.click(); b.remove(); });
+    await p.waitForTimeout(300); await quieto(p);
+    await A(p, () => document.querySelector('#role-seg [data-role="pmo"]').click()); await quieto(p);
+    await A(p, () => { const S = window.EP.S; S.prefs.byRole.pmo = { kpis: ['bugs'] }; window.EP.guardarPrefs(); });
+    const enDemo = await A(p, () => localStorage.getItem(window.EP.CLAVES.prefs));
+    await clic(p, '[data-action="demo-exit"]');
+    const fuera = await A(p, () => ({ role: window.EP.S.role, pmo: !!window.EP.S.prefs.byRole.pmo, demo: window.EP.S.demo }));
+    ok('demo: no guarda preferencias y al salir vuelven el rol y los indicadores de antes', antes === enDemo && fuera.role === 'direccion' && !fuera.pmo && !fuera.demo, JSON.stringify({ igual: antes === enDemo, fuera }));
+    // El equipo elegido en la ficha de equipo se recuerda
+    await ir(p, 'equipos'); await quieto(p);
+    const otro = await A(p, () => { const t = [...document.querySelectorAll('[data-action="team-tab"]')].filter((x) => x.dataset.team !== '__comparar' && x.dataset.team !== window.EP.S.team)[0]; if (!t) return null; t.click(); return t.dataset.team; });
+    await quieto(p);
+    if (otro) { await recargar(p); ok('el equipo elegido se recuerda al volver', (await A(p, () => window.EP.S.team)) === otro, otro); }
+    await ir(p, 'ajustes'); await quieto(p);
+    await clic(p, '[data-action="clear-all"]');
+    const limpio = await A(p, () => ({ byRole: Object.keys(window.EP.S.prefs.byRole), role: window.EP.S.role, cortes: window.EP.S.cortes.length, ls: Object.keys(localStorage).filter((k) => k === window.EP.CLAVES.cfg || k === window.EP.CLAVES.prefs) }));
+    ok('borrar todo: también olvida los indicadores elegidos y el rol que estaban en memoria', !limpio.byRole.length && limpio.role === 'direccion' && !limpio.cortes && !limpio.ls.length, JSON.stringify(limpio));
+    ok('demo y borrar todo: sin errores', !p.errores.length, p.errores.join(' | '));
+    await ctx.close();
+  }
 }
 
 await navegador.close();

@@ -970,5 +970,17 @@
  "ob.enf.entrar": "See the analysis",
  "ob.rev.ocultarEstados": "Hide the statuses",
  "ob.rev.ocultarComprobaciones": "Hide the checks",
- "ob.rev.ocultarEquipos": "Hide teams, vendors and cost"
+ "ob.rev.ocultarEquipos": "Hide teams, vendors and cost",
+ "ajustes.copia": "Configuration copy",
+ "ajustes.copiaTexto": "To carry on in another browser or computer, or to move from the web to the local copy. It holds the configuration, initiatives, preferences and snapshot history.",
+ "ajustes.copiaExportar": "Download copy",
+ "ajustes.copiaImportar": "Load a copy",
+ "ajustes.copiaNota": "It does not hold the Jira exports or the AI key. Loading it replaces the configuration here and adds the snapshots.",
+ "ajustes.copiaMal": "That file is not an easyperformance configuration copy.",
+ "ajustes.copiaConfirma": "The copy replaces the configuration and initiatives in this browser. Continue?",
+ "ajustes.copiaHecha": "Copy loaded. New snapshots: {n}.",
+ "ajustes.ficheroCopia": "easyperformance-configuration",
+ "pestanas.cambios": "Changes made in another tab have been applied.",
+ "pestanas.datos": "New data from another tab has been loaded.",
+ "carga.usandoManual": "Using the files loaded by hand. The folder files have not changed."
 }
