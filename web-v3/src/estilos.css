@@ -767,3 +767,8 @@ html { font-size: 14px; }
 .sub-tabs .tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; margin-bottom: -1px; padding: 8px 14px; color: var(--muted); }
 .sub-tabs .tab.on { background: none; color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
 .sub-tabs .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Resumen: la línea de Qué hacer, en una sola fila con su botón a la derecha */
+.que-hacer { display: block; margin: 16px 0; }
+.que-hacer .f-body { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.recorrido { display: block; }
