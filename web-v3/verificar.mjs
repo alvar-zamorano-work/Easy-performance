@@ -46,6 +46,10 @@ const clic = async (p, sel) => { await p.click(sel); await p.waitForTimeout(200)
 const estado = (p) => A(p, () => ({ error: window.EP.S.error ? window.EP.S.error.message : null, faltan: Object.keys(window.__faltan || {}), ancho: document.documentElement.scrollWidth - innerWidth, vista: window.EP.S.view }));
 const rayas = (p) => A(p, () => { const t = document.body.innerText; const m = t.match(/.{0,30}[—–].{0,30}/); return m ? m[0] : null; });
 const ir = (p, v) => A(p, (v) => window.EP.go(v), v);
+// Labs (IA, cortes, carpeta) está apagado por defecto: las comprobaciones de esas funciones lo encienden antes
+const labs = async (p) => { await A(p, () => { window.EP.S.prefs.labs = true; window.EP.guardarPrefs(); window.EP.render(); }); await quieto(p); };
+// "Compartir" abre un cajón con presentar, el resumen redactado, imprimir y el catálogo
+const compartir = async (p, accion) => { await p.click('#page-actions [data-kind="compartir"]'); await p.waitForTimeout(150); await p.click(`#drawer .compartir[data-action="${accion}"]`); await p.waitForTimeout(200); await quieto(p); };
 const fijarRol = async (p, r) => { await A(p, (r) => document.querySelector(`#role-seg [data-role="${r}"]`).click(), r); await quieto(p); };
 const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.querySelector(`#lang-seg [data-lang="${l}"]`) || document.querySelector(`.ob-lang [data-lang="${l}"]`); b.click(); }, l); await p.waitForTimeout(200); await quieto(p); };
 
@@ -89,7 +93,8 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   await clic(p, '[data-action="ob-role"][data-role="pmo"]');
   await clic(p, '[data-action="ob-finish"]');
   const e = await estado(p);
-  ok('entra en la app con la vista del rol', e.vista === 'calidad' && !e.error, JSON.stringify(e));
+  const rec = await A(p, () => window.EP.S.recorrido);
+  ok('entra en la app: la primera vez, el recorrido empieza en el Resumen', e.vista === 'resumen' && rec === 1 && !e.error, JSON.stringify({ e, rec }));
   const cfg = await A(p, () => JSON.parse(localStorage.getItem(window.EP.CLAVES.cfg) || 'null'));
   ok('configuración guardada (en el espacio de esta carpeta)', cfg && cfg.contexto && cfg.contexto.hecho && cfg.mapeoEstados && !cfg.contexto.objetivos.includes('predictability'));
   ok('un corte guardado', (await A(p, () => window.EP.S.cortes.length)) === 1);
@@ -174,7 +179,7 @@ async function recorrer(p, etiqueta) {
   await p.keyboard.press('Escape');
   await p.click('details.mas summary'); await p.waitForTimeout(100);
   ok('ficha del equipo: lo que no es baseline va plegado', await p.isVisible('details.mas[open] .fila-dot'));
-  for (const [sel, nombre] of [['.fila-dot[data-kind="comprobacion"]', 'comprobación'], ['.rrow[data-kind="caso"]', 'caso'], ['[data-kind="resumen"]', 'resumen redactado'], ['[data-kind="personalizar"]', 'personalizar'], ['[data-kind="ayuda"]', 'ayuda']]) {
+  for (const [sel, nombre] of [['.fila-dot[data-kind="comprobacion"]', 'comprobación'], ['.rrow[data-kind="caso"]', 'caso'], ['#page-actions [data-kind="compartir"]', 'compartir'], ['[data-kind="personalizar"]', 'personalizar'], ['[data-kind="ayuda"]', 'ayuda']]) {
     await p.click(sel); await p.waitForTimeout(200);
     const t = (await p.textContent('#drawer')) || '';
     ok('panel: ' + nombre, t.length > 40 && !(await estado(p)).error);
@@ -183,18 +188,20 @@ async function recorrer(p, etiqueta) {
   // Resumen centrado en la baseline: una fila por indicador y equipo, con su barra y su rango
   await ir(p, 'resumen'); await p.waitForTimeout(100);
   const filasBl = await p.$$eval('#page .fb', (x) => x.length), nEq = await A(p, () => window.EP.visibles().length), nK = await A(p, () => window.EP.kit.destacados().length);
-  ok('resumen: la baseline de cada equipo', filasBl === nEq * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
-  ok('el menú dice Baseline', /Baseline/.test(await p.textContent('#nav')) && !/Referencias/.test(await p.textContent('#nav')));
-  // Gráficos con el eje desde cero: el punto más bajo nunca toca el techo por ruido
-  await ir(p, 'referencias'); await p.waitForTimeout(100);
-  ok('página Baseline con un gráfico por indicador', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nEq * nK);
+  // Una ficha por equipo y, con más de un equipo, otra de toda el área
+  ok('resumen: la baseline de cada equipo y la de toda el área', filasBl === (nEq + (nEq > 1 ? 1 : 0)) * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
+  const textoMenu = await p.textContent('#nav');
+  ok('el menú dice Qué hacer y Datos, sin página de línea base', /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Línea base|Referencias|Baseline/.test(textoMenu), textoMenu);
+  // Los gráficos de cada indicador están en la ficha de equipo
+  await ir(p, 'equipos'); await p.waitForTimeout(100);
+  ok('ficha de equipo con un gráfico por indicador destacado', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nK);
   // Personalizar: cambia los indicadores destacados del rol
   await ir(p, 'resumen'); await p.click('[data-kind="personalizar"]'); await p.waitForTimeout(150);
   await p.click('input[data-change="pref-tile"][value="ciclo"]'); await p.waitForTimeout(150);
   ok('personalizar quita un indicador', !(await A(p, () => window.EP.kit.destacados().includes('ciclo'))));
   await p.click('[data-action="pref-reset"]'); await p.keyboard.press('Escape');
   // Presentación
-  await clic(p, '[data-action="present"]');
+  await compartir(p, 'present');
   const nDiap = await A(p, () => window.EP.visibles().length + 2);
   for (let i = 0; i < nDiap; i++) { await p.keyboard.press('ArrowRight'); await p.waitForTimeout(60); }
   ok('presentación hasta la última diapositiva', /Por dónde empezar/.test(await p.textContent('#present')) && !(await estado(p)).error);
@@ -231,9 +238,8 @@ async function recorrer(p, etiqueta) {
   const p = await pagina(1280, 800);
   await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
   await ir(p, 'resumen');
-  await p.click('#assistant-fab'); await p.waitForTimeout(150);
-  ok('asistente sin clave no pregunta', await p.isDisabled('#chat-input') && /Sin clave de IA/.test(await p.textContent('#assistant')));
-  await p.click('[data-chat="close"]');
+  // Sin clave de IA no sale el botón Preguntar (no tapa contenido para algo que no se puede usar)
+  ok('asistente sin clave: no sale el botón Preguntar', await A(p, () => document.getElementById('assistant-fab').classList.contains('hidden')));
   let modo = 'buena', peticiones = 0;
   await p.route('https://api.anthropic.com/**', async (route) => {
     peticiones++;
@@ -251,7 +257,7 @@ async function recorrer(p, etiqueta) {
     }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: texto }] }) });
   });
-  await ir(p, 'ajustes'); await p.fill('#ia-clave', 'sk-ant-prueba'); await clic(p, '[data-action="ia-guardar"]');
+  await labs(p); await ir(p, 'ajustes'); await p.fill('#ia-clave', 'sk-ant-prueba'); await clic(p, '[data-action="ia-guardar"]');
   const almac = await A(p, () => ({ sesion: sessionStorage.getItem('easyperformance.v3.ia'), local: JSON.stringify(Object.assign({}, localStorage)) }));
   ok('la clave solo en sessionStorage', almac.sesion === 'sk-ant-prueba' && !almac.local.includes('sk-ant-prueba'));
   await ir(p, 'resumen');
@@ -273,7 +279,7 @@ async function recorrer(p, etiqueta) {
   ok('propuestas de IA validadas: las que repiten un caso se unen a él', (await A(p, () => window.EP.S.iaEstado.recs)) === 'hecho' && /La IA coincide/.test(await p.textContent('#page')));
   // Resumen redactado con IA
   modo = 'buena';
-  await ir(p, 'resumen'); await p.click('[data-kind="resumen"]'); await p.waitForTimeout(100);
+  await ir(p, 'resumen'); await compartir(p, 'drill');
   await p.click('[data-action="ia-resumen"]'); await p.waitForFunction(() => !Object.values(window.EP.S.narrativas).some((n) => n.trabajando));
   ok('resumen redactado con IA comprobado', /Redactado por la IA/.test(await p.textContent('#drawer')));
   ok('sin errores de consola con IA', !p.errores.filter((x) => !/500/.test(x)).length, p.errores.slice(0, 3).join(' | '));
@@ -286,7 +292,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   await p.setInputFiles('#file-input', ruta); await p.waitForTimeout(500); await quieto(p);
   await clic(p, '[data-action="ob-rev-ok"]'); await clic(p, '[data-action="ob-finish"]');
   const fallos = [];
-  for (const v of ['resumen', 'equipos', 'referencias', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) { await ir(p, v); await p.waitForTimeout(100); const e = await estado(p); if (e.error || e.ancho > 0) fallos.push(v + ': ' + (e.error || 'scroll')); }
+  await labs(p);
+  for (const v of ['resumen', 'equipos', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) { await ir(p, v); await p.waitForTimeout(100); const e = await estado(p); if (e.error || e.ancho > 0) fallos.push(v + ': ' + (e.error || 'scroll')); }
   await fijarRol(p, 'pmo'); await ir(p, 'calidad'); const e = await estado(p); if (e.error) fallos.push('calidad: ' + e.error);
   const info = await A(p, () => ({ equipos: window.EP.S.vm.equipos.length, veredicto: window.EP.S.vm.dataCheck.veredicto, fiab: window.EP.S.vm.fiabilidad.nivel }));
   ok(`export ${nombre} de principio a fin`, !fallos.length && !p.errores.length, fallos.concat(p.errores).slice(0, 3).join(' | ') || `${info.equipos} equipos · ${info.veredicto} · fiabilidad ${info.fiab}`);
@@ -376,7 +383,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   let respuesta = JSON.stringify({ 'In Review': 'en_pruebas' });
   await p.route('https://api.anthropic.com/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ content: [{ type: 'text', text: respuesta }] }) }));
   await fijarRol(p, 'pmo');
-  await ir(p, 'ajustes'); await p.fill('#ia-clave', 'sk-ant-prueba'); await clic(p, '[data-action="ia-guardar"]');
+  await labs(p); await ir(p, 'ajustes'); await p.fill('#ia-clave', 'sk-ant-prueba'); await clic(p, '[data-action="ia-guardar"]');
   await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="mapeo"]').click()); await quieto(p);
   const pedir = async () => { await p.click('[data-action="ia-mapeo"]'); await p.waitForFunction(() => window.EP.S.iaEstado.mapeo !== 'trabajando'); await p.waitForTimeout(200); await quieto(p); };
   const leer = () => A(p, () => ({ ia: window.EP.S.cfg.mapeoIA || {}, valor: window.EP.S.vm.mapeo['In Review'], revisar: window.EP.P.porRevisar(window.EP.S.cfg, window.EP.S.vm.det).map((e) => e.nombre), aviso: window.EP.S.iaMapeoAviso }));
@@ -423,8 +430,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   const [descarga] = await Promise.all([p.waitForEvent('download'), p.click('[data-action="acu-descargar"]')]);
   ok('Acuerdos: diez acuerdos y se descargan', acu === 10 && /acuerdos-easyperformance\.md$/.test(descarga.suggestedFilename()), `${acu} · ${descarga.suggestedFilename()}`);
   await p.screenshot({ path: join(SALIDA, '53-acuerdos.png'), fullPage: true });
-  // Cortes: valor oficial congelado
-  await ir(p, 'cortes'); await quieto(p);
+  // Cortes (Labs): valor oficial congelado
+  await labs(p); await ir(p, 'cortes'); await quieto(p);
   ok('Cortes: cada corte dice que sus cifras son el valor oficial congelado', /valor oficial de este corte/.test(await A(p, () => document.getElementById('page').textContent)));
   // Acuerdos: el periodo acaba el domingo (como el documento de definiciones) y con un solo equipo no dice "0 equipos"
   await fijarRol(p, 'pmo'); await ir(p, 'fuentes'); await A(p, () => document.querySelector('[data-action="fuentes-tab"][data-tab="acuerdos"]').click()); await quieto(p);
@@ -450,7 +457,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   // Pregunta de coste: con coste y FTE el Resumen la responde con cifras, no "Sin datos"
   await A(p, () => { const S = window.EP.S; S.cfg.contexto = Object.assign({}, window.EP.P.contexto(S.cfg, S.det), { objetivos: ['speed', 'quality', 'predictability', 'cost'], hecho: true }); S.vm.equipos.forEach((e) => { S.cfg.fte = S.cfg.fte || {}; S.cfg.fte[e.nombre] = S.cfg.fte[e.nombre] || 5; S.cfg.coste = S.cfg.coste || {}; S.cfg.coste[e.nombre] = 6000; }); window.EP.recalcular(); }); 
   await fijarRol(p, 'direccion'); await ir(p, 'resumen'); await quieto(p);
-  const coste = await A(p, () => { const hay = window.EP.S.vm.equipos.some((e) => e.medidas.coste && e.medidas.coste.disponible); const fichas = [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((f) => f.textContent); const c = fichas.find((x) => /cuesta cada entrega/.test(x)); return { hay, c: c ? c.slice(0, 120) : null }; });
+  const coste = await A(p, () => { const hay = window.EP.S.vm.equipos.some((e) => e.medidas.coste && e.medidas.coste.disponible); const fichas = [...document.querySelectorAll('[data-tipo="pregunta"]')].map((f) => f.textContent); const c = fichas.find((x) => /cuesta cada entrega/.test(x)); return { hay, c: c ? c.slice(0, 120) : null }; });
   ok('pregunta de coste: responde cuando hay coste', coste.hay && coste.c && !/Sin datos/.test(coste.c), JSON.stringify(coste));
   ok('sin errores de consola en las mejoras de dirección', !p.errores.length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
@@ -568,7 +575,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
   {
     const p = await pagina(1280, 800);
     await cargar(p, 'sinTiempos'); await terminar(p); await ir(p, 'resumen'); await quieto(p);
-    const pr = await A(p, () => [...document.querySelectorAll('.ficha[data-tipo="pregunta"]')].map((x) => x.innerText.replace(/\s+/g, ' ')).find((x) => /ritmo de siempre/.test(x)) || '');
+    const pr = await A(p, () => [...document.querySelectorAll('[data-tipo="pregunta"]')].map((x) => x.innerText.replace(/\s+/g, ' ')).find((x) => /ritmo de siempre/.test(x)) || '');
     ok('sin tiempo en cada estado: "¿Vamos al ritmo de siempre?" responde "En parte"', /En parte/.test(pr) && /Sin datos de Tiempo de ciclo/.test(pr), pr.slice(0, 160));
     await p.context().close();
   }
@@ -602,7 +609,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     await clic(p, '[data-action="demo"]');
     const r = await A(p, () => {
       const malas = [];
-      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && /Fuera de rango/.test(window.EP.kit.estadoChip(m))) malas.push(e.nombre + ' ' + id); }));
+      window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.critico')) >= 0) malas.push(e.nombre + ' ' + id); }));
       // Lo marcado por un límite crítico fijo lleva el chip de límite, nunca "Fuera de rango"
       const conLimite = window.EP.S.vm.equipos.some((e) => Object.values(e.medidas).some((m) => m && m.disponible && m.estado === 'critico' && m.estadoPor === 'limite' && window.EP.kit.estadoChip(m).indexOf(window.EP.t('estado.limite.critico')) >= 0));
       return { malas, limite: conLimite };
@@ -644,12 +651,12 @@ const medirMaquetacion = () => {
         scrollH: document.documentElement.scrollWidth - innerWidth, lateral, botonesLateralFuera: fuera, base: getComputedStyle(document.body).fontSize };
     };
   const p = await pagina(1280, 720);
-  await clic(p, '[data-action="demo"]'); await fijarRol(p, 'pmo');
+  await clic(p, '[data-action="demo"]'); await fijarRol(p, 'pmo'); await labs(p);
   await A(p, () => document.querySelector('.toast')?.remove());
   for (const [w, h] of [[1280, 720], [1024, 768], [390, 844]]) {
     await p.setViewportSize({ width: w, height: h });
     const mal = [];
-    for (const v of ['resumen', 'equipos', 'referencias', 'epicas', 'calidad', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) {
+    for (const v of ['resumen', 'equipos', 'epicas', 'calidad', 'recomendaciones', 'iniciativas', 'cortes', 'fuentes', 'ajustes']) {
       await ir(p, v); await quieto(p);
       const r = await A(p, medirMaquetacion);
       if (r.nSolapes || r.nCortados || r.scrollH > 0 || r.botonesLateralFuera) mal.push(v + ': ' + JSON.stringify({ solapes: r.solapes.slice(0, 2), cortados: r.cortados.slice(0, 2), scrollH: r.scrollH, panel: r.botonesLateralFuera }));
@@ -677,7 +684,8 @@ const medirMaquetacion = () => {
     return p;
   };
   const recargar = async (p) => { await p.reload(); await p.waitForFunction(() => window.EP && window.EP.S); await p.waitForTimeout(800); await quieto(p); };
-  const subir = async (p, f) => { await p.setInputFiles('#file-input', f); await p.waitForTimeout(700); await quieto(p); await p.waitForTimeout(200); };
+  // Con datos ya cargados se pregunta si el export sustituye o se suma: aquí sustituye
+  const subir = async (p, f) => { await p.setInputFiles('#file-input', f); await p.waitForTimeout(700); await quieto(p); if (await p.$('[data-action="carga-sustituir"]')) await clic(p, '[data-action="carga-sustituir"]'); await p.waitForTimeout(200); };
   const empezar = async (p, f, rol = 'pmo') => {
     await subir(p, f);
     if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
@@ -770,7 +778,7 @@ const medirMaquetacion = () => {
     const r1 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: [] });
     const r2 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: { nombre: 'X', iniciativas: 'no' } });
     const r3 = await conCopia({ tipo: 'easyperformance-configuracion', cfg: { nombre: 'Con corte roto', iniciativas: [] }, cortes: [{ id: 'c1', huella: 'h', fechaDatos: 5, creado: 'x', equipos: {} }, { id: 'c2', huella: 'h2', fechaDatos: '2026-01-05T00:00:00.000Z', creado: '2026-01-06T00:00:00.000Z', equipos: {} }] });
-    await ir(b, 'cortes'); await quieto(b);
+    await labs(b); await ir(b, 'cortes'); await quieto(b);
     ok('copia mal formada: no cambia nada; un corte roto no entra y no rompe la página', r1.nombre === antesMala.nombre && r2.nombre === antesMala.nombre && r3.nombre === 'Con corte roto' && r3.cortes === antesMala.cortes && !r3.err && !(await A(b, () => window.EP.S.error)), JSON.stringify({ antesMala, r1, r2, r3 }));
     // Borrar todo en la carpeta que recogió los datos de antes: tampoco quedan los de antes
     const a3 = await abrirEn(ctx, copia('clienteA'));
@@ -948,7 +956,7 @@ const medirMaquetacion = () => {
   };
   {
     const p = await abrirVar('equipoTardio');
-    await ir(p, 'referencias'); await quieto(p);
+    await ir(p, 'resumen'); await quieto(p);
     const r = await A(p, (eq) => ({ sin: window.EP.S.vm.areaSin, n: window.EP.S.r.area.equipos[0].n, total: window.EP.S.r.modelo.equipos.filter((e) => e.nombre !== eq).reduce((s, e) => s + e.n, 0), texto: document.querySelector('#page').textContent }), EQUIPO_TARDIO);
     ok('área: sin el equipo que aún no tiene rango normal, y se dice', r.sin.indexOf(EQUIPO_TARDIO) >= 0 && r.n === r.total && r.texto.indexOf('Sin ' + EQUIPO_TARDIO) >= 0, JSON.stringify({ sin: r.sin, n: r.n, total: r.total }));
     ok('área: sin errores', !p.errores.length, p.errores.join(' | '));
@@ -988,21 +996,208 @@ const medirMaquetacion = () => {
   ok('semáforo: sin errores', !p.errores.length, p.errores.join(' | '));
   await p.context().close();
 }
+// ---------- 14. Cargar datos: otro export desde cualquier rol, sustituir o sumar, y un export malo no pisa el bueno ----------
 {
-  // El menú y la página de Baseline cuentan lo mismo (con un equipo que empezó tarde y otro con alerta)
+  const { variantes } = await import('../tests/variantes.ts');
+  const V = variantes();
+  const DS = join(RAIZ, 'datos-sinteticos');
+  const comoFich = (nombre) => V[nombre].ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }));
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-04-06.csv')); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  await labs(p); // la línea "desde los datos del..." y la página Cortes son de Labs
+  const boton = async () => A(p, () => { const b = document.querySelector('.sb-foot [data-action="import"]'); return !!b && b.offsetParent !== null; });
+  const vDir = await boton(); await fijarRol(p, 'equipo'); const vEq = await boton(); await fijarRol(p, 'pmo');
+  ok('cargar otro export: el botón está en todos los roles', vDir && vEq, JSON.stringify({ vDir, vEq }));
+  // Segundo export: se pregunta; "sumar" junta los dos, "sustituir" deja solo el nuevo
+  await p.setInputFiles('#file-input', join(DS, 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
+  const pregunta = !!(await p.$('[data-action="carga-sumar"]'));
+  await clic(p, '[data-action="carga-sumar"]');
+  const sumados = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  // El mismo nombre de fichero (Jira descarga todos igual) se suma con otro nombre, no sustituye
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-04-06.csv')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sumar"]');
+  const mismoNombre = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  ok('sumar un fichero con el mismo nombre: se suma con otro nombre', mismoNombre.length === 3 && mismoNombre.indexOf('jira-2026-04-06 (2).csv') >= 0, JSON.stringify(mismoNombre));
+  await p.setInputFiles('#file-input', join(DS, 'jira-2026-10-12-parte-a.csv')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  const sustituido = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  await ir(p, 'resumen'); await quieto(p);
+  const desde = await A(p, () => /Desde los datos del/.test(document.querySelector('#page').textContent));
+  ok('Resumen: dice qué ha cambiado desde la carga anterior', desde);
+  ok('otro export: se pregunta, "sumar" junta y "sustituir" deja solo el nuevo', pregunta && sumados.length === 2 && sustituido.length === 1 && /parte-a/.test(sustituido[0]), JSON.stringify({ sumados, sustituido }));
+  // Los mismos datos con otra configuración no crean un corte repetido; el corte actual no se puede borrar
+  const nCortes = await A(p, () => window.EP.S.cortes.length);
+  await A(p, () => { const S = window.EP.S; S.cfg.fte = Object.assign({}, S.cfg.fte, { Pagos: 4 }); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.cortes.capturar(false, true); });
+  const nCortes2 = await A(p, () => window.EP.S.cortes.length);
+  await ir(p, 'cortes'); await quieto(p);
+  const borrarActual = await A(p, () => [...document.querySelectorAll('.rrow.corte')].filter((r) => r.querySelector('.chip.info')).some((r) => r.querySelector('[data-action="corte-borrar"]')));
+  ok('cortes: otra configuración no crea un corte repetido y el actual no se borra', nCortes2 === nCortes && !borrarActual, JSON.stringify({ nCortes, nCortes2, borrarActual }));
+  // Un export que no se puede medir: no se guarda, no deja corte, no tapa Iniciativas y se puede volver a los datos de antes
+  const antesIdb = await A(p, async () => (await window.EP.idbGet('ficheros')).map((f) => f.nombre));
+  await p.setInputFiles('#file-input', comoFich('soloAbiertas')); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  // Otro export malo seguido, y entrar y salir de la demo: los buenos siguen guardados
+  await p.setInputFiles('#file-input', comoFich('soloAbiertas').map((f) => Object.assign({}, f, { name: 'otro-' + f.name }))); await p.waitForTimeout(500); await quieto(p);
+  await clic(p, '[data-action="carga-sustituir"]');
+  await A(p, () => { const b = document.createElement('button'); b.dataset.action = 'demo'; document.body.appendChild(b); b.click(); b.remove(); }); await p.waitForTimeout(300); await quieto(p);
+  await clic(p, '[data-action="demo-exit"]');
+  const malo = await A(p, async () => ({ aviso: !!document.querySelector('[data-action="carga-volver"]'), idb: (await window.EP.idbGet('ficheros')).map((f) => f.nombre), cortes: window.EP.S.cortes.length }));
+  await ir(p, 'iniciativas'); await quieto(p);
+  const iniVisible = await A(p, () => !!document.querySelector('#page [data-action="ini-nueva"], #page-actions [data-action="ini-nueva"]'));
+  await clic(p, '[data-action="carga-volver"]');
+  const vuelta = await A(p, () => window.EP.S.ficheros.map((f) => f.nombre));
+  ok('export que no se puede medir: no pisa los ficheros buenos ni deja corte, Iniciativas se ve y se vuelve a lo anterior', malo.aviso && JSON.stringify(malo.idb) === JSON.stringify(antesIdb) && malo.cortes === nCortes && iniVisible && JSON.stringify(vuelta) === JSON.stringify(antesIdb), JSON.stringify({ malo, antesIdb, iniVisible, vuelta }));
+  // Equipos nuevos: con equipos elegidos, un equipo que llega después se avisa y se puede medir; sus iniciativas no se esconden
+  await A(p, () => { const S = window.EP.S; S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = S.vm.equiposMedidos.slice(0, 2); S.cfg.equiposDescartados = []; S.cfg.iniciativas = (S.cfg.iniciativas || []).concat([{ id: 'ini-fuera', nombre: 'De un equipo fuera', equipos: [S.vm.equiposMedidos[3]], fecha_inicio: '2026-08-03', fecha_fin: null, medidas_objetivo: [{ medida: 'ciclo', direccion: 'bajar' }], estado: 'planificada', origen: 'propia' }]); window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
+  await quieto(p);
+  const nuevos = await A(p, () => ({ lista: window.EP.S.vm.fuera.nuevos, aviso: !!document.querySelector('[data-action="eq-nuevos-anadir"]') }));
+  await ir(p, 'iniciativas'); await quieto(p);
+  const avisoIni = await A(p, () => /De un equipo fuera/.test(document.querySelector('#page').textContent));
+  await ir(p, 'resumen'); await quieto(p);
+  await clic(p, '[data-action="eq-nuevos-anadir"]');
+  const medidos = await A(p, () => window.EP.S.vm.equiposMedidos.length);
+  ok('equipos nuevos: se avisan, se pueden medir y sus iniciativas no se esconden', nuevos.lista.length >= 1 && nuevos.aviso && avisoIni && medidos >= 3, JSON.stringify({ nuevos, avisoIni, medidos }));
+  // Lo que queda fuera de la medición se dice (equipos no medidos y tareas sin equipo)
+  await A(p, () => { const S = window.EP.S, fuera = S.vm.equiposMedidos[S.vm.equiposMedidos.length - 1]; S.cfg.equipos = S.vm.equiposMedidos.slice(0, -1); S.cfg.equiposDescartados = [fuera]; window.EP.guardarCfg(); window.EP.recalcular(); window.EP.go('resumen'); });
+  await quieto(p);
+  const fueraTxt = await A(p, () => ({ f: window.EP.S.vm.fuera, txt: /Fuera de la medición/.test(document.querySelector('#page').textContent), nuevo: !!document.querySelector('[data-action="eq-nuevos-anadir"]') }));
+  ok('fuera de la medición: se dice qué equipos no se miden y no se ofrecen como nuevos si se descartaron', fueraTxt.txt && !fueraTxt.nuevo && fueraTxt.f.fuera.length === 1, JSON.stringify(fueraTxt));
+  ok('cargar datos: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// ---------- 15. Personalizar y roles: solo indicadores medibles; el rol Equipo ve y crea lo de su equipo ----------
+{
   const { variantes } = await import('../tests/variantes.ts');
   const p = await pagina(1280, 800);
-  await p.setInputFiles('#file-input', variantes().equipoTardio.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
+  await p.setInputFiles('#file-input', variantes().sinTiempos.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  // Un indicador elegido que no se puede medir (tiempo de ciclo sin tiempos): sale marcado con el motivo, cuenta y se puede cambiar
+  const r = await A(p, () => {
+    const EP = window.EP, S = EP.S; S.prefs.byRole.direccion = ['ciclo', 'entregas', 'bugs', 'wip']; EP.guardarPrefs();
+    EP.openDrill({ kind: 'personalizar' });
+    const marcados = [...document.querySelectorAll('input[data-change="pref-tile"]:checked')].map((x) => x.value);
+    const fila = [...document.querySelectorAll('#drawer label.check')].filter((l) => l.querySelector('input').value === 'ciclo')[0];
+    return { medible: EP.kit.medible('ciclo'), marcados, cuenta: /Elegidos: 4 de 4/.test(document.querySelector('#drawer').textContent), motivo: fila ? /no se puede medir/.test(fila.textContent) : false };
+  });
+  const cambio = await A(p, () => {
+    document.querySelector('input[data-change="pref-tile"][value="ciclo"]').click();
+    const libre = [...document.querySelectorAll('input[data-change="pref-tile"]:not(:checked)')].filter((x) => window.EP.kit.medible(x.value) && x.value !== 'ciclo')[0]; libre.click();
+    return window.EP.kit.destacados();
+  });
+  ok('Personalizar: lo que cuenta coincide con lo marcado; un indicador que no se puede medir lo dice y se cambia por otro', !r.medible && r.marcados.length === 4 && r.cuenta && r.motivo && cambio.length === 4 && cambio.indexOf('ciclo') < 0, JSON.stringify({ r, cambio }));
+  await A(p, () => window.EP.openDrill(null));
+  // Rol Equipo: no hereda "Comparar equipos" y solo puede crear iniciativas de su equipo
+  await fijarRol(p, 'pmo');
+  await ir(p, 'equipos'); await quieto(p);
+  await A(p, () => { const b = document.querySelector('[data-action="team-tab"][data-team="__comparar"]'); if (b) b.click(); }); await quieto(p);
+  await fijarRol(p, 'equipo');
+  await ir(p, 'equipos'); await quieto(p);
+  const titulo = await A(p, () => document.querySelector('#page-title').textContent);
+  await ir(p, 'iniciativas'); await quieto(p);
+  await clic(p, '#page-actions [data-action="ini-nueva"]');
+  const equiposForm = await A(p, () => [...document.querySelectorAll('#form-ini input[name="equipos"]')].map((x) => x.value));
+  ok('rol Equipo: no sale "Comparar equipos" y la iniciativa solo puede ser de su equipo', !/Comparar/.test(titulo) && equiposForm.length === 1, JSON.stringify({ titulo, equiposForm }));
+  ok('Personalizar y roles: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// ---------- 16. Lenguaje: un solo término (línea base), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
+{
+  const p = await pagina(1280, 720);
+  await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  // Ninguna página dice "lo normal", "Baseline", "rango habitual", "franja", "Context" ni "KPI"
+  const malas = [];
+  for (const rol of ['direccion', 'pmo', 'equipo']) {
+    await fijarRol(p, rol);
+    for (const v of await A(p, () => window.EP.POR_ROL[window.EP.S.role])) {
+      await ir(p, v); await quieto(p);
+      const txt = await A(p, () => document.querySelector('.content').innerText);
+      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
+      if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
+    }
+  }
+  ok('lenguaje: un solo término (línea base) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
+  await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
+  const unidades = await A(p, () => [...document.querySelectorAll('.tile[data-medida]')].map((x) => ({ id: x.dataset.medida, u: (x.querySelector('.t-unit') || {}).textContent || '' })));
+  ok('cifras con unidad y con las semanas que miran', unidades.length > 0 && unidades.every((x) => /semana/.test(x.u)), JSON.stringify(unidades));
+  await A(p, () => window.EP.openDrill({ kind: 'ayuda' }));
+  const ayuda = await A(p, () => ({ pregunta: /Esta página responde/.test(document.querySelector('#drawer').textContent), etiquetas: document.querySelectorAll('#drawer .leyenda > div').length }));
+  await A(p, () => window.EP.openDrill(null));
+  ok('"Cómo leerlo": qué responde la página y todas las etiquetas', ayuda.pregunta && ayuda.etiquetas >= 10, JSON.stringify(ayuda));
+  await ir(p, 'resumen'); await quieto(p);
+  const pantalla = await A(p, () => ({ equipos: document.querySelector('.fichas.cols-2').getBoundingClientRect().top, fab: !document.getElementById('assistant-fab').classList.contains('hidden') }));
+  ok('Resumen: los equipos empiezan en la primera pantalla (1280 x 720) y sin clave de IA no hay botón Preguntar', pantalla.equipos < 720 && !pantalla.fab, JSON.stringify(pantalla));
+  ok('lenguaje: sin errores', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.join(' | '));
+  await p.context().close();
+}
+
+// ---------- 17. Navegación: el mismo menú corto para todos, Qué hacer y Datos con pestañas, Compartir y Labs ----------
+{
+  const p = await pagina(1280, 720);
+  await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
-  await ir(p, 'referencias'); await quieto(p);
-  const b = await A(p, () => {
-    const enMenu = (document.querySelector('#nav [data-view="referencias"]') || {}).textContent || '';
-    const n = window.EP.visibles().filter(window.EP.kit.baselineProvisional).length;
-    return { enMenu: enMenu.replace(/\s+/g, ' ').trim(), n };
-  });
-  ok('Baseline: el menú cuenta los mismos equipos provisionales que la página', b.n > 0 && new RegExp('(^|\\D)' + b.n + '(\\D|$)').test(b.enMenu), JSON.stringify(b));
-  ok('Baseline: sin errores', !p.errores.length, p.errores.join(' | '));
+  // Primera visita: recorrido de tres pasos (Resumen, Equipos, Qué hacer) que se puede terminar
+  const pasos = [];
+  for (let i = 0; i < 3; i++) { pasos.push(await A(p, () => ({ v: window.EP.S.view, paso: (document.querySelector('.recorrido .tiny') || {}).textContent || '' }))); await clic(p, '[data-action="recorrido-sig"]'); }
+  const trasRecorrido = await A(p, () => ({ hay: !!document.querySelector('.recorrido'), hecho: !!window.EP.S.prefs.recorridoHecho }));
+  ok('recorrido de primera visita: Resumen, Equipos y Qué hacer, y no vuelve a salir', pasos.map((x) => x.v).join(',') === 'resumen,equipos,recomendaciones' && pasos.every((x, i) => x.paso.indexOf(String(i + 1)) >= 0) && !trasRecorrido.hay && trasRecorrido.hecho, JSON.stringify({ pasos, trasRecorrido }));
+  await ir(p, 'resumen'); await quieto(p);
+  const menu = () => A(p, () => [...document.querySelectorAll('#nav button')].filter((b) => !b.classList.contains('hidden')).map((b) => b.dataset.view));
+  const menus = {};
+  for (const rol of ['direccion', 'pmo', 'equipo']) { await fijarRol(p, rol); menus[rol] = (await menu()).join(','); }
+  ok('menú: el mismo para los tres roles, cinco entradas y Ajustes; el PMO empieza en el Resumen', pasos[0].v === 'resumen' && menus.direccion === menus.pmo && menus.pmo === menus.equipo && menus.pmo.split(',').length <= 6 && menus.pmo.indexOf('cortes') < 0 && menus.pmo.indexOf('referencias') < 0, JSON.stringify({ menus }));
+  await fijarRol(p, 'pmo');
+  await ir(p, 'recomendaciones'); await quieto(p);
+  const tabsQh = await A(p, () => [...document.querySelectorAll('.sub-tabs .tab')].map((x) => x.dataset.view).join(','));
+  await ir(p, 'calidad'); await quieto(p);
+  const tabsDatos = await A(p, () => [...document.querySelectorAll('.sub-tabs .tab')].map((x) => x.dataset.view).join(','));
+  await ir(p, 'fuentes'); await quieto(p);
+  const marcado = await A(p, () => document.querySelector('#nav button.active').dataset.view);
+  ok('Qué hacer y Datos: dos pestañas cada uno, y el menú marca su entrada', tabsQh === 'recomendaciones,iniciativas' && tabsDatos === 'calidad,fuentes' && marcado === 'calidad', JSON.stringify({ tabsQh, tabsDatos, marcado }));
+  await ir(p, 'resumen'); await quieto(p);
+  await clic(p, '#page-actions [data-kind="compartir"]');
+  const compartir = await A(p, () => [...document.querySelectorAll('#drawer .compartir')].map((x) => x.dataset.action).join(','));
+  await A(p, () => window.EP.openDrill(null));
+  const area = await A(p, () => /Toda el área/.test(document.querySelector('#page').textContent));
+  ok('Compartir junta presentar, texto, imprimir y documentos; el Resumen enseña toda el área', compartir === 'present,drill,print,exp-docx' && area, JSON.stringify({ compartir, area }));
+  // Labs: apagado, ni Cortes ni IA; encendido, aparecen
+  await ir(p, 'ajustes'); await quieto(p);
+  const sinLabs = await A(p, () => ({ ia: !!document.getElementById('ia-clave'), cortes: !document.querySelector('#nav [data-view="cortes"]').classList.contains('hidden') }));
+  await A(p, () => document.querySelector('input[data-change="labs"]').click()); await quieto(p);
+  const conLabs = await A(p, () => ({ ia: !!document.getElementById('ia-clave'), cortes: !document.querySelector('#nav [data-view="cortes"]').classList.contains('hidden') }));
+  ok('Labs: apagado no se ven IA ni Cortes; encendido, sí', !sinLabs.ia && !sinLabs.cortes && conLabs.ia && conLabs.cortes, JSON.stringify({ sinLabs, conLabs }));
+  // Con Labs apagado: el Resumen no enlaza a Cortes, Cortes no se abre y el asistente se cierra
+  await A(p, () => { window.EP.S.chat.open = true; window.EP.render(); });
+  const chatAntes = await A(p, () => !document.getElementById('assistant').classList.contains('hidden'));
+  await A(p, () => document.querySelector('input[data-change="labs"]').click()); await quieto(p);
+  await ir(p, 'resumen'); await quieto(p);
+  const sinCortes = await A(p, () => ({ linea: !!document.querySelector('#page [data-view="cortes"]'), chat: !document.getElementById('assistant').classList.contains('hidden'), abierto: window.EP.S.chat.open }));
+  await ir(p, 'cortes'); await quieto(p);
+  const vistaCortes = await A(p, () => window.EP.S.view);
+  ok('Labs apagado: sin enlace a Cortes, Cortes no se abre y el asistente se cierra', chatAntes && !sinCortes.linea && !sinCortes.chat && !sinCortes.abierto && vistaCortes === 'resumen', JSON.stringify({ chatAntes, sinCortes, vistaCortes }));
+  // El recorrido: ir a otra página lo termina y no vuelve a salir fuera de contexto
+  await ir(p, 'ajustes'); await quieto(p); await clic(p, '[data-action="recorrido-ver"]');
+  await clic(p, '[data-action="recorrido-sig"]'); // paso 2: Equipos
+  await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
+  const fueraDeSitio = await A(p, () => ({ tarjeta: !!document.querySelector('.recorrido'), paso: window.EP.S.recorrido }));
+  ok('recorrido: cambiar de rol o de página a mitad lo termina', !fueraDeSitio.tarjeta && !fueraDeSitio.paso, JSON.stringify(fueraDeSitio));
+  // Al recargar, cada rol empieza en su página (el recorrido ya está visto)
+  await fijarRol(p, 'pmo'); await p.reload(); await p.waitForTimeout(500); await quieto(p);
+  const inicioPmo = await A(p, () => ({ v: window.EP.S.view, rec: window.EP.S.recorrido || 0 }));
+  ok('al recargar, el PMO empieza en el Resumen y no vuelve el recorrido', inicioPmo.v === 'resumen' && !inicioPmo.rec, JSON.stringify(inicioPmo));
+  // Pestañas: se marcan como página actual y el foco se queda en la elegida
+  await ir(p, 'recomendaciones'); await quieto(p);
+  await p.focus('.sub-tabs [data-view="iniciativas"]'); await p.keyboard.press('Enter'); await p.waitForTimeout(200); await quieto(p);
+  const foco = await A(p, () => ({ v: window.EP.S.view, foco: document.activeElement && document.activeElement.dataset.view, actual: (document.querySelector('.sub-tabs [aria-current="page"]') || {}).dataset?.view, titulo: document.querySelector('#page-title') ? document.querySelector('#page-title').textContent : '' }));
+  ok('pestañas: Iniciativas se marca, conserva el foco y lleva el título de Qué hacer', foco.v === 'iniciativas' && foco.foco === 'iniciativas' && foco.actual === 'iniciativas' && foco.titulo === 'Qué hacer', JSON.stringify(foco));
+  ok('navegación: sin errores', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.join(' | '));
   await p.context().close();
 }
 
