@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>easyperformance</title>
+<style>
+/*ESTILOS*/
+</style>
+</head>
+<body>
+<div id="onboarding" class="screen hidden"></div>
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="sb-brand"><span class="logo">easyperformance</span><span class="sb-tag" data-t="marca.tag"></span></div>
+    <nav class="sb-nav" id="nav">
+      <div class="sb-group" data-t="nav.grupo.analisis"></div>
+      <button data-action="go" data-view="resumen"></button>
+      <button data-action="go" data-view="equipos"></button>
+      <button data-action="go" data-view="referencias"></button>
+      <button data-action="go" data-view="epicas"></button>
+      <button data-action="go" data-view="calidad"></button>
+      <button data-action="go" data-view="recomendaciones"></button>
+      <button data-action="go" data-view="iniciativas"></button>
+      <button data-action="go" data-view="cortes"></button>
+      <div class="sb-group" data-t="nav.grupo.config"></div>
+      <button data-action="go" data-view="fuentes"></button>
+      <button data-action="go" data-view="ajustes"></button>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-role"><span class="sb-label" data-t="rol.vistaPara"></span><div class="seg" id="role-seg"><button data-action="set-role" data-role="direccion"></button><button data-action="set-role" data-role="pmo"></button><button data-action="set-role" data-role="equipo"></button></div></div>
+      <div class="sb-lang"><span class="sb-label" data-t="idioma.titulo"></span><div class="seg" id="lang-seg"><button data-action="set-lang" data-lang="es">ES</button><button data-action="set-lang" data-lang="en">EN</button></div></div>
+      <button class="sb-link" data-action="present" data-t="presentar.abrir"></button>
+    </div>
+  </aside>
+  <div class="content">
+    <div class="demo-band hidden" id="demo-band"></div>
+    <div class="page-head"><div><h1 id="page-title"></h1><div class="muted small" id="page-sub"></div></div><div class="row" id="page-actions"></div></div>
+    <div id="page"></div>
+  </div>
+</div>
+<div id="drawer" class="hidden"></div>
+<button id="assistant-fab" class="fab hidden" data-chat="open"></button>
+<div id="assistant" class="hidden"></div>
+<div id="present" class="hidden"></div>
+<div class="toast hidden" role="status" aria-live="polite"></div>
+<div id="busy" class="busy hidden"><div><span class="spinner"></span><span id="busy-text"></span></div></div>
+<input type="file" id="file-input" multiple accept=".csv,.xls,.xlsx,.htm,.html,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden">
+<script type="text/plain" id="demo-csv">/*DEMO*/</script>
+<script type="application/json" id="demo-cliente">/*DEMO_CLIENTE*/</script>
+<script>window.EASY_PERFORMANCE_EXPORTS = null;</script>
+<!-- El script actualizar deja aquí los exports de la carpeta. Si no existe, no pasa nada. -->
+<script src="exports/datos.js" onerror="window.EASY_PERFORMANCE_SIN_DATOSJS = true"></script>
+<script>
+/*NUCLEO*/
+</script>
+<script>
+/*TEXTOS*/
+</script>
+<script>
+/*APP*/
+</script>
+</body>
+</html>

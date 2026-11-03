@@ -1,8 +1,8 @@
 {
-  "name": "easy-performance-acelerador",
+  "name": "easy-performance",
   "version": "0.1.0",
   "private": true,
-  "description": "Easy Performance v1: acelerador del consultor para medir y mejorar la productividad de equipos de desarrollo",
+  "description": "Easy Performance v3: medir equipos de desarrollo desde exports de Jira, Azure DevOps y GitLab, con baseline por equipo",
   "type": "module",
   "engines": {
     "node": ">=22.18"
@@ -18,7 +18,9 @@
     "datos-aseguradora": "TZ=Europe/Madrid node herramientas/generar-sinteticos-aseguradora.ts",
     "web": "TZ=Europe/Madrid node web/construir.ts",
     "verificar-web": "npm run web && node web/verificar.mjs",
-    "evaluar-ia": "TZ=Europe/Madrid node herramientas/evaluar-ia.ts"
+    "evaluar-ia": "TZ=Europe/Madrid node herramientas/evaluar-ia.ts",
+    "web-v3": "TZ=Europe/Madrid node web-v3/construir.ts",
+    "verificar-web-v3": "npm run web-v3 && node web-v3/verificar.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

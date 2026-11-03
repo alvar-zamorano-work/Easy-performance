@@ -1,6 +1,7 @@
 // Iniciativas: antes y después con control (plan, apartado 8). Diferencia de diferencias simple.
 // No es un experimento controlado: indica si merece la pena seguir, no demuestra la causa.
 
+import { Tx } from './idioma.ts';
 import { DIA, cuantil, desv, sumarDias } from './util.ts';
 import type { Preparacion } from './calcular.ts';
 import type { Derivada } from './tipos.ts';
@@ -9,7 +10,7 @@ import type { Iniciativa, MedidaObjetivo } from './modelo.ts';
 export const LATENCIA_DIAS = 14;
 /** Medidas que se pueden evaluar en una iniciativa y semanas de su ventana. */
 export const MEDIDAS_INICIATIVA: Record<string, { semanas: number; formato: 'dias' | 'pct' | 'num' }> = {
-  ciclo: { semanas: 4, formato: 'dias' }, total: { semanas: 4, formato: 'dias' }, entregas: { semanas: 4, formato: 'num' },
+  ciclo: { semanas: 4, formato: 'dias' }, total: { semanas: 4, formato: 'dias' }, entregas: { semanas: 4, formato: 'num' }, bugs: { semanas: 4, formato: 'num' },
   espera: { semanas: 8, formato: 'pct' }, retrabajo: { semanas: 8, formato: 'pct' }, errores: { semanas: 8, formato: 'pct' },
   reabiertas: { semanas: 8, formato: 'pct' }, bloqueo: { semanas: 8, formato: 'pct' }, agent_readiness: { semanas: 8, formato: 'pct' },
 };
@@ -44,6 +45,7 @@ export function medidaEnVentana(medida: string, items: Derivada[], v: Ventana, l
     case 'ciclo': { const c = terminadas.filter((d) => d.ciclo != null).map((d) => d.ciclo!); return { valor: c.length >= 5 ? cuantil(c, 0.85) : null, n: c.length }; }
     case 'total': { const c = terminadas.map((d) => d.total!); return { valor: c.length >= 5 ? cuantil(c, 0.85) : null, n: c.length }; }
     case 'entregas': return { valor: semanas > 0 ? terminadas.length / semanas : null, n: terminadas.length };
+    case 'bugs': { const b = items.filter((d) => d.t.tipo === 'error' && !d.descartada && enVentana(d.t.fechas.creada, v)); return { valor: semanas > 0 ? b.length / semanas : null, n: b.length }; }
     case 'espera': {
       const c = terminadas.filter((d) => d.ciclo != null);
       let e = 0, t = 0;
@@ -75,12 +77,12 @@ export function evaluarIniciativa(ini: Iniciativa, p: Preparacion): EvaluacionIn
   const resultados = ini.medidas_objetivo.map((mo: MedidaObjetivo): ResultadoMedida => {
     const def = MEDIDAS_INICIATIVA[mo.medida];
     const base = { medida: mo.medida, direccion: mo.direccion };
-    if (!def) return { ...base, disponible: false, motivo: 'This measure cannot be evaluated in an initiative.' };
-    if (!participan.length) return { ...base, disponible: false, motivo: 'The teams in the initiative are not in the data.' };
+    if (!def) return { ...base, disponible: false, motivo: Tx('This measure cannot be evaluated in an initiative.', 'Esta medida no se puede evaluar en una iniciativa.') };
+    if (!participan.length) return { ...base, disponible: false, motivo: Tx('The teams in the initiative are not in the data.', 'Los equipos de la iniciativa no están en los datos.') };
     const W = def.semanas * 7;
     const antes: Ventana = { desde: sumarDias(inicio, -W), hasta: inicio };
     const desdeDespues = sumarDias(inicio, LATENCIA_DIAS);
-    if (desdeDespues >= limite) return { ...base, disponible: false, motivo: 'No data yet after the two-week latency.' };
+    if (desdeDespues >= limite) return { ...base, disponible: false, motivo: Tx('No data yet after the two-week latency.', 'Aún no hay datos después de la latencia de dos semanas.') };
     const hastaDespues = new Date(Math.min(sumarDias(desdeDespues, W).getTime(), limite.getTime()));
     const despues: Ventana = { desde: desdeDespues, hasta: hastaDespues };
     const completa = hastaDespues.getTime() - desdeDespues.getTime() >= W * DIA - 36e5;
@@ -106,7 +108,7 @@ export function evaluarIniciativa(ini: Iniciativa, p: Preparacion): EvaluacionIn
     const enDireccion = efecto == null ? null : (mo.direccion === 'bajar' ? efecto < 0 : efecto > 0);
     return {
       ...base, disponible: a.valor != null && d.valor != null,
-      ...(a.valor == null || d.valor == null ? { motivo: 'Not enough tasks in one of the two windows.' } : {}),
+      ...(a.valor == null || d.valor == null ? { motivo: Tx('Not enough tasks in one of the two windows.', 'No hay tareas suficientes en alguna de las dos ventanas.') } : {}),
       antes: a.valor, despues: d.valor, control: control.length ? { antes: ca.valor, despues: cd.valor } : null,
       efecto, confianza, ruido, enDireccionEsperada: enDireccion,
       muestra: { antes: a.n, despues: d.n, controlAntes: ca.n, controlDespues: cd.n },

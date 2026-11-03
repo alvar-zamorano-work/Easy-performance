@@ -1,0 +1,25 @@
+{
+  "definicion": "Un ticket está listo para un agente si alguien ajeno al equipo podría completarlo sin preguntar.",
+  "criterios": {
+    "contenido": {
+      "nombre": "Descripción con contenido",
+      "como": "La descripción tiene al menos 40 palabras y no se limita a repetir el título."
+    },
+    "criterios": {
+      "nombre": "Criterios de aceptación",
+      "como": "Hay una sección o un patrón reconocible: criterios de aceptación, dado / cuando / entonces, lista con casillas o frases que empiezan por debe / no debe."
+    },
+    "acotado": {
+      "nombre": "Alcance acotado",
+      "como": "No es una épica y su estimación (o su duración, si no tiene estimación) no pasa del límite."
+    },
+    "referencias": {
+      "nombre": "Referencias",
+      "como": "Tiene al menos un enlace, una clave de otro ticket, un adjunto o una ruta de código o de diseño."
+    },
+    "sinDependencias": {
+      "nombre": "Sin dependencias abiertas",
+      "como": "No está bloqueado y no dice que depende de otra cosa o que está bloqueado por algo."
+    }
+  }
+}

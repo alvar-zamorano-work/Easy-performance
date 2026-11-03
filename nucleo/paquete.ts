@@ -2,6 +2,7 @@
 // Nunca lleva títulos, descripciones, claves de ticket, nombres de personas ni comentarios;
 // comprobarPaquete lo verifica antes de exportar.
 
+import { Tx } from './idioma.ts';
 import { CATALOGO, type Catalogo } from './catalogo.ts';
 import { RUBRICA, agregar, CRITERIOS_AR, type AgregadoAR } from './agent-readiness.ts';
 import type { ClienteV2 } from './cliente.ts';
@@ -175,23 +176,23 @@ const SECCIONES = ['version', 'generado', 'cliente', 'equipos', 'medidas', 'caso
 /** Problemas que impiden exportar el paquete. Lista vacía = se puede exportar. */
 export function comprobarPaquete(p: unknown, opciones: { nombresProhibidos?: string[] } = {}): string[] {
   const problemas: string[] = [];
-  if (!p || typeof p !== 'object' || Array.isArray(p)) return ['The package is not an object.'];
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return [Tx('The package is not an object.', 'El paquete no es un objeto.')];
   const claves = Object.keys(p);
-  SECCIONES.forEach((s) => { if (!claves.includes(s)) problemas.push(`Missing section "${s}".`); });
-  claves.forEach((k) => { if (!SECCIONES.includes(k)) problemas.push(`Unexpected section: "${k}".`); });
+  SECCIONES.forEach((s) => { if (!claves.includes(s)) problemas.push(Tx(`Missing section "${s}".`, `Falta la sección "${s}".`)); });
+  claves.forEach((k) => { if (!SECCIONES.includes(k)) problemas.push(Tx(`Unexpected section: "${k}".`, `Sección no prevista: "${k}".`)); });
   const prohibidos = (opciones.nombresProhibidos || []).filter(Boolean);
   const recorrer = (v: unknown, ruta: string) => {
     if (typeof v === 'string') {
-      if (CLAVE_TICKET.test(v)) problemas.push(`${ruta}: looks like a ticket key ("${v.match(CLAVE_TICKET)![0]}").`);
-      if (v.length > TEXTO_LARGO && !ruta.startsWith('contexto.')) problemas.push(`${ruta}: text too long; it may be a ticket description.`);
-      for (const n of prohibidos) if (v.includes(n)) problemas.push(`${ruta}: contains a name that must not be shared ("${n}").`);
+      if (CLAVE_TICKET.test(v)) problemas.push(Tx(`${ruta}: looks like a ticket key ("${v.match(CLAVE_TICKET)![0]}").`, `${ruta}: parece una clave de ticket ("${v.match(CLAVE_TICKET)![0]}").`));
+      if (v.length > TEXTO_LARGO && !ruta.startsWith('contexto.')) problemas.push(Tx(`${ruta}: text too long; it may be a ticket description.`, `${ruta}: texto demasiado largo; puede ser una descripción de ticket.`));
+      for (const n of prohibidos) if (v.includes(n)) problemas.push(Tx(`${ruta}: contains a name that must not be shared ("${n}").`, `${ruta}: contiene un nombre que no puede salir ("${n}").`));
       return;
     }
     if (Array.isArray(v)) { v.forEach((w, i) => recorrer(w, `${ruta}[${i}]`)); return; }
     if (v && typeof v === 'object') {
       for (const [k, w] of Object.entries(v)) {
-        if (CAMPOS_PROHIBIDOS.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: field that can never go in the package.`);
-        if (CLAVE_TICKET.test(k)) problemas.push(`${ruta ? ruta + '.' : ''}${k}: looks like a ticket key.`);
+        if (CAMPOS_PROHIBIDOS.test(k)) problemas.push(Tx(`${ruta ? ruta + '.' : ''}${k}: field that can never go in the package.`, `${ruta ? ruta + '.' : ''}${k}: campo que nunca puede ir en el paquete.`));
+        if (CLAVE_TICKET.test(k)) problemas.push(Tx(`${ruta ? ruta + '.' : ''}${k}: looks like a ticket key.`, `${ruta ? ruta + '.' : ''}${k}: parece una clave de ticket.`));
         recorrer(w, ruta ? `${ruta}.${k}` : k);
       }
     }

@@ -48,6 +48,8 @@ export interface Deteccion {
   equipoRecomendado: string;
   haySprints: boolean;
   sprintsComoFecha: boolean;
+  /** El export solo trae el sprint actual de cada tarea (Azure DevOps, GitLab): no se puede medir el arrastre. */
+  sprintsSoloActual?: boolean;
 }
 
 export interface ConfigCalculo {
@@ -56,6 +58,14 @@ export interface ConfigCalculo {
   semanasReferencia?: number;
   /** Mapeo del cliente: estado de origen -> estado normalizado. Manda sobre la propuesta. */
   mapeoEstados?: Record<string, EstadoNormalizado>;
+  /**
+   * Estados de origen que nadie ha revisado, si la página los sabe (confirmados, propuestos por IA...).
+   * Manda sobre la regla por defecto (no reconocido por nombre y sin mapeo del cliente), que no distingue
+   * un mapeo confirmado de uno solo propuesto.
+   */
+  estadosPorRevisar?: string[];
+  /** El cliente ha decidido no usar estimación: la comprobación de historias estimadas no aplica. */
+  sinEstimacion?: boolean;
   /** Mapeo de la v0 (estado -> etapa). Solo para leer cliente.json antiguos; se convierte a mapeoEstados. */
   etapas?: Record<string, Etapa>;
   campoEquipo?: string;
@@ -72,6 +82,8 @@ export interface ConfigCalculo {
 export interface Derivada {
   t: Tarea;
   equipo: string;
+  /** Equipo de la tarea antes de unir el área como un solo equipo (igual a "equipo" fuera de la visión del área). */
+  equipoOrigen: string;
   estado: EstadoNormalizado;
   etapa: Etapa;
   cursoMs: number;
@@ -110,7 +122,16 @@ export interface MedidaCalculada {
   tendencia?: Tendencia | null;
   estado?: Semaforo;
   estadoTexto?: string;
+  /** Qué decide el estado: la banda de lo normal del equipo, un límite del catálogo o uno fijado para el equipo. */
+  estadoPor?: EstadoPor;
+  /** El límite que manda cuando estadoPor es "limite" o "limite_equipo". */
+  limite?: number | null;
+  /** Referencia con 12 semanas (establecida), con 6 a 11 (provisional) o sin banda todavía. */
+  referencia?: EstadoReferencia;
 }
+
+export type EstadoPor = 'banda' | 'limite' | 'limite_equipo';
+export type EstadoReferencia = 'establecida' | 'provisional' | 'sin';
 
 export interface Series {
   entregas: number[];
@@ -121,6 +142,9 @@ export interface Series {
   velocidad: number[];
   pendienteEdad: (number | null)[];
   entregasMedia: (number | null)[];
+  /** Bugs creados cada semana (sin descartados) y su media de 4 semanas. */
+  bugsEntrada: number[];
+  bugsMedia: (number | null)[];
   ciclo85: (number | null)[];
   ciclo50: (number | null)[];
   total85: (number | null)[];

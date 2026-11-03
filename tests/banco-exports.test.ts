@@ -114,7 +114,7 @@ test('estados propios del cliente: se proponen bien y el resultado no cambia', (
 
 test('ficheros que no son un export de Jira: error claro y ninguna tarea', () => {
   const casos: [FicheroEntrada, RegExp][] = [
-    [{ nombre: 'otra-cosa.csv', texto: 'a,b\n1,2\n' }, /has no key column/],
+    [{ nombre: 'otra-cosa.csv', texto: 'a,b\n1,2\n' }, /missing columns that are needed: clave, creada/],
     [{ nombre: 'vacio.csv', texto: '' }, /is empty or is not a CSV/],
     [{ nombre: 'cabecera.csv', texto: base.cab.join(',') + '\n' }, /only has the header row/],
   ];
@@ -123,6 +123,9 @@ test('ficheros que no son un export de Jira: error claro y ninguna tarea', () =>
     assert.equal(r.lectura.tareas.length, 0, f.nombre);
     assert.ok(r.lectura.informe.avisos.some((a) => re.test(a.texto)), f.nombre);
   }
+  // Lo que falta queda apuntado con los títulos del fichero, para elegir las columnas a mano
+  const p = recorrido([casos[0][0]]).lectura.informe.columnasPendientes;
+  assert.deepEqual(p, [{ fichero: 'otra-cosa.csv', cabecera: ['a', 'b'], faltan: ['clave', 'creada'] }]);
 });
 
 // Exports de prueba reales (no de cliente) con su resultado esperado

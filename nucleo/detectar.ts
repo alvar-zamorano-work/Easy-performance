@@ -1,6 +1,7 @@
 // Detección sobre el modelo neutro: fecha de referencia, estados con su etapa, campo que reconoce
 // a los equipos y si los sprints son fiables. No sabe de qué plataforma vienen los datos.
 
+import { Tx, regional } from './idioma.ts';
 import { DIA, cuantil, inicioSemana, media } from './util.ts';
 import { fechaCorta } from './formato.ts';
 import { etapaDe, explicarEstado } from './estados.ts';
@@ -44,7 +45,7 @@ export function detectar(lectura: Lectura): Deteccion {
     const ultima = ks[ks.length - 1];
     if (ultimaActiva != null && ultima - ultimaActiva >= 2) {
       det.fechaRef = new Date(s0 + (ultimaActiva + 1) * 7 * DIA + 9 * 36e5);
-      det.avisos.push({ tipo: 'aviso', texto: 'The last weeks of the export have almost no activity. Measures run up to the week of ' + fechaCorta(new Date(s0 + ultimaActiva * 7 * DIA)) + '.' });
+      det.avisos.push({ tipo: 'aviso', texto: Tx('The last weeks of the export have almost no activity. Measures run up to the week of ', 'Las últimas semanas del export casi no tienen actividad. Las medidas llegan hasta la semana del ') + fechaCorta(new Date(s0 + ultimaActiva * 7 * DIA)) + '.' });
     }
   }
   det.hayTiempos = tareas.some((t) => t.tiempos_estado.length);
@@ -85,8 +86,11 @@ export function detectar(lectura: Lectura): Deteccion {
     tareas.forEach((t) => { const v = valor(t); if (v) { conValor++; cuenta[v] = (cuenta[v] || 0) + 1; } });
     const valores = Object.keys(cuenta).sort((a, b) => cuenta[b] - cuenta[a]);
     const cobertura = tareas.length ? conValor / tareas.length : 0;
-    const valida = o.id === TODOS || (valores.length >= 2 && valores.length <= 25 && cobertura >= 0.6);
-    const puntuacion = o.id === TODOS ? 0.1 : (valida ? cobertura + o.peso - (valores.length > 12 ? 0.3 : 0) : -1);
+    // Un campo que dice "equipo" se acepta con más valores: hay áreas de 30 o 40 equipos. El resto, como mucho 25.
+    const esCampoEquipo = o.id === 'equipo';
+    const maxValores = esCampoEquipo ? 60 : 25;
+    const valida = o.id === TODOS || (valores.length >= 2 && valores.length <= maxValores && cobertura >= 0.6);
+    const puntuacion = o.id === TODOS ? 0.1 : (valida ? cobertura + o.peso - (!esCampoEquipo && valores.length > 12 ? 0.3 : 0) : -1);
     return { id: o.id, nombre: o.nombre, valores: valores.map((v) => ({ valor: v, n: cuenta[v] })), cobertura, valida, puntuacion };
   });
   const mejorOpcion = det.opcionesEquipo.slice().sort((a, b) => b.puntuacion - a.puntuacion)[0];
@@ -99,6 +103,7 @@ export function detectar(lectura: Lectura): Deteccion {
   const conFecha = lista.filter((s) => /^\d{4}-\d{2}-\d{2}T?\d{0,2}/.test(s)).length;
   det.haySprints = lista.length > 0;
   det.sprintsComoFecha = lista.length > 0 && conFecha / lista.length > 0.5;
-  if (det.sprintsComoFecha) det.avisos.push({ tipo: 'aviso', texto: 'Sprint names look like dates and times (' + lista.length.toLocaleString('en-GB') + ' different ones). They are not used as sprints: measures go by week.' });
+  if (lectura.detalle && lectura.detalle.sprintsSoloActual === true && lista.length) det.sprintsSoloActual = true;
+  if (det.sprintsComoFecha) det.avisos.push({ tipo: 'aviso', texto: Tx('Sprint names look like dates and times (', 'Los nombres de sprint parecen fechas y horas (') + lista.length.toLocaleString(regional()) + Tx(' different ones). They are not used as sprints: measures go by week.', ' distintos). No se usan como sprints: las medidas van por semanas.') });
   return det;
 }

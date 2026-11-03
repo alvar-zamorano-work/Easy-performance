@@ -1,0 +1,615 @@
+{
+  "casos": {
+    "atascado": {
+      "accionArea": "Revisar con los equipos qué dependencia común frena las tareas bloqueadas",
+      "comun": "Cuando se repite, suele faltar algo que todos esperan: una revisión, un entorno o una persona de otro equipo.",
+      "titulo": "Trabajo bloqueado",
+      "senal": "Hay tareas en curso que ya superan el plazo en el que el equipo termina casi todo lo que empieza.",
+      "causas": [
+        "Dependencia de otro equipo o de alguien externo",
+        "La tarea era más grande de lo previsto",
+        "El equipo ha empezado otras cosas y nadie la empuja",
+        "Espera de revisión o de pruebas"
+      ],
+      "preguntas": [
+        "¿Qué necesita cada una de estas tareas para avanzar hoy?",
+        "¿Alguna se puede dividir y entregar por partes?",
+        "¿Dependen de alguien de fuera del equipo?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar el tablero de derecha a izquierda en la reunión diaria, empezando por estas tareas",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "5 minutos al día"
+        },
+        {
+          "paso": "Acordar para cada una quién la desbloquea, o pedir ayuda a otra persona del equipo",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si es demasiado grande, dividirla y entregar la primera parte",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En dos semanas no debería quedar ninguna tarea por encima de lo habitual.",
+      "respaldo": "Métricas de flujo: edad del trabajo en curso (Daniel Vacanti)."
+    },
+    "demasiado_a_la_vez": {
+      "accionArea": "Limitar lo que entra en el área hasta terminar lo empezado",
+      "comun": "Cuando se repite, el exceso suele venir de arriba: entra en el área más trabajo del que puede terminar.",
+      "titulo": "Demasiadas cosas a la vez",
+      "senal": "El trabajo en curso ha crecido y las tareas tardan más, sin que se entregue más.",
+      "causas": [
+        "Se empieza trabajo nuevo antes de terminar el anterior",
+        "Interrupciones y cambios de prioridad",
+        "Esperas largas que invitan a coger otra tarea"
+      ],
+      "preguntas": [
+        "¿Cuántas tareas puede llevar el equipo a la vez sin que se paren?",
+        "¿Por qué se empezó trabajo nuevo: era más urgente o lo otro estaba bloqueado?"
+      ],
+      "plan": [
+        {
+          "paso": "Acordar un límite de trabajo en curso; para empezar, el número de personas del equipo",
+          "quien": "Equipo",
+          "esfuerzo": "Una reunión"
+        },
+        {
+          "paso": "Mientras se esté en el límite, no empezar nada nuevo: primero ayudar a terminar",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Revisar el límite cada dos semanas con estos datos",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En cuatro semanas el trabajo en curso debería bajar y el tiempo de ciclo volver a su rango habitual.",
+      "respaldo": "Ley de Little y método Kanban."
+    },
+    "sprint_no_cumple": {
+      "accionArea": "Revisar cómo se fijan los compromisos de sprint en el área",
+      "comun": "Cuando se repite, mira cómo se planifica en el área: compromisos fijados desde fuera o interrupciones comunes.",
+      "titulo": "El sprint no se cumple",
+      "senal": "Una parte importante del trabajo pasa al sprint siguiente, sprint tras sprint.",
+      "causas": [
+        "Se compromete más de lo que el equipo entrega de verdad",
+        "Historias demasiado grandes",
+        "Trabajo imprevisto que entra a mitad de sprint"
+      ],
+      "preguntas": [
+        "¿Cuánto entregamos de media en los últimos sprints y cuánto comprometemos?",
+        "¿Qué tienen en común las tareas que se arrastran?"
+      ],
+      "plan": [
+        {
+          "paso": "Comprometer según lo entregado de media en los tres últimos sprints",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Reservar una parte de la capacidad para imprevistos",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Dividir las historias que no caben en medio sprint",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En tres sprints lo arrastrado debería bajar del 30%.",
+      "respaldo": "Guía Scrum; planificación con entregas reales."
+    },
+    "pendiente_crece": {
+      "accionArea": "Acordar con negocio qué entra y qué se archiva del pendiente",
+      "comun": "Cuando se repite, el área recibe más de lo que puede hacer. Es una conversación de prioridades con negocio, no con los equipos.",
+      "titulo": "El pendiente crece",
+      "senal": "Entra más trabajo del que sale, semana tras semana.",
+      "causas": [
+        "Entra todo lo que se pide, sin filtrar",
+        "La capacidad del equipo ha bajado",
+        "Hay trabajo viejo que ya no tiene sentido y nadie cierra"
+      ],
+      "preguntas": [
+        "¿Qué parte del pendiente haríamos de verdad en los próximos tres meses?",
+        "¿Quién decide qué entra y con qué criterio?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar el pendiente con producto y archivar lo que lleva meses sin moverse",
+          "quien": "Producto y responsable de equipo",
+          "esfuerzo": "Una reunión"
+        },
+        {
+          "paso": "Acordar qué información y qué valor debe tener una petición para entrar",
+          "quien": "Producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si sigue entrando más de lo que sale, decidir con negocio qué no se hará",
+          "quien": "Dirección y producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En cuatro semanas las salidas deberían igualar a las entradas.",
+      "respaldo": "Métricas de flujo: entradas frente a salidas."
+    },
+    "mucha_espera": {
+      "accionArea": "Localizar el paso compartido donde esperan las tareas y darle capacidad",
+      "comun": "Cuando se repite, suele estar en un paso que los equipos comparten: revisión, pruebas, despliegue o aprobación.",
+      "titulo": "Mucha espera",
+      "senal": "Las tareas pasan más tiempo esperando que en trabajo activo.",
+      "causas": [
+        "Revisiones o pruebas que se acumulan",
+        "Dependencias de otros equipos",
+        "Bloqueos que nadie resuelve"
+      ],
+      "preguntas": [
+        "¿En qué estado se para más el trabajo y por qué?",
+        "¿Quién puede revisar o probar, y cuándo lo hace?"
+      ],
+      "plan": [
+        {
+          "paso": "Acordar un plazo interno para atender el estado donde más se espera",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Dar prioridad a revisar y probar antes que a empezar trabajo nuevo",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si la espera es de otro equipo, tratar la dependencia con su responsable",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En cuatro semanas la espera debería bajar de la mitad del tiempo de ciclo.",
+      "respaldo": "Eficiencia de flujo (Flow Framework, Mik Kersten)."
+    },
+    "retrabajo": {
+      "accionArea": "Revisar cómo llegan los requisitos y qué se entiende por terminado",
+      "comun": "Cuando se repite, revisa lo común: cómo llegan los requisitos y qué se entiende por terminado.",
+      "titulo": "Mucho retrabajo",
+      "senal": "Muchas tareas vuelven a un estado por el que ya habían pasado.",
+      "causas": [
+        "Criterios de aceptación poco claros",
+        "Revisiones tardías que encuentran problemas grandes",
+        "Una definición de terminado que no se cumple"
+      ],
+      "preguntas": [
+        "¿Por qué volvieron atrás las últimas tareas?",
+        "¿Están claros los criterios de aceptación antes de empezar?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar las últimas cinco tareas que volvieron atrás y anotar el motivo",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Reforzar la definición de terminado y los criterios de aceptación",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Enseñar el trabajo a mitad, no solo al final",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En cuatro semanas el retrabajo debería bajar del 20%.",
+      "respaldo": "Definición de terminado (Guía Scrum)."
+    },
+    "errores_capacidad": {
+      "accionArea": "Reservar capacidad fija para calidad y pruebas automáticas",
+      "comun": "Cuando se repite, mira la base común: una plataforma, un entorno de pruebas o la falta de pruebas automáticas.",
+      "titulo": "Los errores se comen la capacidad",
+      "senal": "Una parte grande y creciente de lo terminado son errores.",
+      "causas": [
+        "Deuda técnica acumulada",
+        "Pocas pruebas automáticas",
+        "Se arregla el síntoma y no la causa"
+      ],
+      "preguntas": [
+        "¿Qué errores se repiten y en qué parte del sistema?",
+        "¿Cuánta capacidad queremos dedicar a calidad de forma estable?"
+      ],
+      "plan": [
+        {
+          "paso": "Agrupar los errores del último mes por causa y por parte del sistema",
+          "quien": "Equipo",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Reservar una parte fija de cada sprint para atacar esas causas",
+          "quien": "Responsable de equipo y producto",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Añadir pruebas automáticas en las zonas con más errores",
+          "quien": "Equipo",
+          "esfuerzo": "Alto"
+        }
+      ],
+      "comprobar": "En ocho semanas los errores deberían bajar del 30% de lo terminado.",
+      "respaldo": "Distribución del trabajo (Flow Framework, Mik Kersten)."
+    },
+    "todo_al_final": {
+      "accionArea": "Pedir historias más pequeñas y validar durante el sprint, no al final",
+      "comun": "Cuando se repite, suele ser una costumbre del área: historias grandes o una validación que solo llega al final.",
+      "titulo": "Todo llega al final del sprint",
+      "senal": "La mayoría de las tareas se cierra en los dos últimos días del sprint.",
+      "causas": [
+        "Historias grandes que solo se terminan al final",
+        "Revisión y pruebas concentradas al final",
+        "Se cierra en bloque para la revisión del sprint"
+      ],
+      "preguntas": [
+        "¿Qué impide terminar tareas a mitad de sprint?",
+        "¿Se cierra en Jira al terminar o antes de la revisión?"
+      ],
+      "plan": [
+        {
+          "paso": "Dividir las historias para poder terminarlas en pocos días",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Revisar y probar cada día, no al final",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Cerrar en Jira en el momento en que algo está terminado",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En tres sprints menos de la mitad debería cerrarse en los dos últimos días.",
+      "respaldo": "Flujo continuo dentro del sprint."
+    },
+    "entregas_irregulares": {
+      "accionArea": "Identificar las dependencias o ventanas que marcan el ritmo de entrega",
+      "comun": "Cuando se repite, busca dependencias comunes o ventanas de despliegue que marcan el ritmo de todos.",
+      "titulo": "Entregas irregulares",
+      "senal": "Lo que se entrega cambia mucho de una semana a otra.",
+      "causas": [
+        "Tareas de tamaños muy distintos",
+        "Dependencias que llegan a golpes",
+        "Cierres en bloque"
+      ],
+      "preguntas": [
+        "¿Las semanas flojas coinciden con algo: vacaciones, incidencias, dependencias?",
+        "¿Qué tamaño tienen las tareas que más tardan?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar las semanas más bajas y anotar la causa",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Homogeneizar el tamaño de las tareas al refinarlas",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Reducir dependencias externas en lo que se compromete",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En ocho semanas la variación semanal debería bajar.",
+      "respaldo": "Previsión con datos de entregas (Daniel Vacanti)."
+    },
+    "estimaciones_no_predicen": {
+      "accionArea": "Simplificar la estimación: contar tareas en lugar de puntos",
+      "comun": "Cuando se repite, el problema es el método de estimar, no los equipos. Contar tareas suele bastar.",
+      "titulo": "Las estimaciones no predicen",
+      "senal": "Las tareas con pocos puntos tardan lo mismo o más que las de muchos puntos.",
+      "causas": [
+        "La estimación mide otra cosa que la duración",
+        "La espera pesa más que el trabajo real",
+        "Se estima con prisa o sin conocer bien la tarea"
+      ],
+      "preguntas": [
+        "¿Para qué usamos hoy los puntos?",
+        "¿Nos serviría más contar tareas que sumar puntos?"
+      ],
+      "plan": [
+        {
+          "paso": "Comparar en una retro varias tareas pequeñas que tardaron mucho",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si las tareas son de tamaño parecido, planificar contando tareas en lugar de puntos",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si se mantienen los puntos, estimar después de refinar y no antes",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En doce semanas la relación entre puntos y duración debería mejorar, o los puntos dejar de usarse para planificar.",
+      "respaldo": "Previsión probabilística (Daniel Vacanti)."
+    },
+    "todo_urgente": {
+      "accionArea": "Acordar con negocio qué es urgente y limitar su volumen",
+      "comun": "Cuando se repite, la prioridad se decide fuera de los equipos. Hay que acordar con negocio qué es urgente de verdad.",
+      "titulo": "Todo es urgente",
+      "senal": "Una parte muy grande del trabajo entra con la prioridad máxima.",
+      "causas": [
+        "No hay un criterio común de qué es urgente",
+        "Marcar como urgente es la única forma de que algo se atienda",
+        "Varias personas piden sin coordinarse"
+      ],
+      "preguntas": [
+        "¿Qué pasaría si estas tareas esperasen una semana?",
+        "¿Quién decide la prioridad y con qué criterio?"
+      ],
+      "plan": [
+        {
+          "paso": "Definir con negocio qué es urgente, con dos o tres ejemplos",
+          "quien": "Producto y dirección",
+          "esfuerzo": "Una reunión"
+        },
+        {
+          "paso": "Crear un carril urgente con un límite, por ejemplo una tarea a la vez",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Revisar cada mes qué entró como urgente y si lo era",
+          "quien": "Producto",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En ocho semanas lo marcado como urgente debería bajar del 25%.",
+      "respaldo": "Clases de servicio (método Kanban)."
+    },
+    "urgente_no_rapido": {
+      "accionArea": "Usar la prioridad para ordenar el trabajo de verdad",
+      "comun": "Cuando se repite, la prioridad no se usa para ordenar el trabajo en el área.",
+      "titulo": "Lo urgente no va más rápido",
+      "senal": "Las tareas de máxima prioridad tardan lo mismo que el resto.",
+      "causas": [
+        "La prioridad no se usa para ordenar el trabajo",
+        "Hay tantas tareas urgentes que se anulan entre sí",
+        "Lo urgente espera en las mismas colas que lo demás"
+      ],
+      "preguntas": [
+        "¿El equipo mira la prioridad al elegir la siguiente tarea?",
+        "¿Cuántas tareas urgentes hay a la vez?"
+      ],
+      "plan": [
+        {
+          "paso": "Ordenar el pendiente por prioridad y respetar ese orden al elegir",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Crear un carril urgente que salte las colas de revisión",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Si casi todo es urgente, atender antes el caso \"Todo es urgente\"",
+          "quien": "Producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En ocho semanas lo urgente debería tardar claramente menos que el resto.",
+      "respaldo": "Clases de servicio (método Kanban)."
+    },
+    "datos_poco_fiables": {
+      "accionArea": "Acordar cómo se usa Jira antes de sacar conclusiones",
+      "comun": "Cuando se repite, falta un acuerdo común sobre cómo se usa Jira: estados, cierres y sprints.",
+      "titulo": "Datos poco fiables",
+      "senal": "Jira no refleja del todo cómo se trabaja, y eso afecta a las medidas.",
+      "causas": [
+        "Las tareas se mueven en Jira después de hacer el trabajo",
+        "El flujo de estados no se usa como se diseñó",
+        "Campos que no se rellenan"
+      ],
+      "preguntas": [
+        "¿Movemos las tareas en Jira cuando cambian de estado de verdad?",
+        "¿Qué campos necesitamos rellenar siempre?"
+      ],
+      "plan": [
+        {
+          "paso": "Acordar tres reglas de uso: mover al empezar, mover al terminar y rellenar los puntos",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Revisar el flujo de estados para que refleje el trabajo real",
+          "quien": "Responsable con el administrador de Jira",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Repetir el chequeo de datos en cuatro semanas",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En cuatro semanas los avisos de calidad del dato deberían desaparecer o bajar.",
+      "respaldo": "Requisito previo de cualquier medición."
+    },
+    "no_planificado": {
+      "accionArea": "Crear una única puerta de entrada para lo no planificado",
+      "comun": "Cuando se repite, suele venir de la misma fuente: soporte, incidencias o peticiones directas al área.",
+      "titulo": "Trabajo no planificado",
+      "senal": "Una parte importante de lo terminado entró con el sprint ya empezado.",
+      "causas": [
+        "Incidencias de producción",
+        "Peticiones directas que saltan la planificación"
+      ],
+      "preguntas": [
+        "¿Por dónde entra el trabajo imprevisto?"
+      ],
+      "plan": [
+        {
+          "paso": "Reservar capacidad fija para imprevistos",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Crear una única puerta de entrada para lo urgente",
+          "quien": "Producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "Lo que entra a mitad de sprint debería bajar del 15%.",
+      "respaldo": "Guía Scrum."
+    },
+    "grupo_plazo": {
+      "accionArea": "Revisar con el grupo que tarda más dónde se para el trabajo: revisiones, entornos o dependencias",
+      "comun": "Cuando un grupo tarda más en el mismo tipo y tamaño de tarea, suele haber un paso que espera más: revisión, pruebas, accesos o respuestas de otro equipo.",
+      "titulo": "Un grupo tarda más en el mismo tipo de trabajo",
+      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tarda claramente más que el resto.",
+      "causas": [
+        "Esperas más largas en revisión o pruebas",
+        "Dependencias de otros equipos o del cliente",
+        "Menos acceso a entornos, datos o personas que deciden",
+        "Tareas que llegan peor definidas"
+      ],
+      "preguntas": [
+        "¿En qué estado se para más el trabajo de este grupo?",
+        "¿Tiene el mismo acceso a entornos, revisiones y decisiones que el resto?",
+        "¿Llegan sus tareas igual de definidas?"
+      ],
+      "plan": [
+        {
+          "paso": "Comparar con el grupo el tiempo en cada estado y elegir el paso que más espera",
+          "quien": "Responsable del grupo y oficina de mejora",
+          "esfuerzo": "Una reunión"
+        },
+        {
+          "paso": "Acordar un plazo para ese paso y quién lo atiende",
+          "quien": "Responsables de los equipos implicados",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Revisar la diferencia en la siguiente comparación mensual",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En dos meses la diferencia en el plazo debería bajar de un 25%.",
+      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; métricas de flujo."
+    },
+    "grupo_calidad": {
+      "accionArea": "Revisar con el grupo cómo llegan los requisitos y qué se entiende por terminado",
+      "comun": "Cuando un grupo vuelve atrás o reabre más en el mismo tipo de trabajo, suele fallar el acuerdo de qué es terminado o cómo se valida.",
+      "titulo": "Un grupo vuelve atrás o reabre más",
+      "senal": "Dentro del mismo tipo y tamaño de tarea, un grupo tiene claramente más retrabajo o más tareas reabiertas.",
+      "causas": [
+        "Criterios de aceptación poco claros para ese grupo",
+        "Validación tardía o por otro equipo",
+        "Definición de terminado distinta a la del resto",
+        "Menos pruebas automáticas"
+      ],
+      "preguntas": [
+        "¿Usa este grupo la misma definición de terminado que el resto?",
+        "¿Quién valida su trabajo y cuándo?",
+        "¿Por qué se reabrieron las últimas tareas?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar con el grupo las últimas diez tareas que volvieron atrás y anotar el motivo",
+          "quien": "Responsable del grupo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Alinear la definición de terminado y los criterios de aceptación con el resto",
+          "quien": "Oficina de mejora y responsables",
+          "esfuerzo": "Medio"
+        },
+        {
+          "paso": "Validar durante el trabajo, no solo al final",
+          "quien": "Equipo",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En dos meses el retrabajo y las reaperturas del grupo deberían acercarse a las del resto.",
+      "respaldo": "Comparación estratificada por tipo y tamaño de tarea; definición de terminado (Guía Scrum)."
+    },
+    "grupo_agent_ready": {
+      "accionArea": "Acordar con el grupo una plantilla de ticket con criterios de aceptación y referencias",
+      "comun": "Cuando un grupo escribe tickets menos completos, suele faltar una plantilla común o tiempo de refinamiento.",
+      "titulo": "Un grupo tiene el backlog menos preparado para agentes",
+      "senal": "La parte de tickets listos para un agente es claramente más baja en un grupo que en el resto.",
+      "causas": [
+        "No hay plantilla de ticket o no se usa",
+        "El refinamiento se hace de palabra y no queda escrito",
+        "Los criterios de aceptación se acuerdan fuera de la herramienta"
+      ],
+      "preguntas": [
+        "¿Qué plantilla de ticket usa este grupo?",
+        "¿Dónde quedan escritos los criterios de aceptación?"
+      ],
+      "plan": [
+        {
+          "paso": "Revisar con el grupo cinco tickets recientes con la rúbrica de agent readiness",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Adoptar una plantilla con descripción, criterios de aceptación y referencias",
+          "quien": "Responsable del grupo y producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Repetir la medida en un mes",
+          "quien": "Oficina de mejora",
+          "esfuerzo": "Bajo"
+        }
+      ],
+      "comprobar": "En un mes la parte de tickets listos del grupo debería acercarse a la del resto.",
+      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
+    },
+    "backlog_no_listo": {
+      "accionArea": "Acordar una plantilla de ticket común en el área",
+      "comun": "Cuando se repite en varios equipos, falta un acuerdo común sobre cómo se escribe un ticket.",
+      "titulo": "El backlog no está listo para agentes",
+      "senal": "Menos de la mitad de los tickets nuevos cumple cuatro de los cinco criterios de la rúbrica.",
+      "causas": [
+        "Descripciones cortas o que repiten el título",
+        "Sin criterios de aceptación escritos",
+        "Tickets demasiado grandes o con dependencias abiertas"
+      ],
+      "preguntas": [
+        "¿Qué criterio falla más en los tickets del equipo?",
+        "¿Podría alguien de fuera del equipo hacer este ticket sin preguntar?"
+      ],
+      "plan": [
+        {
+          "paso": "Mirar qué criterio de la rúbrica falla más y empezar por ese",
+          "quien": "Responsable de equipo",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Añadir a la plantilla de ticket una sección de criterios de aceptación y otra de referencias",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Bajo"
+        },
+        {
+          "paso": "Dividir los tickets de más de cinco puntos antes de empezarlos",
+          "quien": "Equipo con producto",
+          "esfuerzo": "Medio"
+        }
+      ],
+      "comprobar": "En un mes más de la mitad de los tickets nuevos debería estar listo para un agente.",
+      "respaldo": "Rúbrica de agent readiness de Capgemini (catalogo/rubrica_agent_ready.json)."
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "perfiles": [
+    {
+      "nombre": "Responsable de equipo",
+      "vista": "Mi equipo",
+      "descripcion": "Cada semana: qué está bloqueado, cómo va su equipo y qué hacer."
+    },
+    {
+      "nombre": "Dirección",
+      "vista": "El área",
+      "descripcion": "Cada mes: cómo va el área en conjunto, qué se repite entre equipos y cada equipo frente a sí mismo."
+    },
+    {
+      "nombre": "PMO o delivery lead",
+      "vista": "Compromisos y riesgos",
+      "descripcion": "Cada dos semanas: previsibilidad, salud del dato y casos abiertos."
+    },
+    {
+      "nombre": "Producto o negocio",
+      "vista": "Cuándo y en qué",
+      "descripcion": "Cuando lo necesita: cuánto tardará algo y en qué se va la capacidad."
+    }
+  ],
+  "graficos": {
+    "ciclo": {
+      "pregunta": "¿Cuánto tardamos?",
+      "opciones": [
+        {
+          "nombre": "Un punto por tarea",
+          "ayuda": "Cada tarea terminada es un punto; dos líneas marcan la mitad y el plazo en el que se termina casi todo."
+        },
+        {
+          "nombre": "Barras por tramos de días",
+          "ayuda": "Cuántas tareas terminan en 1, 2, 3... días."
+        }
+      ]
+    },
+    "evolucion": {
+      "pregunta": "¿Cómo evoluciona cada medida?",
+      "opciones": [
+        {
+          "nombre": "Línea con su rango habitual",
+          "ayuda": "La banda es lo normal para el equipo; lo que sale de la banda llama la atención."
+        },
+        {
+          "nombre": "Columnas por semana",
+          "ayuda": "Un valor por semana, sin banda."
+        }
+      ]
+    },
+    "pendiente": {
+      "pregunta": "¿Crece el pendiente?",
+      "opciones": [
+        {
+          "nombre": "Entradas y salidas",
+          "ayuda": "Dos líneas: lo que entra y lo que sale cada semana."
+        },
+        {
+          "nombre": "Tamaño del pendiente",
+          "ayuda": "Una línea con las tareas sin empezar."
+        }
+      ]
+    }
+  },
+  "kpis": [
+    {
+      "unidad": "tareas al mes por persona (FTE)"
+    },
+    {
+      "unidad": "para terminar casi todo lo empezado"
+    },
+    {
+      "unidad": "de lo terminado son funcionalidades nuevas"
+    },
+    {
+      "unidad": "de lo terminado se reabrió"
+    },
+    {
+      "unidad": "de antigüedad típica de lo pendiente"
+    }
+  ]
+}
