@@ -523,6 +523,30 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     ok('sin tiempo en cada estado: "¿Vamos al ritmo de siempre?" responde "En parte"', /En parte/.test(pr) && /Sin datos de Tiempo de ciclo/.test(pr), pr.slice(0, 160));
     await p.context().close();
   }
+  // Export con todos los campos: "Team" viene con None en todas las filas y los equipos están en "Assigned Team"
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'todosLosCampos'); await terminar(p);
+    const r = await A(p, () => ({ campo: window.EP.S.det.equipoRecomendado, n: window.EP.S.vm.equipos.length, error: !!window.EP.S.error }));
+    await fijarRol(p, 'pmo'); await ir(p, 'fuentes'); await quieto(p);
+    const fu = await p.textContent('#page');
+    ok('export con todos los campos: los equipos salen de "Assigned Team" y Fuentes lo dice', r.campo === 'equipo' && r.n > 1 && /Assigned Team/.test(fu) && !r.error, JSON.stringify(r));
+    ok('sin errores de consola con todos los campos', !p.errores.length, p.errores.slice(0, 3).join(' | '));
+    await p.context().close();
+  }
+  // Sin ningún cambio de estado: el trabajo en curso no da alerta y el baseline dice que el tiempo de ciclo no se puede medir
+  {
+    const p = await pagina(1280, 800);
+    await cargar(p, 'sinCambiosEstado'); await terminar(p); await ir(p, 'resumen'); await quieto(p);
+    const r = await A(p, () => {
+      const wipMal = window.EP.S.vm.equipos.filter((e) => e.medidas.wip && ['atencion', 'critico'].includes(e.medidas.wip.estado)).map((e) => e.nombre);
+      const filas = [...document.querySelectorAll('#page .fb[data-medida="ciclo"]')];
+      return { wipMal, filas: filas.length, texto: filas.map((x) => x.innerText).join(' | ').slice(0, 200), motivo: filas[0] ? filas[0].getAttribute('title') : '' };
+    });
+    ok('sin cambios de estado: el trabajo en curso no da alerta', !r.wipMal.length, JSON.stringify(r.wipMal));
+    ok('sin cambios de estado: el tiempo de ciclo dice en el baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
+    await p.context().close();
+  }
   // Datos de ejemplo: lo que supera un límite fijo lo dice así, y nada mejor que su franja sale "Fuera de rango"
   {
     const p = await pagina(1280, 800);

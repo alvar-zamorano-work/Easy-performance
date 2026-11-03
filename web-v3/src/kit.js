@@ -23,6 +23,7 @@
 
   /** Rango habitual en texto: "6 a 9 tareas por semana". */
   function rango(id, m) {
+    if (m && m.sinHistorico) return t('medida.sinHistorico');
     if (!m || !m.ref) return t('medida.sinBanda');
     return t('medida.normal', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) });
   }
@@ -100,8 +101,11 @@
   function filaBaseline(eq, id) {
     const m = eq.medidas[id];
     const ahora = m && m.disponible && m.valor != null ? valor(id, m.valor) : t('comun.sinDatos');
-    const normal = m && m.ref ? t('medida.rangoCorto', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) }) : (m && m.disponible ? t('medida.sinBanda') : '');
-    return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
+    // Lo que no se puede medir lo dice en la fila (con el motivo completo al pasar por encima), no se queda en blanco
+    const normal = m && m.ref ? t('medida.rangoCorto', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) })
+      : m && m.disponible ? (m.sinHistorico ? t('medida.sinHistoricoCorto') : t('medida.sinBanda')) : m ? t('medida.noSeMide') : '';
+    const motivo = m && !m.disponible ? porque(id, m) : m && m.sinHistorico ? t('medida.sinHistorico') : '';
+    return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"${motivo ? ` title="${esc(motivo)}"` : ''}>
       <span class="fb-n">${esc(nombreMedida(id))}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
   }
 

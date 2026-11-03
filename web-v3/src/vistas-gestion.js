@@ -187,6 +187,12 @@
   const ayudaCsv = () => `<div class="ficha"><div class="f-head"><div class="f-title">${esc(t('csv.titulo'))}</div></div><div class="f-body"><div class="two-col"><div><b class="small">${esc(t('csv.jira'))}</b><ol class="small">${[1, 2, 3, 4].map((i) => `<li>${esc(t('csv.jira' + i))}</li>`).join('')}</ol></div><div><b class="small">${esc(t('csv.excel'))}</b><ol class="small">${[1, 2, 3].map((i) => `<li>${esc(t('csv.excel' + i))}</li>`).join('')}</ol></div></div><p class="tiny muted">${esc(t('csv.nota'))}</p></div></div>`;
   const formatoDe = (nombre) => { const f = (S.ficheros || []).filter((x) => x.nombre === nombre)[0]; return f && f.formato && f.formato !== 'csv' ? f.formato : null; };
   EP.accion('col-borrar', () => { delete S.cfg.columnas; EP.guardarCfg(); EP.enSegundoPlano(() => { if (S.ficheros && EP.procesar(S.ficheros)) EP.render(); else EP.render(); }); });
+  /** Cómo se ha leído cada columna del primer fichero, con las columnas que de verdad ha usado la lectura. */
+  function columnasLeidas() {
+    if (!S.ficheros || !S.ficheros[0]) return [];
+    const f = S.ficheros[0], inf = S.lectura && S.lectura.informe, eq = inf && inf.columnaEquipo && inf.columnaEquipo[f.nombre];
+    return N.describirColumnas(f.texto, Object.assign({}, S.demo ? {} : S.cfg.columnas || {}, eq ? { equipo: eq } : {}));
+  }
   function fuentesFicheros() {
     const inf = S.vm.informe;
     const tiles = `<div class="tiles">${K.stat(t('fuentes.tile.ficheros'), String(inf.ficheros.length), esc(t('fuentes.tile.ficherosPie')), '')}${K.stat(t('fuentes.tile.tareas'), String(inf.tareas), esc(t('fuentes.tile.tareasPie', { f: inf.filasLeidas })), '')}${K.stat(t('fuentes.tile.fuera'), String(inf.epicas + inf.subtareas + inf.duplicadas + (inf.sinClave || 0) + (inf.sinFecha || 0)), esc(t('fuentes.tile.fueraPie', { e: inf.epicas, s: inf.subtareas, d: inf.duplicadas, o: (inf.sinClave || 0) + (inf.sinFecha || 0) })), '')}${K.stat(t('fuentes.tile.avisos'), String(inf.avisos.length + S.vm.det.avisos.length), esc(t('fuentes.tile.avisosPie')), '', { tone: inf.avisos.length + S.vm.det.avisos.length ? 'warn' : 'good' })}</div>`;
@@ -194,7 +200,7 @@
     const pend = S.colPend && S.colPend.pendientes.length ? `<div class="notice bad small" style="margin-bottom:12px">${esc(tn('fuentes.pendientes', S.colPend.pendientes.length, { f: S.colPend.pendientes.map((p) => p.fichero).join(', ') }))} <button class="btn sm" data-action="col-abrir">${esc(t('columnas.elegir'))}</button></div>` : '';
     const elegidas = S.cfg.columnas && Object.keys(S.cfg.columnas).some((k) => S.cfg.columnas[k]) ? `<div class="notice info small" style="margin-bottom:12px">${esc(t('fuentes.columnasElegidas', { c: Object.keys(S.cfg.columnas).filter((k) => S.cfg.columnas[k]).map((k) => t('columnas.campo.' + k) + ' = ' + S.cfg.columnas[k]).join(' · ') }))} <button class="link small" data-action="col-borrar">${esc(t('columnas.volverAuto'))}</button></div>` : '';
     const fich = K.ficha(`<div class="f-title">${esc(t('fuentes.ficheros'))}</div>`, `<div class="table-wrap"><table><tr><th>${esc(t('fuentes.col.fichero'))}</th><th class="num">${esc(t('fuentes.col.filas'))}</th><th class="num">${esc(t('fuentes.col.columnas'))}</th></tr>${inf.ficheros.map((f) => `<tr><td>${esc(f.nombre)}${formatoDe(f.nombre) ? ` <span class="tiny muted">${esc(t('fuentes.formato.' + formatoDe(f.nombre)))}</span>` : ''}</td><td class="num">${f.filas}</td><td class="num">${f.columnasConDatos} / ${f.columnas}</td></tr>`).join('')}</table></div>${avisos.length ? `<div class="notice warn small" style="margin-top:8px">${avisos.map((a) => esc(a.texto)).join('<br>')}</div>` : ''}`);
-    const cols = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
+    const cols = columnasLeidas();
     const ACC = { usa: 'good', descarta: 'bad', ignora: 'neutral' };
     const colHtml = cols.length ? `<details class="all-src"><summary>${esc(t('fuentes.columnas', { n: cols.filter((c) => c.accion === 'usa').length, de: cols.length }))}</summary><div class="ficha" style="margin-top:10px"><div class="table-wrap"><table><tr><th>${esc(t('fuentes.col.columna'))}</th><th>${esc(t('fuentes.col.que'))}</th><th>${esc(t('fuentes.col.accion'))}</th><th>${esc(t('fuentes.col.ejemplo'))}</th></tr>${cols.map((c) => `<tr><td>${esc(c.columna)}${c.veces > 1 ? ` <span class="tiny muted">×${c.veces}</span>` : ''}</td><td class="small">${esc(c.que)}</td><td>${K.chip(ACC[c.accion], t('fuentes.accion.' + c.accion))}</td><td class="small muted">${esc(c.ejemplo || '')}</td></tr>`).join('')}</table></div></div></details>` : '';
     return K.statusBar(avisos.length ? 'warn' : 'good', esc(avisos.length ? tn('fuentes.conAvisos', avisos.length) : t('fuentes.bien')), [esc(t('fuentes.items1')), esc(t('fuentes.items2'))])
@@ -255,7 +261,7 @@
     const etqSel = `<select data-change="tipo-etiqueta"><option value="">${esc(t('tipos.etiquetaNinguna'))}</option>${etiquetas.map((e) => `<option value="${esc(e.etiqueta)}" ${S.cfg.etiquetaBug === e.etiqueta ? 'selected' : ''}>${esc(e.etiqueta)} · ${e.n}</option>`).join('')}</select>`;
     // Estimación: automática (por nombre), ninguna o una columna numérica del export
     const numericas = S.ficheros && S.ficheros[0] ? N.columnasNumericas(S.ficheros[0].texto) : [];
-    const leidas = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
+    const leidas = columnasLeidas();
     const descartada = (c) => leidas.some((x) => x.columna === c && (x.accion === 'descarta' || (x.campo && x.campo !== 'puntos')));
     const candidatas = numericas.filter((c) => !descartada(c.columna));
     const auto = (leidas.filter((x) => x.campo === 'puntos')[0] || {}).columna || null;
@@ -300,7 +306,7 @@
     const revisar = P.porRevisar(S.cfg, det).length;
     const tipos = N.tiposDeOrigen(S.lectura, { mapeoTipos: S.cfg.mapeoTipos || null, etiquetaBug: S.cfg.etiquetaBug || null });
     const bugs = tipos.filter((x) => x.tipo === 'error').map((x) => x.tipo_origen || t('tipos.sinTipo'));
-    const leidas = S.ficheros && S.ficheros[0] ? N.describirColumnas(S.ficheros[0].texto) : [];
+    const leidas = columnasLeidas();
     const auto = (leidas.filter((x) => x.campo === 'puntos')[0] || {}).columna || null;
     const est = S.cfg.columnaEstimacion;
     const cortes = (S.demo ? S.cortesDemo : S.cortes) || [];

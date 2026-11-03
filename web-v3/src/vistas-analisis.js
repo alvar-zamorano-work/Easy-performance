@@ -55,8 +55,10 @@
     if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
     if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
     // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
-    const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref; });
+    const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref && !m.sinHistorico; });
     if (sinRango.length) return t('resumen.sinRango', { m: lista(sinRango.map(nombreMedida)) });
+    const sinHistorico = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.sinHistorico; });
+    if (sinHistorico.length) return t('resumen.sinHistorico', { m: lista(sinHistorico.map(nombreMedida)) });
     return t('resumen.fichaEstable');
   }
   /** Ficha de equipo sin cambios: lo mismo que el pie del Resumen, con la frase larga cuando de verdad todo es normal. */

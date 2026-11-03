@@ -5,7 +5,7 @@
 import { Tx, regional } from '../../nucleo/idioma.ts';
 import { leerCSV } from '../comun/csv.ts';
 import { limpiarLectura } from '../comun/limpieza.ts';
-import { mapearColumnas, columnasDeEnlaces } from './columnas.ts';
+import { mapearColumnas, columnasDeEnlaces, elegirColumnaEquipo, valorVacio } from './columnas.ts';
 import { ordenFechas, leerFechaOrden, hayNumericas, type OrdenFechas } from '../comun/fechas.ts';
 import { buscarCabecera, aplicarColumnas } from '../comun/cabecera.ts';
 import { nombreDeId, nombresDeEstado, unidadTiempo, type TiempoJira } from './tiempos.ts';
@@ -130,6 +130,16 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
     while (filas.length > 1 && filas[filas.length - 1].every((x) => !String(x || '').trim())) filas.pop();
     const n = filas.length - 1;
     if (n < 1) { informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(' only has the header row: it has no tasks.', ' solo tiene la fila de títulos: no trae tareas.') }); return; }
+    // Equipo: si la columna que da el nombre viene vacía ("None"), la que de verdad trae los equipos (salvo elección a mano)
+    if (!(opciones.columnas && opciones.columnas.equipo && cab.some((h) => String(h).trim() === opciones.columnas!.equipo))) {
+      const eq = elegirColumnaEquipo(cab, filas, mapa.equipo as number | undefined, { clave: mapa.clave as number | undefined, tipo: mapa.tipo as number | undefined });
+      if (eq.i != null && eq.i !== mapa.equipo) {
+        mapa.equipo = eq.i;
+        informe.avisos.push({ tipo: 'aviso', texto: f.nombre + Tx(': teams come from the column "', ': los equipos salen de la columna «') + String(cab[eq.i]).trim() + Tx('"', '»')
+          + (eq.descartada ? Tx('. "', '. «') + eq.descartada + Tx('" has no teams (empty or "None").', '» no trae equipos (vacía o con «None»).') : '.') });
+      }
+    }
+    if (typeof mapa.equipo === 'number') (informe.columnaEquipo = informe.columnaEquipo || {})[f.nombre] = String(cab[mapa.equipo]).trim();
     const conDatos = cab.map(() => false);
     for (let r = 1; r < filas.length; r++) for (let c = 0; c < cab.length; c++) if (!conDatos[c] && filas[r][c]) conDatos[c] = true;
     informe.ficheros.push({ nombre: f.nombre, filas: n, columnas: cab.length, columnasConDatos: conDatos.filter(Boolean).length });
@@ -190,7 +200,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
         etiquetas: vals(fila, 'etiquetas'),
         sprints: vals(fila, 'sprint'),
         puntos: null,
-        equipoCampo: val(fila, 'equipo'),
+        equipoCampo: valorVacio(val(fila, 'equipo')) ? '' : val(fila, 'equipo'),
         proyecto: val(fila, 'proyecto'),
         padre: val(fila, 'padre'),
         padreClave: val(fila, 'padreClave'),
@@ -199,7 +209,7 @@ export function leerJira(ficheros: FicheroEntrada[], opciones: OpcionesLectura =
         primera: leerFecha(val(fila, 'primera')),
         cambioCategoria: leerFecha(val(fila, 'cambioCategoria')),
         vence: leerFecha(val(fila, 'vence')),
-        reparto: iReparto >= 0 ? String(fila[iReparto] || '').trim() : '',
+        reparto: iReparto >= 0 && !valorVacio(fila[iReparto]) ? String(fila[iReparto] || '').trim() : '',
       };
       const p = val(fila, 'puntos').replace(',', '.');
       if (p !== '' && !isNaN(+p)) t.puntos = +p;

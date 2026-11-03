@@ -48,6 +48,8 @@ function medidaPaquete(m: MedidaCalculada) {
     estado: m.estado ?? null,
     tendencia: m.tendencia ? m.tendencia.sentido : null,
     serie: m.serie ? m.serie.slice(-SEMANAS_SERIE).map((x) => redondear(x)) : null,
+    // Sin rango porque falta saber cuándo empezó el trabajo: se dice el motivo
+    ...(m.sinHistorico ? { motivo: m.motivo ?? null } : {}),
   };
 }
 const medidasEquipo = (e: ResultadoEquipo) => Object.fromEntries(Object.entries(e.medidas).map(([id, m]) => [id, medidaPaquete(m)]));

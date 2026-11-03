@@ -142,5 +142,40 @@ export function variantes(): Record<string, Variante> {
   const sinEnt = copia(o), iEq7 = col(sinEnt, 'Custom field (Team)'), iSt7 = col(sinEnt, 'Status'), iCat7 = col(sinEnt, 'Status category'), iRes7 = col(sinEnt, 'Resolved');
   sinEnt.filas.forEach((f) => { if (f[iEq7] === EQUIPO_TARDIO) { f[iRes7] = ''; if (f[iSt7] === 'Done') { f[iSt7] = 'In Progress'; f[iCat7] = 'In Progress'; } } });
   out.equipoSinEntregas = v('equipo-sin-entregas', 'Un equipo sin ninguna tarea terminada; los demás entregan', sinEnt);
+
+  // Export con todos los campos: el campo "Team" del sistema viene con "None" en todas las filas y los equipos están en
+  // otra columna ("Assigned Team"), entre más de 200 columnas casi vacías
+  const todos = copia(o), iEq8 = col(todos, 'Custom field (Team)');
+  todos.cab[iEq8] = 'Custom field (Assigned Team)';
+  const extra: [string, (i: number) => string][] = [['Custom field (Team)', () => 'None'], ['Custom field (Team Role)', () => 'None'], ['Custom field (Assigned Scrum Team)', () => '']];
+  for (let k = 0; k < 220; k++) extra.push(['Custom field (Campo ' + (k + 1) + ')', (i) => (k % 7 === 0 && i % 5 === 0 ? 'x' + (i % 3) : '')]);
+  todos.cab = extra.map((x) => x[0]).concat(todos.cab);
+  todos.filas = todos.filas.map((f, i) => extra.map((x) => x[1](i)).concat(f));
+  out.todosLosCampos = v('todos-los-campos', 'Export con todos los campos: "Team" con None y los equipos en "Assigned Team"', todos);
+
+  const parecido = copia(o), iEq9 = col(parecido, 'Custom field (Team)');
+  parecido.cab[iEq9] = 'Custom field (Delivery Squad Name)';
+  out.equipoOtroNombre = v('equipo-otro-nombre', 'Los equipos en una columna con un nombre que no está en la lista ("Delivery Squad Name")', parecido);
+
+  // Sin ningún dato de cambios de estado: ni tiempo por estado ni fecha de cambio de categoría (como el Excel de vista)
+  const sinCambios = copia(o);
+  ['Custom field ([CHART] Time in Status)', 'Status category changed'].forEach((n) => { const i = col(sinCambios, n); sinCambios.cab.splice(i, 1); sinCambios.filas.forEach((f) => f.splice(i, 1)); });
+  out.sinCambiosEstado = v('sin-cambios-estado', 'Sin tiempo por estado ni fecha de cambio de estado', sinCambios);
+
+  // Lo mismo que "todos los campos", con un solo equipo en el export y con un fichero por equipo
+  const iEqT = col(todos, 'Custom field (Assigned Team)');
+  out.unEquipoTodosCampos = v('un-equipo-todos-los-campos', 'Todos los campos y un solo equipo en el export', { cab: todos.cab, filas: todos.filas.filter((f) => f[iEqT] === EQUIPO_SALTO) });
+  const nombresEq = [...new Set(todos.filas.map((f) => f[iEqT]))].filter(Boolean);
+  out.ficheroPorEquipo = v('fichero-por-equipo', 'Todos los campos, un fichero por equipo', nombresEq.map((n) => ({ cab: todos.cab, filas: todos.filas.filter((f) => f[iEqT] === n) })));
+
+  // Un equipo que se llama "NA": es un nombre, no un vacío
+  const na = copia(o), iEqNa = col(na, 'Custom field (Team)');
+  na.filas.forEach((f) => { if (f[iEqNa] === EQUIPO_TARDIO) f[iEqNa] = 'NA'; });
+  out.equipoNA = v('equipo-na', 'Un equipo llamado "NA"', na);
+
+  // Tiempo por estado solo en lo reciente (un export antiguo sin él, juntado con uno nuevo): el histórico reciente vale
+  const parcial = copia(o), iTisP = col(parcial, 'Custom field ([CHART] Time in Status)'), iResP = col(parcial, 'Resolved');
+  parcial.filas.forEach((f) => { const d = fechaJira(f[iResP]); if (d && d.getTime() < fin - 20 * 7 * 864e5) f[iTisP] = ''; });
+  out.tiemposSoloRecientes = v('tiempos-solo-recientes', 'Tiempo por estado solo en lo terminado en las últimas 20 semanas', parcial);
   return out;
 }

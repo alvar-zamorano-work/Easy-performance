@@ -47,7 +47,10 @@ export function kpisComite(info: InfoParcial, c: ContextoCalculo, nombre: string
   const rep = s.reparto.map((r) => (r ? r.historia : null));
   out.valor = M.reparto && M.reparto.disponible ? desdeSerie('valor', rep, c.KP, { dir: 'mas', formato: 'pct' }) : copia('valor', 'reparto');
   out.calidad = copia('calidad', 'retrabajo');
-  out.carga = s.pendienteEdad.some((x) => x != null)
+  // La edad del pendiente tiene el mismo sesgo que el pendiente cuando no se sabe cuándo empezó el trabajo terminado
+  out.carga = M.pendiente && M.pendiente.sinHistorico
+    ? { id: 'carga', disponible: false, motivo: M.pendiente.motivo ?? null }
+    : s.pendienteEdad.some((x) => x != null)
     ? desdeSerie('carga', s.pendienteEdad, 1, { dir: 'menos', formato: 'dias' })
     : { id: 'carga', disponible: false, motivo: Tx('Not enough backlog to measure it.', 'No hay trabajo pendiente suficiente para medirlo.') };
   return out;
