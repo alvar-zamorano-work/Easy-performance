@@ -83,7 +83,7 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
   }
   let rel: Resultado | null = null;
   if (ref) {
-    const rango = Tx('its usual range (', 'su rango habitual (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
+    const rango = Tx('its baseline (', 'su línea base (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
@@ -113,12 +113,12 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
   if (rev) {
     if (abs && abs.estado !== 'bien') return abs;
     const texto = rev === 'cero'
-      ? Tx('Its normal was zero: in the reference weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Lo normal era cero: en las semanas de referencia el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
-      : Tx('More than three times its usual range (', 'Más del triple de su rango habitual (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
+      ? Tx('Its baseline was zero: in those weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Su línea base era cero: en esas semanas el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
+      : Tx('More than three times its baseline (', 'Más del triple de su línea base (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
     return { estado: 'sin', texto, por: 'banda', revisar: rev };
   }
   const cands = [rel, abs].filter((x): x is Resultado => !!x);
-  if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet to know what is normal for this team.', 'Aún no hay semanas suficientes para saber qué es lo habitual en este equipo.') };
+  if (!cands.length) return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la línea base de este equipo.') };
   // Gana el peor. Si empatan, manda la banda del equipo (es la que se ve en la tarjeta).
   cands.sort((a, b) => orden[b.estado] - orden[a.estado] || (a.por === 'banda' ? -1 : 1));
   return rel && cands[0] !== rel ? { ...cands[0], banda: rel.estado } : cands[0];
