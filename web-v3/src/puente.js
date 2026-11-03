@@ -81,9 +81,15 @@
     const actual = new Map(o.valores.map((v) => [claveNombre(v.valor), v.valor]));
     const nuevo = (n) => actual.get(claveNombre(n)) || n;
     let cambio = false;
-    if (Array.isArray(cfg.equipos)) {
-      const l = [...new Set(cfg.equipos.map(nuevo))];
-      if (JSON.stringify(l) !== JSON.stringify(cfg.equipos)) { cfg.equipos = l; cambio = true; }
+    ['equipos', 'equiposDescartados'].forEach((k) => {
+      if (!Array.isArray(cfg[k])) return;
+      const l = [...new Set(cfg[k].map(nuevo))];
+      if (JSON.stringify(l) !== JSON.stringify(cfg[k])) { cfg[k] = l; cambio = true; }
+    });
+    // Equipos elegidos antes de que existieran los descartes: los no elegidos de ahora cuentan como descartados
+    // (si no, todos saldrían como "equipos nuevos" la primera vez)
+    if (Array.isArray(cfg.equipos) && cfg.equipos.length && cfg.equiposDescartados === undefined && cfg.campoEquipo === campo(cfg, det)) {
+      cfg.equiposDescartados = o.valores.map((v) => v.valor).filter((v) => cfg.equipos.indexOf(v) < 0); cambio = true;
     }
     ['fte', 'coste', 'equiposInfo', 'fteOrigen', 'limites'].forEach((k) => {
       const m = cfg[k];
@@ -187,6 +193,16 @@
   // ---------- piezas de la VM ----------
   const med = (eq, id) => (id === 'coste' ? (eq.kpis && eq.kpis.coste) || { id: 'coste', disponible: false, motivo: null, falta: 'coste' } : eq.medidas[id]);
   const malo = (m) => m && m.disponible && (m.estado === 'atencion' || m.estado === 'critico');
+  /** Nivel de una recomendación: alto si el caso es grave; bajo si hay pocas semanas de datos. */
+  const nivelDe = (gravedad, confianza) => (gravedad === 'critico' ? 'alto' : confianza === 'baja' ? 'bajo' : 'medio');
+  const RANGO_NIVEL = { alto: 0, medio: 1, bajo: 2 };
+  // Medidas de las que sale cada caso. Si alguna está "por revisar" en un equipo, el caso no se le recomienda:
+  // primero hay que arreglar el dato (lo dice su ficha), y una recomendación sobre un dato dudoso parece una certeza.
+  const MEDIDAS_CASO = {
+    demasiado_a_la_vez: ['wip', 'ciclo', 'entregas'], sprint_no_cumple: ['arrastradas'], pendiente_crece: ['pendiente'], mucha_espera: ['espera'],
+    retrabajo: ['retrabajo'], errores_capacidad: ['errores'], entregas_irregulares: ['regularidad', 'entregas'], estimaciones_no_predicen: ['estimacion'],
+  };
+  const casoSobreDatoDudoso = (id, eq) => (MEDIDAS_CASO[id] || []).some((k) => { const m = med(eq, k); return !!(m && m.disponible && m.revisar); });
 
   /**
    * Previsión por probabilidad desde las entregas reales de las últimas 12 semanas: cuántas tareas en 4 semanas
@@ -208,7 +224,7 @@
   }
 
   /** Ficha de un equipo (o del área). */
-  function fichaEquipo(r, eq, cols, fiab, cfg) {
+  function fichaEquipo(r, eq, cols, fiab, cfg, det, esArea) {
     const info = (cfg.equiposInfo || {})[eq.nombre] || {};
     const fe = fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
     const bien = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado === 'bien').length : null;
@@ -231,10 +247,13 @@
     // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
-    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : 'estable';
+    // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
+    const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))
+      .filter((c) => c.gravedad === 'critico' && casoActivo(c.id, cfg, det) && !casoSobreDatoDudoso(c.id, eq)).map((c) => c.id);
+    const estado = pocoFiable ? 'poco_fiable' : cambios.length ? 'alerta' : revisarDato.length ? 'revisar' : provisional ? 'provisional' : graves.length ? 'atencion' : 'estable';
     return {
       nombre: eq.nombre, tipo: info.tipo || 'interno', proveedor: info.proveedor || null, area: info.area || null,
-      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores,
+      estado, medidas: Object.assign({}, eq.medidas, eq.kpis && eq.kpis.coste ? { coste: eq.kpis.coste } : {}), cambios, revisarDato, mejores, graves, gravesTodas: graves,
       tiempo: N.tiempoPorEtapa(r.preparacion, eq.nombre), atascadas: eq.atascadas, enCurso: eq.enCurso, umbralEdad: eq.umbralEdad,
       sprints: eq.sprints, fiabilidad: fe ? { valores: fe.valores, revisar: fe.revisar, bien, medibles } : null,
       semanasConDatos: eq.semanasConDatos, entregadas: eq.entregadas, n: eq.n, casos: eq.casos,
@@ -243,17 +262,27 @@
   }
 
   /** Recomendaciones del banco de casos, filtradas por el Context y agrupadas cuando se repiten (como en la v2). */
-  function recomendaciones(r, cfg, det) {
+  function recomendaciones(r, cfg, det, equiposVM) {
     const porId = {}, out = [];
+    // Las medidas de la ficha (con lo marcado "por revisar", como los cierres masivos): de ahí se sabe qué dato es dudoso
+    const fichaDe = {}; (equiposVM || []).forEach((e) => { fichaDe[e.nombre] = e; });
     const deEquipo = (id, gravedad, confianza, equipo, evidencia) => {
       if (!casoActivo(id, cfg, det)) return;
-      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false };
+      if (fichaDe[equipo] && casoSobreDatoDudoso(id, fichaDe[equipo])) return;
+      const x = porId[id] = porId[id] || { id, gravedad: 'atencion', confianza: 'baja', equipos: [], evidencias: [], grupo: false, porEquipo: {}, ordenModelo: [] };
       if (gravedad === 'critico') x.gravedad = 'critico';
       if (confianza === 'alta' || (confianza === 'media' && x.confianza === 'baja')) x.confianza = confianza;
-      x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]);
+      x.equipos.push(equipo); x.evidencias.push([equipo, evidencia]); x.ordenModelo.push(equipo);
+      // Cada equipo con su nivel y su evidencia: la ficha de un equipo no enseña la de otro ni el nivel del peor
+      x.porEquipo[equipo] = { gravedad, confianza, evidencia, nivel: nivelDe(gravedad, confianza) };
     };
     r.modelo.equipos.forEach((eq) => eq.casos.forEach((c) => deEquipo(c.id, c.gravedad, c.confianza, eq.nombre, c.evidencia)));
     r.casosAgentReady.forEach((c) => deEquipo(c.id, c.gravedad, 'alta', c.equipo, c.evidencia));
+    // Primero el equipo con el nivel más alto: su evidencia es la que explica el nivel de la recomendación
+    Object.keys(porId).forEach((k) => {
+      const x = porId[k], orden = x.equipos.map((e, i) => i).sort((a, b) => RANGO_NIVEL[x.porEquipo[x.equipos[a]].nivel] - RANGO_NIVEL[x.porEquipo[x.equipos[b]].nivel] || a - b);
+      x.equipos = orden.map((i) => x.equipos[i]); x.evidencias = orden.map((i) => x.evidencias[i]);
+    });
     Object.keys(porId).forEach((k) => out.push(porId[k]));
     const dims = r.casosGrupo.some((x) => x.dimension !== 'area') ? ['tipo', 'proveedor'] : ['area'];
     r.casosGrupo.filter((x) => dims.indexOf(x.dimension) >= 0 && casoActivo(x.id, cfg, det)).forEach((x) => {
@@ -267,9 +296,10 @@
     out.forEach((x) => {
       const c = C().casos[x.id];
       x.caso = c; x.titulo = c.titulo; x.senal = c.senal; x.medida = c.medida || null;
-      x.nivel = x.gravedad === 'critico' ? 'alto' : x.confianza === 'baja' ? 'bajo' : 'medio';
+      x.nivel = nivelDe(x.gravedad, x.confianza);
       x.evaluable = !!(x.medida && N.MEDIDAS_INICIATIVA[x.medida]);
-      x.clave = x.id + '|' + x.equipos.join(',');
+      // La clave (con la que se guarda un descarte) sigue el orden del modelo, no el de urgencia: así no cambia entre cargas
+      x.clave = x.id + '|' + (x.ordenModelo || x.equipos).join(',');
       x.fuente = 'banco';
     });
     const rango = { alto: 0, medio: 1, bajo: 2 };
@@ -306,24 +336,51 @@
     return { veredicto, bloqueos, limites, avisos, kpis: cols };
   }
 
+  /**
+   * Recomendaciones urgentes que siguen activas en cada equipo (sin las descartadas). Un equipo "Pide atención" solo
+   * mientras tenga alguna; si se descartan todas, vuelve a "Estable".
+   */
+  function ajustarAtencion(vm, descartadas) {
+    const desc = descartadas || {};
+    vm.equipos.forEach((e) => {
+      e.graves = (e.gravesTodas || []).filter((id) => vm.recs.some((r) => r.id === id && r.equipos.indexOf(e.nombre) >= 0 && !desc[r.clave]));
+      if (e.estado === 'atencion' && !e.graves.length) e.estado = 'estable';
+      else if (e.estado === 'estable' && e.graves.length) e.estado = 'atencion';
+    });
+    return vm;
+  }
+  /**
+   * Equipos que se ven en el export y no se miden: los de menos del 2 % (o no elegidos) y las tareas sin equipo.
+   * "Nuevos" son los que han llegado con un export después de elegir equipos y no se han descartado.
+   */
+  function fueraDeMedicion(cfg, det, tareas) {
+    const cp = campo(cfg, det), o = opcion(det, cp), medidos = equipos(cfg, det);
+    if (!o || o.id === 'todos') return { fuera: [], sinEquipo: 0, nuevos: [] };
+    const total = tareas || o.valores.reduce((s, v) => s + v.n, 0), conEquipo = o.valores.reduce((s, v) => s + v.n, 0);
+    const elegidos = !!(cfg.equipos && cfg.equipos.length && cfg.campoEquipo === cp);
+    const descartados = cfg.equiposDescartados || [];
+    const fuera = o.valores.filter((v) => medidos.indexOf(v.valor) < 0).map((v) => ({ nombre: v.valor, n: v.n, poco: v.n / Math.max(1, conEquipo) < 0.02 }));
+    return { fuera, sinEquipo: Math.max(0, total - conEquipo), nuevos: elegidos ? fuera.filter((v) => !v.poco && descartados.indexOf(v.nombre) < 0).map((v) => v.nombre) : [] };
+  }
   /** La vista-modelo completa. */
   function construirVM(r, entrada) {
     const { det, cfg } = entrada, lectura = lecturaCalculo(entrada.lectura, cfg);
     const cols = columnas(cfg, det);
     const fiab = N.fiabilidad(lectura, det, r.preparacion, r.modelo, cfgCalculo(cfg, det));
-    const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg));
-    const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg);
+    const equiposVM = r.modelo.equipos.map((eq) => fichaEquipo(r, eq, cols, fiab, cfg, det));
+    const area = fichaEquipo(r, r.area.equipos[0], cols, null, cfg, det, true);
     const inis = r.iniciativas.map((x) => ({ ini: x.iniciativa, ev: x.evaluacion, s: N.seguimiento(x.iniciativa, x.evaluacion, r.preparacion) }));
-    return {
+    return ajustarAtencion({
       fechaDatos: det.fechaRef, semanaFin: r.modelo.semanaFin, semanas: { K: r.preparacion.ctx.K, KP: r.preparacion.ctx.KP, R: r.preparacion.ctx.R, N: r.modelo.semanas.length },
-      kpis: cols, contexto: contexto(cfg, det), area, equipos: equiposVM,
-      recs: recomendaciones(r, cfg, det), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
+      kpis: cols, contexto: contexto(cfg, det), area, areaSin: r.areaSin || [], equipos: equiposVM,
+      recs: recomendaciones(r, cfg, det, equiposVM), fiabilidad: fiab, dataCheck: dataCheck(r, lectura, fiab, cfg, det),
       comparaciones: r.comparaciones, casosGrupo: r.casosGrupo, iniciativas: inis, paquete: r.paquete, problemasPaquete: r.problemas,
       informe: lectura.informe, det, campoEquipo: campo(cfg, det), equiposMedidos: equipos(cfg, det), mapeo: mapeo(cfg, det),
+      fuera: fueraDeMedicion(cfg, det, (lectura.tareas || []).length),
       hayCoste: hayCoste(cfg), hayProveedores: hayProveedores(cfg),
       epicas: N.vistaEpicas(r.preparacion, lectura.epicas || []),
-    };
+    }, entrada.descartadas);
   }
 
-  window.Puente = { migrarNombres, OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, hayCoste, hayProveedores, med };
+  window.Puente = { migrarNombres, OBJETIVOS, BASE, TRABAJO, contexto, columnas, casoActivo, campo, equipos, mapeo, mapeoSinIA, porMapeo, porRevisar, confirmarReconocidos, fijarConfirmados, migrarMapeo, lecturaCalculo, cfgCalculo, clienteDe, iniciativas, diagnosticar, construirVM, ajustarAtencion, casoSobreDatoDudoso, hayCoste, hayProveedores, med };
 })();

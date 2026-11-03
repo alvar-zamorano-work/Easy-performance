@@ -54,9 +54,14 @@ function deItems(items: Derivada[], p: Preparacion, det: Deteccion, cfg: ConfigC
     out.tiempos = { valor: pct(x), estado: x >= 0.8 ? 'bien' : 'revisar', detalle: pct(x) + Tx(' of done work has the time in each status.', ' de lo terminado trae el tiempo en cada estado.') };
   }
   // Pasan por en curso
+  // Solo se puede saber con el tiempo en cada estado: sin él, ninguna tarea "salta" y saldría un 100 % que no es verdad
+  const entT = ent.filter((d) => d.conTiempos);
   if (ent.length < 5) out.flujo = { valor: Tx('Few tasks', 'Pocas tareas'), estado: 'sin', detalle: Tx('Fewer than 5 tasks were done in recent weeks.', 'Hay menos de 5 tareas terminadas en las últimas semanas.') };
+  else if (entT.length < 5) out.flujo = { valor: Tx('Unknown', 'No se sabe'), estado: 'sin', detalle: det.hayTiempos
+    ? Tx('Fewer than 5 recent done tasks have the time in each status: it cannot tell whether tasks went through in progress.', 'Menos de 5 tareas terminadas recientes traen el tiempo en cada estado: no se puede saber si pasaron por en curso.')
+    : Tx('The export has no time in each status, so it cannot tell whether tasks went through in progress.', 'El export no trae el tiempo en cada estado: no se puede saber si las tareas pasaron por en curso.') };
   else {
-    const x = 1 - ent.filter((d) => d.salto).length / ent.length;
+    const x = 1 - entT.filter((d) => d.salto).length / entT.length;
     out.flujo = { valor: pct(x), estado: x >= 0.95 ? 'bien' : 'revisar', detalle: pct(x) + Tx(' of done work went through in progress before it was closed.', ' de lo terminado pasó por en curso antes de cerrarse.') };
   }
   // Registro a tiempo: las tareas se crean antes de hacer el trabajo
@@ -153,7 +158,7 @@ export function fiabilidad(lectura: Lectura, det: Deteccion, p: Preparacion, mod
 
   // Historia suficiente para saber qué es lo normal
   const cortos = modelo.equipos.filter((e) => e.semanasConDatos < SEMANAS_MINIMAS);
-  nuevo('historia', Tx('Enough history', 'Historia suficiente'), Tx('Weeks with activity for each team. It takes 12 to know what is normal and 4 to measure.', 'Semanas con actividad de cada equipo. Hacen falta 12 para saber qué es lo normal y 4 para medir.'), SEMANAS_MINIMAS + Tx(' weeks or more', ' semanas o más'),
+  nuevo('historia', Tx('Enough history', 'Historia suficiente'), Tx('Weeks with activity for each team. It takes 12 for a baseline and 4 to measure.', 'Semanas con actividad de cada equipo. Hacen falta 12 para tener línea base y 4 para medir.'), SEMANAS_MINIMAS + Tx(' weeks or more', ' semanas o más'),
     Tx('Load a longer period in the first import.', 'Cargar un periodo más largo en la primera ingesta.'),
     { valor: (modelo.equipos.length - cortos.length) + Tx(' of ', ' de ') + modelo.equipos.length + Tx(' teams', ' equipos'), estado: cortos.length ? 'revisar' : 'bien',
       detalle: cortos.length ? Tx('Short history: ', 'Con poca historia: ') + cortos.map((e) => e.nombre + ' (' + e.semanasConDatos + Tx(' weeks)', ' semanas)')).join(', ') + '.' : Tx('Every team has enough history.', 'Todos los equipos tienen historia suficiente.') });

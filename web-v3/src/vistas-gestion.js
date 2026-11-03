@@ -5,7 +5,8 @@
   const { S, N, t, tn, esc, valor, nombreMedida, nombreEquipo, fecha, cat, lista } = EP;
   const IA = N.IA;
   const proveedor = () => IA.proveedorAnthropic({ clave: S.ia.clave, modelo: S.ia.modelo || IA.MODELO_POR_DEFECTO });
-  const hayIa = () => !!S.ia.clave;
+  // La IA está en Labs: sin Labs no hay botones de IA aunque quede una clave de la sesión
+  const hayIa = () => !!S.ia.clave && !!(S.prefs && S.prefs.labs);
   /** Fecha de hoy en la hora local, como aaaa-mm-dd. */
   const hoyLocal = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
@@ -14,7 +15,13 @@
   function recsIa() {
     S.vm.recs.forEach((r) => { r.ia = null; });
     if (!S.iaRecs || S.iaRecsDe !== S.lectura) return [];
-    return S.iaRecs.filter((x) => {
+    const dudoso = (caso, eq) => { const e = S.vm.equipos.filter((y) => y.nombre === eq)[0]; return !!(caso && e && EP.P.casoSobreDatoDudoso(caso, e)); };
+    return S.iaRecs.map((x) => {
+      // Un equipo cuyo dato está por revisar no recibe esta propuesta (como en el banco de casos)
+      const equipos = x.equipos.filter((e) => !dudoso(x.causa.caso, e));
+      return equipos.length === x.equipos.length ? x : Object.assign({}, x, { equipos, evidencia: x.evidencia.filter((e) => equipos.indexOf(e.equipo) >= 0) });
+    }).filter((x) => {
+      if (!x.equipos.length) return false;
       if (x.causa.caso && !EP.P.casoActivo(x.causa.caso, S.cfg, S.det)) return false;
       const mismo = x.causa.caso && S.vm.recs.filter((c) => c.id === x.causa.caso && !c.ia && x.equipos.some((e) => c.equipos.indexOf(e) >= 0))[0];
       if (mismo) { mismo.ia = x; return false; }
@@ -28,7 +35,7 @@
     const ev = r.evidencias.slice(0, 2).map((x) => `<div class="small">${x[0] ? `<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</div>`).join('');
     const ini = iniDeRec(r);
     const botones = [
-      r.fuente === 'ia' ? '' : `<button class="btn sm" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}">${esc(t('recs.porque'))}</button>`,
+      r.fuente === 'ia' ? '' : `<button class="btn sm" data-action="drill" data-kind="caso" data-id="${esc(r.clave)}"${r.todos && r.equipos.length === 1 ? ` data-team="${esc(r.equipos[0])}"` : ''}>${esc(t('recs.porque'))}</button>`,
       ini ? K.chip('good', t('recs.yaIniciativa')) : r.evaluable ? `<button class="btn sm primary" data-action="rec-ini" data-id="${esc(r.clave)}">${esc(t('recs.crearIni'))}</button>` : '',
       opts.descartada ? `<button class="link small" data-action="rec-restore" data-id="${esc(r.clave)}">${esc(t('recs.restaurar'))}</button>` : `<button class="link small" data-action="rec-dismiss" data-id="${esc(r.clave)}">${esc(t('recs.descartar'))}</button>`,
     ].join('');
@@ -43,10 +50,14 @@
     if (S.role === 'equipo') S.recFilter = nombres[0] || 'todos';
     const ia = recsIa();
     const todas = EP.vistas.recsActivas(eqs).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => nombres.indexOf(e) >= 0)));
-    const enFiltro = (r) => (S.recFilter === 'todos' || r.equipos.indexOf(S.recFilter) >= 0) && (!S.recLevel || r.nivel === S.recLevel);
-    const vistas = todas.filter(enFiltro);
-    const descartadas = S.vm.recs.filter((r) => S.dismissed[r.clave] && enFiltro(r));
-    const n = (l) => todas.filter((r) => r.nivel === l).length;
+    // Filtrado por un equipo: cada recomendación con el nivel y la evidencia de ese equipo
+    const unEquipo = S.recFilter !== 'todos' && nombres.indexOf(S.recFilter) >= 0 ? [S.recFilter] : null;
+    const soloEquipo = (r) => { const ev = r.evidencias.filter((x) => x[0] === S.recFilter); return Object.assign({}, r, { equipos: [S.recFilter], evidencias: ev.length ? ev : r.evidencias, otros: r.equipos.length - 1 }); };
+    const delFiltro = unEquipo ? EP.vistas.recsActivas(eqs.filter((e) => e.nombre === S.recFilter)).concat(ia.filter((r) => !S.dismissed[r.clave] && r.equipos.indexOf(S.recFilter) >= 0).map(soloEquipo)) : todas;
+    const enNivel = (r) => !S.recLevel || r.nivel === S.recLevel;
+    const vistas = delFiltro.filter(enNivel);
+    const descartadas = S.vm.recs.filter((r) => S.dismissed[r.clave] && (!unEquipo || r.equipos.indexOf(S.recFilter) >= 0)).map((r) => K.recPara(r, unEquipo || nombres)).filter(enNivel);
+    const n = (l) => delFiltro.filter((r) => r.nivel === l).length;
     const estado = S.iaEstado.recs, nIa = S.iaRecs && S.iaRecsDe === S.lectura ? S.iaRecs.length : 0;
     const iaPie = !hayIa() ? esc(t('ia.sinClave')) : estado === 'trabajando' ? esc(t('ia.trabajando')) : estado === 'error' ? esc(t('ia.error', { e: S.iaError.recs || '' })) : nIa ? esc(t('ia.recsValidadas', { n: nIa, d: S.iaDescartadas })) : esc(t('ia.recsQue'));
     // Filtros en una fila: equipo, nivel y, si hay clave, las propuestas de la IA
@@ -55,7 +66,7 @@
     const iaCtl = hayIa() ? `<span class="row"><button class="btn sm" data-action="ia-recs" ${estado === 'trabajando' ? 'disabled' : ''}>${esc(nIa ? t('ia.otraVez') : t('ia.generar'))}</button><span class="small muted">${iaPie}</span></span>` : '';
     const tiles = `<div class="filtros">${selEquipo}${niveles}${iaCtl}</div>`;
     const primera = vistas[0];
-    const status = K.statusBar(n('alto') ? 'bad' : n('medio') ? 'warn' : 'good', primera ? esc(t('recs.loPrimero', { titulo: primera.titulo, para: K.paraQuien(primera) })) : esc(t('recs.ninguna')), [esc(t('recs.items1')), esc(t('recs.items2'))]);
+    const status = K.statusBar(n('alto') ? 'bad' : n('medio') ? 'warn' : 'good', primera ? esc(t('recs.loPrimero', { titulo: primera.titulo, para: K.paraQuien(primera) })) : esc(t('recs.ninguna')), [esc(t('recs.items1'))].concat(hayIa() ? [esc(t('recs.items2'))] : []));
     const cuerpo = vistas.length ? `<div class="fichas cols-2">${vistas.map((r) => recCard(r)).join('')}</div>` : `<div class="ficha empty">${esc(descartadas.length ? t('recs.todasDescartadas') : t('recs.ningunaFiltro'))}</div>`;
     const caja = descartadas.length ? `<details class="dismissed"><summary>${esc(tn('recs.descartadas', descartadas.length))}</summary><div class="fichas cols-2">${descartadas.map((r) => recCard(r, { descartada: true })).join('')}</div></details>` : '';
     return status + tiles + cuerpo + caja;
@@ -63,8 +74,8 @@
   EP.accion('rec-level', (el) => { S.recLevel = S.recLevel === el.dataset.level ? null : el.dataset.level; EP.render(); });
   EP.accion('rec-filter', (el) => { S.recFilter = el.dataset.team; EP.render(); });
   EP.cambio('rec-team', (el) => { S.recFilter = el.value; EP.render(); });
-  EP.accion('rec-dismiss', (el) => { S.dismissed[el.dataset.id] = true; EP.guardarPrefs(); EP.render(); EP.toast(t('recs.descartada')); });
-  EP.accion('rec-restore', (el) => { delete S.dismissed[el.dataset.id]; EP.guardarPrefs(); EP.render(); });
+  EP.accion('rec-dismiss', (el) => { S.dismissed[el.dataset.id] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); EP.guardarPrefs(); EP.render(); EP.toast(t('recs.descartada')); });
+  EP.accion('rec-restore', (el) => { delete S.dismissed[el.dataset.id]; EP.P.ajustarAtencion(S.vm, S.dismissed); EP.guardarPrefs(); EP.render(); });
   EP.accion('rec-ini', (el) => {
     const r = S.vm.recs.concat(recsIa()).filter((x) => x.clave === el.dataset.id)[0]; if (!r) return;
     S.iniForm = { nombre: r.titulo, equipos: r.equipos.slice(), medida: r.medida, inicio: hoyLocal(), origen: r.fuente === 'ia' ? (r.ia.causa && r.ia.causa.caso) || 'propia' : r.id, efecto: r.caso ? r.caso.comprobar : (r.ia ? r.ia.comprobar : '') };
@@ -78,11 +89,17 @@
     }).catch((e) => { S.iaEstado.recs = 'error'; S.iaError.recs = e.message; EP.render(); });
   });
   function cajonCaso(d) {
-    const r = S.vm.recs.filter((x) => x.clave === d.id)[0];
+    let r = S.vm.recs.filter((x) => x.clave === d.id)[0];
     if (!r) return [t('recs.titulo'), ''];
+    // Abierto desde un equipo (su ficha, Presentar o el rol Equipo): con el nivel y la evidencia de ese equipo
+    const desde = S.role === 'equipo' ? EP.visibles().map((e) => e.nombre) : d.team ? [d.team] : null;
+    if (desde) r = K.recPara(r, desde);
     const c = r.caso;
     let html = `<div class="meta">${K.nivelChip(r.nivel)}${K.chip('neutral', K.paraQuien(r))}</div><p><b>${esc(t('caso.senal'))}</b> ${esc(c.senal)}</p>`;
-    html += `<h4>${esc(t('caso.evidencia'))}</h4>${r.evidencias.map((x) => `<p class="small">${x[0] ? `<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</p>`).join('')}`;
+    // Con varios equipos, cada evidencia lleva el nivel de su equipo: el de la recomendación es el del más urgente
+    const nivelEq = (e) => (r.porEquipo && r.porEquipo[e] && r.equipos.length > 1 ? K.nivelChip(r.porEquipo[e].nivel) + ' ' : '');
+    html += `<h4>${esc(t('caso.evidencia'))}</h4>${r.evidencias.map((x) => `<p class="small">${x[0] ? `${nivelEq(x[0])}<b>${esc(nombreEquipo(x[0]))}:</b> ` : ''}${esc(x[1])}</p>`).join('')}`;
+    if (r.porEquipo && r.equipos.length > 1) html += `<p class="tiny muted">${esc(t('caso.nivelPorEquipo'))}</p>`;
     if (c.comun && r.equipos.length > 1) html += `<p class="small muted">${esc(c.comun)}</p>`;
     html += `<h4>${esc(t('caso.causas'))}</h4><ul class="small">${c.causas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
     html += `<h4>${esc(t('caso.preguntas'))}</h4><ul class="small">${c.preguntas.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
@@ -112,6 +129,10 @@
   function iniciativas() {
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);
     const vis = vm.iniciativas.filter((x) => x.ini.equipos.some((e) => nombres.indexOf(e) >= 0));
+    // Iniciativas de equipos que ahora no se miden (renombrados, fuera del export o no elegidos): no se esconden sin decirlo
+    const enVista = vm.equipos.map((e) => e.nombre);
+    const fueraIni = S.role === 'equipo' ? [] : vm.iniciativas.filter((x) => !x.ini.equipos.some((e) => enVista.indexOf(e) >= 0));
+    const avisoFuera = fueraIni.length ? `<div class="notice warn small">${esc(tn('ini.fueraDeMedicion', fueraIni.length, { lista: lista(fueraIni.map((x) => x.ini.nombre + ' (' + lista(x.ini.equipos.map(nombreEquipo)) + ')')) }))}</div>` : '';
     const n = (est) => vis.filter((x) => x.s.estado === est).length;
     const pasos = `<div class="steps">${[1, 2, 3, 4].map((i) => `<div class="step"><span class="n">${i}</span><div><b>${esc(t('ini.paso' + i + '.t'))}</b><div class="small muted">${esc(t('ini.paso' + i + '.d', { lat: N.LATENCIA_DIAS / 7 }))}</div></div></div>`).join('')}</div>`;
     const propias = (S.cfg.iniciativas || []).map((i) => i.id);
@@ -124,16 +145,17 @@
         <div class="progress"><div class="bar"><i class="tone-neutral" style="width:${Math.round(s.progreso * 100)}%"></i></div><span class="small muted">${esc(s.completa ? t('ini.completa') : t('ini.completaEl', { f: fecha(s.completaEl) }))}</span></div>
         <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${s.control ? `<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}
         <p class="small">${esc(s.texto)}</p>${graficoIni(s)}${lect ? `<div class="notice info small"><b>${esc(t('ini.lecturaIa'))}</b> ${esc(lect.lectura)}</div>` : ''}</div>
-        <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (S.carpeta && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
+        <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (EP.carpeta && EP.carpeta.enUso() && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
     }).join('');
     const estIa = S.iaEstado.impacto;
     const iaFila = vis.length && hayIa() ? `<div class="row" style="margin:8px 0"><button class="btn sm" data-action="ia-impacto" ${estIa === 'trabajando' ? 'disabled' : ''}>${esc(estIa === 'trabajando' ? t('ia.trabajando') : t('ini.leerIa'))}</button>${estIa === 'error' ? `<span class="small t-warn">${esc(t('ia.error', { e: S.iaError.impacto || '' }))}</span>` : ''}</div>` : '';
     const status = K.statusBar(n('empeora') ? 'bad' : n('funciona') ? 'good' : 'neutral', esc(vis.length ? tn('ini.titular', vis.length, { m: n('midiendo'), f: n('funciona') }) : t('ini.ninguna')), [esc(t('ini.items1')), esc(t('ini.items2'))]);
-    return status + (S.iniForm ? formulario() : '') + iaFila
+    return status + avisoFuera + (S.iniForm ? formulario() : '') + iaFila
       + (vis.length ? `<div class="fichas cols-2">${tarjetas}</div>` : `<div class="ficha empty">${esc(t('ini.vacio'))}</div>`) + `<details class="mas"><summary>${esc(t('ini.como'))}</summary>${pasos}</details>`;
   }
   function formulario() {
-    const f = S.iniForm, eqs = S.vm.equipos;
+    // Con el rol Equipo, una iniciativa es de su equipo: no se puede guardar una de otro que luego no se vería
+    const f = S.iniForm, eqs = S.role === 'equipo' ? EP.visibles() : S.vm.equipos;
     const medidas = Object.keys(N.MEDIDAS_INICIATIVA).filter((id) => cat().medidas[id]);
     return `<div class="ficha" id="form-ini"><h3>${esc(t('ini.nueva'))}</h3><form class="grid cols-2" onsubmit="return false">
       <div class="field span-2"><label>${esc(t('ini.f.nombre'))}</label><input type="text" name="nombre" value="${esc(f.nombre || '')}" placeholder="${esc(t('ini.f.nombreEj'))}"></div>
@@ -368,7 +390,16 @@
   }
   const info = (eq) => { S.cfg.equiposInfo = S.cfg.equiposInfo || {}; S.cfg.equiposInfo[eq] = S.cfg.equiposInfo[eq] || { tipo: 'interno', proveedor: null, area: null }; return S.cfg.equiposInfo[eq]; };
   EP.cambio('eq-campo', (el) => aplicarCfg(() => { S.cfg.campoEquipo = el.value; delete S.cfg.equipos; }));
-  EP.cambio('eq-incluir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value); }));
+  EP.cambio('eq-incluir', () => aplicarCfg(() => {
+    S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:checked'), (c) => c.value);
+    // Los que se dejan sin marcar a propósito no vuelven a salir como "equipos nuevos"
+    // Se suman a los descartes de antes (un equipo descartado que no viene en este export sigue descartado)
+    const sin = [].map.call(document.querySelectorAll('input[data-change="eq-incluir"]:not(:checked)'), (c) => c.value);
+    S.cfg.equiposDescartados = [...new Set((S.cfg.equiposDescartados || []).filter((e) => S.cfg.equipos.indexOf(e) < 0).concat(sin))];
+  }));
+  // Equipos nuevos en un export: se añaden a la medición o se descartan, desde el aviso del Resumen
+  EP.accion('eq-nuevos-anadir', () => aplicarCfg(() => { S.cfg.campoEquipo = S.vm.campoEquipo; S.cfg.equipos = (S.cfg.equipos || []).concat(S.vm.fuera.nuevos); }));
+  EP.accion('eq-nuevos-no', () => aplicarCfg(() => { S.cfg.equiposDescartados = (S.cfg.equiposDescartados || []).concat(S.vm.fuera.nuevos); }));
   EP.cambio('eq-tipo', (el) => aplicarCfg(() => { const i = info(el.dataset.eq); i.tipo = el.value; if (el.value !== 'proveedor') i.proveedor = null; else i.proveedor = i.proveedor || t('equipo.proveedorEj'); }));
   EP.cambio('eq-proveedor', (el) => aplicarCfg(() => { info(el.dataset.eq).proveedor = el.value.trim() || null; }));
   EP.cambio('eq-area', (el) => aplicarCfg(() => { info(el.dataset.eq).area = el.value.trim() || null; }));
@@ -383,21 +414,27 @@
   // ---------- ajustes ----------
   function ajustes() {
     const eqs = S.vm.equipos;
+    const labs = !!(S.prefs && S.prefs.labs);
+    // Labs: funciones en prueba (IA, cortes, carpeta compartida). Apagado, no aparecen.
+    // Con Labs encendido hay seis tarjetas de media anchura y Labs va en la sexta; apagado, Labs ocupa toda la fila
+    const tarjetaLabs = `<div class="card${labs ? '' : ' full'}"><h3>${esc(t('ajustes.labs'))}</h3><p class="small muted">${esc(t('ajustes.labsTexto'))}</p>
+      <label class="check"><input type="checkbox" data-change="labs" ${labs ? 'checked' : ''}> ${esc(t('ajustes.labsActivar'))}</label></div>`;
     return `<div class="grid cols-2">
-      <div class="card"><h3>${esc(t('ajustes.ia'))}</h3><p class="small muted">${esc(t('ajustes.iaTexto'))}</p>
+      ${labs ? `<div class="card"><h3>${esc(t('ajustes.ia'))}</h3><p class="small muted">${esc(t('ajustes.iaTexto'))}</p>
         <div class="field"><label for="ia-clave">${esc(t('ajustes.clave'))}</label><input type="password" id="ia-clave" value="${esc(S.ia.clave)}" placeholder="sk-ant-..." autocomplete="off"><div class="tiny muted">${esc(t('ajustes.claveNota'))}</div></div>
         <div class="field"><label for="ia-modelo">${esc(t('ajustes.modelo'))}</label><input type="text" id="ia-modelo" value="${esc(S.ia.modelo)}"></div>
         <div class="row"><button class="btn primary" data-action="ia-guardar">${esc(t('comun.guardar'))}</button><button class="btn" data-action="ia-probar" ${S.iaEstado.prueba === 'trabajando' ? 'disabled' : ''}>${esc(t('ajustes.probar'))}</button><button class="btn" data-action="ia-olvidar">${esc(t('ajustes.olvidar'))}</button></div>
-        <div class="small" style="margin-top:6px">${esc(S.iaPrueba || '')}</div></div>
+        <div class="small" style="margin-top:6px">${esc(S.iaPrueba || '')}</div></div>` : ''}
       <div class="card"><h3>${esc(t('ajustes.vista'))}</h3>
         <div class="field"><label>${esc(t('idioma.titulo'))}</label><select data-change="lang"><option value="es" ${window.I18N.lang === 'es' ? 'selected' : ''}>Español</option><option value="en" ${window.I18N.lang === 'en' ? 'selected' : ''}>English</option></select></div>
-        <div class="field"><label>${esc(t('rol.vistaPara'))}</label><select data-change="rol">${['direccion', 'pmo', 'equipo'].map((r) => `<option value="${r}" ${S.role === r ? 'selected' : ''}>${esc(t('rol.' + r))}</option>`).join('')}</select></div>
         <div class="field"><label>${esc(t('ajustes.equipoPropio'))}</label><select data-change="equipo-propio">${eqs.map((e) => `<option value="${esc(e.nombre)}" ${S.team === e.nombre ? 'selected' : ''}>${esc(nombreEquipo(e.nombre))}</option>`).join('')}</select></div></div>
       <div class="card"><h3>${esc(t('ajustes.exportar'))}</h3><p class="small muted">${esc(t('ajustes.exportarTexto'))}</p>
         <div class="row"><button class="btn" data-action="exp-docx">${esc(t('ajustes.catalogoWord'))}</button><button class="btn" data-action="exp-md">${esc(t('ajustes.catalogoMd'))}</button><button class="btn" data-action="exp-modelo">${esc(t('ajustes.modeloMedida'))}</button><button class="btn" data-action="exp-paquete">${esc(t('ajustes.paquete'))}</button></div></div>
-      <div class="card"><h3>${esc(t('ajustes.carpeta'))}</h3><p class="small muted">${esc(t('ajustes.carpetaTexto'))}</p>
-        <div class="row"><button class="btn" data-action="carpeta-elegir" ${window.showDirectoryPicker ? '' : 'disabled'}>${esc(S.carpeta ? t('ajustes.carpetaOtra') : t('ajustes.carpetaElegir'))}</button>${S.carpeta ? `<button class="btn" data-action="carpeta-leer">${esc(t('ajustes.carpetaLeer'))}</button><span class="small">${esc(t('ajustes.carpetaUsando', { n: S.carpeta.name }))}</span>` : ''}</div>${window.showDirectoryPicker ? '' : `<div class="tiny muted">${esc(t('ajustes.carpetaNoNavegador'))}</div>`}
+      <div class="card"><h3>${esc(t(labs ? 'ajustes.carpeta' : 'ajustes.datosNavegador'))}</h3>${labs ? `<p class="small muted">${esc(t('ajustes.carpetaTexto'))}</p>
+        <div class="row"><button class="btn" data-action="carpeta-elegir" ${window.showDirectoryPicker ? '' : 'disabled'}>${esc(S.carpeta ? t('ajustes.carpetaOtra') : t('ajustes.carpetaElegir'))}</button>${S.carpeta ? `<button class="btn" data-action="carpeta-leer">${esc(t('ajustes.carpetaLeer'))}</button><span class="small">${esc(t('ajustes.carpetaUsando', { n: S.carpeta.name }))}</span>` : ''}</div>${window.showDirectoryPicker ? '' : `<div class="tiny muted">${esc(t('ajustes.carpetaNoNavegador'))}</div>`}` : ''}
         <div class="row" style="margin-top:12px"><button class="btn" data-action="clear-all">${esc(t('ajustes.borrar'))}</button></div><div class="tiny muted">${esc(t('ajustes.borrarTexto'))}</div></div>
+      <div class="card"><h3>${esc(t('recorrido.titulo'))}</h3><p class="small muted">${esc(t('recorrido.ajustes'))}</p><button class="btn" data-action="recorrido-ver">${esc(t('recorrido.ver'))}</button></div>
+      ${tarjetaLabs}
       <div class="card full"><h3>${esc(t('ajustes.copia'))}</h3><p class="small muted">${esc(t('ajustes.copiaTexto'))}</p>
         <div class="row"><button class="btn" data-action="cfg-exportar" ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaExportar'))}</button><label class="btn ${S.demo ? 'disabled' : ''}"><input type="file" accept=".json,application/json" data-change="cfg-importar" hidden ${S.demo ? 'disabled' : ''}>${esc(t('ajustes.copiaImportar'))}</label></div>
         <div class="tiny muted">${esc(t('ajustes.copiaNota'))}</div></div>
@@ -414,7 +451,8 @@
       .then(() => { S.iaEstado.prueba = 'hecho'; EP.render(); });
   });
   EP.cambio('lang', (el) => { window.I18N.fijar(el.value); EP.guardarPrefs(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); });
-  EP.cambio('rol', (el) => { S.role = el.value; S.recFilter = 'todos'; EP.guardarPrefs(); EP.render(); });
+  // Apagar Labs cierra también el asistente si estaba abierto
+  EP.cambio('labs', (el) => { S.prefs.labs = !!el.checked; if (!S.prefs.labs) S.chat.open = false; EP.guardarPrefs(); EP.render(); });
   EP.cambio('equipo-propio', (el) => { S.team = el.value; EP.guardarPrefs(); EP.render(); });
   // Copia de la configuración: para pasar de la web a una copia local (o a otro ordenador) sin perder lo hecho.
   // Lleva configuración, iniciativas, preferencias y cortes (cifras ya calculadas). Nunca los ficheros ni la clave.
@@ -481,12 +519,12 @@
     if (i === 0) {
       const alerta = eqs.filter((e) => e.estado === 'alerta');
       return cerrar + `<div class="slide title">${cab(esc(t('presentar.titulo')), esc(t('presentar.sub', { n: eqs.length, k: vm.semanas.K, f: fecha(vm.fechaDatos) })))}
-        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${nav}</div>`;
+        <div class="tiles">${K.stat(t('resumen.tile.alerta'), String(alerta.length), esc(alerta.length ? lista(alerta.map((e) => nombreEquipo(e.nombre))) : t('resumen.tile.alertaNinguno')), K.puntos((e) => ({ tone: { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' }[e.estado], label: t('equipo.estado.' + e.estado) })), { tone: alerta.length ? 'bad' : 'good' })}${K.stat(t('resumen.tile.fiabilidad'), esc(t('fiab.nivel.' + vm.fiabilidad.nivel)), esc(t('fiab.bienDe', { bien: vm.fiabilidad.bien, n: vm.fiabilidad.comprobaciones.length })), '')}${K.destacados().slice(0, 2).map((id) => K.tile(vm.area, id)).join('')}</div>${vm.areaSin.length ? `<p class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</p>` : ''}${nav}</div>`;
     }
     if (i === ultima) {
       return cerrar + `<div class="slide">${cab(esc(t('resumen.primero')), esc(t('presentar.ultimaSub')))}${recs.length ? `<div class="ficha list big">${recs.slice(0, 4).map(K.recFila).join('')}</div>` : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}${nav}</div>`;
     }
-    const e = eqs[i - 1], r = recs.filter((x) => x.equipos.indexOf(e.nombre) >= 0)[0];
+    const e = eqs[i - 1], r = EP.vistas.recsActivas([e])[0];
     return cerrar + `<div class="slide">${cab(esc(nombreEquipo(e.nombre)), esc(e.fiabilidad ? t('fiab.equipoBien', { bien: e.fiabilidad.bien, n: e.fiabilidad.medibles }) : ''), K.equipoChip(e))}
       <div class="tiles">${K.destacados().map((id) => K.tile(e, id)).join('')}</div>
       <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(EP.vistas.textoSinCambios(e))}</p>`)}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
@@ -498,25 +536,39 @@
     const vm = S.vm, eqs = equipo ? vm.equipos.filter((e) => e.nombre === equipo) : EP.visibles();
     const b1 = [], b2 = [], b3 = [];
     const alerta = eqs.filter((e) => e.cambios.length);
-    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: valor(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
-    else b1.push(t('narr.sinCambios'));
+    if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: K.conUnidad(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
+    else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
+    // Recomendaciones de nivel alto en equipos sin cambios: no se dice que todo va bien
+    eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta').forEach((e) => b1.push(t('narr.atencion', { e: nombreEquipo(e.nombre), r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)).toLowerCase() })));
     // Lo que hay que revisar antes de leer las cifras (cierres masivos, saltos, lo normal era cero)
     const revisar = eqs.filter((e) => e.revisarDato && e.revisarDato.length);
     if (revisar.length) b1.push(t('narr.revisar', { e: lista(revisar.map((e) => nombreEquipo(e.nombre) + ' (' + lista(e.revisarDato.map(nombreMedida)).toLowerCase() + ')')) }));
     const estables = eqs.filter((e) => e.estado === 'estable').map((e) => nombreEquipo(e.nombre));
     if (estables.length && alerta.length) b1.push(t('narr.estables', { e: lista(estables) }));
     const f = vm.fiabilidad;
-    b2.push(t('narr.fiabilidad', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase(), bien: f.bien, n: f.comprobaciones.length }));
-    f.comprobaciones.filter((c) => c.estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
-    const nombres = eqs.map((e) => e.nombre);
-    const recs = EP.vistas.recsActivas(eqs).filter((r) => r.equipos.some((x) => nombres.indexOf(x) >= 0)).slice(0, 3);
+    if (equipo && eqs[0] && eqs[0].fiabilidad) {
+      // Un equipo: sus comprobaciones, no las de toda el área
+      const fe = eqs[0].fiabilidad;
+      b2.push(t('narr.fiabilidadEquipo', { bien: fe.bien, n: fe.medibles }));
+      f.comprobaciones.filter((c) => fe.valores[c.id] && fe.valores[c.id].estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
+    } else {
+      b2.push(t('narr.fiabilidad', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase(), bien: f.bien, n: f.comprobaciones.length }));
+      f.comprobaciones.filter((c) => c.estado === 'revisar').slice(0, 3).forEach((c) => b2.push('- ' + c.nombre + ': ' + c.arreglo));
+    }
+    const recs = EP.vistas.recsActivas(eqs).slice(0, 3);
     if (recs.length) recs.forEach((r) => b3.push('- ' + r.titulo + ' (' + K.paraQuien(r) + ').'));
     else b3.push(t('narr.sinRecs'));
     return [[t('narr.b1'), b1], [t('narr.b2'), b2], [t('narr.b3'), b3]];
   }
   const md = (txt) => String(txt || '').split(/\n+/).map((l) => l.trim()).filter(Boolean).map((l) => (/^- /.test(l) ? `<li>${esc(l.slice(2))}</li>` : `<p>${esc(l)}</p>`)).join('').replace(/(<li>.*?<\/li>)+/g, (m) => `<ul>${m}</ul>`);
   /** Cifras de la página que no están en el paquete y el asistente puede citar. */
-  const extraIa = () => ({ fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto });
+  const extraIa = (equipo) => {
+    const e = equipo && S.vm.equipos.filter((x) => x.nombre === equipo)[0];
+    // Un equipo: sus comprobaciones, no las del área
+    if (e && e.fiabilidad) return { fiabilidad_equipo: { bien: e.fiabilidad.bien, medibles: e.fiabilidad.medibles, comprobaciones: S.vm.fiabilidad.comprobaciones.filter((c) => e.fiabilidad.valores[c.id]).map((c) => ({ id: c.id, nombre: c.nombre, valor: e.fiabilidad.valores[c.id].valor, estado: e.fiabilidad.valores[c.id].estado })) }, data_check: S.vm.dataCheck.veredicto };
+    return extraArea();
+  };
+  const extraArea = () => ({ fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto });
   function cajonResumen(d) {
     const equipo = d.team || (S.role === 'equipo' ? S.team : null);
     const clave = (equipo || 'area') + '|' + S.role + '|' + window.I18N.lang;
@@ -525,13 +577,13 @@
     if (n && n.texto) html += `<div class="narrative">${md(n.texto)}</div><div class="tiny muted">${esc(t('narr.deIa'))}</div>`;
     else html += resumenReglas(equipo).map(([h, ls]) => `<h4>${esc(h)}</h4>${md(ls.join('\n'))}`).join('') + `<div class="tiny muted">${esc(t('narr.deReglas'))}</div>`;
     if (n && n.error) html += `<div class="notice warn small">${esc(n.error)}</div>`;
-    html += hayIa() ? `<div class="row" style="margin-top:12px"><button class="btn" data-action="ia-resumen" data-team="${esc(equipo || '')}" ${n && n.trabajando ? 'disabled' : ''}>${esc(n && n.trabajando ? t('ia.trabajando') : t('narr.conIa'))}</button></div>` : `<div class="tiny muted" style="margin-top:12px">${esc(t('narr.sinClave'))}</div>`;
+    html += hayIa() ? `<div class="row" style="margin-top:12px"><button class="btn" data-action="ia-resumen" data-team="${esc(equipo || '')}" ${n && n.trabajando ? 'disabled' : ''}>${esc(n && n.trabajando ? t('ia.trabajando') : t('narr.conIa'))}</button></div>` : S.prefs && S.prefs.labs ? `<div class="tiny muted" style="margin-top:12px">${esc(t('narr.sinClave'))}</div>` : '';
     return [t('narr.titulo', { para: equipo ? nombreEquipo(equipo) : t('rol.' + S.role) }), html];
   }
   EP.accion('ia-resumen', (el) => {
     const equipo = el.dataset.team || null, clave = (equipo || 'area') + '|' + S.role + '|' + window.I18N.lang;
     S.narrativas[clave] = { trabajando: true }; EP.render();
-    const o = { idioma: window.I18N.lang, rol: S.role, equipo, extra: extraIa() };
+    const o = { idioma: window.I18N.lang, rol: S.role, equipo, extra: extraIa(equipo) };
     proveedor()(IA.peticionResumen(S.vm.paquete, o, cat())).then((texto) => {
       const v = IA.validarChat(texto, S.vm.paquete, { equipo, extra: o.extra });
       S.narrativas[clave] = v.ok ? { texto: v.respuesta.respuesta } : { error: t('ia.noComprobada') };

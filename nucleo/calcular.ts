@@ -127,6 +127,14 @@ export function preparar(tareas: Tarea[], det: Deteccion, cfgEntrada?: ConfigCal
   return { porEquipo, nombresEquipo, ctx, mapeo };
 }
 
+/**
+ * Cerrada (hecha o descartada) pero sin fecha de cierre: no se sabe cuándo dejó de estar abierta, así que no cuenta
+ * como pendiente ni en curso en ninguna semana. El mismo criterio en las series, en el detalle y en las comparaciones.
+ */
+export function cerradaSinFecha(d: Derivada): boolean {
+  return !d.t.fechas.terminada && (d.etapa === 'hecho' || d.estado === 'descartado' || !!d.t.descartada);
+}
+
 function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, catalogo: Catalogo): ResultadoEquipo {
   const N = c.N, K = c.K, R = c.R, det = c.det, cfg = c.cfg;
   const vacia = () => new Array<number>(N).fill(0);
@@ -165,6 +173,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
       if (t.fechas.creada >= fin) continue;
       const abierta = !t.fechas.terminada || t.fechas.terminada >= fin;
       if (!abierta) continue;
+      if (cerradaSinFecha(d)) continue;
       if (d.inicio && d.inicio < fin) { if (!d.descartada) wip++; } else { pend++; edades.push((fin.getTime() - t.fechas.creada.getTime()) / DIA); }
     }
     s.pendiente[w] = pend;
@@ -279,6 +288,7 @@ function calcularEquipo(nombre: string, items: Derivada[], c: ContextoCalculo, c
     m.estadoTexto = est.texto;
     if (est.por) { m.estadoPor = est.por; m.limite = est.limite ?? null; }
     if (est.lado) m.lado = est.lado;
+    if (est.banda) m.estadoBanda = est.banda;
     if (est.revisar) m.revisar = est.revisar;
     medidas[id] = m;
   });

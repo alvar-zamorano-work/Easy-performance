@@ -86,6 +86,30 @@ test('cierre masivo: las entregas se marcan para revisar y no salen como "normal
   r.modelo.equipos.filter((x) => x.nombre !== EQUIPO_SALTO).forEach((x) => assert.equal(x.medidas.entregas.valor, entregasPorEquipo(base.modelo)[x.nombre], x.nombre));
 });
 
+test('semáforo: fuera de la banda por poco no se dice "dentro" (borde), y dentro de verdad sí', () => {
+  const def = CATALOGO.medidas.ciclo; // menos es mejor
+  const ref = { lo: 6, hi: 9, med: 7.5, n: 12 };
+  const dentro = estadoMedida('ciclo', 8, ref, null, def);
+  assert.equal(dentro.estado, 'bien'); assert.equal(dentro.lado, undefined); assert.match(dentro.texto, /Dentro de|Within/);
+  const encima = estadoMedida('ciclo', 9.4, ref, null, def);
+  assert.equal(encima.estado, 'bien'); assert.equal(encima.lado, 'borde'); assert.doesNotMatch(encima.texto, /Dentro de|Within/);
+  const ent = CATALOGO.medidas.entregas; // más es mejor
+  const debajo = estadoMedida('entregas', 5.6, ref, null, ent);
+  assert.equal(debajo.estado, 'bien'); assert.equal(debajo.lado, 'borde');
+});
+
+test('semáforo: un límite fijo dice si es por arriba o por abajo y guarda lo que diría la banda', () => {
+  // Más es mejor (estimación): el límite se pasa por abajo
+  const est = estadoMedida('estimacion', 0.04, { lo: 0.03, hi: 0.1, med: 0.06, n: 12 }, null, CATALOGO.medidas.estimacion);
+  assert.equal(est.por, 'limite'); assert.match(est.texto, /debajo|below/); assert.equal(est.banda, 'bien');
+  // Fuera de su banda y además sobre el límite: la banda también lo dice
+  const err = estadoMedida('errores', 0.45, { lo: 0.2, hi: 0.3, med: 0.25, n: 12 }, null, CATALOGO.medidas.errores);
+  if (err.por === 'limite') assert.ok(err.banda === 'atencion' || err.banda === 'critico', String(err.banda));
+  // Límite fijado para el equipo: también se sabe qué diría su banda
+  const eq = estadoMedida('ciclo', 20, { lo: 6, hi: 9, med: 7.5, n: 12 }, { atencion: 10, critico: 15 }, CATALOGO.medidas.ciclo);
+  assert.equal(eq.por, 'limite_equipo'); assert.equal(eq.banda, 'critico');
+});
+
 test('semáforo: mejor de lo normal no es "normal", y un límite fijo superado manda aunque la banda diga mejor', () => {
   const def = CATALOGO.medidas.entregas;
   const ref = { lo: 6, hi: 9, med: 7.5, n: 12 };
