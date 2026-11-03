@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" width="960" height="500" role="img" aria-labelledby="t d">
+  <title id="t">Una iniciativa se mide frente al resto de equipos</title>
+  <desc id="d">Tiempo de ciclo semanal de los equipos de una iniciativa y del resto. Cuatro semanas antes, dos de margen que no cuentan y cuatro después. El efecto es la diferencia entre los dos cambios.</desc>
+  <style>
+    .f{font-family:Ubuntu,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    .h{font-size:20px;font-weight:700;fill:#121a38}
+    .s{font-size:13px;fill:#5a6577}
+    .c{font-size:12px;font-weight:700;fill:#5a6577;letter-spacing:.06em}
+    .p{font-size:12px;fill:#5a6577}
+    .ax{font-size:11px;fill:#adb8c2}
+    .bt{font-size:14px;font-weight:700;fill:#121a38}
+    .bx{font-size:12.5px;fill:#121a38}
+    .ch{font-size:12px;font-weight:700}
+  </style>
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f3f4f7"/><line x1="0" y1="0" x2="0" y2="8" stroke="#e1e5ea" stroke-width="3"/>
+    </pattern>
+  </defs>
+  <rect x="1" y="1" width="958" height="498" rx="14" fill="#ffffff" stroke="#e1e5ea"/>
+  <text class="f h" x="32" y="44">Una iniciativa se mide frente al resto de equipos</text>
+  <text class="f s" x="32" y="68">No es un experimento de laboratorio. Dice si el cambio merece seguir, extenderse o pararse.</text>
+
+  <!-- zonas -->
+  <rect x="328" y="122" width="124" height="258" fill="url(#hatch)"/>
+  <text class="f c" x="204" y="112" text-anchor="middle">ANTES: 4 SEMANAS</text>
+  <text class="f c" x="390" y="112" text-anchor="middle">MARGEN</text>
+  <text class="f c" x="576" y="112" text-anchor="middle">DESPUÉS: 4 SEMANAS</text>
+  <text class="f p" x="390" y="350" text-anchor="middle">2 semanas</text>
+  <text class="f p" x="390" y="366" text-anchor="middle">que no cuentan</text>
+  <line x1="328" y1="122" x2="328" y2="380" stroke="#5a6577" stroke-dasharray="5 4"/>
+  <text class="f p" x="332" y="136" style="fill:#0058ab;font-weight:700">Empieza</text>
+
+  <!-- rejilla -->
+  <g stroke="#e1e5ea">
+    <line x1="80" y1="295.6" x2="700" y2="295.6"/><line x1="80" y1="211.25" x2="700" y2="211.25"/><line x1="80" y1="126.9" x2="700" y2="126.9"/>
+  </g>
+  <line x1="80" y1="380" x2="700" y2="380" stroke="#adb8c2" stroke-width="1.5"/>
+  <g class="f ax" text-anchor="end">
+    <text x="72" y="384">0</text><text x="72" y="299.6">5</text><text x="72" y="215.25">10</text><text x="72" y="130.9">15</text>
+  </g>
+
+  <!-- el resto -->
+  <polyline fill="none" stroke="#adb8c2" stroke-width="2.4" stroke-linejoin="round"
+    points="111,194.4 173,194.4 235,202.8 297,194.4 359,194.4 421,202.8 483,202.8 545,202.8 607,211.25 669,202.8"/>
+  <g fill="#adb8c2"><circle cx="111" cy="194.4" r="3.5"/><circle cx="173" cy="194.4" r="3.5"/><circle cx="235" cy="202.8" r="3.5"/><circle cx="297" cy="194.4" r="3.5"/><circle cx="359" cy="194.4" r="3.5"/><circle cx="421" cy="202.8" r="3.5"/><circle cx="483" cy="202.8" r="3.5"/><circle cx="545" cy="202.8" r="3.5"/><circle cx="607" cy="211.25" r="3.5"/><circle cx="669" cy="202.8" r="3.5"/></g>
+  <!-- sus equipos -->
+  <polyline fill="none" stroke="#0058ab" stroke-width="2.6" stroke-linejoin="round"
+    points="111,177.5 173,160.6 235,177.5 297,177.5 359,194.4 421,211.25 483,228.1 545,245 607,245 669,245"/>
+  <g fill="#0058ab"><circle cx="111" cy="177.5" r="4"/><circle cx="173" cy="160.6" r="4"/><circle cx="235" cy="177.5" r="4"/><circle cx="297" cy="177.5" r="4"/><circle cx="359" cy="194.4" r="4"/><circle cx="421" cy="211.25" r="4"/><circle cx="483" cy="228.1" r="4"/><circle cx="545" cy="245" r="4"/><circle cx="607" cy="245" r="4"/><circle cx="669" cy="245" r="4"/></g>
+
+  <!-- leyenda de líneas -->
+  <line x1="96" y1="300" x2="124" y2="300" stroke="#0058ab" stroke-width="3"/><text class="f p" x="132" y="304" style="fill:#0058ab;font-weight:700">Equipos de la iniciativa</text>
+  <line x1="96" y1="322" x2="124" y2="322" stroke="#adb8c2" stroke-width="3"/><text class="f p" x="132" y="326">El resto de equipos</text>
+
+  <text class="f p" x="80" y="402">Tiempo de ciclo en días de un ejemplo. Aquí menos es mejor.</text>
+
+  <!-- explicación -->
+  <rect x="728" y="96" width="204" height="92" rx="10" fill="#f3f4f7"/>
+  <text class="f bt" x="744" y="120">Antes y después</text>
+  <text class="f bx" x="744" y="142">4 semanas a cada lado,</text>
+  <text class="f bx" x="744" y="159">8 en proporciones como</text>
+  <text class="f bx" x="744" y="176">retrabajo o espera.</text>
+
+  <rect x="728" y="198" width="204" height="76" rx="10" fill="#f3f4f7"/>
+  <text class="f bt" x="744" y="222">El resto, de control</text>
+  <text class="f bx" x="744" y="244">Si todos mejoran, no es</text>
+  <text class="f bx" x="744" y="261">mérito de la iniciativa.</text>
+
+  <rect x="728" y="284" width="204" height="96" rx="10" fill="#e0f8f7" stroke="#0a9e9b"/>
+  <text class="f bt" x="744" y="308" style="fill:#0a9e9b">Funciona</text>
+  <text class="f bx" x="744" y="330">Sus equipos: de 12,3 a 8,3</text>
+  <text class="f bx" x="744" y="347">El resto: de 10,9 a 10,4</text>
+  <text class="f bx" x="744" y="364" style="font-weight:700">Efecto: 3,5 días menos</text>
+
+  <!-- estados -->
+  <text class="f c" x="80" y="438">ESTADOS DE UNA INICIATIVA</text>
+  <g class="f ch">
+    <rect x="80" y="450" width="92" height="24" rx="12" fill="#f3f4f7"/><text x="126" y="466" text-anchor="middle" style="fill:#5a6577">Planificada</text>
+    <rect x="180" y="450" width="82" height="24" rx="12" fill="#e6f0fa"/><text x="221" y="466" text-anchor="middle" style="fill:#0058ab">Midiendo</text>
+    <rect x="270" y="450" width="78" height="24" rx="12" fill="#e0f8f7"/><text x="309" y="466" text-anchor="middle" style="fill:#0a9e9b">Funciona</text>
+    <rect x="356" y="450" width="122" height="24" rx="12" fill="#fff3d6"/><text x="417" y="466" text-anchor="middle" style="fill:#b67c00">Sin efecto claro</text>
+    <rect x="486" y="450" width="80" height="24" rx="12" fill="#ffe9e4"/><text x="526" y="466" text-anchor="middle" style="fill:#d9573d">Empeora</text>
+    <rect x="574" y="450" width="86" height="24" rx="12" fill="#f3f4f7"/><text x="617" y="466" text-anchor="middle" style="fill:#5a6577">Sin datos</text>
+  </g>
+  <text class="f p" x="728" y="410">La confianza (baja, media o alta)</text>
+  <text class="f p" x="728" y="426">mira si el efecto supera lo que</text>
+  <text class="f p" x="728" y="442">la medida varía sola, si hay al</text>
+  <text class="f p" x="728" y="458">menos 20 tareas y si la ventana</text>
+  <text class="f p" x="728" y="474">de después está completa.</text>
+</svg>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="960" height="480" role="img" aria-labelledby="t d">
+  <title id="t">Primero se comprueba el dato, después se dan cifras</title>
+  <desc id="d">Diez comprobaciones de fiabilidad llevan a uno de tres veredictos: listo, con límites o todavía no se puede analizar. En el último caso no se enseñan cifras.</desc>
+  <style>
+    .f{font-family:Ubuntu,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    .h{font-size:20px;font-weight:700;fill:#121a38}
+    .s{font-size:13px;fill:#5a6577}
+    .c{font-size:12px;font-weight:700;fill:#5a6577;letter-spacing:.06em}
+    .r{font-size:13px;fill:#121a38}
+    .p{font-size:12px;fill:#5a6577}
+    .v{font-size:15px;font-weight:700}
+    .b{font-size:13px;fill:#121a38}
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0058ab"/>
+    </marker>
+    <g id="ok"><circle r="9" fill="#0a9e9b"/><path d="M-4,0 l3,3 l5,-6" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="rev"><circle r="9" fill="#b67c00"/><path d="M0,-5 v6 M0,4 v0.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></g>
+  </defs>
+  <rect x="1" y="1" width="958" height="478" rx="14" fill="#ffffff" stroke="#e1e5ea"/>
+  <text class="f h" x="32" y="44">Primero se comprueba el dato, después se dan cifras</text>
+  <text class="f s" x="32" y="68">Si un export no aguanta el análisis, la página lo dice y no enseña números.</text>
+
+  <!-- comprobaciones -->
+  <rect x="32" y="92" width="404" height="360" rx="10" fill="#f3f4f7" stroke="#e1e5ea"/>
+  <text class="f c" x="52" y="120">LAS DIEZ COMPROBACIONES</text>
+  <g class="f r">
+    <use href="#ok" x="62" y="148"/><text x="82" y="152">Tareas con equipo</text>
+    <use href="#ok" x="62" y="178"/><text x="82" y="182">Estados reconocidos</text>
+    <use href="#ok" x="62" y="208"/><text x="82" y="212">Tiempo en cada estado</text>
+    <use href="#ok" x="62" y="238"/><text x="82" y="242">Pasan por en curso</text>
+    <use href="#ok" x="62" y="268"/><text x="82" y="272">Sin cierres en bloque</text>
+    <use href="#rev" x="62" y="298"/><text x="82" y="302">Registro a tiempo</text>
+    <use href="#ok" x="62" y="328"/><text x="82" y="332">Historias estimadas</text>
+    <use href="#rev" x="62" y="358"/><text x="82" y="362">Sprints creíbles</text>
+    <use href="#ok" x="62" y="388"/><text x="82" y="392">Datos hasta el final</text>
+    <use href="#ok" x="62" y="418"/><text x="82" y="422">Historia suficiente</text>
+  </g>
+  <rect x="256" y="132" width="168" height="96" rx="8" fill="#ffffff" stroke="#e1e5ea"/>
+  <text class="f p" x="276" y="154">Ejemplo de resultado</text>
+  <text class="f" x="276" y="182" style="font-size:22px;font-weight:700;fill:#121a38">8 de 10</text>
+  <text class="f p" x="276" y="202">bien, 2 por revisar.</text>
+  <text class="f p" x="276" y="218">Cada una dice su arreglo.</text>
+
+  <!-- flecha -->
+  <line x1="444" y1="272" x2="490" y2="272" stroke="#0058ab" stroke-width="2.5" marker-end="url(#a)"/>
+
+  <!-- veredictos -->
+  <rect x="500" y="92" width="428" height="84" rx="10" fill="#e0f8f7" stroke="#0a9e9b"/>
+  <use href="#ok" x="526" y="122"/>
+  <text class="f v" x="546" y="127" style="fill:#0a9e9b">Listo para analizar</text>
+  <text class="f b" x="526" y="156">Todas las cifras, cada una con su baseline.</text>
+
+  <rect x="500" y="190" width="428" height="100" rx="10" fill="#fff3d6" stroke="#b67c00"/>
+  <use href="#rev" x="526" y="220"/>
+  <text class="f v" x="546" y="225" style="fill:#b67c00">Se puede analizar con límites</text>
+  <text class="f b" x="526" y="254">Las cifras salen. La página dice qué indicador</text>
+  <text class="f b" x="526" y="272">no se puede calcular y por qué.</text>
+
+  <rect x="500" y="304" width="428" height="148" rx="10" fill="#ffe9e4" stroke="#d9573d"/>
+  <g transform="translate(526,334)"><circle r="9" fill="#d9573d"/><path d="M-4,-4 l8,8 M4,-4 l-8,8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></g>
+  <text class="f v" x="546" y="339" style="fill:#d9573d">Todavía no se puede analizar</text>
+  <text class="f b" x="526" y="368">No enseña cifras. Te manda a revisar los estados</text>
+  <text class="f b" x="526" y="386">o a cargar otro export. Para aquí si hay:</text>
+  <text class="f p" x="526" y="410">menos de 50 tareas, menos de la mitad con equipo,</text>
+  <text class="f p" x="526" y="426">menos de 4 semanas, ninguna fecha de terminado</text>
+  <text class="f p" x="526" y="442">o ningún estado que se reconozca como terminado.</text>
+</svg>

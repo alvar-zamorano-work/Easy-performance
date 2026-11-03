@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" width="960" height="400" role="img" aria-labelledby="t d">
+  <title id="t">De un export a una decisión</title>
+  <desc id="d">Seis pasos dentro del navegador: exports, lectura, estados, data check, baseline y mejora. Cada carga nueva lo recalcula todo.</desc>
+  <style>
+    .f{font-family:Ubuntu,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+    .h{font-size:20px;font-weight:700;fill:#121a38}
+    .s{font-size:13px;fill:#5a6577}
+    .n{font-size:14px;font-weight:700;fill:#121a38}
+    .p{font-size:12px;fill:#5a6577}
+    .k{font-size:11px;font-weight:700;fill:#ffffff}
+    .ic{fill:none;stroke:#0058ab;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#0058ab"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#adb8c2"/>
+    </marker>
+  </defs>
+  <rect x="1" y="1" width="958" height="398" rx="14" fill="#ffffff" stroke="#e1e5ea"/>
+  <text class="f h" x="32" y="44">De un export a una decisión</text>
+  <text class="f s" x="32" y="68">Todo ocurre en tu navegador. Las tareas que cargas no salen de tu equipo.</text>
+
+  <rect x="24" y="88" width="912" height="290" rx="14" fill="#f3f4f7" stroke="#adb8c2" stroke-dasharray="6 5"/>
+  <text class="f p" x="40" y="110">Tu navegador</text>
+
+  <!-- aviso del data check -->
+  <rect x="456" y="100" width="200" height="24" rx="12" fill="#ffe9e4"/>
+  <text class="f p" x="556" y="116" text-anchor="middle" style="fill:#d9573d;font-weight:700">Si el dato no aguanta, para aquí</text>
+  <path d="M556,124 L556,134" stroke="#d9573d" stroke-width="2"/>
+
+  <!-- flechas entre pasos -->
+  <g stroke="#0058ab" stroke-width="2" marker-end="url(#a)">
+    <line x1="140" y1="172" x2="210" y2="172"/>
+    <line x1="292" y1="172" x2="362" y2="172"/>
+    <line x1="444" y1="172" x2="514" y2="172"/>
+    <line x1="596" y1="172" x2="666" y2="172"/>
+    <line x1="748" y1="172" x2="818" y2="172"/>
+  </g>
+
+  <!-- 1 exports -->
+  <g transform="translate(100,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <path class="ic" d="M-11,-16 h14 l8,8 v24 h-22 z M3,-16 v8 h8 M-6,0 h12 M-6,7 h12"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">1</text>
+  </g>
+  <text class="f n" x="100" y="232" text-anchor="middle">Exports</text>
+  <text class="f p" x="100" y="252" text-anchor="middle">Uno o varios ficheros</text>
+  <text class="f p" x="100" y="268" text-anchor="middle">de Jira, CSV o Excel</text>
+
+  <!-- 2 lectura -->
+  <g transform="translate(252,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <path class="ic" d="M-15,-12 h30 v24 h-30 z M-15,-4 h30 M-15,4 h30 M-5,-12 v24"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">2</text>
+  </g>
+  <text class="f n" x="252" y="232" text-anchor="middle">Lectura</text>
+  <text class="f p" x="252" y="252" text-anchor="middle">Un modelo común</text>
+  <text class="f p" x="252" y="268" text-anchor="middle">de tareas y equipos,</text>
+  <text class="f p" x="252" y="284" text-anchor="middle">nunca de personas</text>
+
+  <!-- 3 estados -->
+  <g transform="translate(404,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <path class="ic" d="M-16,-12 C-4,-12 -2,0 8,0 M-16,0 H8 M-16,12 C-4,12 -2,0 8,0 M8,0 h8"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">3</text>
+  </g>
+  <text class="f n" x="404" y="232" text-anchor="middle">Estados</text>
+  <text class="f p" x="404" y="252" text-anchor="middle">Cada estado del equipo</text>
+  <text class="f p" x="404" y="268" text-anchor="middle">pasa a uno de los</text>
+  <text class="f p" x="404" y="284" text-anchor="middle">nueve comunes</text>
+
+  <!-- 4 data check -->
+  <g transform="translate(556,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <path class="ic" d="M-15,-11 l3,3 l5,-6 M-15,1 l3,3 l5,-6 M-15,13 l3,3 l5,-6 M-1,-10 h15 M-1,2 h15 M-1,14 h15"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">4</text>
+  </g>
+  <text class="f n" x="556" y="232" text-anchor="middle">Data check</text>
+  <text class="f p" x="556" y="252" text-anchor="middle">Diez comprobaciones</text>
+  <text class="f p" x="556" y="268" text-anchor="middle">de fiabilidad antes</text>
+  <text class="f p" x="556" y="284" text-anchor="middle">de dar una cifra</text>
+
+  <!-- 5 baseline -->
+  <g transform="translate(708,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <rect x="-17" y="-7" width="34" height="11" fill="#1db8f2" opacity=".35"/>
+    <path class="ic" d="M-17,0 L-9,-3 L-2,2 L5,-4 L10,0 L17,12"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">5</text>
+  </g>
+  <text class="f n" x="708" y="232" text-anchor="middle">Baseline</text>
+  <text class="f p" x="708" y="252" text-anchor="middle">Cada equipo frente</text>
+  <text class="f p" x="708" y="268" text-anchor="middle">a su propia historia</text>
+
+  <!-- 6 mejora -->
+  <g transform="translate(860,172)">
+    <circle r="34" fill="#e6f0fa" stroke="#0058ab" stroke-width="2"/>
+    <path class="ic" d="M-10,16 V-16 M-10,-16 h20 l-5,7 l5,7 h-20"/>
+    <circle cx="-26" cy="-26" r="10" fill="#0058ab"/><text class="f k" x="-26" y="-22" text-anchor="middle">6</text>
+  </g>
+  <text class="f n" x="860" y="232" text-anchor="middle">Mejora</text>
+  <text class="f p" x="860" y="252" text-anchor="middle">Recomendaciones</text>
+  <text class="f p" x="860" y="268" text-anchor="middle">con evidencia e</text>
+  <text class="f p" x="860" y="284" text-anchor="middle">iniciativas medidas</text>
+
+  <!-- vuelta -->
+  <path d="M860,298 V340 H100 V300" fill="none" stroke="#adb8c2" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#g)"/>
+  <rect x="270" y="330" width="420" height="22" fill="#f3f4f7"/>
+  <text class="f p" x="480" y="345" text-anchor="middle">Cada carga nueva lo recalcula todo y guarda un corte para comparar</text>
+</svg>
