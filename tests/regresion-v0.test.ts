@@ -69,12 +69,19 @@ function sinNovedades(m: unknown): unknown {
   return x;
 }
 
-/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su línea base. La regla nueva
- *  se comprueba en v3-robustez.test.ts; aquí se quita el caso en los dos lados para seguir comparando todo lo demás. */
-function sinCasoRetrabajo(m: unknown): unknown {
-  const x = m as { equipos: { casos?: { id: string }[] }[] };
-  x.equipos.forEach((e) => { if (Array.isArray(e.casos)) e.casos = e.casos.filter((c) => c.id !== 'retrabajo'); });
-  return x;
+/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su línea base (20 % o más, pero
+ *  por debajo de su franja). Solo en esos equipos cambia algo frente a la v0: ahí se quita el caso en los dos lados, y en
+ *  todos los demás se sigue comparando. La regla nueva se comprueba también en aseguradora.test.ts. */
+type ConCasos = { equipos: { nombre: string; medidas: Record<string, { valor?: number | null; ref?: { lo: number } }>; casos?: { id: string }[] }[] };
+function retrabajoMejorQueSuBase(m: unknown): Set<string> {
+  return new Set((m as ConCasos).equipos.filter((e) => {
+    const rt = e.medidas.retrabajo;
+    return !!(rt && rt.ref && rt.valor != null && rt.valor >= 0.2 && rt.valor < rt.ref.lo);
+  }).map((e) => e.nombre));
+}
+function sinCasoRetrabajo(m: unknown, equipos: Set<string>): unknown {
+  (m as ConCasos).equipos.forEach((e) => { if (equipos.has(e.nombre) && Array.isArray(e.casos)) e.casos = e.casos.filter((c) => c.id !== 'retrabajo'); });
+  return m;
 }
 
 function sinSprintsDelArea(m: unknown, area: boolean): unknown {
@@ -147,7 +154,10 @@ for (const esc of escenarios()) {
         // v3: en la visión del área los sprints se cuentan por equipo de origen. La v0 los sumaba y daba los sprints
         // del área por no creíbles. Lo que depende de eso (arrastradas, sprints y casos) se comprueba en v3-nucleo.test.ts.
         const area = nombre === 'área unida con FTE';
-        assert.deepEqual(sinTextos(sinCasoRetrabajo(sinSprintsDelArea(sinNovedades(mN), area))), sinTextos(sinCasoRetrabajo(sinSprintsDelArea(json(mV), area))));
+        const mejores = retrabajoMejorQueSuBase(json(mN));
+        // Donde cambia la regla, el núcleo nuevo no da "mucho retrabajo"
+        mN.equipos.filter((e) => mejores.has(e.nombre)).forEach((e) => assert.ok(!(e.casos || []).some((c) => c.id === 'retrabajo'), 'sin mucho retrabajo en ' + e.nombre));
+        assert.deepEqual(sinTextos(sinCasoRetrabajo(sinSprintsDelArea(sinNovedades(mN), area), mejores)), sinTextos(sinCasoRetrabajo(sinSprintsDelArea(json(mV), area), mejores)));
       });
     }
   });

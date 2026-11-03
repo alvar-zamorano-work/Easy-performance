@@ -113,9 +113,10 @@ test('semáforo: con línea base, un límite fijo superado es un aviso que dice 
   // Sin línea base todavía, el límite fijo es la única referencia y sí da el estado
   const sinBase = estadoMedida('estimacion', 0.04, undefined, null, CATALOGO.medidas.estimacion);
   assert.equal(sinBase.por, 'limite'); assert.equal(sinBase.estado, 'critico');
-  // Fuera de su banda y además sobre el límite: la banda también lo dice
+  // Fuera de su banda y además sobre el límite: manda la banda (crítico) y el límite superado queda como aviso
   const err = estadoMedida('errores', 0.45, { lo: 0.2, hi: 0.3, med: 0.25, n: 12 }, null, CATALOGO.medidas.errores);
-  if (err.por === 'limite') assert.ok(err.banda === 'atencion' || err.banda === 'critico', String(err.banda));
+  assert.equal(err.por, 'banda'); assert.equal(err.estado, 'critico');
+  assert.equal(err.aviso!.estado, 'critico'); assert.equal(err.aviso!.limite, 0.4);
   // Límite fijado para el equipo: también se sabe qué diría su banda
   const eq = estadoMedida('ciclo', 20, { lo: 6, hi: 9, med: 7.5, n: 12 }, { atencion: 10, critico: 15 }, CATALOGO.medidas.ciclo);
   assert.equal(eq.por, 'limite_equipo'); assert.equal(eq.banda, 'critico');

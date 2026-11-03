@@ -921,10 +921,15 @@ const medirMaquetacion = () => {
       e.estado = 'estable'; e.estadoSinGraves = 'estable'; e.gravesTodas = ['todo_urgente'];
       EP.P.ajustarAtencion(S.vm, S.dismissed); const con = e.estado;
       S.dismissed[r.clave] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); const sin = e.estado;
-      delete S.dismissed[r.clave]; e.estado = antes.estado; e.estadoSinGraves = antes.sinGraves; e.gravesTodas = antes.todas; EP.P.ajustarAtencion(S.vm, S.dismissed);
-      return { clave: r.clave, esperada: 'todo_urgente|' + orden.join(','), cajonLeve: cajon.indexOf('Evidencia leve de ' + eqs[1].nombre) >= 0, cajonGrave: cajon.indexOf('Evidencia grave de') >= 0, con, sin };
+      // Con un dato por revisar: "Pide atención" va por delante y, descartada, vuelve a "Revisar el dato". Provisional se queda
+      delete S.dismissed[r.clave]; e.estadoSinGraves = 'revisar'; EP.P.ajustarAtencion(S.vm, S.dismissed); const conRev = e.estado;
+      S.dismissed[r.clave] = true; EP.P.ajustarAtencion(S.vm, S.dismissed); const sinRev = e.estado;
+      delete S.dismissed[r.clave]; e.estadoSinGraves = 'provisional'; EP.P.ajustarAtencion(S.vm, S.dismissed); const conProv = e.estado;
+      e.estado = antes.estado; e.estadoSinGraves = antes.sinGraves; e.gravesTodas = antes.todas; EP.P.ajustarAtencion(S.vm, S.dismissed);
+      return { clave: r.clave, esperada: 'todo_urgente|' + orden.join(','), cajonLeve: cajon.indexOf('Evidencia leve de ' + eqs[1].nombre) >= 0, cajonGrave: cajon.indexOf('Evidencia grave de') >= 0, con, sin, conRev, sinRev, conProv };
     });
-    ok('recomendaciones: la clave sigue el orden del modelo, el cajón de un equipo es suyo y descartar quita "Pide atención"', otros.clave === otros.esperada && otros.cajonLeve && !otros.cajonGrave && otros.con === 'atencion' && otros.sin === 'estable', JSON.stringify(otros));
+    ok('recomendaciones: la clave sigue el orden del modelo, el cajón de un equipo es suyo y descartar quita "Pide atención"', otros.clave === otros.esperada && otros.cajonLeve && !otros.cajonGrave && otros.con === 'atencion' && otros.sin === 'estable'
+      && otros.conRev === 'atencion' && otros.sinRev === 'revisar' && otros.conProv === 'provisional', JSON.stringify(otros));
     // Resumen redactado de un equipo: su fiabilidad, no la del área
     const narr = await A(p, () => { const EP = window.EP, S = EP.S, e = S.vm.equipos[0]; EP.openDrill({ kind: 'resumen', team: e.nombre }); return document.querySelector('#drawer') ? document.querySelector('#drawer').textContent : ''; });
     ok('resumen redactado de un equipo: habla del equipo y de su dato', /Dato del equipo/.test(narr) && !/Ningún equipo se ha salido/.test(narr), narr.slice(0, 160));
@@ -1222,7 +1227,7 @@ const medirMaquetacion = () => {
   // Lo que se ve de cada equipo en el Resumen: el chip, y el tono y el texto de cada fila
   const filas = (p) => A(p, () => [...document.querySelectorAll('#page .ficha')].filter((f) => f.querySelector('.fbs')).map((f) => ({
     equipo: (f.querySelector('.f-title') || {}).textContent, chip: (f.querySelector('.f-head .chip') || {}).textContent || '',
-    filas: [...f.querySelectorAll('.fb')].map((r) => ({ medida: r.dataset.medida, tono: (r.querySelector('.fb-v').className.match(/t-(\w+)/) || [])[1], lim: !!r.querySelector('.b-lim'), margen: !!r.querySelector('.b-margen') })),
+    filas: [...f.querySelectorAll('.fb')].map((r) => ({ medida: r.dataset.medida, tono: (r.querySelector('.fb-v').className.match(/t-(\w+)/) || [])[1], lim: !!r.querySelector('.b-lim'), margen: !!r.querySelector('.b-margen'), banda: !!r.querySelector('.b-band') })),
   })));
   {
     const { p } = await abrir(join(RAIZ, 'datos-sinteticos', 'aseguradora', 'jira-aseguradora.csv'));
@@ -1231,9 +1236,17 @@ const medirMaquetacion = () => {
     const dc = vm.find((e) => e.nombre === 'Digital Channel');
     ok('auditoría: un retrabajo que mejora frente a su línea base sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
     const res = await filas(p);
-    const dcFila = res.find((x) => x.equipo === 'Digital Channel').filas.find((f) => f.medida === 'retrabajo');
-    ok('auditoría: en la barra, el límite fijo es una marca aparte y la cifra no sale en ámbar', dcFila.lim && dcFila.tono !== 'warn' && dcFila.tono !== 'bad', JSON.stringify(dcFila));
-    ok('auditoría: la barra pinta el margen alrededor de la línea base', res.every((x) => x.filas.filter((f) => f.tono !== 'neutral').every((f) => f.margen)), JSON.stringify(res.map((x) => x.equipo + ':' + x.filas.filter((f) => !f.margen).map((f) => f.medida).join('/'))));
+    const dcEq = res.find((x) => x.equipo === 'Digital Channel'), dcFila = dcEq && dcEq.filas.find((f) => f.medida === 'retrabajo');
+    ok('auditoría: en la barra, el límite fijo es una marca aparte y la cifra no sale en ámbar', !!dcFila && dcFila.lim && dcFila.tono !== 'warn' && dcFila.tono !== 'bad', JSON.stringify(dcFila || res.map((x) => x.equipo)));
+    // Donde hay línea base (la franja), se pinta también el margen
+    const conBanda = res.flatMap((x) => x.filas.filter((f) => f.banda).map((f) => Object.assign({ equipo: x.equipo }, f)));
+    ok('auditoría: la barra pinta el margen alrededor de la línea base', conBanda.length > 0 && conBanda.every((f) => f.margen), JSON.stringify(conBanda.filter((f) => !f.margen).map((f) => f.equipo + ':' + f.medida)));
+    // El pie de un equipo con una recomendación urgente: "dentro de su línea base" solo si no hay nada por revisar
+    const pies = await A(p, () => {
+      const V = window.EP.vistas, base = { nombre: 'X', cambios: [], graves: ['todo_urgente'], mejores: [], avisos: [], medidas: {}, estado: 'atencion' };
+      return { limpio: V.pieFicha(Object.assign({}, base, { revisarDato: [] })), conDato: V.pieFicha(Object.assign({}, base, { revisarDato: ['ciclo'] })) };
+    });
+    ok('auditoría: con una recomendación urgente y un dato por revisar, el pie no dice "dentro de su línea base"', /dentro de su línea base/i.test(pies.limpio) && !/dentro de su línea base/i.test(pies.conDato) && /Revisar el dato/.test(pies.conDato), JSON.stringify(pies));
     // "Mucho retrabajo" no salta en un equipo que mejora frente a su línea base
     const recs = await A(p, () => window.EP.S.vm.recs.filter((r) => r.id === 'retrabajo').map((r) => r.equipos));
     ok('auditoría: "Mucho retrabajo" solo en el equipo que empeora (Policies), no en Digital Channel', recs.length === 1 && recs[0].indexOf('Policies') >= 0 && recs[0].indexOf('Digital Channel') < 0, JSON.stringify(recs));
@@ -1266,6 +1279,21 @@ const medirMaquetacion = () => {
     const pay = dud.filter((x) => x.e === 'Payments').map((x) => x.id);
     ok('auditoría: en Payments, tiempo de ciclo y retrabajo salen "Revisar el dato"', pay.indexOf('ciclo') >= 0 && pay.indexOf('retrabajo') >= 0, JSON.stringify(pay));
     ok('auditoría: ninguna cifra dudosa sale en verde', dud.length > 0 && dud.every((x) => x.tono !== 'good'), JSON.stringify(dud.filter((x) => x.tono === 'good')));
+    // En pantalla: ni la cifra ni la marca de una medida dudosa salen en verde, tampoco en Toda el área
+    const enPantalla = await A(p, () => {
+      const S = window.EP.S, todos = [S.vm.area].concat(S.vm.equipos), mal = [], vistas = [];
+      todos.forEach((e) => Object.keys(e.medidas).forEach((id) => {
+        const m = e.medidas[id]; if (!m || m.revisar !== 'dato') return;
+        document.querySelectorAll(`#page .fb[data-team="${CSS.escape(e.nombre)}"][data-medida="${CSS.escape(id)}"]`).forEach((r) => {
+          vistas.push(e.nombre + ':' + id);
+          if (r.querySelector('.fb-v.t-good') || r.querySelector('.b-now.tone-good')) mal.push(e.nombre + ':' + id);
+        });
+      }));
+      const a = S.vm.area;
+      return { mal, vistas: vistas.length, area: Object.keys(a.medidas).filter((id) => a.medidas[id] && a.medidas[id].revisar === 'dato').map((id) => id + ' ' + Math.round((a.medidas[id].dudosoParte || 0) * 100) + '%'), areaNombre: a.nombre };
+    });
+    ok('auditoría: en el Resumen, ninguna cifra dudosa sale en verde (equipos y Toda el área)', enPantalla.vistas > 0 && !enPantalla.mal.length, JSON.stringify(enPantalla));
+    ok('auditoría: en Toda el área, una cifra que es dudosa en equipos con el 25 % de las tareas o más sale "Revisar el dato"', enPantalla.area.length > 0, JSON.stringify(enPantalla));
     const pregs = await A(p, () => [...document.querySelectorAll('#page details.preg')].map((d) => d.querySelector('summary .chip').textContent));
     ok('auditoría: con datos por revisar en equipos de la pregunta, "¿Vamos al ritmo de siempre?" no responde "Sí"', pregs.length && pregs[0] !== 'Sí', JSON.stringify(pregs));
     ok('sin errores de consola en la sección de la auditoría (export con fallos)', !p.errores.length, p.errores.slice(0, 3).join(' | '));

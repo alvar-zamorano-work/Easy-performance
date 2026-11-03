@@ -527,7 +527,7 @@
     const e = eqs[i - 1], r = EP.vistas.recsActivas([e])[0];
     return cerrar + `<div class="slide">${cab(esc(nombreEquipo(e.nombre)), esc(e.fiabilidad ? t('fiab.equipoBien', { bien: e.fiabilidad.bien, n: e.fiabilidad.medibles }) : ''), K.equipoChip(e))}
       <div class="tiles">${K.destacados().map((id) => K.tile(e, id)).join('')}</div>
-      <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(EP.vistas.textoSinCambios(e))}</p>`)}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
+      <div class="fichas cols-2">${K.ficha(`<div class="f-title">${esc(t('equipo.cambios'))}</div>`, (e.cambios.length ? e.cambios.slice(0, 3).map((x) => K.cambioFila(e, x)).join('') : `<p class="muted">${esc(EP.vistas.textoSinCambios(e))}</p>`) + (e.avisos || []).slice(0, 2).map((x) => K.avisoFila(e, x)).join(''))}${K.ficha(`<div class="f-title">${esc(t('equipo.queHacer'))}</div>`, r ? K.recFila(r) : `<p class="muted">${esc(t('recs.ningunaEquipo'))}</p>`)}</div>${nav}</div>`;
   }
 
   // ---------- resumen redactado ----------
@@ -535,6 +535,8 @@
   function resumenReglas(equipo) {
     const vm = S.vm, eqs = equipo ? vm.equipos.filter((e) => e.nombre === equipo) : EP.visibles();
     const b1 = [], b2 = [], b3 = [];
+    // Con fiabilidad baja, lo primero: estas cifras sirven para mirar, no para decidir (como el veredicto y el Resumen)
+    if (vm.fiabilidad && vm.fiabilidad.nivel === 'baja') b1.push(t('narr.mirar'));
     const alerta = eqs.filter((e) => e.cambios.length);
     if (alerta.length) alerta.forEach((e) => { const c = e.cambios[0]; b1.push('- ' + t('narr.cambio', { e: nombreEquipo(e.nombre), m: nombreMedida(c.id).toLowerCase(), v: K.conUnidad(c.id, c.m.valor), r: K.rango(c.id, c.m) })); });
     else b1.push(t(equipo ? 'narr.sinCambiosEquipo' : 'narr.sinCambios'));
@@ -565,10 +567,22 @@
   const extraIa = (equipo) => {
     const e = equipo && S.vm.equipos.filter((x) => x.nombre === equipo)[0];
     // Un equipo: sus comprobaciones, no las del área
-    if (e && e.fiabilidad) return { fiabilidad_equipo: { bien: e.fiabilidad.bien, medibles: e.fiabilidad.medibles, comprobaciones: S.vm.fiabilidad.comprobaciones.filter((c) => e.fiabilidad.valores[c.id]).map((c) => ({ id: c.id, nombre: c.nombre, valor: e.fiabilidad.valores[c.id].valor, estado: e.fiabilidad.valores[c.id].estado })) }, data_check: S.vm.dataCheck.veredicto };
+    if (e && e.fiabilidad) return Object.assign({ fiabilidad_equipo: { bien: e.fiabilidad.bien, medibles: e.fiabilidad.medibles, comprobaciones: S.vm.fiabilidad.comprobaciones.filter((c) => e.fiabilidad.valores[c.id]).map((c) => ({ id: c.id, nombre: c.nombre, valor: e.fiabilidad.valores[c.id].valor, estado: e.fiabilidad.valores[c.id].estado })) }, data_check: S.vm.dataCheck.veredicto }, marcasIa(e));
     return extraArea();
   };
-  const extraArea = () => ({ fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto });
+  /**
+   * Lo que la página enseña aparte de la cifra y el asistente no debe contradecir: las cifras por revisar (y por qué) y
+   * los límites fijos superados sin alerta, que no cambian el estado porque manda la línea base.
+   */
+  const marcasIa = (e) => ({
+    estado: e.estado,
+    revisar_dato: (e.revisarDato || []).map((id) => { const m = e.medidas[id] || {}; return { medida: id, motivo: m.revisar || null, comprobaciones: m.dudosoPor || [] }; }),
+    avisos_limite: (e.avisos || []).map((x) => ({ medida: x.id, estado: x.m.aviso.estado, limite: x.m.aviso.limite })),
+  });
+  const extraArea = () => ({
+    fiabilidad: { nivel: S.vm.fiabilidad.nivel, comprobaciones: S.vm.fiabilidad.comprobaciones.map((c) => ({ id: c.id, nombre: c.nombre, valor: c.valor, estado: c.estado })) }, data_check: S.vm.dataCheck.veredicto,
+    area: marcasIa(S.vm.area), equipos: EP.visibles().map((e) => Object.assign({ equipo: e.nombre }, marcasIa(e))),
+  });
   function cajonResumen(d) {
     const equipo = d.team || (S.role === 'equipo' ? S.team : null);
     const clave = (equipo || 'area') + '|' + S.role + '|' + window.I18N.lang;

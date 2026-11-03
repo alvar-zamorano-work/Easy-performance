@@ -142,6 +142,8 @@ export function definiciones(lectura: Lectura, cliente: ClienteV2, opciones: Opc
     [{ b: Tx('Attention. ', 'Atención. ') }, Tx('Worse than the baseline, up to 25% beyond the margin.', 'Peor que la línea base, hasta un 25 % más allá del margen.')],
     [{ b: Tx('Critical. ', 'Crítico. ') }, Tx('Much worse than the baseline.', 'Mucho peor que la línea base.')],
     [{ b: Tx('Fixed limits. ', 'Límites fijos. ') }, Tx('Some measures also have an attention limit and a critical limit. If a team agrees its own limits, its limits apply.', 'Algunas medidas tienen además un límite de atención y uno crítico. Si un equipo acuerda sus propios límites, se aplican los suyos.')],
+    [{ b: Tx('Which one decides. ', 'Cuál manda. ') }, Tx('If the team has a baseline, its baseline decides over the limits that are the same for every team: one that is reached is shown apart and does not change the status. Without a baseline, that limit sets the status. Limits agreed by the team always decide.', 'Si el equipo tiene línea base, manda su línea base sobre los límites iguales para todos: si llega a uno, se enseña aparte y no cambia el estado. Sin línea base, ese límite da el estado. Los límites que acuerda el equipo mandan siempre.')],
+    [{ b: Tx('Check the data. ', 'Revisar el dato. ') }, Tx('When a reliability check fails, the figures that depend on it are not shown as good or better: they show as "Check the data".', 'Cuando falla una comprobación de fiabilidad, las cifras que dependen de ella no salen como bien ni mejor: salen como "Revisar el dato".')],
   ]);
   medidas.forEach((id) => {
     const def = cat.medidas[id];

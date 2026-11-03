@@ -26,8 +26,8 @@
   function resumen() {
     const vm = S.vm, eqs = EP.visibles();
     const alerta = eqs.filter((e) => e.estado === 'alerta'), pocoFiables = eqs.filter((e) => e.estado === 'poco_fiable'), prov = eqs.filter((e) => e.estado === 'provisional');
-    // Datos por revisar en un equipo, aunque además pida atención: el banner lo dice igual
-    const revisar = eqs.filter((e) => e.estado === 'revisar' || (e.estado === 'atencion' && e.revisarDato && e.revisarDato.length)), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
+    // Datos por revisar en un equipo, aunque además pida atención o sea provisional: el banner lo dice igual
+    const revisar = eqs.filter((e) => ['revisar', 'atencion', 'provisional'].indexOf(e.estado) >= 0 && e.revisarDato && e.revisarDato.length), atencion = eqs.filter((e) => e.graves && e.graves.length && e.estado !== 'alerta');
     const recs = recsActivas(eqs);
     // Con fiabilidad baja, lo primero que se lee es que no hay que decidir con estas cifras (auditoría UX, P0.1)
     const baja = vm.fiabilidad && vm.fiabilidad.nivel === 'baja';
@@ -37,7 +37,8 @@
     const titular = alerta.length ? esc(tn('resumen.conAlerta', alerta.length, { equipos: lista(alerta.map((e) => nombreEquipo(e.nombre))) }))
       : baja ? esc(t('resumen.mirar')) : esc(t(sinComparar ? 'resumen.sinComparar' : 'resumen.sinAlertas'));
     const f = vm.fiabilidad;
-    const items = baja && !alerta.length ? [] : [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
+    // Con fiabilidad baja y alertas, el titular son las alertas: que no se decida con ellas va en la primera línea
+    const items = baja ? (alerta.length ? [esc(t('resumen.mirar'))] : []) : [esc(t('resumen.fiabilidadItem', { nivel: t('fiab.nivel.' + f.nivel).toLowerCase() }))];
     if (pocoFiables.length) items.push(esc(t('resumen.pocoFiables', { equipos: lista(pocoFiables.map((e) => nombreEquipo(e.nombre))) })));
     if (revisar.length) items.push(esc(t('resumen.revisarEn', { equipos: lista(revisar.map((e) => nombreEquipo(e.nombre))) })));
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
@@ -80,9 +81,16 @@
       const revisar = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
       return [fuera.length ? t('resumen.cambio', { m: lista(fuera) }) : '', porLimite.length ? t('resumen.cambioLimite', { m: lista(porLimite) }) : '', revisar].filter(Boolean).join(' · ');
     }
-    const revisarPie = e.revisarDato && e.revisarDato.length ? t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) }) : '';
-    if (e.estado === 'atencion') return [t('resumen.atencionPie', { r: lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id)) }), revisarPie].filter(Boolean).join(' · ');
-    if (revisarPie) return revisarPie;
+    const resto = pieSinCambios(e);
+    if (!e.graves || !e.graves.length) return resto;
+    // Con una recomendación urgente: "dentro de su línea base" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
+    const r = lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id));
+    if (resto === t('resumen.fichaEstable')) return t('resumen.atencionPie', { r });
+    return [t('resumen.atencionPieSolo', { r }), resto].join(' · ');
+  }
+  /** El pie sin alertas ni recomendaciones urgentes: dato por revisar, mejor de lo normal, sin rango o estable. */
+  function pieSinCambios(e) {
+    if (e.revisarDato && e.revisarDato.length) return t('resumen.revisarDato', { m: lista(e.revisarDato.map(nombreMedida)) });
     if (e.mejores && e.mejores.length) return t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) });
     // Con valor pero sin rango normal todavía: no se puede decir que esté "dentro de lo normal"
     const sinRango = K.destacados().filter((id) => { const m = e.medidas[id]; return m && m.disponible && m.valor != null && !m.ref && !m.sinHistorico; });
@@ -221,9 +229,11 @@
     if (par) partes.push(tn('epicas.paradas', par));
     if (riesgo) partes.push(tn('epicas.enRiesgo', riesgo));
     const pctSin = v.tareas ? v.sinEpica / v.tareas : 0;
+    // Vencimientos de las épicas abiertas que se ven (no del export entero): si ninguna tiene fecha, no hay riesgo que contar
+    const hayVenc = abiertas.some((x) => !!x.vence);
     const tiles = `<div class="tiles">${K.stat(t('epicas.tile.abiertas'), String(abiertas.length), esc(tn('epicas.tile.abiertasPie', terminadas.length)), '')}`
       // Sin fechas de vencimiento no se sabe si alguna llega tarde: "sin datos", nunca un 0 en verde (auditoría UX, P0.5)
-      + `${K.stat(t('epicas.tile.riesgo'), v.hayVencimientos || venc + riesgo ? String(venc + riesgo) : t('comun.sinDatos'), esc(v.hayVencimientos ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : v.hayVencimientos ? 'good' : 'neutral' })}`
+      + `${K.stat(t('epicas.tile.riesgo'), hayVenc || venc + riesgo ? String(venc + riesgo) : t('comun.sinDatos'), esc(hayVenc ? t('epicas.tile.riesgoPie') : t('epicas.tile.riesgoSin')), '', { tone: venc ? 'bad' : riesgo ? 'warn' : hayVenc ? 'good' : 'neutral' })}`
       + `${K.stat(t('epicas.tile.paradas'), String(par), esc(t('epicas.tile.paradasPie', { s: v.semanasRitmo })), '', { tone: par ? 'bad' : 'good' })}`
       + `${K.stat(t('epicas.tile.sinEpica'), N.conPorcentaje(Math.round(pctSin * 100)), esc(t('epicas.tile.sinEpicaPie', { n: v.sinEpica, de: v.tareas })), '', { tone: pctSin > 0.2 ? 'warn' : 'good' })}</div>`;
     const fila = (x) => `<tr${x.situacion === 'vencida' || x.situacion === 'parada' ? ' class="dudoso"' : ''}><td><b>${esc(x.clave)}</b><div class="small">${esc(x.titulo)}</div>${x.estadoDescuadrado ? `<div class="tiny t-warn" title="${esc(t('epicas.descuadradoTitle'))}">${esc(t('epicas.descuadrado', { e: x.estado }))}</div>` : ''}</td>
@@ -298,7 +308,7 @@
       ${K.stat(t('calidad.tile.revisar'), String(f.revisar), esc(f.revisar ? t('calidad.tile.revisarPie') : t('calidad.tile.revisarNada')), '', { tone: f.revisar ? 'warn' : 'good' })}
       ${K.stat(t('calidad.tile.estados'), String(porConfirmar.length), esc(t('calidad.tile.estadosPie')), `<button class="link small" data-action="fuentes-mapeo">${esc(t('calidad.revisarMapeo'))}</button>`, { tone: porConfirmar.length ? 'warn' : 'good' })}
     </div>`;
-    const ver = { ready: 'good', limits: 'warn', mirar: 'bad', not_ready: 'bad' }[dc.veredicto];
+    const ver = { ready: 'good', limits: 'warn', look_only: 'bad', not_ready: 'bad' }[dc.veredicto];
     const dcHtml = K.ficha(`<div class="f-title">${esc(t('ob.dc.kpis'))}</div>${K.chip(ver, t('dc.veredicto.' + dc.veredicto))}`,
       (dc.bloqueos.length ? `<ul class="small">${dc.bloqueos.map((b) => `<li>${esc(t(b.clave, b.p))}</li>`).join('')}</ul>` : '')
       + `<div class="filas">${dc.kpis.map((id) => { const l = dc.limites.filter((x) => x.kpi === id)[0]; return `<div class="fila-dot"><span class="s-dot tone-${!l ? 'good' : l.parcial ? 'warn' : 'bad'}"></span><span class="small"><b>${esc(nombreMedida(id))}</b>${l ? ' · ' + esc(l.parcial ? t('dc.soloPara', { equipos: lista(l.equipos) }) : (l.motivo || t('medida.noDisponible'))) : ''}</span></div>`; }).join('')}
@@ -406,12 +416,12 @@
   EP.accion('pref-reset', () => { if (S.prefs.byRole) delete S.prefs.byRole[S.role]; EP.guardarPrefs(); EP.render(); });
   /** Ayuda de la página: primero qué responde esta página, después cómo se compara y todas las etiquetas que pueden salir. */
   const LEYENDA = [['good', 'estado.bien'], ['good', 'estado.borde'], ['good', 'estado.mejor'], ['warn', 'estado.atencion'], ['bad', 'estado.critico'],
-    ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
+    ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['neutral', 'estado.avisoLimite'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
   function cajonAyuda() {
     const vm = S.vm, p = { k: vm.semanas.K, kp: vm.semanas.KP, r: vm.semanas.R };
     const pag = S.view === 'equipos' && S.teamCompare && S.role !== 'equipo' ? 'comparar' : (S.view || 'resumen');
     const html = `<p><b>${esc(t('ayuda.pagina.' + pag, p))}</b></p>`
-      + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
+      + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p3b', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
       + `<h4>${esc(t('ayuda.etiquetas'))}</h4><div class="leyenda">${LEYENDA.map(([tono, k]) => `<div class="small">${K.chip(tono, t(k))} ${esc(t('ayuda.e.' + k.replace(/^estado\./, '')))}</div>`).join('')}</div>`;
     return [t('ayuda.titulo'), html];
   }

@@ -55,9 +55,12 @@ Ficha de equipo `vm.equipos[i]`:
 | Campo | Qué es | De dónde sale |
 |---|---|---|
 | `nombre`, `tipo`, `proveedor`, `area` | Identidad del equipo | `eq.nombre` y `cliente.equipos.lista` |
-| `estado` | Una palabra: Datos poco fiables, Con alerta, Referencia provisional o Estable | crítico o atención en alguna medida visible, fiabilidad del equipo y estado de la referencia |
+| `estado` | Una palabra, en este orden: Datos poco fiables, Con alerta, Referencia provisional, Pide atención, Revisar el dato o Estable | fiabilidad del equipo, crítico o atención en alguna medida visible, estado de la referencia, recomendaciones urgentes activas y medidas por revisar |
+| `estadoSinGraves` | El estado sin contar las recomendaciones urgentes. Al descartarlas, el equipo vuelve a este estado | lo mismo sin `graves` |
 | `medidas[id]` | `valor`, `serie` (16 semanas), `ref` (lo, hi, med, n), `estado`, `estadoTexto`, `motivoEstado`, `tendencia`, `referencia` | `eq.medidas[id]` (y `eq.kpis.coste`) |
 | `cambios[]` | Medidas visibles en atención o crítico, la peor primero | `eq.medidas` |
+| `revisarDato[]` | Medidas visibles cuya cifra no es de fiar: lo normal era cero, un salto de más del triple, un cierre masivo o una comprobación de fiabilidad que falla (`revisar: 'dato'`, con `dudosoPor`). En el área, una cifra es dudosa si los equipos donde lo es suman el 25 % de las tareas o más (`dudosoParte`), o si la comprobación falla en el área entera (`dudosoArea`) | `eq.medidas`, `calidad.diasMasivos` y `fiabilidad()` |
+| `avisos[]` | Medidas visibles que llegan a un límite fijo sin ser una alerta, porque manda la línea base | `medidas[id].aviso` |
 | `tiempo` | Días en curso frente a días en espera, y la espera por estado | `Derivada.cursoMs`, `esperaMs` y `porEstado` vía el núcleo |
 | `atascadas[]`, `enCurso[]` | Trabajo parado hoy (solo en pantalla, nunca en el paquete) | `eq.atascadas`, `eq.enCurso` |
 | `sprints` | Si son fiables y por qué | `eq.sprints` |
@@ -227,6 +230,7 @@ El resumen redactado usa la misma validación. Sin clave hay un resumen por regl
 | Medida `bugs` | Bugs creados por semana (media de 4 semanas), sin descartados, con banda y semáforo, `dir: menos`, `requiere: errores`. Entra en el objetivo Quality | valor y banda en el banco B3; no disponible sin tipo |
 | `referencia` en cada medida | `establecida` con 12 semanas de referencia, `provisional` con 6 a 11, `sin` con menos | casos con historia corta |
 | `motivoEstado` | `banda` o `limite`, con el límite que manda. La tarjeta dice "por encima del límite del 20 %" | Rework del área del banco B3 |
+| `aviso` y `margen` (nov 2026) | Con línea base manda la línea base. Un límite fijo superado no cambia el estado: queda en `aviso` (estado, límite y texto) y se enseña aparte. Sin línea base, el límite sí da el estado. `margen` es la holgura de la línea base (10 % del borde, con un mínimo) | Rework del área del banco B3 y Digital Channel en la aseguradora |
 | `detalleMedida(preparacion, equipo, medida)` | Las tareas que componen la cifra actual: clave, título, tipo, estado, fechas y días. Solo en memoria | cuenta igual al valor en entregas y bugs |
 | Campo de equipo | Reconoce `Assigned Team`, `Squad` y `Equipo asignado`, y lo prefiere al componente | export de prueba con esa columna |
 | Carried over del área | Que el área no pierda la medida cuando sus equipos sí la tienen | banco B3 |

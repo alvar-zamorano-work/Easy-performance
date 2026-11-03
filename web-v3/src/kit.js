@@ -56,7 +56,11 @@
     }
     if (m.revisar === 'dato' && m.estado !== 'atencion' && m.estado !== 'critico') {
       const com = (S.vm && S.vm.fiabilidad ? S.vm.fiabilidad.comprobaciones : []).filter((c) => (m.dudosoPor || []).indexOf(c.id) >= 0).map((c) => c.nombre);
-      return t('medida.dudoso', { c: window.EP.lista(com.length ? com : (m.dudosoPor || [])) });
+      const nombres = com.length ? com : (m.dudosoPor || []), p = { c: window.EP.lista(nombres) };
+      // En el área se dice cuánto pesa lo que falla: los equipos donde falla y su parte de las tareas
+      if (m.dudosoArea) return tn('medida.dudosoAreaTodo', nombres.length, p);
+      if (m.dudosoParte != null) return tn('medida.dudosoArea', nombres.length, Object.assign(p, { p: window.Nucleo.conPorcentaje(Math.round(m.dudosoParte * 100)) }));
+      return tn('medida.dudoso', nombres.length, p);
     }
     if (m.revisar === 'masivo' && m.estado !== 'atencion' && m.estado !== 'critico') return t('medida.masivo', { dias: (m.diasMasivos || []).map((x) => t('medida.masivoDia', { n: x.n, f: window.Nucleo.fechaCorta(new Date(x.fecha)) })).join(', ') });
     return m.estadoTexto || '';
