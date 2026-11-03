@@ -677,7 +677,8 @@ const medirMaquetacion = () => {
     return p;
   };
   const recargar = async (p) => { await p.reload(); await p.waitForFunction(() => window.EP && window.EP.S); await p.waitForTimeout(800); await quieto(p); };
-  const subir = async (p, f) => { await p.setInputFiles('#file-input', f); await p.waitForTimeout(700); await quieto(p); await p.waitForTimeout(200); };
+  // Con datos ya cargados se pregunta si el export sustituye o se suma: aquí sustituye
+  const subir = async (p, f) => { await p.setInputFiles('#file-input', f); await p.waitForTimeout(700); await quieto(p); if (await p.$('[data-action="carga-sustituir"]')) await clic(p, '[data-action="carga-sustituir"]'); await p.waitForTimeout(200); };
   const empezar = async (p, f, rol = 'pmo') => {
     await subir(p, f);
     if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
