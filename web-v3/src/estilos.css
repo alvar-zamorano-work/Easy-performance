@@ -273,6 +273,7 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
   .card { box-shadow: none; break-inside: avoid; }
   .table-wrap { overflow: visible; }
   details.more { display: block; } details.more > summary { display: none; }
+  .preg > summary::after { display: none; }
 }
 
 /* Asistente de IA: botón flotante y panel lateral de conversación */
@@ -317,7 +318,7 @@ button:focus-visible, [tabindex]:focus-visible, select:focus-visible, input:focu
 .t-value small { font-size: 0.9333rem; font-weight: 400; color: var(--muted); margin-left: 2px; }
 .t-value.tone-bad { color: var(--bad); } .t-value.tone-good { color: var(--ok); } .t-value.tone-warn { color: var(--warn); }
 .t-unit { font-size: 0.8333rem; color: var(--muted); margin: -4px 0 6px; }
-.fb-u { display: block; font-size: 0.75rem; color: var(--muted); font-weight: 400; line-height: 1.3; }
+.fb-u { display: block; font-size: 0.75rem; color: var(--muted); font-weight: 400; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 0.8333rem; color: var(--muted); min-height: 22px; }
 .t-warn { color: var(--warn); font-weight: 600; font-size: 0.8rem; }
 .t-bad { color: var(--bad); }
@@ -741,13 +742,15 @@ html { font-size: 14px; }
 .rrow-t .small { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: clip; }
 
 /* Preguntas de dirección: una línea por pregunta, el detalle al abrirla */
-.preguntas { padding: 4px 0; }
+.ficha.list.preguntas { padding: 4px 0; }
+.leyenda { display: grid; gap: 6px; }
 .preg { border-bottom: 1px solid var(--line); }
 .preg:last-child { border-bottom: 0; }
-.preg > summary { display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer; list-style: none; flex-wrap: wrap; }
+.preg > summary { display: flex; align-items: center; gap: 12px; padding: 10px 16px; cursor: pointer; list-style: none; flex-wrap: wrap; color: inherit; font-size: inherit; }
+.preg > summary > b { order: 2; } .preg > summary > .chip { order: 1; } .preg > summary > .preg-quien { order: 3; }
 .preg > summary::-webkit-details-marker { display: none; }
 .preg > summary::after { content: '›'; margin-left: auto; color: var(--muted); transition: transform .15s; }
 .preg[open] > summary::after { transform: rotate(90deg); }
 .preg > summary b { font-weight: 600; }
-.preg-quien { flex: 1 1 200px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.preg-quien { flex: 1 1 200px; min-width: 0; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .preg-cuerpo { padding: 0 16px 12px; }

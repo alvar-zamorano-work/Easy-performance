@@ -1127,7 +1127,7 @@ const medirMaquetacion = () => {
     for (const v of await A(p, () => window.EP.POR_ROL[window.EP.S.role])) {
       await ir(p, v); await quieto(p);
       const txt = await A(p, () => document.querySelector('.content').innerText);
-      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|franja|Context|KPI)\b.{0,30}/);
+      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
       if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
     }
   }

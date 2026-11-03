@@ -106,12 +106,17 @@
         : `<p class="small muted">${esc(conDato ? detalleBien : t('preg.sinDatosDetalle'))}</p>`;
       // Una línea por pregunta (respuesta y qué equipos); el detalle, al abrirla. Así el Resumen cabe en una pantalla.
       const quienes = malos.length ? lista([...new Set(malos.map((x) => nombreEquipo(x.e.nombre)))]) : (conDato ? detalleBien : t('preg.sinDatosDetalle'));
-      return `<details class="preg" data-tipo="pregunta"><summary>${K.chip(tono, resp)}<b>${esc(t('preg.' + o.id))}</b><span class="small muted preg-quien">${esc(quienes)}</span></summary>
-        <div class="preg-cuerpo">${cuerpo}<div class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</div></div></details>`;
+      const abierta = !!(S.pregAbiertas && S.pregAbiertas[o.id]);
+      return `<details class="preg" data-tipo="pregunta" data-preg="${esc(o.id)}"${abierta ? ' open' : ''}><summary><b>${esc(t('preg.' + o.id))}</b>${K.chip(tono, resp)}<span class="small muted preg-quien">${esc(quienes)}</span></summary>
+        <div class="preg-cuerpo">${malos.length ? cuerpo : ''}<div class="tiny muted">${esc(t('preg.mide', { m: lista(kpis.map(nombreMedida)) }))}</div></div></details>`;
     }).filter(Boolean);
     return tarjetas.length ? K.sec(t('preg.titulo'), `<span class="muted small">${esc(t('preg.nota'))}</span>`) + `<div class="ficha list preguntas">${tarjetas.join('')}</div>` : '';
   }
   /** Recomendaciones de unos equipos, cada una con el nivel y la evidencia de esos equipos, de más a menos urgente. */
+  // Las preguntas que se abren siguen abiertas al repintar (por ejemplo, al abrir y cerrar el detalle de una cifra)
+  document.addEventListener('toggle', (e) => { const d = e.target; if (d && d.matches && d.matches('details.preg')) { S.pregAbiertas = S.pregAbiertas || {}; S.pregAbiertas[d.dataset.preg] = d.open; } }, true);
+  // Al imprimir, las preguntas salen abiertas
+  window.addEventListener('beforeprint', () => document.querySelectorAll('details.preg').forEach((d) => { d.open = true; }));
   function recsActivas(eqs) {
     const n = eqs.map((e) => e.nombre);
     return S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => n.indexOf(e) >= 0)).map((r) => K.recPara(r, n))
@@ -132,7 +137,7 @@
   function fichaEquipo(e) {
     const vm = S.vm, dest = K.destacados();
     const c = e.cambios[0];
-    const titular = c ? esc(nombreMedida(c.id) + ': ' + valor(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? (e.mejores && e.mejores.length ? t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) }) : t('equipo.estable')) : e.estado === 'atencion' ? pieFicha(e) : t('equipo.estado.' + e.estado));
+    const titular = c ? esc(nombreMedida(c.id) + ': ' + K.conUnidad(c.id, c.m.valor)) + ' · ' + esc(K.rango(c.id, c.m)) : esc(e.estado === 'estable' ? (e.mejores && e.mejores.length ? t('resumen.mejor', { m: lista(e.mejores.map(nombreMedida)) }) : t('equipo.estable')) : e.estado === 'atencion' ? pieFicha(e) : t('equipo.estado.' + e.estado));
     const fe = e.fiabilidad;
     const items = [esc(fe ? t('fiab.equipoBien', { bien: fe.bien, n: fe.medibles }) : ''), esc(t('equipo.semanas', { n: e.semanasConDatos }))].filter(Boolean);
     const tiles = `<div class="tiles">${dest.map((id) => K.tile(e, id)).join('')}</div>`;
@@ -335,7 +340,7 @@
     if (!m) return [titulo, `<p class="muted">${esc(t('medida.noDisponible'))}</p>`, ''];
     let html = (def && def.pregunta ? `<p class="small muted">${esc(def.pregunta)}</p>` : '') + `<p>${esc(def ? def.como : t('medida.costeComo'))}</p>`;
     if (def && def.decision) html += `<div class="ficha-4"><div><span class="tiny muted">${esc(t('cajon.decision'))}</span><b class="small">${esc(def.decision)}</b></div><div><span class="tiny muted">${esc(t('cajon.quien'))}</span><b class="small">${esc(def.quien || '')}</b></div></div>`;
-    if (m.disponible) html += `<div class="kv"><div><span>${esc(t('cajon.valor'))}</span><b>${esc(valor(id, m.valor))}</b></div><div><span>${esc(t('cajon.normal'))}</span><b>${esc(K.rangoBanda(id, m))}</b></div><div><span>${esc(t('cajon.estado'))}</span>${K.estadoChip(m)}</div><div><span>${esc(t('cajon.referencia'))}</span><b>${esc(t('ref.' + (m.referencia || 'sin')))}</b></div></div><p class="small">${esc(K.porque(id, m))}</p>`;
+    if (m.disponible) html += `<div class="kv"><div><span>${esc(t('cajon.valor'))}</span><b>${esc(K.conUnidad(id, m.valor))}</b></div><div><span>${esc(t('cajon.normal'))}</span><b>${esc(m.ref ? t('medida.rangoCorto', { lo: valor(id, m.ref.lo), hi: valor(id, m.ref.hi) }) : K.rangoBanda(id, m))}</b></div><div><span>${esc(t('cajon.estado'))}</span>${K.estadoChip(m)}</div><div><span>${esc(t('cajon.referencia'))}</span><b>${esc(t('ref.' + (m.referencia || 'sin')))}</b></div></div><p class="small">${esc(K.porque(id, m))}</p>`;
     else html += `<div class="notice warn small">${esc(m.motivo || t('medida.noDisponible'))}</div>`;
     if (m.serie) html += `<div class="ficha" style="margin:10px 0">${K.spark(m.serie.slice(-26), m.ref, { tone: K.tonoDe(m), h: 70, label: nombreMedida(id) })}<div class="tiny muted">${esc(t('cajon.serie'))}</div></div>`;
     let extra = '';
@@ -394,7 +399,8 @@
     ['warn', 'estado.limite.atencion'], ['bad', 'estado.limite.critico'], ['warn', 'estado.revisar'], ['neutral', 'estado.sinBanda'], ['neutral', 'estado.sin']];
   function cajonAyuda() {
     const vm = S.vm, p = { k: vm.semanas.K, kp: vm.semanas.KP, r: vm.semanas.R };
-    const html = `<p><b>${esc(t('ayuda.pagina.' + (S.view || 'resumen'), p))}</b></p>`
+    const pag = S.view === 'equipos' && S.teamCompare && S.role !== 'equipo' ? 'comparar' : (S.view || 'resumen');
+    const html = `<p><b>${esc(t('ayuda.pagina.' + pag, p))}</b></p>`
       + ['ayuda.p1', 'ayuda.p2', 'ayuda.p3', 'ayuda.p4', 'ayuda.p5'].map((k) => `<p>${esc(t(k, p))}</p>`).join('')
       + `<h4>${esc(t('ayuda.etiquetas'))}</h4><div class="leyenda">${LEYENDA.map(([tono, k]) => `<div class="small">${K.chip(tono, t(k))} ${esc(t('ayuda.e.' + k.replace(/^estado\./, '')))}</div>`).join('')}</div>`;
     return [t('ayuda.titulo'), html];

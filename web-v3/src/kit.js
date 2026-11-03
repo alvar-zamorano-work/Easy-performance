@@ -15,6 +15,7 @@
     if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : m.lado === 'borde' ? 'estado.borde' : 'estado.bien'));
     if (m.estado === 'atencion') return chip('warn', t(porLimite ? 'estado.limite.atencion' : 'estado.atencion'));
     if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
+    if (m.estado === 'neutro') return '';
     return chip('neutral', t('estado.sinBanda'));
   }
   const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' };
@@ -124,7 +125,12 @@
     return [u, P85[id] ? t('medida.p85') : ''].filter(Boolean).join(' · ');
   }
   /** Cifra con su unidad en una frase: "5,3 tareas por semana", "30 % de lo terminado". */
-  const conUnidad = (id, v) => { const def = cat().medidas[id]; const u = v == null || !def || !def.unidad || def.formato === 'dias' || def.formato === 'horas' ? '' : def.unidad; return valor(id, v) + (u ? ' ' + u : ''); };
+  const conUnidad = (id, v) => {
+    if (v == null || isNaN(v)) return valor(id, v);
+    const def = cat().medidas[id];
+    const u = id === 'coste' ? t('medida.unidadCoste') : !def || !def.unidad || def.formato === 'dias' || def.formato === 'horas' ? '' : def.unidad;
+    return valor(id, v) + (u ? ' ' + u : '');
+  };
   /** Las semanas que mira la cifra de ahora (no todas las medidas miran las mismas). */
   const ventanaDe = (m) => (m && m.ventana ? tn('medida.ventana', m.ventana) : '');
   /** Fila de baseline de un indicador: nombre, ahora, la barra y lo normal. */
@@ -136,7 +142,7 @@
       : m && m.disponible ? (m.sinHistorico ? t('medida.sinHistoricoCorto') : t('medida.sinBanda')) : m ? t('medida.noSeMide') : '';
     const motivo = m && !m.disponible ? porque(id, m) : m && m.sinHistorico ? t('medida.sinHistorico') : '';
     return `<div class="fb clickable" data-action="drill" data-kind="medida" data-team="${esc(eq.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0"${motivo ? ` title="${esc(motivo)}"` : ''}>
-      <span class="fb-n">${esc(nombreMedida(id))}<small class="fb-u">${esc([unidad(id), m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · '))}</small></span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
+      <span class="fb-n">${esc(nombreMedida(id))}${(() => { const u = [unidad(id), m && m.disponible ? ventanaDe(m) : ''].filter(Boolean).join(' · '); return `<small class="fb-u" title="${esc(u)}">${esc(u)}</small>`; })()}</span><b class="fb-v t-${tonoDe(m)}">${esc(ahora)}</b>${bala(id, m)}<span class="fb-r">${esc(normal)}</span></div>`;
   }
 
   /** Indicadores destacados del rol: los elegidos en Personalizar o los cuatro primeros del Context. */
