@@ -125,12 +125,20 @@
   }
 
   /** Indicadores destacados del rol: los elegidos en Personalizar o los cuatro primeros del Context. */
+  /** Una medida se puede destacar si algún equipo (o el área) la puede medir con estos datos. */
+  function medible(id) {
+    const vm = S.vm; if (!vm) return false;
+    if (id === 'coste' && !vm.hayCoste) return false;
+    const ok = (e) => { const m = e && (e.medidas[id] || (id === 'coste' && e.kpis && e.kpis.coste)); return !!(m && m.disponible); };
+    return ok(vm.area) || vm.equipos.some(ok);
+  }
+  /** Los cuatro indicadores destacados del rol: solo los que se pueden medir con estos datos (nunca ocupan hueco los que no). */
   function destacados() {
-    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => cat().medidas[k] || k === 'coste') : null;
+    const by = S.prefs && S.prefs.byRole; const p = by && Array.isArray(by[S.role]) ? by[S.role].filter((k) => (cat().medidas[k] || k === 'coste') && medible(k)) : null;
     if (p && p.length) return p.slice(0, 4);
-    const base = S.vm.kpis.slice();
+    const base = S.vm.kpis.filter(medible);
     // Si el Context da menos de cuatro, se completan con medidas que suelen estar
-    ['entregas', 'bugs', 'wip', 'edad', 'pendiente', 'errores'].forEach((k) => { if (base.length < 4 && base.indexOf(k) < 0) base.push(k); });
+    ['entregas', 'bugs', 'wip', 'edad', 'pendiente', 'errores', 'ciclo', 'retrabajo'].forEach((k) => { if (base.length < 4 && base.indexOf(k) < 0 && medible(k)) base.push(k); });
     return base.slice(0, 4);
   }
 
@@ -200,5 +208,5 @@
 
   /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
   const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, medible, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, barra, fmt };
 })();

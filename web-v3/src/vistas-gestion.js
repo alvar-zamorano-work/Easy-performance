@@ -153,7 +153,8 @@
       + (vis.length ? `<div class="fichas cols-2">${tarjetas}</div>` : `<div class="ficha empty">${esc(t('ini.vacio'))}</div>`) + `<details class="mas"><summary>${esc(t('ini.como'))}</summary>${pasos}</details>`;
   }
   function formulario() {
-    const f = S.iniForm, eqs = S.vm.equipos;
+    // Con el rol Equipo, una iniciativa es de su equipo: no se puede guardar una de otro que luego no se vería
+    const f = S.iniForm, eqs = S.role === 'equipo' ? EP.visibles() : S.vm.equipos;
     const medidas = Object.keys(N.MEDIDAS_INICIATIVA).filter((id) => cat().medidas[id]);
     return `<div class="ficha" id="form-ini"><h3>${esc(t('ini.nueva'))}</h3><form class="grid cols-2" onsubmit="return false">
       <div class="field span-2"><label>${esc(t('ini.f.nombre'))}</label><input type="text" name="nombre" value="${esc(f.nombre || '')}" placeholder="${esc(t('ini.f.nombreEj'))}"></div>
@@ -443,7 +444,7 @@
       .then(() => { S.iaEstado.prueba = 'hecho'; EP.render(); });
   });
   EP.cambio('lang', (el) => { window.I18N.fijar(el.value); EP.guardarPrefs(); EP.enSegundoPlano(() => { EP.recalcular(); EP.render(); }); });
-  EP.cambio('rol', (el) => { S.role = el.value; S.recFilter = 'todos'; EP.guardarPrefs(); EP.render(); });
+  EP.cambio('rol', (el) => { S.role = el.value; S.recFilter = 'todos'; if (S.role === 'equipo') S.teamCompare = false; EP.guardarPrefs(); EP.render(); });
   EP.cambio('equipo-propio', (el) => { S.team = el.value; EP.guardarPrefs(); EP.render(); });
   // Copia de la configuración: para pasar de la web a una copia local (o a otro ordenador) sin perder lo hecho.
   // Lleva configuración, iniciativas, preferencias y cortes (cifras ya calculadas). Nunca los ficheros ni la clave.

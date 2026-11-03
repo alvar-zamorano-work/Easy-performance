@@ -12,7 +12,7 @@
     const sub = t('cabecera.datosHasta', { fecha: fecha(vm.fechaDatos), n: vm.equipos.length, k: vm.semanas.K });
     if (view === 'resumen') return { titulo: t('nav.resumen'), sub, acciones: btn(t('resumen.redactado'), 'drill', ' data-kind="resumen"') + btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') + btn(t('presentar.abrir'), 'present', '', true) };
     if (view === 'equipos') {
-      if (S.teamCompare) return { titulo: t('comparar.titulo'), sub: t('comparar.sub') };
+      if (S.teamCompare && S.role !== 'equipo') return { titulo: t('comparar.titulo'), sub: t('comparar.sub') };
       return { titulo: nombreEquipo(S.team), sub: t('equipo.sub', { k: vm.semanas.K, r: vm.semanas.R }), acciones: btn(t('resumen.redactado'), 'drill', ` data-kind="resumen" data-team="${esc(S.team)}"`) + btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') };
     }
     if (view === 'recomendaciones') return { titulo: t('nav.recomendaciones'), sub: t('recs.sub'), acciones: btn(t('comun.imprimir'), 'print') };
@@ -366,8 +366,8 @@
   }
   function cajonPersonalizar() {
     const sel = K.destacados();
-    const opciones = cat().ordenMedidas.concat(S.vm.hayCoste ? ['coste'] : []).filter((id) => S.vm.area.medidas[id] && S.vm.area.medidas[id].disponible || S.vm.equipos.some((e) => e.medidas[id] && e.medidas[id].disponible));
-    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p><div class="checks">${opciones.map((id) => `<label class="check"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}> ${esc(nombreMedida(id))}</label>`).join('')}</div>
+    const opciones = cat().ordenMedidas.concat(S.vm.hayCoste ? ['coste'] : []).filter(K.medible);
+    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p><p class="small"><b>${esc(t('personalizar.elegidos', { n: sel.length }))}</b></p><div class="checks">${opciones.map((id) => `<label class="check"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}> ${esc(nombreMedida(id))}</label>`).join('')}</div>
       <div class="row" style="margin-top:12px"><button class="btn" data-action="pref-reset">${esc(t('personalizar.restaurar'))}</button></div>`;
     return [t('personalizar.titulo'), html];
   }

@@ -400,7 +400,7 @@
   accion('go', (el) => go(el.dataset.view));
   accion('open-team', (el) => openTeam(el.dataset.team));
   accion('team-tab', (el) => { if (el.dataset.team === '__comparar') { S.teamCompare = true; } else { S.team = el.dataset.team; S.teamCompare = false; guardarPrefs(); } S.drill = null; render(); });
-  accion('set-role', (el) => { S.role = el.dataset.role; S.recFilter = 'todos'; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
+  accion('set-role', (el) => { S.role = el.dataset.role; S.recFilter = 'todos'; if (S.role === 'equipo') S.teamCompare = false; if (S.vm) S.view = INICIO_ROL[S.role]; guardarPrefs(); render(); toast(t('rol.cambiado.' + S.role)); });
   accion('set-lang', (el) => { I.fijar(el.dataset.lang); guardarPrefs(); if (S.vm) enSegundoPlano(() => { recalcular(); render(); }); else render(); });
   accion('toast-close', () => document.querySelector('.toast').classList.add('hidden'));
   accion('retry', () => { S.error = null; try { if (S.lectura) recalcular(); } catch (e) { S.error = { message: e.message, stack: e.stack }; } render(); });

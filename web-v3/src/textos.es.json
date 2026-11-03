@@ -1020,5 +1020,6 @@
  "cortes.desde": "Desde los datos del {f}. Mejoran: {m}. Empeoran: {e}.",
  "cortes.verCambios": "Ver los cambios",
  "equipos.tareas.1": "1 tarea",
- "equipos.tareas.n": "{n} tareas"
+ "equipos.tareas.n": "{n} tareas",
+ "personalizar.elegidos": "Elegidos: {n} de 4."
 }

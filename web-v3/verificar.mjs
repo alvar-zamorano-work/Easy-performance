@@ -1078,6 +1078,40 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
+// ---------- 15. Personalizar y roles: solo indicadores medibles; el rol Equipo ve y crea lo de su equipo ----------
+{
+  const { variantes } = await import('../tests/variantes.ts');
+  const p = await pagina(1280, 800);
+  await p.setInputFiles('#file-input', variantes().sinTiempos.ficheros.map((f) => ({ name: f.nombre, mimeType: 'text/csv', buffer: Buffer.from(f.texto) }))); await p.waitForTimeout(500); await quieto(p);
+  if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
+  await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
+  // Un indicador elegido que no se puede medir (tiempo de ciclo sin tiempos) no ocupa hueco
+  const r = await A(p, () => {
+    const EP = window.EP, S = EP.S; S.prefs.byRole.direccion = ['ciclo', 'entregas', 'bugs', 'wip']; EP.guardarPrefs();
+    EP.openDrill({ kind: 'personalizar' });
+    const marcados = [...document.querySelectorAll('input[data-change="pref-tile"]:checked')].map((x) => x.value);
+    const texto = document.querySelector('#drawer').textContent;
+    return { medible: EP.kit.medible('ciclo'), dest: EP.kit.destacados(), marcados, cuenta: /Elegidos: 3 de 4/.test(texto) };
+  });
+  // Y se puede elegir un cuarto
+  const cuarto = await A(p, () => { const libre = [...document.querySelectorAll('input[data-change="pref-tile"]:not(:checked)')][0]; libre.click(); return window.EP.kit.destacados().length; });
+  ok('Personalizar: un indicador que no se puede medir no ocupa hueco y se puede elegir otro', !r.medible && r.dest.indexOf('ciclo') < 0 && r.marcados.length === r.dest.length && r.cuenta && cuarto === 4, JSON.stringify({ r, cuarto }));
+  await A(p, () => window.EP.openDrill(null));
+  // Rol Equipo: no hereda "Comparar equipos" y solo puede crear iniciativas de su equipo
+  await fijarRol(p, 'pmo');
+  await ir(p, 'equipos'); await quieto(p);
+  await A(p, () => { const b = document.querySelector('[data-action="team-tab"][data-team="__comparar"]'); if (b) b.click(); }); await quieto(p);
+  await fijarRol(p, 'equipo');
+  await ir(p, 'equipos'); await quieto(p);
+  const titulo = await A(p, () => document.querySelector('#page-title').textContent);
+  await ir(p, 'iniciativas'); await quieto(p);
+  await clic(p, '#page-actions [data-action="ini-nueva"]');
+  const equiposForm = await A(p, () => [...document.querySelectorAll('#form-ini input[name="equipos"]')].map((x) => x.value));
+  ok('rol Equipo: no sale "Comparar equipos" y la iniciativa solo puede ser de su equipo', !/Comparar/.test(titulo) && equiposForm.length === 1, JSON.stringify({ titulo, equiposForm }));
+  ok('Personalizar y roles: sin errores', !p.errores.length, p.errores.join(' | '));
+  await p.context().close();
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);

@@ -1020,5 +1020,6 @@
  "cortes.desde": "Since the data of {f}. Better: {m}. Worse: {e}.",
  "cortes.verCambios": "See the changes",
  "equipos.tareas.1": "1 task",
- "equipos.tareas.n": "{n} tasks"
+ "equipos.tareas.n": "{n} tasks",
+ "personalizar.elegidos": "Chosen: {n} of 4."
 }
