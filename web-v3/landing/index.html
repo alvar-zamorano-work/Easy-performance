@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>easyperformance</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="alternate" hreflang="en" href="en/">
 <meta name="description" content="easyperformance: cada equipo medido contra su propia baseline, con el dato comprobado e iniciativas que se miden solas.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -76,11 +77,16 @@ button { font: inherit; }
 
 /* ---------- Hero ---------- */
 .hero { background: var(--navy); color: var(--on-navy); padding-block: 22px 92px; overflow: hidden; }
-.topbar { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.topbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 20px; }
 .logo { display: flex; flex-direction: column; gap: 2px; text-decoration: none; }
 .logo b { font-weight: 500; font-size: 24px; color: var(--sky); letter-spacing: -0.01em; }
 .logo span { font-size: 13px; color: var(--on-navy-2); }
 .topbar .btn { padding: 10px 16px; font-size: 15px; }
+.top-r { display: flex; align-items: center; gap: 16px; }
+.lang { font: 500 14px/1 var(--font); color: var(--on-navy-2); text-decoration: none; padding: 8px 4px; }
+.lang:hover { color: var(--on-navy); }
+.lang .corto { display: none; }
+.topbar .btn { white-space: nowrap; }
 .hero-main { margin-top: 96px; }
 .kicker { font: 700 13px/1.2 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--sky); }
 .hero h1 { margin-top: 22px; font-weight: 500; font-size: clamp(44px, 7.4vw, 92px); line-height: 1; letter-spacing: -0.03em; max-width: 13ch; }
@@ -107,13 +113,14 @@ button { font: inherit; }
 .tool { font-family: var(--font); color: var(--t-navy); }
 .tile { position: relative; background: var(--t-card); border: 1px solid var(--t-line); border-radius: 12px; padding: 14px 16px 12px; display: grid; min-width: 0; color: var(--t-navy); }
 .t-team { font-weight: 600; font-size: 15px; margin-bottom: 10px; color: var(--t-navy); }
-.t-label { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 20px; text-transform: uppercase; letter-spacing: .05em; font-size: 11.5px; font-weight: 600; color: var(--t-muted); }
+.t-label { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; min-height: 20px; text-transform: uppercase; letter-spacing: .05em; font-size: 11.5px; font-weight: 600; color: var(--t-muted); }
 .chip { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; line-height: 1.6; }
 .chip.good { background: var(--t-ok-soft); color: var(--t-ok); }
 .chip.warn { background: var(--t-warn-soft); color: var(--t-warn); }
 .chip.bad { background: var(--t-bad-soft); color: var(--t-bad); }
 .chip.neutral { background: var(--t-grey1); color: var(--t-muted); }
 .chip.info { background: var(--t-info-soft); color: var(--t-accent); }
+.chip.ok { background: #eef1f6; color: var(--t-navy); }
 .t-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; margin: 8px 0 4px; color: var(--t-navy); white-space: nowrap; }
 .t-value.tone-warn { color: var(--t-warn); } .t-value.tone-good { color: var(--t-ok); }
 .t-unit { font-size: 12.5px; color: var(--t-muted); }
@@ -127,7 +134,7 @@ button { font: inherit; }
 .grafico path { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
 .grafico .g-linea-base { stroke: var(--t-linea-base); }
 .grafico .g-linea-ahora { stroke: var(--t-accent); stroke-width: 2.6; transition: stroke .4s ease; }
-.grafico .tone-good { stroke: var(--t-ok); } .grafico .tone-warn { stroke: var(--t-warn); } .grafico .tone-bad { stroke: var(--t-bad); }
+.grafico .tone-ok { stroke: var(--t-navy); } .grafico .tone-good { stroke: var(--t-ok); } .grafico .tone-warn { stroke: var(--t-warn); } .grafico .tone-bad { stroke: var(--t-bad); }
 .grafico .g-dot { stroke-width: 7; stroke-linecap: round; vector-effect: non-scaling-stroke; transition: stroke .4s ease; }
 .g-eje { display: flex; justify-content: space-between; font-size: 11px; color: var(--t-muted); margin-top: 3px; }
 
@@ -226,13 +233,13 @@ button { font: inherit; }
 .ini-chart .ic-ini { stroke: var(--t-accent); stroke-width: 2.4; }
 .ini-chart .ic-control { stroke: var(--t-grey4); stroke-dasharray: 4 3; }
 .ini-chart .ic-inicio { stroke: var(--t-navy); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.ini-chart .ic-margen { fill: var(--t-warn-soft); }
+.ini-chart .ic-margen { fill: #eef0f4; }
 .ini-chart .ic-bl { fill: var(--t-band); } .ini-chart .ic-bl-despues { fill: var(--t-band-now); }
 .ini-chart .ic-head { stroke: var(--t-accent); stroke-width: 1; stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
 .carga { position: absolute; top: -24px; left: 0; transform: translateX(-50%); font: 700 11.5px/1 var(--mono); color: var(--t-accent); background: var(--t-info-soft); padding: 4px 7px; border-radius: 6px; white-space: nowrap; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--t-muted); }
 .legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-right: 6px; }
-.legend .sw-ini { background: var(--t-accent); } .legend .sw-bl { background: var(--t-band); } .legend .sw-todo { background: var(--t-grey4); } .legend .sw-margen { background: var(--t-warn-soft); box-shadow: inset 0 0 0 1px #f3d999; }
+.legend .sw-ini { background: var(--t-accent); } .legend .sw-bl { background: var(--t-band); } .legend .sw-todo { background: var(--t-grey4); } .legend .sw-margen { background: #eef0f4; box-shadow: inset 0 0 0 1px #d5dae3; }
 .cargas { display: flex; align-items: center; gap: 10px; font: 400 12px/1 var(--mono); color: var(--t-muted); }
 .cargas .dots { display: flex; gap: 4px; flex: 1; }
 .cargas .dots i { flex: 1; height: 6px; border-radius: 3px; background: var(--t-grey1); box-shadow: inset 0 0 0 1px var(--t-line); transition: background-color .2s ease; }
@@ -260,6 +267,10 @@ button { font: inherit; }
   body { font-size: 16px; }
   .hero { padding-block: 18px 64px; }
   .hero-main { margin-top: 56px; }
+  .logo b { font-size: 21px; }
+  .top-r { gap: 10px; }
+  .topbar .btn { padding: 9px 13px; font-size: 14px; }
+  .lang .largo { display: none; } .lang .corto { display: inline; }
   .sec { padding-block: 72px; }
   .flips, .pills { grid-template-columns: minmax(0, 1fr); }
   .f-dl div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
@@ -277,7 +288,7 @@ button { font: inherit; }
   <div class="wrap">
     <div class="topbar">
       <a class="logo" href="#inicio"><b>easyperformance</b><span>Medición de equipos</span></a>
-      <a class="btn btn--primary" href="https://alvar-zamorano-work.github.io/Easy-performance/" target="_blank" rel="noopener">Abrir la demo</a>
+      <div class="top-r"><a class="lang" href="en/" hreflang="en" lang="en" aria-label="English"><span class="largo">English</span><span class="corto">EN</span></a><a class="btn btn--primary" href="https://alvar-zamorano-work.github.io/Easy-performance/" target="_blank" rel="noopener">Abrir la demo</a></div>
     </div>
     <div class="hero-main" id="inicio">
       <div class="kicker">Medición de equipos de desarrollo</div>
@@ -468,8 +479,8 @@ button { font: inherit; }
     { team: 'Risk', med: 'Retrabajo', val: '15' + NB + '%', unit: 'de lo terminado, últimas 8 semanas', chip: ['good', 'Mejor que la baseline'], vtone: '', base: 'Baseline: 22' + NB + '% a 26' + NB + '%',
       ref: { lo: 22, hi: 26 }, win: 8, tone: 'good', serie: [24, 25, 23, 26, 24, 22, 25, 27, 23, 24, 21, 25, 23, 21, 19, 18, 17, 16, 15, 15],
       k: 'Risk, retrabajo', msg: 'Ha mejorado frente a su propia historia.', det: 'Vuelve atrás el 15' + NB + '% de lo terminado. Lo suyo era del 22' + NB + '% al 26' + NB + '%.', b: { max: 35, lo: 22, hi: 26, v: 15, c: 'var(--t-turquoise)', l: '22 a 26' + NB + '%', n: '15' + NB + '%' } },
-    { team: 'Payments', med: 'Tiempo de ciclo', val: '3,3 días', unit: 'últimas 4 semanas', chip: ['good', 'Normal'], vtone: '', base: 'Baseline: 3 días a 4,4 días',
-      ref: { lo: 3.0, hi: 4.4 }, win: 4, tone: 'good', serie: [3.8, 3.5, 4.1, 3.2, 3.9, 4.5, 3.6, 3.1, 4.0, 3.7, 4.3, 3.4, 3.6, 3.4, 3.5, 3.3],
+    { team: 'Payments', med: 'Tiempo de ciclo', val: '3,3 días', unit: 'últimas 4 semanas', chip: ['ok', 'Dentro'], vtone: '', base: 'Baseline: 3 días a 4,4 días',
+      ref: { lo: 3.0, hi: 4.4 }, win: 4, tone: 'ok', serie: [3.8, 3.5, 4.1, 3.2, 3.9, 4.5, 3.6, 3.1, 4.0, 3.7, 4.3, 3.4, 3.6, 3.4, 3.5, 3.3],
       k: 'Payments, tiempo de ciclo', msg: 'Va como siempre.', det: 'Es el más rápido del área. Lo que cuenta es que va dentro de su baseline.', b: { max: 6, lo: 3.0, hi: 4.4, v: 3.3, c: '#ffffff', l: '3 a 4,4 días', n: '3,3' } },
     { team: 'Customer Portal', med: 'Bugs nuevos', val: '1,8', unit: 'bugs por semana, últimas 4 semanas', chip: ['warn', 'Atención'], vtone: 'warn', base: 'Baseline: 0,8 a 1,3',
       ref: { lo: 0.8, hi: 1.3 }, win: 4, tone: 'warn', serie: [1.0, 1.2, 0.9, 1.1, 0.7, 1.3, 1.0, 0.9, 1.4, 1.1, 0.8, 1.0, 1.2, 1.5, 1.7, 1.8],
@@ -744,7 +755,7 @@ button { font: inherit; }
     s4tl = G.timeline();
     s4tl.set(clip, { attr: { width: x(0) + 2 } })
       .set(head, { attr: { x1: x(0), x2: x(0) }, opacity: 1 })
-      .set(carga, { left: (x(0) / 3) + '%', opacity: 1 })
+      .set(carga, { left: (x(0) / 3) + '%', xPercent: -x(0) / 3, opacity: 1 })
       .call(function () {
         carga.textContent = 'Carga del ' + fecha(0); paso(0);
         fases.forEach(function (li, i) { li.classList.toggle('on', i === 0); li.classList.remove('done'); });
@@ -755,7 +766,7 @@ button { font: inherit; }
         var xk = x(k);
         s4tl.to(clip, { attr: { width: xk + 2 }, duration: 0.42, ease: 'none' })
           .to(head, { attr: { x1: xk, x2: xk }, duration: 0.42, ease: 'none' }, '<')
-          .to(carga, { left: (xk / 3) + '%', duration: 0.42, ease: 'none' }, '<')
+          .to(carga, { left: (xk / 3) + '%', xPercent: -xk / 3, duration: 0.42, ease: 'none' }, '<')
           .call(function () { carga.textContent = 'Carga del ' + fecha(k); paso(k); });
         if (k === m.completa) {
           s4tl.fromTo($('[data-est]', s4), { scale: 0.4 }, { scale: 1, duration: 0.6, ease: 'back.out(3)', immediateRender: false })
