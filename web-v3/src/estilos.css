@@ -959,3 +959,42 @@ table.cmp-bl tr.fila-area .sobre { background: var(--card); }
 .ic-leyenda .l-margen { width: 12px; height: 9px; border-radius: 2px; background: #eef0f4; }
 .ficha.ini .progress { margin-top: 2px; }
 .bl-leyenda .lg-linea { border-top-color: var(--navy); }
+
+/* ---------- Indicadores separados: cada uno en su caja, con su nombre y su unidad ---------- */
+/* Página Baseline: cuatro gráficos seguidos se leían como una sola línea. Cada indicador va en su propia caja. */
+.bls { gap: 12px; }
+.bl { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 8px; background: #f9fafc; }
+.bl:hover { border-color: #b9c6d8; background: #fff; }
+.bl-cab { align-items: flex-start; gap: 8px; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--text); }
+.bl-n { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.bl-n b { font-size: 0.9667rem; font-weight: 600; color: var(--text); line-height: 1.25; }
+.bl-n small { font-size: 0.7667rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bl-cab .chip { flex: none; margin-top: 1px; }
+.bl-cifras { margin-top: 8px; }
+.bl .grafico, .bl svg { background: transparent; }
+
+/* Resumen: una línea fina entre indicadores para que la cifra de uno no se pegue al rango del siguiente */
+.bm-cols, .bm .fbs { gap: 0; }
+.bm-cols > span, .bm .fbs > .fb { padding: 0 16px; border-left: 1px solid var(--line); min-width: 0; }
+.bm-cols > span { color: var(--text); font-weight: 600; }
+.bm-cab, .bm-fila { gap: 0 6px; }
+@media (max-width: 1000px) {
+  .bm .fbs { gap: 10px; }
+  .bm .fbs > .fb { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #f9fafc; }
+  .bm .fb .fb-n { color: var(--text); font-weight: 600; }
+}
+
+/* Personalizar: lo elegido arriba y lo que se puede elegir separado por familias */
+.per-elegidos { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; margin: 10px 0 14px; }
+.per-elegidos ol { margin: 6px 0 0; padding-left: 20px; display: flex; flex-wrap: wrap; gap: 2px 22px; font-size: 0.9333rem; }
+.per-grupo { border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px 12px; margin: 0 0 10px; }
+.per-grupo legend { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; padding: 0 6px; }
+.per-ops { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; }
+label.check.per-op { align-items: flex-start; padding: 6px 8px; border-radius: 8px; }
+label.check.per-op:hover { background: var(--grey1); }
+label.check.per-op.on { background: var(--accent-soft); }
+label.check.per-op input { margin-top: 3px; }
+.per-op span { display: flex; flex-direction: column; gap: 1px; }
+.per-op b { font-weight: 600; font-size: 0.9333rem; }
+.per-op small { font-size: 0.7667rem; color: var(--muted); line-height: 1.3; }
+.per-op small.t-warn { color: var(--warn); }

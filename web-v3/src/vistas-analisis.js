@@ -15,6 +15,8 @@
       if (S.teamCompare && S.role !== 'equipo') return { titulo: t('comparar.titulo'), sub: t('comparar.sub') };
       return { titulo: nombreEquipo(S.team), sub: t('equipo.sub', { k: vm.semanas.K, r: vm.semanas.R }), acciones: btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') + btn(t('compartir.abrir'), 'drill', ` data-kind="compartir" data-team="${esc(S.team)}"`, true) };
     }
+    // En Baseline se ven los indicadores elegidos: desde aquí también se cambian
+    if (view === 'referencias') return { titulo: t('nav.referencias'), sub: t('pagina.sub.referencias'), acciones: btn(t('personalizar.abrir'), 'drill', ' data-kind="personalizar"') };
     if (view === 'recomendaciones') return { titulo: t('nav.recomendaciones'), sub: t('recs.sub'), acciones: btn(t('comun.imprimir'), 'print') };
     // Iniciativas y Fuentes son la segunda pestaña de Qué hacer y de Datos: llevan el título de su entrada del menú
     if (view === 'iniciativas') return { titulo: t('nav.recomendaciones'), sub: t('ini.sub'), acciones: btn(t('ini.nueva'), 'ini-nueva', '', true) };
@@ -394,9 +396,10 @@
     const por = ok && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? K.porque(id, m) : '';
     const nota = por ? `<span class="t-why" title="${esc(por)}">${esc(K.primeraFrase(por))}</span>`
       : ok && m.aviso ? `<span class="t-aviso" title="${esc(K.avisoTexto(m))}">${esc(K.avisoCorto(id, m))}</span>` : '';
-    const vent = K.ventanaDistinta(m);
+    const vent = K.ventanaDistinta(m), u = K.unidad(id);
+    // Cada indicador en su propia caja, con su nombre y su unidad: cuatro gráficos seguidos no deben leerse como una sola línea
     return `<div class="bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
-      <div class="bl-cab"><span title="${esc(K.unidad(id))}">${esc(nombreMedida(id))}</span>${ok ? K.estadoChip(m) : ''}</div>
+      <div class="bl-cab"><div class="bl-n"><b>${esc(nombreMedida(id))}</b>${u ? `<small title="${esc(u)}">${esc(u)}</small>` : ''}</div>${ok ? K.estadoChip(m) : ''}</div>
       <div class="bl-cifras"><b class="t-${K.tonoDe(m)}">${esc(ok ? valor(id, m.valor) : t('comun.sinDatos'))}${vent ? `<small class="bl-vent">${esc(vent)}</small>` : ''}</b><span class="small muted">${esc(ok ? K.rango(id, m) : K.porque(id, m))}</span>${nota}</div>
       ${ok ? K.grafico(id, m, { h: 52, sinEje: true }) : ''}</div>`;
   }
@@ -519,12 +522,26 @@
       + op('exp-docx', t('ajustes.catalogoWord'), t('compartir.catalogo')) + `</div>`;
     return [t('compartir.titulo'), html];
   }
+  /** Familias de indicadores en Personalizar: lo que se puede elegir, separado por lo que responde. Lo que no está aquí va en Otros. */
+  const FAMILIAS = [['tiempos', ['ciclo', 'total', 'espera', 'primera']], ['entrega', ['entregas', 'velocidad', 'pendiente']],
+    ['calidad', ['retrabajo', 'bugs', 'errores']], ['previsibilidad', ['regularidad', 'arrastradas', 'fiabilidad', 'estimacion']],
+    ['marcha', ['wip', 'edad', 'reparto']]];
   function cajonPersonalizar() {
     const sel = K.destacados();
     // Todas las medidas: las que no se pueden medir con este export se ven (y se pueden quitar) con el motivo
     const elegidas = sel.filter((id) => cat().ordenMedidas.indexOf(id) < 0 && id !== 'coste');
     const opciones = cat().ordenMedidas.concat(S.vm.hayCoste ? ['coste'] : []).concat(elegidas);
-    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p><p class="small"><b>${esc(t('personalizar.elegidos', { n: sel.length }))}</b></p><div class="checks">${opciones.map((id) => `<label class="check"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}> ${esc(nombreMedida(id))}${K.medible(id) ? '' : ` <span class="tiny muted">(${esc(t('personalizar.noMedible'))})</span>`}</label>`).join('')}</div>
+    const enFamilia = (id) => FAMILIAS.some((f) => f[1].indexOf(id) >= 0);
+    const grupos = FAMILIAS.map(([g, ids]) => [g, ids.filter((id) => opciones.indexOf(id) >= 0)])
+      .concat([['otros', opciones.filter((id) => !enFamilia(id))]]).filter((g) => g[1].length);
+    const op = (id) => {
+      const def = cat().medidas[id], preg = def && def.pregunta;
+      return `<label class="check per-op${sel.indexOf(id) >= 0 ? ' on' : ''}"><input type="checkbox" data-change="pref-tile" value="${esc(id)}" ${sel.indexOf(id) >= 0 ? 'checked' : ''}><span><b>${esc(nombreMedida(id))}</b>${preg ? `<small>${esc(preg)}</small>` : ''}${K.medible(id) ? '' : `<small class="t-warn">${esc(t('personalizar.noMedible'))}</small>`}</span></label>`;
+    };
+    // Arriba, los elegidos en el orden en que se ven; debajo, todo lo que se puede elegir, por familias
+    const html = `<p class="small muted">${esc(t('personalizar.texto', { rol: t('rol.' + S.role) }))}</p>
+      <div class="per-elegidos"><b class="small">${esc(t('personalizar.elegidos', { n: sel.length }))}</b><ol>${sel.map((id) => `<li>${esc(nombreMedida(id))}</li>`).join('')}</ol></div>
+      ${grupos.map(([g, ids]) => `<fieldset class="per-grupo"><legend>${esc(t('personalizar.grupo.' + g))}</legend><div class="per-ops">${ids.map(op).join('')}</div></fieldset>`).join('')}
       <div class="row" style="margin-top:12px"><button class="btn" data-action="pref-reset">${esc(t('personalizar.restaurar'))}</button></div>`;
     return [t('personalizar.titulo'), html];
   }
