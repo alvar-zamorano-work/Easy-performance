@@ -825,3 +825,5 @@ table.cmp-bl tr.fila-area .sobre { background: var(--card); }
 .bl { display: flex; flex-direction: column; }
 .bl-cifras { flex: 1; }
 .ini-nota { flex-basis: 100%; color: var(--muted); }
+.kpis-heroe { margin-bottom: 6px; }
+.kpis-heroe .tile { min-height: 0; }

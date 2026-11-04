@@ -185,11 +185,11 @@ async function recorrer(p, etiqueta) {
     ok('panel: ' + nombre, t.length > 40 && !(await estado(p)).error);
     await p.keyboard.press('Escape'); await p.waitForTimeout(100);
   }
-  // Resumen centrado en la baseline: una fila por indicador y equipo, con su barra y su rango
+  // Resumen centrado en la baseline: arriba los indicadores de toda el área con su gráfico; debajo, una barra por indicador y equipo
   await ir(p, 'resumen'); await p.waitForTimeout(100);
   const filasBl = await p.$$eval('#page .fb', (x) => x.length), nEq = await A(p, () => window.EP.visibles().length), nK = await A(p, () => window.EP.kit.destacados().length);
-  // Una ficha por equipo y, con más de un equipo, otra de toda el área
-  ok('resumen: la baseline de cada equipo y la de toda el área', filasBl === (nEq + (nEq > 1 ? 1 : 0)) * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
+  const kpisArea = await A(p, () => [...document.querySelectorAll('#page .kpis-heroe .tile')].filter((x) => x.dataset.team === window.EP.S.vm.area.nombre && x.querySelector('svg.grafico')).length);
+  ok('resumen: los indicadores de toda el área con su gráfico y la baseline de cada equipo en barras', kpisArea === nK && filasBl === (nEq > 1 ? nEq : 0) * nK, `${kpisArea} indicadores del área, ${filasBl} filas`);
   const textoMenu = await p.textContent('#nav');
   ok('el menú dice Baseline, Qué hacer y Datos', /Baseline/.test(textoMenu) && /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Referencias|Línea base/.test(textoMenu), textoMenu);
   // Los gráficos de cada indicador están en la ficha de equipo
@@ -1304,6 +1304,13 @@ const medirMaquetacion = () => {
           if (r.querySelector('.fb-v.t-good') || r.querySelector('.b-now.tone-good')) mal.push(e.nombre + ':' + id);
         });
       }));
+      // Los indicadores de toda el área (arriba): ni el gráfico ni el chip de una cifra dudosa en verde
+      document.querySelectorAll('#page .kpis-heroe .tile[data-medida]').forEach((x) => {
+        const e = x.dataset.team === S.vm.area.nombre ? S.vm.area : S.vm.equipos.find((y) => y.nombre === x.dataset.team), m = e && e.medidas[x.dataset.medida];
+        if (!m || m.revisar !== 'dato') return;
+        vistas.push(x.dataset.team + ':' + x.dataset.medida);
+        if (x.querySelector('.grafico .tone-good') || x.querySelector('.t-label .chip.good')) mal.push(x.dataset.team + ':' + x.dataset.medida);
+      });
       const a = S.vm.area;
       return { mal, vistas: vistas.length, area: Object.keys(a.medidas).filter((id) => a.medidas[id] && a.medidas[id].revisar === 'dato').map((id) => id + ' ' + Math.round((a.medidas[id].dudosoParte || 0) * 100) + '%'), areaNombre: a.nombre };
     });
@@ -1348,8 +1355,8 @@ const medirMaquetacion = () => {
     const filas = [...document.querySelectorAll('#page .que-hacer .rrow')].map((r) => r.querySelector('b').textContent);
     return { h, filas, recs: window.EP.vistas.recsActivas(window.EP.visibles()).map((r) => r.titulo) };
   });
-  const iB = res.h.indexOf('Cada equipo frente a su baseline'), iE = res.h.indexOf('Por dónde empezar'), iP = res.h.indexOf('Preguntas de dirección');
-  ok('Resumen: la baseline primero, después por dónde empezar y al final las preguntas de dirección', iB >= 0 && iB < iE && iE < iP, JSON.stringify(res.h));
+  const iA = res.h.indexOf('Toda el área frente a su baseline'), iB = res.h.indexOf('Cada equipo frente a su baseline'), iE = res.h.indexOf('Por dónde empezar'), iP = res.h.indexOf('Preguntas de dirección');
+  ok('Resumen: primero toda el área y cada equipo frente a su baseline, después por dónde empezar y al final las preguntas', iA === 0 && iA < iB && iB < iE && iE < iP, JSON.stringify(res.h));
   ok('Resumen: por dónde empezar son las tres primeras de Qué hacer, en el mismo orden', res.filas.length === Math.min(3, res.recs.length) && res.filas.every((x, i) => x === res.recs[i]), JSON.stringify(res));
   // Qué hacer: cada recomendación con medida enseña esa medida en sus equipos frente a su baseline, con la cifra del equipo
   await ir(p, 'recomendaciones'); await quieto(p);

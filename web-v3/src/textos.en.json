@@ -129,7 +129,7 @@
  "resumen.fiabilidadItem": "data reliability {nivel}",
  "resumen.cambio": "Outside baseline: {m}",
  "resumen.baselineEquipos": "Each team against its baseline",
- "resumen.baselineNota": "The shaded area is the baseline (the previous {r} weeks); the mark, each indicator's current period",
+ "resumen.baselineNota": "In each bar, the blue zone is its baseline and the mark shows how it is doing now",
  "equipo.masDetalle": "More detail: time per stage, reliability, stalled work and other measures",
  "grafico.baseline": "Baseline: {r} weeks",
  "grafico.ahora": "Now: {k} wks",
@@ -1052,7 +1052,7 @@
  "recorrido.terminar": "Finish",
  "recorrido.saltar": "Skip the tour",
  "recorrido.t1": "Summary: how each team is doing",
- "recorrido.d1": "At the top, whether any team has left its baseline. Below, each team with its indicators against its baseline, where to start and the leadership questions.",
+ "recorrido.d1": "At the top, whether any team has left its baseline. Below, the indicators of the whole area with their charts, each team against its baseline, where to start and the leadership questions.",
  "recorrido.t2": "Baseline: each team against itself",
  "recorrido.d2": "Each indicator of each team with its chart: the shaded area is its baseline and the current period is on the right. No team is compared with another.",
  "recorrido.t3": "What to do: where to start",
@@ -1085,7 +1085,7 @@
  "ref.leyendaBanda": "Baseline: the previous {r} weeks",
  "ref.leyendaAhora": "Now: last {k} weeks",
  "ref.leyendaCorte": "Where the current period starts",
- "resumen.verBaseline": "See charts",
+ "resumen.verBaseline": "See each team's charts",
  "medida.avisoCorto": "Reaches the fixed limit of {l}; its baseline decides",
  "comparar.leyendaBanda": "The middle zone is each team's baseline",
  "comparar.leyendaLado": "To the right, better than its baseline; to the left, worse. Each team is compared with itself, never its figures with another team's.",
@@ -1099,5 +1099,8 @@
  "ref.sinEnMedidas": "Provisional: no baseline yet for {m}",
  "ini.frente.incompleta": "the after period is compared once its window is complete",
  "ini.frente.notaFuncionaPeor": "It works compared with the other teams: they got worse by more.",
- "ini.frente.notaEmpeoraMejor": "It improves on its baseline, but less than the other teams."
+ "ini.frente.notaEmpeoraMejor": "It improves on its baseline, but less than the other teams.",
+ "resumen.areaBaseline": "The whole area against its baseline",
+ "resumen.equipoBaseline": "{e} against its baseline",
+ "resumen.heroeNota": "The shaded area is the baseline (the previous {r} weeks); right of the line, the current period"
 }

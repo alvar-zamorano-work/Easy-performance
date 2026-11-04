@@ -44,20 +44,25 @@
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
     if (atencion.length) items.push(esc(t('resumen.atencionEn', { equipos: lista(atencion.map((e) => nombreEquipo(e.nombre))) })));
     const dest = K.destacados();
-    // Toda el área, primero (si hay más de un equipo a la vista): la vista que antes estaba en la página de baseline
-    const fichaArea = eqs.length > 1 && S.role !== 'equipo' ? K.ficha(`<div class="f-title">${esc(t('equipo.area'))}</div>`, `<div class="fbs">${dest.map((id) => K.filaBaseline(vm.area, id)).join('')}</div>`,
-      vm.areaSin && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span>` : '') : '';
-    const fichas = fichaArea + eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
-      `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
+    // Arriba, los indicadores de toda el área (o del equipo, si solo se ve uno), cada uno con su gráfico y su baseline sombreada
+    const conEquipos = eqs.length > 1 && S.role !== 'equipo', heroe = conEquipos ? vm.area : eqs[0];
+    const kpis = heroe ? K.sec(conEquipos ? t('resumen.areaBaseline') : t('resumen.equipoBaseline', { e: nombreEquipo(heroe.nombre) }), `<span class="muted small">${esc(t('resumen.heroeNota', { r: vm.semanas.R }))}</span>`)
+      + `<div class="tiles kpis-heroe">${dest.map((id) => K.tile(heroe, id)).join('')}</div>`
+      + (conEquipos && vm.areaSin && vm.areaSin.length ? `<p class="tiny muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</p>` : '') : '';
+    // Debajo, cada equipo frente a su baseline: una barra por indicador. El pie dice lo que ha salido de la baseline; el aviso de
+    // un límite fijo ya está en la barra (la marca discontinua) y entero al pasar por encima
+    const fichas = conEquipos ? eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
+      `<span class="small muted" title="${esc(pieFicha(e))}">${esc(pieBase(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('') : '';
     // Por dónde empezar: las tres primeras de Qué hacer, en el mismo orden; el enlace abre la lista entera sin filtros
     const altas = recs.filter((r) => r.nivel === 'alto').length;
     const cuenta = !recs.length ? t('recs.ninguna') : altas ? tn('resumen.queHacer', recs.length, { a: altas }) : tn('resumen.queHacerSinAltas', recs.length);
     const empezar = K.sec(t('resumen.primero'), `<span class="muted small">${esc(cuenta)}</span>${recs.length ? ` <button class="link small" data-action="ver-que-hacer">${esc(t('resumen.verQueHacer'))}</button>` : ''}`)
       + `<div class="ficha list que-hacer">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
-    // Primero la baseline de cada equipo (lo que diferencia al producto), después qué hacer y al final las preguntas de dirección
-    const notaBl = `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span> <button class="link small" data-action="go" data-view="referencias">${esc(t('resumen.verBaseline'))}</button>`;
+    // Primero la baseline (lo que diferencia al producto): el área y cada equipo. Después qué hacer y al final las preguntas
+    const notaBl = `<span class="muted small">${esc(t('resumen.baselineNota'))}</span> <button class="link small" data-action="go" data-view="referencias">${esc(t('resumen.verBaseline'))}</button>`;
+    const equipos = fichas ? K.sec(t('resumen.baselineEquipos'), notaBl) + `<div class="fichas cols-2">${fichas}</div>` : '';
     return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos()
-      + K.sec(t('resumen.baselineEquipos'), notaBl) + `<div class="fichas cols-2">${fichas}</div>` + empezar + preguntas();
+      + kpis + equipos + empezar + preguntas();
   }
   /** Equipos nuevos en este export (se ofrece medirlos) y qué queda fuera de la medición (equipos pequeños y tareas sin equipo). */
   function avisoEquipos() {

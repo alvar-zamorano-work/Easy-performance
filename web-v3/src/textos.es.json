@@ -129,7 +129,7 @@
  "resumen.fiabilidadItem": "fiabilidad del dato {nivel}",
  "resumen.cambio": "Fuera de la baseline: {m}",
  "resumen.baselineEquipos": "Cada equipo frente a su baseline",
- "resumen.baselineNota": "La zona sombreada es la baseline (las {r} semanas anteriores); la marca, el periodo actual de cada indicador",
+ "resumen.baselineNota": "En cada barra, la zona azul es su baseline y la marca, cómo va ahora",
  "equipo.masDetalle": "Más detalle: tiempo por etapa, fiabilidad, trabajo parado y otras medidas",
  "grafico.baseline": "Baseline: {r} semanas",
  "grafico.ahora": "Ahora: {k} sem.",
@@ -1052,7 +1052,7 @@
  "recorrido.terminar": "Terminar",
  "recorrido.saltar": "Saltar el recorrido",
  "recorrido.t1": "Resumen: cómo está cada equipo",
- "recorrido.d1": "Arriba, si algún equipo ha salido de su baseline. Debajo, cada equipo con sus indicadores frente a su baseline, por dónde empezar y las preguntas de dirección.",
+ "recorrido.d1": "Arriba, si algún equipo ha salido de su baseline. Debajo, los indicadores de toda el área con su gráfico, cada equipo frente a su baseline, por dónde empezar y las preguntas de dirección.",
  "recorrido.t2": "Baseline: cada equipo frente a sí mismo",
  "recorrido.d2": "Cada indicador de cada equipo con su gráfico: la zona sombreada es su baseline y a la derecha está el periodo actual. Ningún equipo se compara con otro.",
  "recorrido.t3": "Qué hacer: por dónde empezar",
@@ -1085,7 +1085,7 @@
  "ref.leyendaBanda": "Baseline: las {r} semanas anteriores",
  "ref.leyendaAhora": "Ahora: últimas {k} semanas",
  "ref.leyendaCorte": "Donde empieza el periodo actual",
- "resumen.verBaseline": "Ver gráficos",
+ "resumen.verBaseline": "Ver los gráficos de cada equipo",
  "medida.avisoCorto": "Llega al límite fijo de {l}; manda su baseline",
  "comparar.leyendaBanda": "La zona del centro es la baseline de cada equipo",
  "comparar.leyendaLado": "A la derecha, mejor que su baseline; a la izquierda, peor. Cada equipo se compara consigo mismo, nunca sus cifras con las de otro.",
@@ -1099,5 +1099,8 @@
  "ref.sinEnMedidas": "Provisional: aún sin baseline en {m}",
  "ini.frente.incompleta": "el después se compara cuando su ventana esté completa",
  "ini.frente.notaFuncionaPeor": "Funciona frente al resto de equipos: los demás empeoraron más.",
- "ini.frente.notaEmpeoraMejor": "Mejora frente a su baseline, pero menos que el resto de equipos."
+ "ini.frente.notaEmpeoraMejor": "Mejora frente a su baseline, pero menos que el resto de equipos.",
+ "resumen.areaBaseline": "Toda el área frente a su baseline",
+ "resumen.equipoBaseline": "{e} frente a su baseline",
+ "resumen.heroeNota": "La zona sombreada es la baseline (las {r} semanas anteriores); a la derecha de la línea, el periodo actual"
 }
