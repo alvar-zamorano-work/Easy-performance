@@ -115,25 +115,44 @@
 
   // ---------- iniciativas ----------
   const ESTADO_INI = { planificada: 'neutral', midiendo: 'warn', funciona: 'good', sin_efecto: 'neutral', empeora: 'bad', sin_datos: 'neutral' };
-  /** Gráfico de la iniciativa: su medida en sus equipos frente al resto, con el inicio y el margen de dos semanas. */
+  /**
+   * Gráfico de la iniciativa: su medida en sus equipos, semana a semana, sobre la baseline que tenían antes de empezar.
+   * El antes va en gris y el después del color de lo que dice la evaluación (turquesa si funciona, rojo si empeora y azul
+   * marino si aún no hay efecto claro). La baseline de antes sigue después del inicio con borde discontinuo: es contra lo
+   * que se lee el después. El resto de equipos es la línea fina. Eje desde cero, como en la baseline.
+   */
+  const TONO_INI = { funciona: 'good', empeora: 'bad' };
   function graficoIni(s) {
     const pts = s.serie || [];
     const vals = pts.flatMap((p) => [p.iniciativa, p.control]).filter((v) => v != null);
     if (pts.length < 2 || !vals.length) return '';
-    // La baseline de sus equipos antes de empezar entra en la escala: el después se lee contra ella
     const bl = s.baseline;
-    if (bl) vals.push(bl.lo, bl.hi);
-    const W = 300, H = 90, lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo || 1) * 0.15;
+    const W = 600, H = 150, tope = K.techo(vals.concat(bl ? [bl.hi] : []));
     const x0 = new Date(pts[0].fecha).getTime(), x1 = new Date(pts[pts.length - 1].fecha).getTime() || x0 + 1;
     const x = (d) => ((new Date(d).getTime() - x0) / (x1 - x0 || 1)) * W;
-    const y = (v) => H - ((v - (lo - pad)) / ((hi + pad) - (lo - pad))) * H;
-    const linea = (k) => { let d = '', pen = false; pts.forEach((p) => { if (p[k] == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(p.fecha).toFixed(1) + ' ' + y(p[k]).toFixed(1) + ' '; pen = true; }); return d; };
-    const lim = (v) => Math.max(0, Math.min(W, v)), xi = lim(x(s.inicio)), xd = lim(x(s.desdeDespues));
-    // Franja de la baseline: oscura hasta el inicio (de donde sale) y clara después (contra lo que se mide)
-    const yb = bl ? [y(bl.hi), Math.max(1, y(bl.lo) - y(bl.hi))] : null;
+    const y = (v) => H - (v / tope) * (H - 6) - 3;
+    const lim = (v) => Math.max(0, Math.min(W, v)), ini = new Date(s.inicio).getTime(), xi = lim(x(s.inicio)), xd = lim(x(s.desdeDespues));
+    // Línea de sus equipos partida en el inicio: el antes y el después se ven de un vistazo
+    const tramo = (desde, hasta) => { let d = '', pen = false; pts.forEach((p) => { const t0 = new Date(p.fecha).getTime(); if (t0 < desde || t0 > hasta || p.iniciativa == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(p.fecha).toFixed(1) + ' ' + y(p.iniciativa).toFixed(1) + ' '; pen = true; }); return d; };
+    const antesDe = pts.filter((p) => new Date(p.fecha).getTime() < ini && p.iniciativa != null), ultAntes = antesDe.length ? new Date(antesDe[antesDe.length - 1].fecha).getTime() : -Infinity;
+    const control = (() => { let d = '', pen = false; pts.forEach((p) => { if (p.control == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(p.fecha).toFixed(1) + ' ' + y(p.control).toFixed(1) + ' '; pen = true; }); return d; })();
+    const tono = TONO_INI[s.estado] || 'ok';
+    const yb = bl ? [y(bl.hi), Math.max(1.5, y(bl.lo) - y(bl.hi))] : null;
     const banda = yb ? `<rect class="ic-bl" x="0" y="${yb[0].toFixed(1)}" width="${xi.toFixed(1)}" height="${yb[1].toFixed(1)}"/><rect class="ic-bl-despues" x="${xi.toFixed(1)}" y="${yb[0].toFixed(1)}" width="${(W - xi).toFixed(1)}" height="${yb[1].toFixed(1)}"/>` : '';
-    return `<svg class="ini-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('ini.grafico'))}">${banda}<rect class="ic-margen" x="${Math.max(0, xi).toFixed(1)}" y="0" width="${Math.max(0, xd - xi).toFixed(1)}" height="${H}"/><line class="ic-inicio" x1="${xi.toFixed(1)}" x2="${xi.toFixed(1)}" y1="0" y2="${H}"/><path class="ic-control" d="${linea('control')}"/><path class="ic-ini" d="${linea('iniciativa')}"/></svg>
-      <div class="stage-legend"><span><i class="sw-in_progress"></i>${esc(t('ini.leyendaIni'))}</span>${bl ? `<span><i class="sw-bl"></i>${esc(t('ini.leyendaBaseline'))}</span>` : ''}<span><i class="sw-todo"></i>${esc(t('ini.leyendaResto'))}</span><span><i class="sw-margen"></i>${esc(t('ini.leyendaMargen'))}</span></div>`;
+    const svg = `<svg class="ini-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('ini.grafico'))}">
+      <line class="ic-eje" x1="0" x2="${W}" y1="${H - 3}" y2="${H - 3}"/>${banda}<rect class="ic-margen" x="${xi.toFixed(1)}" y="0" width="${Math.max(0, xd - xi).toFixed(1)}" height="${H}"/>
+      <path class="ic-control" d="${control}"/><path class="ic-antes" d="${tramo(-Infinity, ini)}"/><path class="ic-ini tone-${tono}" d="${tramo(ultAntes, Infinity)}"/>
+      <line class="ic-inicio" x1="${xi.toFixed(1)}" x2="${xi.toFixed(1)}" y1="0" y2="${H}"/></svg>`;
+    // Lo que no se dibuja bien estirado (texto y puntos) va encima, colocado en porcentaje
+    const ult = pts.filter((p) => p.iniciativa != null).slice(-1)[0];
+    const punto = ult ? `<span class="ic-punto tone-${tono}" style="left:${(x(ult.fecha) / W * 100).toFixed(2)}%;top:${(y(ult.iniciativa) / H * 100).toFixed(2)}%"></span>` : '';
+    const F = (v) => N.formatear(v, s.formato), corta = (d) => window.Nucleo.fechaCorta(new Date(d));
+    // Cerca del borde derecho, la etiqueta del inicio va a la izquierda de la línea para no salirse del gráfico
+    const marca = `<span class="ic-marca${xi / W > 0.7 ? ' izq' : ''}" style="left:${(xi / W * 100).toFixed(2)}%">${esc(t('ini.marcaInicio', { f: corta(s.inicio) }))}</span>`;
+    const eje = `<div class="ic-y"><span>${esc(F(tope))}</span><span>${esc(F(0))}</span></div>`;
+    const fechas = `<div class="ic-x"><span>${esc(corta(pts[0].fecha))}</span><span>${esc(corta(pts[pts.length - 1].fecha))}</span></div>`;
+    const leyenda = `<div class="ic-leyenda"><span><i class="l-antes"></i>${esc(t('ini.leyendaAntes'))}</span><span><i class="l-despues tone-${tono}"></i>${esc(t('ini.leyendaDespues'))}</span>${bl ? `<span><i class="l-bl"></i>${esc(t('ini.leyendaBaseline'))}</span>` : ''}<span><i class="l-resto"></i>${esc(t('ini.leyendaResto'))}</span><span><i class="l-margen"></i>${esc(t('ini.leyendaMargenS', { s: N.LATENCIA_DIAS / 7 }))}</span></div>`;
+    return `<div class="ic-wrap">${eje}<div class="ic-area"><div class="ic-plot">${svg}${punto}${marca}</div>${fechas}</div></div>${leyenda}`;
   }
   /** El después frente a la baseline de antes de empezar: mejor, dentro o peor (según la dirección que se busca). */
   function frenteBaseline(s) {
@@ -163,9 +182,9 @@
       const lect = S.iaImpacto && S.iaImpacto.filter((x) => x.id === ini.id)[0];
       return `<div class="ficha ini"><div class="f-head"><div class="f-title">${esc(ini.nombre)}</div>${K.chip(ESTADO_INI[s.estado], t('ini.estado.' + s.estado))}</div>
         <div class="f-body"><div class="meta">${ini.equipos.map((e) => K.chip('neutral', nombreEquipo(e))).join('')}${K.chip('info', nombreMedida(m))}${K.chip('neutral', t('ini.inicio', { f: fecha(s.inicio) }))}${s.confianza ? K.chip('neutral', t('ini.confianza', { c: t('conf.' + s.confianza) })) : ''}</div>
-        <div class="progress"><div class="bar"><i class="tone-neutral" style="width:${Math.round(s.progreso * 100)}%"></i></div><span class="small muted">${esc(s.completa ? t('ini.completa') : t('ini.completaEl', { f: fecha(s.completaEl) }))}</span></div>
-        <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${frenteBaseline(s)}${s.control ?`<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}
-        <p class="small">${esc(s.texto)}</p>${graficoIni(s)}${lect ? `<div class="notice info small"><b>${esc(t('ini.lecturaIa'))}</b> ${esc(lect.lectura)}</div>` : ''}</div>
+        <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${frenteBaseline(s)}${s.control ?`<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}${graficoIni(s)}
+        <p class="small">${esc(s.texto)}</p>
+        <div class="progress"><div class="bar"><i class="tone-neutral" style="width:${Math.round(s.progreso * 100)}%"></i></div><span class="small muted">${esc(s.completa ? t('ini.completa') : t('ini.completaEl', { f: fecha(s.completaEl) }))}</span></div>${lect ? `<div class="notice info small"><b>${esc(t('ini.lecturaIa'))}</b> ${esc(lect.lectura)}</div>` : ''}</div>
         <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (EP.carpeta && EP.carpeta.enUso() && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
     }).join('');
     const estIa = S.iaEstado.impacto;

@@ -4,21 +4,27 @@
   const { S, t, tn, esc, valor, nombreMedida, nombreEquipo, fmt, cat } = window.EP;
 
   const TONO = { bien: 'good', atencion: 'warn', critico: 'bad', sin: 'neutral', neutro: 'neutral' };
-  const tonoDe = (m) => (!m || !m.disponible ? 'neutral' : m.revisar && m.estado !== 'atencion' && m.estado !== 'critico' ? 'warn' : TONO[m.estado] || 'neutral');
+  /**
+   * Tono de una cifra. Lo habitual no lleva color (ok, azul marino); solo se colorea lo que se sale: mejor que su baseline
+   * en turquesa (good), atención en ámbar y crítico en rojo. Un dato que hay que revisar no es una alerta: va aparte (dudoso).
+   */
+  const tonoDe = (m) => (!m || !m.disponible ? 'neutral' : m.revisar && m.estado !== 'atencion' && m.estado !== 'critico' ? 'dudoso'
+    : m.estado === 'bien' ? (m.lado === 'mejor' ? 'good' : 'ok') : TONO[m.estado] || 'neutral');
   const chip = (tono, texto, title) => `<span class="chip ${tono}"${title ? ` title="${esc(title)}"` : ''}>${esc(texto)}</span>`;
   /** Etiqueta de una medida. Mejor de lo normal no es "normal", y un límite fijo superado no es "fuera de rango". */
   function estadoChip(m) {
     if (!m || !m.disponible) return chip('neutral', t('estado.sin'));
     // Una alerta manda sobre "revisar": no se esconde un "fuera de lo normal" detrás de un aviso de dato
-    if (m.revisar && m.estado !== 'atencion' && m.estado !== 'critico') return chip('warn', t('estado.revisar'));
+    if (m.revisar && m.estado !== 'atencion' && m.estado !== 'critico') return chip('dudoso', t('estado.revisar'));
     const porLimite = m.estadoPor === 'limite' || m.estadoPor === 'limite_equipo';
-    if (m.estado === 'bien') return chip('good', t(m.lado === 'mejor' ? 'estado.mejor' : m.lado === 'borde' ? 'estado.borde' : 'estado.bien'));
+    if (m.estado === 'bien') return chip(m.lado === 'mejor' ? 'good' : m.lado === 'borde' ? 'borde' : 'ok', t(m.lado === 'mejor' ? 'estado.mejor' : m.lado === 'borde' ? 'estado.borde' : 'estado.bien'));
     if (m.estado === 'atencion') return chip('warn', t(porLimite ? 'estado.limite.atencion' : 'estado.atencion'));
     if (m.estado === 'critico') return chip('bad', t(porLimite ? 'estado.limite.critico' : 'estado.critico'));
     if (m.estado === 'neutro') return '';
     return chip('neutral', t('estado.sinBanda'));
   }
-  const ESTADO_EQUIPO = { poco_fiable: 'bad', alerta: 'bad', revisar: 'warn', provisional: 'warn', atencion: 'warn', estable: 'good' };
+  // Un equipo estable no lleva color; uno con el dato por revisar o con baseline provisional tampoco es una alerta
+  const ESTADO_EQUIPO = { poco_fiable: 'dudoso', alerta: 'bad', revisar: 'dudoso', provisional: 'neutral', atencion: 'warn', estable: 'ok' };
   const equipoChip = (e) => chip(ESTADO_EQUIPO[e.estado], t('equipo.estado.' + e.estado));
   const nivelChip = (nivel) => `<span class="chip level-${nivel}">${esc(t('nivel.' + nivel))}</span>`;
 
@@ -133,7 +139,9 @@
     // Un límite fijo superado (con baseline) es una marca aparte en la barra: no cambia el color de la cifra
     const marcaLim = lim != null ? `<i class="b-lim tone-${TONO[m.aviso.estado] || 'warn'}" style="left:${pc(lim)}%"></i>` : '';
     const titulo = [rangoBanda(id, m), avisoTexto(m)].filter(Boolean).join(' · ');
-    return `<div class="bala" title="${esc(titulo)}">${margen}${banda}${marcaLim}<b class="b-now tone-${tonoDe(m)}" style="left:${pc(m.valor)}%"></b></div>`;
+    const tono = tonoDe(m);
+    // Dato dudoso: la franja rayada y la marca hueca, se mira pero no se decide. Sin baseline: solo la marca, hueca
+    return `<div class="bala${tono === 'dudoso' ? ' dudoso' : ''}${m.ref ? '' : ' sin-ref'}" title="${esc(titulo)}">${margen}${banda}${marcaLim}<b class="b-now tone-${tono}" style="left:${pc(m.valor)}%"></b></div>`;
   }
   /**
    * Unidad de una medida, para que ninguna cifra salga sola: "tareas por semana", "de lo terminado"... En los plazos
@@ -311,5 +319,5 @@
   }
   /** Dirección de una medida (menos o más es mejor). El coste por tarea no está en el catálogo: menos es mejor, como en el núcleo. */
   const dirDe = (id) => (id === 'coste' ? 'menos' : (cat().medidas[id] || {}).dir || null);
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, estadoBaseline, dirDe, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, avisoFila, avisoTexto, avisoCorto, ventanaDe, ventanaDistinta, conBaseline, miniBaseline, barra, fmt };
+  window.EP.kit = { TONO, ESTADO_EQUIPO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, estadoBaseline, dirDe, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, avisoFila, avisoTexto, avisoCorto, ventanaDe, ventanaDistinta, conBaseline, miniBaseline, barra, fmt };
 })();
