@@ -247,14 +247,15 @@
     const fe = !esArea && fiab && fiab.porEquipo.filter((x) => x.equipo === eq.nombre)[0];
     const bien = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado === 'bien').length : null;
     const medibles = fe ? N.COMPROBACIONES_EQUIPO.filter((k) => fe.valores[k] && fe.valores[k].estado !== 'sin').length : null;
-    // Un cierre masivo en las semanas que se miden: las entregas de esas semanas no son de fiar, se marcan para revisar
+    // Un cierre masivo en las semanas que se miden: las entregas y los tiempos de esas semanas no son de fiar, se marcan
+    // para revisar. Una limpieza del tablero cierra de golpe tareas viejas: sube las entregas y deforma el tiempo de ciclo.
     const ctx = r.preparacion.ctx, desdeVentana = new Date(ctx.semanaFin.getTime() - 7 * 864e5 * ctx.K);
     const masivos = ((eq.calidad && eq.calidad.diasMasivos) || []).filter((x) => new Date(x.fecha) >= desdeVentana && new Date(x.fecha) < ctx.semanaFin);
     let medidasEq = eq.medidas;
     if (masivos.length) {
       medidasEq = Object.assign({}, eq.medidas);
-      // Las medidas que cuentan lo terminado: entregas y velocidad (puntos terminados)
-      ['entregas', 'velocidad'].forEach((id) => { const m = eq.medidas[id]; if (m && m.disponible && !m.revisar) medidasEq[id] = Object.assign({}, m, { revisar: 'masivo', diasMasivos: masivos }); });
+      // Las medidas que cuentan lo terminado (entregas y velocidad) y las que miden cuánto tardó (ciclo y tiempo total)
+      ['entregas', 'velocidad', 'ciclo', 'total'].forEach((id) => { const m = eq.medidas[id]; if (m && m.disponible && !m.revisar) medidasEq[id] = Object.assign({}, m, { revisar: 'masivo', diasMasivos: masivos }); });
     }
     // Comprobaciones de fiabilidad que fallan en este equipo: sus medidas salen por revisar (dudosoPor dice cuáles)
     const dudosas = {};

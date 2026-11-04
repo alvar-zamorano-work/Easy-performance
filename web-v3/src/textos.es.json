@@ -850,7 +850,7 @@
  "resumen.sinRango": "Aún sin baseline en {m}: faltan semanas",
  "resumen.sinHistorico": "Sin histórico para comparar {m}: el export no dice cuándo empezó el trabajo terminado",
  "resumen.cambioLimite": "Supera el límite: {m}",
- "medida.masivo": "Cierre masivo en las semanas medidas: {dias}. Si fue una limpieza del tablero, estas entregas no son de fiar.",
+ "medida.masivo": "Cierre masivo en las semanas medidas: {dias}. Si fue una limpieza del tablero, las entregas y los tiempos de esas semanas no son de fiar.",
  "medida.masivoDia": "{n} tareas el {f}",
  "narr.revisar": "Antes de leer las cifras, revisar el dato en {e}.",
  "columnas.revisar": "Revisar columnas",
