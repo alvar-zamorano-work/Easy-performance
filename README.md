@@ -4,6 +4,8 @@ Herramienta para medir equipos de desarrollo a partir de sus exports. Comprueba 
 
 **Abrir la aplicación:** https://alvar-zamorano-work.github.io/Easy-performance/
 
+**Presentación del producto:** https://alvar-zamorano-work.github.io/Easy-performance/landing/
+
 Hoy la página lee exports de Jira, en CSV o en Excel. Azure DevOps ya tiene adaptador en el núcleo, pero todavía no está en la página. GitLab está pendiente.
 
 ## Cómo funciona

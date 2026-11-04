@@ -35,6 +35,8 @@ jobs:
           mkdir -p _site/exports
           cp dist/EasyPerformance-v3/EasyPerformance.html _site/index.html
           cp dist/EasyPerformance-v3/exports/datos.js _site/exports/datos.js
+          mkdir -p _site/landing
+          cp web-v3/landing/index.html _site/landing/index.html
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
