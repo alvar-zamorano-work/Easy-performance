@@ -824,3 +824,4 @@ table.cmp-bl tr.fila-area .sobre { background: var(--card); }
 @media (max-width: 700px) { .rrow.con-mini { grid-template-columns: auto minmax(0, 1fr) auto; } .rrow-mini { display: none; } .minis { grid-template-columns: minmax(0, 1fr); } }
 .bl { display: flex; flex-direction: column; }
 .bl-cifras { flex: 1; }
+.ini-nota { flex-basis: 100%; color: var(--muted); }

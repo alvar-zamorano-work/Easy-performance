@@ -139,10 +139,13 @@
   function frenteBaseline(s) {
     const bl = s.baseline; if (!bl) return '';
     const f = (v) => N.formatear(v, s.formato), rango = t('ini.baselineAntes', { lo: f(bl.lo), hi: f(bl.hi) });
-    if (s.despues == null) return `<div class="small muted ini-bl">${esc(rango)}</div>`;
+    // Con la ventana de después a medias, el después no es comparable con una baseline de ventanas completas: no se juzga
+    if (s.despues == null || !s.completa) return `<div class="small muted ini-bl">${esc(rango)}${s.despues != null ? ' · ' + esc(t('ini.frente.incompleta')) : ''}</div>`;
     const bajar = s.direccion === 'bajar';
     const donde = s.despues >= bl.lo && s.despues <= bl.hi ? 'dentro' : (bajar ? s.despues < bl.lo : s.despues > bl.hi) ? 'mejor' : 'peor';
-    return `<div class="small ini-bl">${K.chip({ mejor: 'good', dentro: 'neutral', peor: 'bad' }[donde], t('ini.frente.' + donde))} <span class="muted">${esc(rango)}</span></div>`;
+    // El estado compara con el resto de equipos; esto, con su propia historia. Si dicen cosas distintas, se explica
+    const nota = s.estado === 'funciona' && donde === 'peor' ? t('ini.frente.notaFuncionaPeor') : s.estado === 'empeora' && donde === 'mejor' ? t('ini.frente.notaEmpeoraMejor') : '';
+    return `<div class="small ini-bl">${K.chip({ mejor: 'good', dentro: 'neutral', peor: 'bad' }[donde], t('ini.frente.' + donde))} <span class="muted">${esc(rango)}</span>${nota ? `<span class="ini-nota">${esc(nota)}</span>` : ''}</div>`;
   }
   function iniciativas() {
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);

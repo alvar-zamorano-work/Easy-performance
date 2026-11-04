@@ -1372,22 +1372,30 @@ const medirMaquetacion = () => {
     return { con, deberian, mal };
   });
   ok('Qué hacer: cada recomendación con medida enseña su gráfico frente a la baseline de sus equipos, con su cifra', qh.deberian > 0 && qh.con === qh.deberian && !qh.mal.length, JSON.stringify(qh));
-  // Comparar: cada cifra sobre la baseline de su propio equipo; la baseline en el centro y lo mejor siempre a la derecha
-  await fijarRol(p, 'pmo'); await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
-  const cmp = await A(p, () => {
+  // Comparar: cada cifra sobre la baseline de su propio equipo; la baseline en el centro y lo mejor siempre a la derecha.
+  // La posición se contrasta con lo que dice el semáforo del núcleo: "mejor que la baseline" a la derecha, peor a la izquierda.
+  const revisarComparar = () => A(p, () => {
     const EP = window.EP, K = EP.kit, vm = EP.S.vm, mal = [];
     const marcas = [...document.querySelectorAll('#page .sobre-btn')];
     marcas.forEach((b) => {
       const e = b.dataset.team === vm.area.nombre ? vm.area : vm.equipos.find((x) => x.nombre === b.dataset.team), id = b.dataset.medida, m = e.medidas[id];
-      const dir = (window.CATALOGO.medidas[id] || {}).dir, x = parseFloat(b.querySelector('.sb-now').style.left);
-      const dentro = m.valor >= m.ref.lo && m.valor <= m.ref.hi, mejor = dir === 'menos' ? m.valor < m.ref.lo : m.valor > m.ref.hi;
-      const bien = dentro ? x >= 30 && x <= 70 : mejor ? x > 70 : x < 30;
-      if (!bien) mal.push(b.dataset.team + ':' + id + ' x=' + x);
+      const x = parseFloat(b.querySelector('.sb-now').style.left);
+      if (m.ref.hi > m.ref.lo && m.valor >= m.ref.lo && m.valor <= m.ref.hi && !(x >= 30 && x <= 70)) mal.push('dentro y fuera del centro ' + b.dataset.team + ':' + id + ' x=' + x);
+      if (m.lado === 'mejor' && !(x > 70)) mal.push('mejor y no a la derecha ' + b.dataset.team + ':' + id + ' x=' + x);
+      if (m.estadoPor === 'banda' && (m.estado === 'atencion' || m.estado === 'critico') && !(x < 30)) mal.push('peor y no a la izquierda ' + b.dataset.team + ':' + id + ' x=' + x);
       if (!b.querySelector('.sb-now').classList.contains('tone-' + K.tonoDe(m))) mal.push('color ' + b.dataset.team + ':' + id);
     });
-    return { n: marcas.length, filas: document.querySelectorAll('#page table.cmp-bl tr').length - 1, equipos: vm.equipos.length, mal };
+    const ids = [...new Set(marcas.map((b) => b.dataset.medida))];
+    return { n: marcas.length, ids, filas: document.querySelectorAll('#page table.cmp-bl tr').length - 1, equipos: vm.equipos.length, mal };
   });
-  ok('Comparar: cada cifra sobre su propia baseline (en el centro), lo mejor a la derecha y el color de su estado', cmp.n > 0 && cmp.filas === cmp.equipos + 1 && !cmp.mal.length, JSON.stringify(cmp));
+  await fijarRol(p, 'pmo'); await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
+  const cmp = await revisarComparar();
+  ok('Comparar: cada cifra sobre su propia baseline (en el centro), lo mejor a la derecha, lo peor a la izquierda y el color de su estado', cmp.n > 0 && cmp.filas === cmp.equipos + 1 && !cmp.mal.length, JSON.stringify(cmp));
+  // Con el objetivo de coste: el coste por tarea no está en el catálogo y menos es mejor
+  await A(p, () => { const S = window.EP.S; S.cfg.contexto = Object.assign({}, window.EP.P.contexto(S.cfg, S.det), { objetivos: ['speed', 'quality', 'predictability', 'cost'], coste: true }); window.EP.recalcular(); window.EP.render(); }); await quieto(p);
+  await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
+  const cmpCoste = await revisarComparar();
+  ok('Comparar con coste: el coste por tarea también se lee con menos es mejor', cmpCoste.ids.indexOf('coste') >= 0 && !cmpCoste.mal.length, JSON.stringify(cmpCoste));
   // Iniciativas: el después se lee contra la baseline que tenían sus equipos antes de empezar
   await ir(p, 'iniciativas'); await quieto(p);
   const ini = await A(p, () => {
@@ -1399,10 +1407,14 @@ const medirMaquetacion = () => {
       if (!s.baseline) { if (card.querySelector('.ini-bl')) mal.push('baseline inventada: ' + ini.nombre); return; }
       con++;
       if (!card.querySelector('.ini-chart .ic-bl')) mal.push('sin baseline en el gráfico: ' + ini.nombre);
+      const chipIni = card.querySelector('.ini-bl .chip');
+      if (!s.completa) { if (chipIni) mal.push('juzga con la ventana a medias: ' + ini.nombre); return; }
       if (s.despues == null) return;
       const bl = s.baseline, esperado = s.despues >= bl.lo && s.despues <= bl.hi ? 'Dentro' : (s.direccion === 'bajar' ? s.despues < bl.lo : s.despues > bl.hi) ? 'Mejor' : 'Peor';
       const chip = (card.querySelector('.ini-bl .chip') || {}).textContent || '';
       if (chip.indexOf(esperado) !== 0) mal.push(ini.nombre + ': ' + chip + ' / ' + esperado);
+      const contradice = (s.estado === 'funciona' && esperado === 'Peor') || (s.estado === 'empeora' && esperado === 'Mejor');
+      if (contradice !== !!card.querySelector('.ini-nota')) mal.push('contradicción sin explicar: ' + ini.nombre);
     });
     return { n: vm.iniciativas.length, con, mal };
   });
@@ -1411,11 +1423,29 @@ const medirMaquetacion = () => {
   await fijarRol(p, 'equipo'); await ir(p, 'referencias'); await quieto(p);
   const soloSuyo = await A(p, () => [...document.querySelectorAll('#page [data-tipo="baseline"]')].map((f) => f.dataset.team));
   ok('Baseline en el rol Equipo: solo su equipo, sin toda el área', soloSuyo.length === 1 && soloSuyo[0] === (await A(p, () => window.EP.S.team)), JSON.stringify(soloSuyo));
+  const ajenos = [];
+  for (const v of ['resumen', 'equipos', 'recomendaciones']) {
+    await ir(p, v); await quieto(p);
+    ajenos.push(...(await A(p, (v) => { const mio = window.EP.S.team; return [...document.querySelectorAll('#page .rrow-mini, #page .mini-bl')].map((x) => x.dataset.team).filter((n) => n !== mio).map((n) => v + ':' + n); }, v)));
+  }
+  ok('rol Equipo: ningún gráfico de otro equipo en el Resumen, Mi equipo ni Qué hacer', !ajenos.length, JSON.stringify(ajenos));
   await fijarIdioma(p, 'en'); await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
   const en = await A(p, () => ({ menu: document.querySelector('#nav [data-view="referencias"]').textContent, titulo: document.getElementById('page-title').textContent, titular: document.querySelector('#page .status b').textContent }));
   ok('Baseline en inglés', /Baseline/.test(en.menu) && en.titulo === 'Baseline' && /baselines? /i.test(en.titular), JSON.stringify(en));
   await fijarIdioma(p, 'es');
   await p.screenshot({ path: join(SALIDA, '19-baseline.png'), fullPage: true });
+  // Un equipo con una cifra de baseline provisional y otro sin ninguna baseline (se fuerzan en la vista-modelo de la demo)
+  await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
+  const estados = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, [a, b] = vm.equipos;
+    const ciclo = a.medidas.ciclo; a.medidas.ciclo = Object.assign({}, ciclo, { referencia: 'provisional', ref: Object.assign({}, ciclo.ref, { n: 8 }) });
+    Object.keys(b.medidas).forEach((id) => { const m = b.medidas[id]; if (m) b.medidas[id] = Object.assign({}, m, { ref: undefined, referencia: 'sin' }); });
+    EP.render();
+    const ficha = (n) => { const f = document.querySelector(`#page [data-tipo="baseline"][data-team="${CSS.escape(n)}"]`); return { cab: f.querySelector('.f-head').innerText.replace(/\s+/g, ' '), pie: f.querySelector('.f-foot').innerText.replace(/\s+/g, ' ') }; };
+    return { a: a.nombre, b: b.nombre, fa: ficha(a.nombre), fb: ficha(b.nombre), titular: document.querySelector('#page .status b').textContent, menu: (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '' };
+  });
+  ok('Baseline provisional: cabecera, pie, titular y menú dicen lo mismo', /Provisional/.test(estados.fa.cab) && /8 semanas/.test(estados.fa.pie) && estados.titular.indexOf('provisional en ' + estados.a) >= 0, JSON.stringify(estados));
+  ok('Sin baseline: "Aún sin baseline" en la cabecera, el pie y el titular, y el menú cuenta los dos equipos', /Aún sin baseline/.test(estados.fb.cab) && /Aún sin baseline/.test(estados.fb.pie) && !/calculada con/.test(estados.fb.pie) && estados.titular.indexOf('Aún sin baseline en ' + estados.b) >= 0 && estados.menu === '2', JSON.stringify(estados));
   ok('sin errores de consola en la sección de la baseline', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }

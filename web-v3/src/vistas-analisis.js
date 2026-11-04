@@ -281,8 +281,10 @@
    * y a la derecha está siempre lo mejor: así se comparan equipos sin comparar sus cifras, que no son comparables.
    */
   function sobreSuBaseline(id, m) {
-    const ref = m.ref, dir = (cat().medidas[id] || {}).dir;
-    let z = ref.hi === ref.lo ? (m.valor === ref.lo ? 0.5 : m.valor > ref.lo ? 2 : -1) : (m.valor - ref.lo) / (ref.hi - ref.lo);
+    const ref = m.ref, dir = K.dirDe(id), mg = m.margen || 0;
+    // Una baseline sin anchura (todas sus semanas iguales) se dibuja con su margen: lo que cae dentro del margen no salta al borde
+    const lo = ref.hi > ref.lo ? ref.lo : ref.lo - mg, hi = ref.hi > ref.lo ? ref.hi : ref.hi + mg;
+    let z = hi > lo ? (m.valor - lo) / (hi - lo) : m.valor === lo ? 0.5 : m.valor > lo ? 2 : -1;
     if (dir === 'menos') z = 1 - z;
     return Math.max(3, Math.min(97, 30 + z * 40));
   }
@@ -333,24 +335,25 @@
   }
   function referencias() {
     const vm = S.vm, eqs = EP.visibles(), dest = K.destacados();
-    const prov = eqs.filter(K.baselineProvisional);
+    const prov = eqs.filter((e) => K.estadoBaseline(e).estado === 'provisional'), sin = eqs.filter((e) => K.estadoBaseline(e).estado === 'sin');
     // Toda el área primero (salvo en el rol Equipo, que solo ve el suyo)
     const conArea = S.role === 'equipo' || eqs.length < 2 ? eqs : [vm.area].concat(eqs);
     const fichas = conArea.map((e) => {
       const area = e === vm.area;
-      const refs = dest.map((id) => e.medidas[id]).filter((m) => m && m.disponible && m.ref);
-      // La misma regla que el recuento del menú y el titular: entregas y bugs con sus semanas completas
-      const provisional = !refs.length || K.baselineProvisional(e);
-      const corta = refs.filter((m) => m.referencia !== 'establecida')[0];
-      const cab = (area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e) + K.equipoChip(e)) + (provisional ? K.chip('warn', t('ref.provisional')) : '');
+      // La misma regla en la cabecera, el pie, el titular y el número del menú. La cabecera solo dice lo de la baseline:
+      // el estado de cada cifra está en su chip.
+      const eb = K.estadoBaseline(e);
+      const cab = (area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e)) + (eb.estado === 'sin' ? K.chip('warn', t('ref.sin')) : eb.estado === 'provisional' ? K.chip('warn', t('ref.provisional')) : '');
       // El área se calcula sin los equipos que aún no tienen baseline: se dice cuáles
       const sinEllos = area && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span> ` : '';
-      const pie = sinEllos + (corta ? `<span class="small t-warn">${esc(t('ref.motivo', { n: corta.ref ? corta.ref.n : 0, r: vm.semanas.R }))}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`)
+      const motivo = eb.estado === 'sin' ? t('ref.sinPie') : eb.n ? t('ref.motivo', { n: eb.n, r: vm.semanas.R }) : eb.sinEn.length ? t('ref.sinEnMedidas', { m: lista(eb.sinEn.map(nombreMedida)) }) : '';
+      const pie = sinEllos + (motivo ? `<span class="small t-warn">${esc(motivo)}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`)
         + (area ? '' : `<button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`);
       return K.ficha(cab, `<div class="bls">${dest.map((id) => bloqueBaseline(e, id)).join('')}</div>`, pie, ` data-tipo="baseline" data-team="${esc(e.nombre)}"`);
     }).join('');
     const leyenda = `<div class="bl-leyenda small muted"><span><i class="lg-band"></i>${esc(t('ref.leyendaBanda', { r: vm.semanas.R }))}</span><span><i class="lg-linea"></i>${esc(t('ref.leyendaAhora', { k: vm.semanas.K }))}</span><span><i class="lg-corte"></i>${esc(t('ref.leyendaCorte'))}</span></div>`;
-    return K.statusBar(prov.length ? 'warn' : 'good', esc(prov.length ? t('ref.provisionalEn', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) }) : t('ref.todas')), [esc(t('ref.items1', { r: vm.semanas.R })), esc(t('ref.items2'))])
+    const titular = [prov.length ? t('ref.provisionalEn', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) }) : '', sin.length ? t('ref.sinEn', { equipos: lista(sin.map((e) => nombreEquipo(e.nombre))) }) : ''].filter(Boolean).join(' · ') || t('ref.todas');
+    return K.statusBar(prov.length || sin.length ? 'warn' : 'good', esc(titular), [esc(t('ref.items1', { r: vm.semanas.R })), esc(t('ref.items2'))])
       + leyenda + `<div class="fichas cols-1">${fichas}</div>`;
   }
 

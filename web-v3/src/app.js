@@ -405,8 +405,8 @@
       const vt = visibles().map((e) => e.nombre);
       const cuentas = {
         recomendaciones: S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => vt.indexOf(e) >= 0)).length,
-        // Equipos con la baseline aún provisional (la misma regla que el titular de la página)
-        referencias: visibles().filter(EP.kit.baselineProvisional).length,
+        // Equipos con la baseline provisional o aún sin ella (la misma regla que el titular y las fichas de la página)
+        referencias: visibles().filter((e) => EP.kit.estadoBaseline(e).estado !== 'establecida').length,
         calidad: S.vm.fiabilidad.revisar,
       };
       document.querySelectorAll('#nav button').forEach((b) => {

@@ -234,7 +234,7 @@
  "tipo.otro": "Other",
  "ayuda.titulo": "How to read this page",
  "ayuda.p1": "Each team is compared with its own history, never with other teams. The baseline is the range the measure falls in 70 weeks out of 100, over the {r} weeks before the current period.",
- "ayuda.p2": "Each figure looks at the weeks shown under it: {k} for most measures and {kp} for percentages.",
+ "ayuda.p2": "Each figure looks at the last {k} weeks, and percentages at the last {kp}. When a figure looks at a window other than {k} weeks, it is shown under it.",
  "ayuda.p3": "Some measures also have a fixed limit, the same for every team. If the team has no baseline yet, the limit sets the colour.",
  "ayuda.p3b": "If the team has a baseline, its baseline decides. A limit that is passed shows apart, as a dashed mark on the bar, and does not change the colour.",
  "ayuda.p4": "With fewer than 6 weeks of data there is no baseline. Between 6 and {r} it is provisional: the figures are valid, but the baseline can still move.",
@@ -1093,5 +1093,11 @@
  "ini.baselineAntes": "Baseline before starting: {lo} to {hi}",
  "ini.frente.mejor": "Better than its baseline",
  "ini.frente.dentro": "Within its baseline",
- "ini.frente.peor": "Worse than its baseline"
+ "ini.frente.peor": "Worse than its baseline",
+ "ref.sinEn": "No baseline yet in {equipos}",
+ "ref.sinPie": "No baseline yet: it takes at least 6 weeks with data",
+ "ref.sinEnMedidas": "Provisional: no baseline yet for {m}",
+ "ini.frente.incompleta": "the after period is compared once its window is complete",
+ "ini.frente.notaFuncionaPeor": "It works compared with the other teams: they got worse by more.",
+ "ini.frente.notaEmpeoraMejor": "It improves on its baseline, but less than the other teams."
 }

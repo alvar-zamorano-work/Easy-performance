@@ -249,7 +249,9 @@
    */
   function conBaseline(r, max) {
     if (!r.medida || !S.vm) return [];
-    const nombres = [...new Set(r.evidencias.map((x) => x[0]).filter(Boolean).concat(r.equipos))];
+    // Solo equipos que ve el rol: el rol Equipo no ve las cifras de otro equipo aunque la recomendación sea de grupo
+    const vis = window.EP.visibles().map((e) => e.nombre);
+    const nombres = [...new Set(r.evidencias.map((x) => x[0]).filter(Boolean).concat(r.equipos))].filter((n) => vis.indexOf(n) >= 0);
     const out = [];
     for (const n of nombres) {
       const e = S.vm.equipos.filter((x) => x.nombre === n)[0], m = e && e.medidas[r.medida];
@@ -263,7 +265,7 @@
     opts = opts || {};
     const m = e.medidas[id];
     const titulo = nombreEquipo(e.nombre) + ' · ' + nombreMedida(id) + ': ' + conUnidad(id, m.valor) + ' · ' + rangoBanda(id, m);
-    if (opts.fila) return `<div class="rrow-mini" title="${esc(titulo)}">${grafico(id, m, { h: 30, sinEje: true })}</div>`;
+    if (opts.fila) return `<div class="rrow-mini" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" title="${esc(titulo)}">${grafico(id, m, { h: 30, sinEje: true })}</div>`;
     return `<div class="mini-bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0" title="${esc(titulo)}">
       <div class="mini-cab"><span>${esc(nombreEquipo(e.nombre))}</span><b class="t-${tonoDe(m)}">${esc(valor(id, m.valor))}</b></div>
       ${grafico(id, m, { h: 40, sinEje: true })}<div class="tiny muted">${esc(nombreMedida(id))} · ${esc(rangoBanda(id, m))}</div></div>`;
@@ -291,5 +293,23 @@
 
   /** Baseline provisional: entregas o errores sin sus semanas completas de referencia (lo mismo en el menú y en la página). */
   const baselineProvisional = (e) => ['entregas', 'bugs'].some((id) => e.medidas[id] && e.medidas[id].disponible && e.medidas[id].referencia !== 'establecida');
-  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, avisoFila, avisoTexto, avisoCorto, ventanaDe, ventanaDistinta, conBaseline, miniBaseline, barra, fmt };
+  /**
+   * Estado de la baseline de un equipo, con una sola regla para la página Baseline (cabecera y pie), su titular y el número
+   * del menú. Mira entregas y bugs (la baseline del equipo) y los indicadores destacados del rol.
+   * sin: ninguna medida tiene baseline todavía. provisional: alguna con menos semanas de las necesarias, o con valor y sin
+   * baseline (n: las semanas de la más corta). establecida: todas con sus semanas completas.
+   */
+  function estadoBaseline(e) {
+    const ids = [...new Set(['entregas', 'bugs'].concat(destacados()))];
+    const ms = ids.map((id) => [id, e.medidas[id]]).filter((x) => x[1] && x[1].disponible && x[1].valor != null);
+    const conRef = ms.filter((x) => x[1].ref);
+    if (!conRef.length) return { estado: 'sin', n: 0, sinEn: [] };
+    const cortas = conRef.filter((x) => x[1].referencia !== 'establecida');
+    const sinEn = ms.filter((x) => !x[1].ref && !x[1].sinHistorico).map((x) => x[0]);
+    if (cortas.length || sinEn.length) return { estado: 'provisional', n: cortas.length ? Math.min(...cortas.map((x) => x[1].ref.n)) : 0, sinEn };
+    return { estado: 'establecida', n: 0, sinEn: [] };
+  }
+  /** Dirección de una medida (menos o más es mejor). El coste por tarea no está en el catálogo: menos es mejor, como en el núcleo. */
+  const dirDe = (id) => (id === 'coste' ? 'menos' : (cat().medidas[id] || {}).dir || null);
+  window.EP.kit = { TONO, tonoDe, grafico, bala, filaBaseline, techo, chip, estadoChip, equipoChip, nivelChip, rango, porque, spark, serie, destacados, tile, stat, puntos, cifra, statusBar, sec, ficha, tituloEquipo, baselineProvisional, estadoBaseline, dirDe, rangoBanda, medible, unidad, conUnidad, recFila, recPara, ordenRecs, paraQuien, primeraFrase, cambioFila, avisoFila, avisoTexto, avisoCorto, ventanaDe, ventanaDistinta, conBaseline, miniBaseline, barra, fmt };
 })();

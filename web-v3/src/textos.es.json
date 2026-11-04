@@ -234,7 +234,7 @@
  "tipo.otro": "Otro",
  "ayuda.titulo": "Cómo leer esta página",
  "ayuda.p1": "Cada equipo se compara con su propia historia, nunca con otros equipos. La baseline es el rango en el que cae la medida 70 de cada 100 semanas, en las {r} semanas anteriores al periodo actual.",
- "ayuda.p2": "Cada cifra mira las semanas que se indican debajo de ella: {k} en la mayoría de medidas y {kp} en los porcentajes.",
+ "ayuda.p2": "Cada cifra mira las últimas {k} semanas, y los porcentajes, las últimas {kp}. Cuando una cifra mira una ventana distinta de {k} semanas, se indica debajo de ella.",
  "ayuda.p3": "Algunas medidas tienen además un límite fijo, igual para todos los equipos. Si el equipo aún no tiene baseline, el límite da el color.",
  "ayuda.p3b": "Si el equipo tiene baseline, manda su baseline. Un límite superado sale aparte, con una marca discontinua en la barra, y no cambia el color.",
  "ayuda.p4": "Con menos de 6 semanas de datos no hay baseline. Entre 6 y {r} es provisional: las cifras son válidas, pero la baseline aún puede moverse.",
@@ -1093,5 +1093,11 @@
  "ini.baselineAntes": "Baseline antes de empezar: {lo} a {hi}",
  "ini.frente.mejor": "Mejor que su baseline",
  "ini.frente.dentro": "Dentro de su baseline",
- "ini.frente.peor": "Peor que su baseline"
+ "ini.frente.peor": "Peor que su baseline",
+ "ref.sinEn": "Aún sin baseline en {equipos}",
+ "ref.sinPie": "Aún sin baseline: hacen falta al menos 6 semanas con datos",
+ "ref.sinEnMedidas": "Provisional: aún sin baseline en {m}",
+ "ini.frente.incompleta": "el después se compara cuando su ventana esté completa",
+ "ini.frente.notaFuncionaPeor": "Funciona frente al resto de equipos: los demás empeoraron más.",
+ "ini.frente.notaEmpeoraMejor": "Mejora frente a su baseline, pero menos que el resto de equipos."
 }
