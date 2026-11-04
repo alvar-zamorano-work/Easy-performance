@@ -1,0 +1,21 @@
+{
+  "id": "revision-mismo-dia-core",
+  "nombre": "Same-day code review in Core Banking",
+  "descripcion": "Every pull request is reviewed the same day it is opened. Two people per day keep a slot for reviews before starting new work.",
+  "fecha_inicio": "2026-08-03",
+  "fecha_fin": null,
+  "equipos": [
+    "Core Banking"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "ciclo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Lead time 20% lower in two months.",
+  "estado": "en_curso",
+  "origen": "demasiado_a_la_vez",
+  "evaluacion": null,
+  "notas": ""
+}

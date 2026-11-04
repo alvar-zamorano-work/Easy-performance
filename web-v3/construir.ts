@@ -1,6 +1,7 @@
 // Construye la v3: un solo HTML, sin servidor y sin conexión.
 //   TZ=Europe/Madrid node web-v3/construir.ts [carpeta]   (por defecto dist/EasyPerformance-v3)
-// Lleva el núcleo empaquetado, la tipografía Ubuntu, los textos en castellano e inglés y los datos de ejemplo del banco B3.
+// Lleva el núcleo empaquetado, la tipografía Ubuntu, los textos en castellano e inglés y los datos de ejemplo de la demo
+// (datos-sinteticos/demo, un banco ficticio con diez equipos; B3 se queda para las pruebas).
 
 import { build } from 'esbuild';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
@@ -10,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const RAIZ = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(RAIZ, 'web-v3', 'src');
 const FUENTES = join(RAIZ, 'web', 'src', 'fuentes');
-const DEMO = join(RAIZ, 'datos-sinteticos', 'b3');
+const DEMO = join(RAIZ, 'datos-sinteticos', 'demo');
 const leerJson = (...p: string[]) => JSON.parse(readFileSync(join(...p), 'utf8'));
 
 /** Sin "</script" dentro de un bloque <script>. */
@@ -49,7 +50,7 @@ export async function construir(destino = join(RAIZ, 'dist', 'EasyPerformance-v3
     entryPoints: [join(SRC, 'nucleo-web.ts')], bundle: true, format: 'iife', write: false, target: 'es2019',
     minify: true, legalComments: 'none', logLevel: 'silent',
   });
-  const demoCsv = readFileSync(join(DEMO, 'jira-b3.csv'), 'utf8');
+  const demoCsv = readFileSync(join(DEMO, 'jira-demo.csv'), 'utf8');
   if (/<\/script/i.test(demoCsv)) throw new Error('El CSV de la demo contiene </script');
   const textos = { es: leerJson(SRC, 'textos.es.json'), en: leerJson(SRC, 'textos.en.json') };
   const piezas: Record<string, string> = {
