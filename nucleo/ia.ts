@@ -98,6 +98,8 @@ export function peticionRecomendaciones(paquete: Paquete, catalogo: Catalogo = C
 
 function numero(v: unknown): number | null { const n = typeof v === 'string' ? parseFloat(v) : (v as number); return typeof n === 'number' && isFinite(n) ? n : null; }
 function cerca(a: number, b: number): boolean { return Math.abs(a - b) <= Math.max(Math.abs(b) * TOLERANCIA, 0.005); }
+/** Solo una proporción (hasta el 200 %, por la regularidad) se puede citar como porcentaje. */
+const esProporcion = (v: number) => Math.abs(v) <= 2;
 
 /** Valores del paquete donde puede encajar una cifra citada: la medida del equipo, su rango, los datos de sus casos y las comparaciones. */
 function valoresDe(p: Paquete, equipo: string | null, medida: string): number[] {
@@ -458,7 +460,8 @@ export function validarChat(texto: string, paquete: Paquete, o: { equipo?: strin
     if (val == null) { problemas.push('Figure without a number.'); continue; }
     if (eq && !equipos.has(eq)) { problemas.push('Unknown team in a figure: ' + eq); continue; }
     const enPaquete = /^[a-z_]+$/.test(med) && coincideEstricto(p, eq, med, val);
-    const enExtra = extra.some((v) => cerca(val, v) || cerca(val * 100, v) || cerca(val, v * 100));
+    // El paso a porcentaje solo vale para proporciones: un recuento como "9 de 10 equipos" no apoya un 1000 %, ni un 987
+    const enExtra = extra.some((v) => cerca(val, v) || (esProporcion(val) && cerca(val * 100, v)) || (esProporcion(v) && cerca(val, v * 100)));
     if (!enPaquete && !enExtra) { problemas.push(`Figure not in the package: ${eq || 'area'} ${med} ${val}`); continue; }
     cifras.push({ equipo: eq, medida: med, valor: val });
   }
@@ -467,7 +470,8 @@ export function validarChat(texto: string, paquete: Paquete, o: { equipo?: strin
   const validos = cifras.map((c) => c.valor).concat(extra);
   const neutros = new Set([4, 8, 12, 16, 26, 52]);
   const nEquipos = paquete.equipos.length;
-  const apoyado = (n: number) => validos.some((v) => cerca(n, v) || cerca(n, v * 100) || Math.abs(n - Math.round(v * 10) / 10) < 0.051 || Math.abs(n - Math.round(v)) < 0.51 || Math.abs(n - Math.round(v * 100)) < 0.51 || Math.abs(n - Math.round(v * 1000) / 10) < 0.051)
+  const apoyado = (n: number) => validos.some((v) => cerca(n, v) || Math.abs(n - Math.round(v * 10) / 10) < 0.051 || Math.abs(n - Math.round(v)) < 0.51
+      || (esProporcion(v) && (cerca(n, v * 100) || Math.abs(n - Math.round(v * 100)) < 0.51 || Math.abs(n - Math.round(v * 1000) / 10) < 0.051)))
     || neutros.has(n) || (Number.isInteger(n) && n >= 0 && n <= nEquipos);
   const enTexto = (sinNumerosNeutros(respuesta, [...paquete.equipos.map((e) => e.id)]).match(/\d+(?:[.,]\d+)?/g) || []).map((s) => parseFloat(s.replace(',', '.')));
   const sinApoyo = enTexto.filter((n) => !apoyado(n));
