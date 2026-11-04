@@ -320,7 +320,7 @@
   // ---------- navegación y render ----------
   // El mismo menú para todos los roles: el rol solo decide la página de inicio y, en Equipo, qué equipo se ve.
   // "Qué hacer" junta recomendaciones e iniciativas; "Datos", la calidad del dato y las fuentes. Cortes va en Labs.
-  // La página de línea base sale: la vista de toda el área está en el Resumen y los gráficos, en la ficha de cada equipo.
+  // La página de baseline sale: la vista de toda el área está en el Resumen y los gráficos, en la ficha de cada equipo.
   const PAGINAS = ['resumen', 'equipos', 'recomendaciones', 'iniciativas', 'epicas', 'calidad', 'fuentes', 'ajustes', 'cortes'];
   const POR_ROL = { direccion: PAGINAS, pmo: PAGINAS, equipo: PAGINAS };
   const INICIO_ROL = { direccion: 'resumen', pmo: 'resumen', equipo: 'equipos' };

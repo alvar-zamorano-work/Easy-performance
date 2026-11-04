@@ -85,10 +85,10 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   ok('paso Qué mirar', /Qué quieres mirar primero/.test(await p.textContent('#onboarding')));
   altos.push(await alto());
   ok('la cabecera no salta entre pasos', Math.max(...altos) - Math.min(...altos) <= 1, altos.join(','));
-  // Quitar Predictability: los arrastrados salen de la línea base
+  // Quitar Predictability: los arrastrados salen de la baseline
   await p.click('input[data-change="ctx-obj"][value="predictability"]', { force: true }); await p.waitForTimeout(200); await quieto(p);
   const kpis = await A(p, () => window.EP.S.vm.kpis);
-  ok('Context cambia la línea base', !kpis.includes('arrastradas') && kpis.includes('bugs'), kpis.join(','));
+  ok('Context cambia la baseline', !kpis.includes('arrastradas') && kpis.includes('bugs'), kpis.join(','));
   await p.screenshot({ path: join(SALIDA, '03-que-mirar.png'), fullPage: true });
   await clic(p, '[data-action="ob-role"][data-role="pmo"]');
   await clic(p, '[data-action="ob-finish"]');
@@ -191,7 +191,7 @@ async function recorrer(p, etiqueta) {
   // Una ficha por equipo y, con más de un equipo, otra de toda el área
   ok('resumen: la baseline de cada equipo y la de toda el área', filasBl === (nEq + (nEq > 1 ? 1 : 0)) * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
   const textoMenu = await p.textContent('#nav');
-  ok('el menú dice Qué hacer y Datos, sin página de línea base', /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Línea base|Referencias|Baseline/.test(textoMenu), textoMenu);
+  ok('el menú dice Qué hacer y Datos, sin página de baseline', /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Baseline|Referencias|Baseline/.test(textoMenu), textoMenu);
   // Los gráficos de cada indicador están en la ficha de equipo
   await ir(p, 'equipos'); await p.waitForTimeout(100);
   ok('ficha de equipo con un gráfico por indicador destacado', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nK);
@@ -619,8 +619,8 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
     ok('sin cambios de estado: el tiempo de ciclo dice en el baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
     await p.context().close();
   }
-  // Datos de ejemplo: sin línea base, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
-  // Con línea base manda la línea base (auditoría UX): el límite superado es un aviso y no pone chip de límite.
+  // Datos de ejemplo: sin baseline, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
+  // Con baseline manda la baseline (auditoría UX): el límite superado es un aviso y no pone chip de límite.
   {
     const p = await pagina(1280, 800);
     await clic(p, '[data-action="demo"]');
@@ -633,7 +633,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
       window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (!m || !m.disponible || !m.aviso) return; avisos.push(e.nombre + ' ' + id); const c = window.EP.kit.estadoChip(m); if (c.indexOf(window.EP.t('estado.limite.critico')) >= 0 || c.indexOf(window.EP.t('estado.limite.atencion')) >= 0) avisoConChip.push(e.nombre + ' ' + id); }));
       return { malas, limite: conLimite, avisos: avisos.length, avisoConChip };
     });
-    ok('datos de ejemplo: con línea base, un límite fijo superado es un aviso sin chip de límite; sin ella, "Límite crítico" y nunca "Fuera de rango"', r.avisos > 0 && !r.avisoConChip.length && !r.malas.length, JSON.stringify(r));
+    ok('datos de ejemplo: con baseline, un límite fijo superado es un aviso sin chip de límite; sin ella, "Límite crítico" y nunca "Fuera de rango"', r.avisos > 0 && !r.avisoConChip.length && !r.malas.length, JSON.stringify(r));
     await p.context().close();
   }
 }
@@ -1132,7 +1132,7 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
-// ---------- 16. Lenguaje: un solo término (línea base), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
+// ---------- 16. Lenguaje: un solo término (baseline), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
 {
   const p = await pagina(1280, 720);
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
@@ -1149,7 +1149,7 @@ const medirMaquetacion = () => {
       if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
     }
   }
-  ok('lenguaje: un solo término (línea base) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
+  ok('lenguaje: un solo término (baseline) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
   await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
   const unidades = await A(p, () => [...document.querySelectorAll('.tile[data-medida]')].map((x) => ({ id: x.dataset.medida, u: (x.querySelector('.t-unit') || {}).textContent || '' })));
   ok('cifras con unidad y con las semanas que miran', unidades.length > 0 && unidades.every((x) => /semana/.test(x.u)), JSON.stringify(unidades));
@@ -1228,7 +1228,7 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
-// ---------- 18. Auditoría UX (P0): manda la línea base, la fiabilidad llega a cada cifra y un estado por equipo ----------
+// ---------- 18. Auditoría UX (P0): manda la baseline, la fiabilidad llega a cada cifra y un estado por equipo ----------
 {
   const abrir = async (ruta) => {
     const p = await pagina(1440, 900);
@@ -1247,22 +1247,22 @@ const medirMaquetacion = () => {
   {
     const { p } = await abrir(join(RAIZ, 'datos-sinteticos', 'aseguradora', 'jira-aseguradora.csv'));
     const vm = await A(p, () => window.EP.S.vm.equipos.map((e) => ({ nombre: e.nombre, estado: e.estado, graves: e.graves.length, ret: e.medidas.retrabajo && { v: e.medidas.retrabajo.valor, lo: e.medidas.retrabajo.ref && e.medidas.retrabajo.ref.lo, estado: e.medidas.retrabajo.estado, aviso: !!e.medidas.retrabajo.aviso } })));
-    // Una mejora frente a su línea base no es una alerta: Digital Channel baja su retrabajo al 22 % (línea base 25 % a 35 %)
+    // Una mejora frente a su baseline no es una alerta: Digital Channel baja su retrabajo al 22 % (baseline 25 % a 35 %)
     const dc = vm.find((e) => e.nombre === 'Digital Channel');
-    ok('auditoría: un retrabajo que mejora frente a su línea base sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
+    ok('auditoría: un retrabajo que mejora frente a su baseline sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
     const res = await filas(p);
     const dcEq = res.find((x) => x.equipo === 'Digital Channel'), dcFila = dcEq && dcEq.filas.find((f) => f.medida === 'retrabajo');
     ok('auditoría: en la barra, el límite fijo es una marca aparte y la cifra no sale en ámbar', !!dcFila && dcFila.lim && dcFila.tono !== 'warn' && dcFila.tono !== 'bad', JSON.stringify(dcFila || res.map((x) => x.equipo)));
-    // Donde hay línea base (la franja), se pinta también el margen
+    // Donde hay baseline (la franja), se pinta también el margen
     const conBanda = res.flatMap((x) => x.filas.filter((f) => f.banda).map((f) => Object.assign({ equipo: x.equipo }, f)));
-    ok('auditoría: la barra pinta el margen alrededor de la línea base', conBanda.length > 0 && conBanda.every((f) => f.margen), JSON.stringify(conBanda.filter((f) => !f.margen).map((f) => f.equipo + ':' + f.medida)));
-    // El pie de un equipo con una recomendación urgente: "dentro de su línea base" solo si no hay nada por revisar
+    ok('auditoría: la barra pinta el margen alrededor de la baseline', conBanda.length > 0 && conBanda.every((f) => f.margen), JSON.stringify(conBanda.filter((f) => !f.margen).map((f) => f.equipo + ':' + f.medida)));
+    // El pie de un equipo con una recomendación urgente: "dentro de su baseline" solo si no hay nada por revisar
     const pies = await A(p, () => {
       const V = window.EP.vistas, base = { nombre: 'X', cambios: [], graves: ['todo_urgente'], mejores: [], avisos: [], medidas: {}, estado: 'atencion' };
       return { limpio: V.pieFicha(Object.assign({}, base, { revisarDato: [] })), conDato: V.pieFicha(Object.assign({}, base, { revisarDato: ['ciclo'] })) };
     });
-    ok('auditoría: con una recomendación urgente y un dato por revisar, el pie no dice "dentro de su línea base"', /dentro de su línea base/i.test(pies.limpio) && !/dentro de su línea base/i.test(pies.conDato) && /Revisar el dato/.test(pies.conDato), JSON.stringify(pies));
-    // "Mucho retrabajo" no salta en un equipo que mejora frente a su línea base
+    ok('auditoría: con una recomendación urgente y un dato por revisar, el pie no dice "dentro de su baseline"', /dentro de su baseline/i.test(pies.limpio) && !/dentro de su baseline/i.test(pies.conDato) && /Revisar el dato/.test(pies.conDato), JSON.stringify(pies));
+    // "Mucho retrabajo" no salta en un equipo que mejora frente a su baseline
     const recs = await A(p, () => window.EP.S.vm.recs.filter((r) => r.id === 'retrabajo').map((r) => r.equipos));
     ok('auditoría: "Mucho retrabajo" solo en el equipo que empeora (Policies), no en Digital Channel', recs.length === 1 && recs[0].indexOf('Policies') >= 0 && recs[0].indexOf('Digital Channel') < 0, JSON.stringify(recs));
     // Un estado por equipo: con una recomendación urgente, nunca "Estable"; el mismo chip en el Resumen y en la presentación

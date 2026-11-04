@@ -44,7 +44,7 @@
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
     if (atencion.length) items.push(esc(t('resumen.atencionEn', { equipos: lista(atencion.map((e) => nombreEquipo(e.nombre))) })));
     const dest = K.destacados();
-    // Toda el área, primero (si hay más de un equipo a la vista): la vista que antes estaba en la página de línea base
+    // Toda el área, primero (si hay más de un equipo a la vista): la vista que antes estaba en la página de baseline
     const fichaArea = eqs.length > 1 && S.role !== 'equipo' ? K.ficha(`<div class="f-title">${esc(t('equipo.area'))}</div>`, `<div class="fbs">${dest.map((id) => K.filaBaseline(vm.area, id)).join('')}</div>`,
       vm.areaSin && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span>` : '') : '';
     const fichas = fichaArea + eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
@@ -69,7 +69,7 @@
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
   function pieFicha(e) {
     const base = pieBase(e);
-    // Un límite fijo superado sin alerta (manda la línea base) se dice al final, sin cambiar lo que dice la línea base
+    // Un límite fijo superado sin alerta (manda la baseline) se dice al final, sin cambiar lo que dice la baseline
     const avisos = (e.avisos || []).filter((x) => K.destacados().indexOf(x.id) >= 0).map((x) => nombreMedida(x.id));
     return avisos.length ? [base, t('resumen.avisoLimite', { m: lista(avisos) })].filter(Boolean).join(' · ') : base;
   }
@@ -83,7 +83,7 @@
     }
     const resto = pieSinCambios(e);
     if (!e.graves || !e.graves.length) return resto;
-    // Con una recomendación urgente: "dentro de su línea base" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
+    // Con una recomendación urgente: "dentro de su baseline" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
     const r = lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id));
     if (resto === t('resumen.fichaEstable')) return t('resumen.atencionPie', { r });
     return [t('resumen.atencionPieSolo', { r }), resto].join(' · ');

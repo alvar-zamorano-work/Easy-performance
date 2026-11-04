@@ -143,11 +143,11 @@ export interface MedidaCalculada {
   /** Hay valor actual pero no histórico con el que compararlo (el export no dice cuándo empezó el trabajo terminado). */
   sinHistorico?: boolean;
   /**
-   * Límite fijo del catálogo superado cuando hay línea base: no cambia el estado (manda la línea base del equipo),
+   * Límite fijo del catálogo superado cuando hay baseline: no cambia el estado (manda la baseline del equipo),
    * se enseña aparte como aviso, con el nivel que habría dado el límite.
    */
   aviso?: AvisoLimite;
-  /** Margen alrededor de la línea base dentro del que el valor cuenta como normal (en las unidades de la medida). */
+  /** Margen alrededor de la baseline dentro del que el valor cuenta como normal (en las unidades de la medida). */
   margen?: number;
 }
 

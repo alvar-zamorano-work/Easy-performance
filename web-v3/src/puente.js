@@ -13,7 +13,7 @@
     { id: 'cost', kpis: ['coste'], catalogo: [] },
     { id: 'ai', kpis: ['agent_readiness'], catalogo: ['agentes'] },
   ];
-  /** Medidas de la línea base (las que puede elegir el Context). */
+  /** Medidas de la baseline (las que puede elegir el Context). */
   const BASE = ['ciclo', 'entregas', 'retrabajo', 'bugs', 'arrastradas', 'agent_readiness', 'coste'];
   const TRABAJO = ['sprints', 'flujo', 'mixto'];
 
@@ -298,7 +298,7 @@
     // Medidas cuya comparación no es de fiar (lo normal era cero, o un salto de más del triple) y medidas mejor de lo normal
     const revisarDato = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && m.revisar && !malo(m); });
     const mejores = cols.filter((id) => { const m = med(eq, id); return m && m.disponible && !m.revisar && m.estado === 'bien' && m.lado === 'mejor'; });
-    // Límite fijo superado con la línea base dentro o mejor: no es una alerta, se enseña aparte como aviso
+    // Límite fijo superado con la baseline dentro o mejor: no es una alerta, se enseña aparte como aviso
     const avisos = cols.map((id) => ({ id, m: med(eq, id) })).filter((x) => x.m && x.m.disponible && x.m.aviso && !malo(x.m));
     // Casos graves (recomendación de nivel alto) aunque sus medidas estén dentro de lo normal: el equipo no está "estable"
     const graves = esArea ? [] : (eq.casos || []).concat((r.casosAgentReady || []).filter((c) => c.equipo === eq.nombre))

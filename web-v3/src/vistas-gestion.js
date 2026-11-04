@@ -572,7 +572,7 @@
   };
   /**
    * Lo que la página enseña aparte de la cifra y el asistente no debe contradecir: las cifras por revisar (y por qué) y
-   * los límites fijos superados sin alerta, que no cambian el estado porque manda la línea base.
+   * los límites fijos superados sin alerta, que no cambian el estado porque manda la baseline.
    */
   const marcasIa = (e) => ({
     estado: e.estado,
