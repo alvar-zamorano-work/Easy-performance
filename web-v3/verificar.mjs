@@ -1520,6 +1520,64 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
+// ---------- 21. Indicadores separados: cada uno en su caja en Baseline, columnas separadas en el Resumen y Personalizar por familias ----------
+{
+  const p = await pagina(1280, 800);
+  await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
+  await fijarIdioma(p, 'es'); await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
+  const b = await A(p, () => {
+    const EP = window.EP, dest = EP.kit.destacados(), mal = [];
+    document.querySelectorAll('#page .bls').forEach((g) => {
+      const bls = [...g.querySelectorAll('.bl')];
+      const nombres = bls.map((x) => (x.querySelector('.bl-n b') || {}).textContent || '');
+      if (nombres.join('|') !== dest.map((id) => EP.nombreMedida(id)).join('|')) mal.push('nombres: ' + nombres.join('|'));
+      bls.forEach((x, i) => {
+        const cs = getComputedStyle(x), r = x.getBoundingClientRect();
+        if (parseFloat(cs.borderTopWidth) < 1 || parseFloat(cs.borderRadius) < 4) mal.push('sin caja: ' + nombres[i]);
+        const sig = bls[i + 1]; if (!sig) return;
+        const rs = sig.getBoundingClientRect();
+        // En la misma fila, separados; en filas distintas, una debajo de la otra sin pisarse
+        if (Math.abs(rs.top - r.top) < 2 ? rs.left - r.right < 8 : rs.top - r.bottom < 8) mal.push('pegados: ' + nombres[i] + ' y ' + nombres[i + 1]);
+      });
+    });
+    return { grupos: document.querySelectorAll('#page .bls').length, mal, boton: !!document.querySelector('#page-actions [data-kind="personalizar"]') };
+  });
+  ok('Baseline: cada indicador en su propia caja, con su nombre, en el orden elegido y sin pegarse al siguiente', b.grupos > 1 && !b.mal.length, JSON.stringify(b));
+  ok('Baseline: se puede personalizar desde la propia página', b.boton);
+  // Personalizar: lo elegido arriba, en orden; cada indicador una sola vez y dentro de una familia
+  await clic(p, '#page-actions [data-kind="personalizar"]'); await p.waitForTimeout(150);
+  const per = await A(p, () => {
+    const EP = window.EP, dest = EP.kit.destacados(), d = document.getElementById('drawer');
+    const elegidos = [...d.querySelectorAll('.per-elegidos li')].map((x) => x.textContent);
+    const ids = [...d.querySelectorAll('input[data-change="pref-tile"]')].map((x) => x.value);
+    const fueraDeGrupo = [...d.querySelectorAll('input[data-change="pref-tile"]')].filter((x) => !x.closest('fieldset.per-grupo')).length;
+    return { elegidos, esperados: dest.map((id) => EP.nombreMedida(id)), familias: d.querySelectorAll('fieldset.per-grupo').length, repetidos: ids.length - new Set(ids).size, todas: EP.cat().ordenMedidas.every((id) => ids.indexOf(id) >= 0), fueraDeGrupo };
+  });
+  ok('Personalizar: lo elegido arriba y en orden, y cada indicador una vez dentro de su familia', per.elegidos.join('|') === per.esperados.join('|') && per.familias >= 5 && !per.repetidos && per.todas && !per.fueraDeGrupo, JSON.stringify(per));
+  // Quitar uno cambia la lista de arriba y las cajas de la página
+  await p.click('#drawer input[data-change="pref-tile"]:checked'); await p.waitForTimeout(200);
+  const tras = await A(p, () => ({ elegidos: document.querySelectorAll('#drawer .per-elegidos li').length, cajas: (document.querySelector('#page .bls') || { children: [] }).children.length, dest: window.EP.kit.destacados().length }));
+  ok('Personalizar: al quitar un indicador cambian la lista y las cajas de la Baseline', tras.elegidos === tras.dest && tras.cajas === tras.dest && tras.dest === per.esperados.length - 1, JSON.stringify(tras));
+  await clic(p, '#drawer [data-action="pref-reset"]'); await p.waitForTimeout(150);
+  await p.screenshot({ path: join(SALIDA, '21-personalizar.png') });
+  await A(p, () => { window.EP.S.drill = null; window.EP.render(); });
+  // Resumen: una línea entre indicadores, en la cabecera y en cada fila
+  await ir(p, 'resumen'); await quieto(p);
+  const col = await A(p, () => {
+    const lin = (x) => parseFloat(getComputedStyle(x).borderLeftWidth) >= 1;
+    const cab = [...document.querySelectorAll('#page .bm-cols > span')], celdas = [...document.querySelectorAll('#page .bm .fbs > .fb')];
+    return { cab: cab.length, celdas: celdas.length, sinLinea: cab.concat(celdas).filter((x) => !lin(x)).length };
+  });
+  ok('Resumen: una línea separa cada indicador en la tabla de equipos', col.cab > 1 && col.celdas > col.cab && !col.sinLinea, JSON.stringify(col));
+  // En el móvil, las cajas siguen separadas y no hay desplazamiento lateral
+  await p.setViewportSize({ width: 390, height: 844 }); await ir(p, 'referencias'); await quieto(p);
+  const m = await A(p, () => ({ ancho: document.documentElement.scrollWidth, cajas: document.querySelectorAll('#page .bl').length }));
+  ok('Baseline en el móvil: cajas separadas sin desplazamiento lateral', m.ancho <= 390 && m.cajas > 4, JSON.stringify(m));
+  await p.screenshot({ path: join(SALIDA, '21-baseline-movil.png'), fullPage: true });
+  ok('sin errores de consola en la sección de indicadores separados', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
+  await p.context().close();
+}
+
 await navegador.close();
 writeFileSync(join(SALIDA, 'resultados.json'), JSON.stringify(resultados, null, 1));
 const mal = resultados.filter((r) => !r.bien);
