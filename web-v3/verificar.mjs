@@ -1161,7 +1161,7 @@ const medirMaquetacion = () => {
   await A(p, () => window.EP.openDrill(null));
   ok('"Cómo leerlo": qué responde la página y todas las etiquetas', ayuda.pregunta && ayuda.etiquetas >= 10, JSON.stringify(ayuda));
   await ir(p, 'resumen'); await quieto(p);
-  const pantalla = await A(p, () => ({ equipos: document.querySelector('.fichas.cols-2').getBoundingClientRect().top, fab: !document.getElementById('assistant-fab').classList.contains('hidden') }));
+  const pantalla = await A(p, () => ({ equipos: document.querySelector('#page .bm').getBoundingClientRect().top, fab: !document.getElementById('assistant-fab').classList.contains('hidden') }));
   ok('Resumen: los equipos empiezan en la primera pantalla (1280 x 720) y sin clave de IA no hay botón Preguntar', pantalla.equipos < 720 && !pantalla.fab, JSON.stringify(pantalla));
   ok('lenguaje: sin errores', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.join(' | '));
   await p.context().close();
@@ -1291,7 +1291,7 @@ const medirMaquetacion = () => {
   {
     const { p, veredicto } = await abrir(join(RAIZ, 'datos-sinteticos', 'fallos', 'jira-con-fallos.csv'));
     ok('auditoría: con fiabilidad baja, el veredicto es "Se puede mirar, no decidir"', /Se puede mirar, no decidir/.test(veredicto), veredicto.slice(0, 80));
-    ok('auditoría: con fiabilidad baja, el titular del Resumen lo dice', /no decidir/.test(await p.textContent('#page .status')), '');
+    ok('auditoría: con fiabilidad baja, el titular del Resumen lo dice', /no decidir/.test(await p.textContent('#page .panorama')), '');
     // Lo que depende de una comprobación que falla no sale en verde ni "mejor": Payments salta el en curso en 1 de cada 3 tareas
     const dud = await A(p, () => window.EP.S.vm.equipos.flatMap((e) => Object.values(e.medidas).filter((m) => m && m.revisar === 'dato').map((m) => ({ e: e.nombre, id: m.id, estado: m.estado, lado: m.lado || null, tono: window.EP.kit.tonoDe(m) }))));
     const pay = dud.filter((x) => x.e === 'Payments').map((x) => x.id);
@@ -1351,15 +1351,18 @@ const medirMaquetacion = () => {
   ok('Baseline: toda el área primero y una ficha por equipo, cada una con sus indicadores destacados', bl.fichas === bl.equipos + 1 && bl.primera === bl.area && bl.bloques.every((n) => n === bl.dest) && bl.leyenda, JSON.stringify(bl));
   ok('Baseline: cada indicador con su gráfico y la cifra del color de su estado', !bl.malTono.length && !bl.sinGrafico.length, JSON.stringify({ malTono: bl.malTono, sinGrafico: bl.sinGrafico }));
   ok('Baseline: el titular y el número del menú cuentan los mismos equipos con baseline provisional', (bl.prov ? /provisional/.test(bl.titular) && bl.cuenta === String(bl.prov) : /Todas las baselines/.test(bl.titular) && !bl.cuenta), JSON.stringify({ prov: bl.prov, cuenta: bl.cuenta, titular: bl.titular }));
-  // Resumen: primero la baseline de cada equipo, después por dónde empezar (en el orden de Qué hacer) y al final las preguntas
+  // Resumen: arriba el panorama; después la baseline de cada equipo y la de toda el área, por dónde empezar (en el orden de
+  // Qué hacer) y al final las preguntas
   await ir(p, 'resumen'); await quieto(p);
   const res = await A(p, () => {
     const h = [...document.querySelectorAll('#page .sec h2')].map((x) => x.textContent);
+    const pan = document.querySelector('#page .panorama'), sec = document.querySelector('#page .sec');
+    const panoramaArriba = !!(pan && sec && pan.getBoundingClientRect().top < sec.getBoundingClientRect().top);
     const filas = [...document.querySelectorAll('#page .que-hacer .rrow')].map((r) => r.querySelector('b').textContent);
-    return { h, filas, recs: window.EP.vistas.recsActivas(window.EP.visibles()).map((r) => r.titulo) };
+    return { h, filas, panoramaArriba, recs: window.EP.vistas.recsActivas(window.EP.visibles()).map((r) => r.titulo) };
   });
   const iA = res.h.indexOf('Toda el área frente a su baseline'), iB = res.h.indexOf('Cada equipo frente a su baseline'), iE = res.h.indexOf('Por dónde empezar'), iP = res.h.indexOf('Preguntas de dirección');
-  ok('Resumen: primero toda el área y cada equipo frente a su baseline, después por dónde empezar y al final las preguntas', iA === 0 && iA < iB && iB < iE && iE < iP, JSON.stringify(res.h));
+  ok('Resumen: arriba el panorama, después cada equipo y toda el área frente a su baseline, por dónde empezar y al final las preguntas', res.panoramaArriba && iB === 0 && iB < iA && iA < iE && iE < iP, JSON.stringify({ h: res.h, panorama: res.panoramaArriba }));
   ok('Resumen: por dónde empezar son las tres primeras de Qué hacer, en el mismo orden', res.filas.length === Math.min(3, res.recs.length) && res.filas.every((x, i) => x === res.recs[i]), JSON.stringify(res));
   // Qué hacer: cada recomendación con medida enseña esa medida en sus equipos frente a su baseline, con la cifra del equipo
   await ir(p, 'recomendaciones'); await quieto(p);
@@ -1459,6 +1462,61 @@ const medirMaquetacion = () => {
   ok('Baseline provisional: cabecera, pie, titular y menú dicen lo mismo', /Provisional/.test(estados.fa.cab) && /8 semanas/.test(estados.fa.pie) && estados.titular.indexOf('provisional en ' + estados.a) >= 0, JSON.stringify(estados));
   ok('Sin baseline: "Aún sin baseline" en la cabecera, el pie y el titular, y el menú cuenta los dos equipos más los que ya había', /Aún sin baseline/.test(estados.fb.cab) && /Aún sin baseline/.test(estados.fb.pie) && !/calculada con/.test(estados.fb.pie) && estados.titular.indexOf('Aún sin baseline en ' + estados.b) >= 0 && estados.menu === String(estados.antes + 2), JSON.stringify(estados));
   ok('sin errores de consola en la sección de la baseline', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
+  await p.context().close();
+}
+
+// ---------- 20. Resumen para dirección: panorama, tabla de equipos, marca de baseline y gráfico de iniciativas ----------
+{
+  const p = await pagina(1280, 800);
+  await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
+  await fijarIdioma(p, 'es'); await fijarRol(p, 'direccion'); await ir(p, 'resumen'); await quieto(p);
+  const r = await A(p, () => {
+    const EP = window.EP, K = EP.kit, eqs = EP.visibles(), dest = K.destacados();
+    const pan = document.querySelector('#page .panorama');
+    const cifra = (pan.querySelector('.pan-cifra b') || {}).textContent || '';
+    const pills = [...pan.querySelectorAll('.pan-eq')].map((b) => b.dataset.team);
+    const aptas = (pan.querySelector('.pan-aptas b') || {}).textContent || '';
+    // Mismo criterio que el panorama: aptas, por revisar (dudoso o provisional) y sin dato o sin baseline
+    let a = 0, total = 0;
+    eqs.forEach((e) => dest.forEach((id) => { const m = e.medidas[id]; total++; if (m && m.disponible && m.valor != null && m.ref && !m.revisar && m.referencia === 'establecida') a++; }));
+    const orden = ['alerta', 'poco_fiable', 'atencion', 'revisar', 'provisional', 'estable'];
+    const filas = [...document.querySelectorAll('#page .bm .bm-fila')].map((f) => eqs.find((e) => e.nombre === f.dataset.team).estado);
+    const ordenada = filas.every((est, i) => i === 0 || orden.indexOf(filas[i - 1]) <= orden.indexOf(est));
+    // Lo habitual sin color: ninguna marca en turquesa salvo lo que es mejor que su baseline; lo dudoso, rayado y hueco
+    const malColor = [], malDudoso = [];
+    document.querySelectorAll('#page .bm .fb').forEach((f) => {
+      const e = eqs.find((x) => x.nombre === f.dataset.team), m = e.medidas[f.dataset.medida], marca = f.querySelector('.b-now');
+      if (!m || !marca) return;
+      if (marca.classList.contains('tone-good') && !(m.estado === 'bien' && m.lado === 'mejor')) malColor.push(e.nombre + ':' + f.dataset.medida);
+      if (m.estado === 'bien' && m.lado !== 'mejor' && !m.revisar && !marca.classList.contains('tone-ok')) malColor.push('habitual con color ' + e.nombre + ':' + f.dataset.medida);
+      if (K.tonoDe(m) === 'dudoso' && !f.querySelector('.bala.dudoso')) malDudoso.push(e.nombre + ':' + f.dataset.medida);
+    });
+    return { cifra, estables: eqs.filter((e) => e.estado === 'estable').length, n: eqs.length, pills: pills.length, unicos: new Set(pills).size, aptas, a, total, ordenada, filas, malColor, malDudoso,
+      dudosos: document.querySelectorAll('#page .bm .bala.dudoso').length };
+  });
+  ok('Resumen: el panorama dice cuántos equipos están dentro de su baseline y nombra a todos una vez', r.cifra === r.estables + ' de ' + r.n && r.pills === r.n && r.unicos === r.n, JSON.stringify(r));
+  ok('Resumen: las cifras aptas para decidir cuentan lo mismo que la tabla', r.aptas === r.a + ' de ' + r.total, JSON.stringify({ aptas: r.aptas, a: r.a, total: r.total }));
+  ok('Resumen: los equipos van ordenados por atención', r.ordenada, JSON.stringify(r.filas));
+  ok('Marca de baseline: lo habitual sin color, turquesa solo si es mejor y lo dudoso rayado', !r.malColor.length && !r.malDudoso.length && r.dudosos > 0, JSON.stringify({ malColor: r.malColor, malDudoso: r.malDudoso, dudosos: r.dudosos }));
+  await p.screenshot({ path: join(SALIDA, '20-resumen.png'), fullPage: true });
+  // Iniciativas: el después del color de lo que dice la evaluación, sobre la baseline de antes de empezar
+  await ir(p, 'iniciativas'); await quieto(p);
+  const ini = await A(p, () => {
+    const vm = window.EP.S.vm, mal = [];
+    vm.iniciativas.forEach(({ ini, s }) => {
+      const card = [...document.querySelectorAll('#page .ficha.ini')].find((c) => c.querySelector('.f-title').textContent === ini.nombre);
+      if (!card || !card.querySelector('.ini-chart')) return;
+      const linea = card.querySelector('.ini-chart .ic-ini'), tono = s.estado === 'funciona' ? 'tone-good' : s.estado === 'empeora' ? 'tone-bad' : 'tone-ok';
+      if (!linea || !linea.classList.contains(tono)) mal.push(ini.nombre + ': ' + (linea && linea.getAttribute('class')));
+      if (!card.querySelector('.ini-chart .ic-antes') || !card.querySelector('.ic-marca')) mal.push(ini.nombre + ': sin antes o sin marca de inicio');
+      const marca = card.querySelector('.ic-marca'), plot = card.querySelector('.ic-plot');
+      if (marca && plot && marca.getBoundingClientRect().right > plot.getBoundingClientRect().right + 1) mal.push(ini.nombre + ': la etiqueta del inicio se sale');
+    });
+    return { n: document.querySelectorAll('#page .ini-chart').length, mal };
+  });
+  ok('Iniciativas: antes en gris, después del color de su evaluación y la etiqueta del inicio dentro del gráfico', ini.n > 0 && !ini.mal.length, JSON.stringify(ini));
+  await p.screenshot({ path: join(SALIDA, '20-iniciativas.png'), fullPage: true });
+  ok('sin errores de consola en la sección del Resumen para dirección', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }
 

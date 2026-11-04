@@ -49,10 +49,6 @@
     const kpis = heroe ? K.sec(conEquipos ? t('resumen.areaBaseline') : t('resumen.equipoBaseline', { e: nombreEquipo(heroe.nombre) }), `<span class="muted small">${esc(t('resumen.heroeNota', { r: vm.semanas.R }))}</span>`)
       + `<div class="tiles kpis-heroe">${dest.map((id) => K.tile(heroe, id)).join('')}</div>`
       + (conEquipos && vm.areaSin && vm.areaSin.length ? `<p class="tiny muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</p>` : '') : '';
-    // Debajo, cada equipo frente a su baseline: una barra por indicador. El pie dice lo que ha salido de la baseline; el aviso de
-    // un límite fijo ya está en la barra (la marca discontinua) y entero al pasar por encima
-    const fichas = conEquipos ? eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
-      `<span class="small muted" title="${esc(pieFicha(e))}">${esc(pieBase(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('') : '';
     // Por dónde empezar: las tres primeras de Qué hacer, en el mismo orden; el enlace abre la lista entera sin filtros
     const altas = recs.filter((r) => r.nivel === 'alto').length;
     const cuenta = !recs.length ? t('recs.ninguna') : altas ? tn('resumen.queHacer', recs.length, { a: altas }) : tn('resumen.queHacerSinAltas', recs.length);
@@ -60,9 +56,75 @@
       + `<div class="ficha list que-hacer">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
     // Primero la baseline (lo que diferencia al producto): el área y cada equipo. Después qué hacer y al final las preguntas
     const notaBl = `<span class="muted small">${esc(t('resumen.baselineNota'))}</span> <button class="link small" data-action="go" data-view="referencias">${esc(t('resumen.verBaseline'))}</button>`;
-    const equipos = fichas ? K.sec(t('resumen.baselineEquipos'), notaBl) + `<div class="fichas cols-2">${fichas}</div>` : '';
-    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos()
-      + kpis + equipos + empezar + preguntas();
+    const cortes = EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '';
+    // Con varios equipos, arriba el panorama (cómo están los equipos y cuánto fiarse del dato), debajo cada equipo frente a
+    // su baseline en una tabla ordenada por atención, después toda el área, qué hacer y las preguntas
+    if (conEquipos) {
+      const equipos = K.sec(t('resumen.baselineEquipos'), notaBl) + matrizEquipos(eqs, dest);
+      return panorama(eqs, dest) + cortes + avisoEquipos() + equipos + kpis + empezar + preguntas();
+    }
+    // Un solo equipo (rol Equipo): su estado arriba y sus indicadores con el gráfico de su baseline
+    return K.statusBar(tono, titular, items) + cortes + avisoEquipos() + kpis + empezar + preguntas();
+  }
+
+  // ---------- Resumen: panorama y tabla de equipos ----------
+  /** Orden de atención de los estados de equipo: primero lo que se sale de su baseline, al final lo estable. */
+  const ORDEN_ESTADO = ['alerta', 'poco_fiable', 'atencion', 'revisar', 'provisional', 'estable'];
+  const nCriticos = (e) => (e.cambios || []).filter((x) => x.m.estado === 'critico').length;
+  const porAtencion = (eqs) => eqs.slice().sort((a, b) => (ORDEN_ESTADO.indexOf(a.estado) - ORDEN_ESTADO.indexOf(b.estado))
+    || (nCriticos(b) - nCriticos(a)) || ((b.cambios || []).length - (a.cambios || []).length) || nombreEquipo(a.nombre).localeCompare(nombreEquipo(b.nombre)));
+  /**
+   * Cifras del Resumen (cada equipo por cada indicador destacado) según se pueda decidir con ellas: aptas (con baseline
+   * establecida y sin nada que revisar), por revisar (dato dudoso o baseline provisional) y sin dato o sin baseline.
+   */
+  function cifrasAptas(eqs, ids) {
+    const c = { aptas: 0, revisar: 0, sin: 0, total: 0 };
+    eqs.forEach((e) => ids.forEach((id) => {
+      const m = e.medidas[id];
+      c.total++;
+      if (!m || !m.disponible || m.valor == null || !m.ref) c.sin++;
+      else if (m.revisar || m.referencia !== 'establecida') c.revisar++;
+      else c.aptas++;
+    }));
+    return c;
+  }
+  /** Tres barras de nivel: alta, media o baja. */
+  const sello = (nivel) => { const n = { alta: 3, media: 2, baja: 1 }[nivel] || 0; return `<span class="sello" aria-hidden="true">${[1, 2, 3].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`; };
+  /** Panorama: cuántos equipos están dentro de su baseline, quién se sale (agrupados por estado) y cuánto fiarse del dato. */
+  function panorama(eqs, dest) {
+    const vm = S.vm, f = vm.fiabilidad, baja = !!(f && f.nivel === 'baja');
+    const estables = eqs.filter((e) => e.estado === 'estable');
+    const sinComparar = eqs.every((e) => e.estado === 'poco_fiable' || e.estado === 'provisional');
+    const pill = (e) => `<button class="pan-eq tone-${K.ESTADO_EQUIPO[e.estado] || 'neutral'}" data-action="open-team" data-team="${esc(e.nombre)}"><i></i>${esc(nombreEquipo(e.nombre))}</button>`;
+    const grupos = ORDEN_ESTADO.map((est) => [est, porAtencion(eqs.filter((e) => e.estado === est))]).filter((g) => g[1].length)
+      .map(([est, es]) => `<div class="pan-grupo"><span class="pan-g">${esc(t('equipo.estado.' + est))} <b>${es.length}</b></span><div class="pan-eqs">${es.map(pill).join('')}</div></div>`).join('');
+    const cifra = sinComparar ? `<p class="pan-cifra pan-cifra-txt">${esc(t('resumen.sinComparar'))}</p>`
+      : `<p class="pan-cifra"><b>${esc(t('pan.nDeTotal', { n: estables.length, total: eqs.length }))}</b> <span>${esc(t('pan.dentro'))}</span></p>`;
+    const aviso = baja ? `<p class="pan-aviso">${esc(t('resumen.mirar'))}</p>` : '';
+    // Confianza del dato: el nivel, cuántas de las cifras que se enseñan sirven para decidir y qué comprobación falla
+    let conf = '';
+    if (f) {
+      const c = cifrasAptas(eqs, dest), pct = (n) => (c.total ? (n / c.total) * 100 : 0).toFixed(1);
+      const equiposDe = (id) => (f.porEquipo || []).filter((x) => x.valores[id] && x.valores[id].estado === 'revisar').map((x) => nombreEquipo(x.equipo));
+      const fallan = f.comprobaciones.filter((x) => x.estado === 'revisar').slice(0, 3).map((x) => { const es = equiposDe(x.id); return x.nombre + (es.length ? ' (' + lista(es) + ')' : ''); });
+      conf = `<aside class="pan-conf"><div class="pan-k">${esc(t('pan.confianza'))}</div>
+        <div class="pan-nivel">${sello(f.nivel)}<span>${esc(t('pan.fiab.' + f.nivel))}</span></div>
+        <p class="pan-aptas"><b>${esc(t('pan.nDeTotal', { n: c.aptas, total: c.total }))}</b> ${esc(t('pan.aptas'))}</p>
+        <div class="pan-barra" role="img" aria-label="${esc(t('pan.barra', { a: c.aptas, r: c.revisar, s: c.sin }))}"><i class="a" style="width:${pct(c.aptas)}%"></i><i class="r" style="width:${pct(c.revisar)}%"></i><i class="s" style="width:${pct(c.sin)}%"></i></div>
+        <p class="pan-ley"><span><i class="r"></i>${esc(tn('pan.revisar', c.revisar))}</span><span><i class="s"></i>${esc(tn('pan.sin', c.sin))}</span></p>
+        <p class="pan-falla">${esc(fallan.length ? t('pan.falla', { c: fallan.join(' · ') }) : t('pan.todoBien'))}</p>
+        <button class="link small" data-action="go" data-view="calidad">${esc(t('pan.verCalidad'))}</button></aside>`;
+    }
+    return `<section class="panorama"><div class="pan-main"><div class="pan-k"><span>${esc(t('pan.titulo', { k: vm.semanas.K }))}</span><button class="link s-help" data-action="drill" data-kind="ayuda">${esc(t('comun.comoLeer'))}</button></div>
+      ${cifra}${aviso}<div class="pan-grupos">${grupos}</div></div>${conf}</section>`;
+  }
+  /** Cada equipo frente a su baseline: una fila por equipo, ordenada por atención, y una columna por indicador destacado. */
+  function matrizEquipos(eqs, dest) {
+    const cols = `style="--n:${dest.length}"`;
+    const cab = `<div class="bm-cab"><span>${esc(t('pan.equipo'))}</span><div class="bm-cols" ${cols}>${dest.map((id) => `<span title="${esc(K.unidad(id))}">${esc(nombreMedida(id))}</span>`).join('')}</div></div>`;
+    const filas = porAtencion(eqs).map((e) => `<div class="ficha bm-fila" data-team="${esc(e.nombre)}"><div class="f-head"><div class="bm-eq">${K.tituloEquipo(e)}<span class="bm-pie" title="${esc(pieFicha(e))}">${esc(pieBase(e))}</span></div>${K.equipoChip(e)}</div>`
+      + `<div class="f-body"><div class="fbs" ${cols}>${dest.map((id) => K.filaBaseline(e, id)).join('')}</div></div></div>`).join('');
+    return `<div class="bm">${cab}${filas}</div>`;
   }
   /** Equipos nuevos en este export (se ofrece medirlos) y qué queda fuera de la medición (equipos pequeños y tareas sin equipo). */
   function avisoEquipos() {
