@@ -49,13 +49,15 @@
       vm.areaSin && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span>` : '') : '';
     const fichas = fichaArea + eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
       `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
-    // Qué hacer: una línea con el número y el enlace (la lista está en Qué hacer, con un solo orden)
+    // Por dónde empezar: las tres primeras de Qué hacer, en el mismo orden; el enlace abre la lista entera sin filtros
     const altas = recs.filter((r) => r.nivel === 'alto').length;
     const cuenta = !recs.length ? t('recs.ninguna') : altas ? tn('resumen.queHacer', recs.length, { a: altas }) : tn('resumen.queHacerSinAltas', recs.length);
-    // El enlace abre la lista sin filtros: el número que se lee aquí es el que se ve allí
-    const queHacer = `<div class="ficha que-hacer"><div class="f-body row"><span>${esc(cuenta)}</span>${recs.length ? `<button class="btn sm primary" data-action="ver-que-hacer">${esc(t('resumen.verQueHacer'))}</button>` : ''}</div></div>`;
-    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos() + preguntas() + queHacer
-      + K.sec(t('resumen.baselineEquipos'), `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span>`) + `<div class="fichas cols-2">${fichas}</div>`;
+    const empezar = K.sec(t('resumen.primero'), `<span class="muted small">${esc(cuenta)}</span>${recs.length ? ` <button class="link small" data-action="ver-que-hacer">${esc(t('resumen.verQueHacer'))}</button>` : ''}`)
+      + `<div class="ficha list que-hacer">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
+    // Primero la baseline de cada equipo (lo que diferencia al producto), después qué hacer y al final las preguntas de dirección
+    const notaBl = `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span> <button class="link small" data-action="go" data-view="referencias">${esc(t('resumen.verBaseline'))}</button>`;
+    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos()
+      + K.sec(t('resumen.baselineEquipos'), notaBl) + `<div class="fichas cols-2">${fichas}</div>` + empezar + preguntas();
   }
   /** Equipos nuevos en este export (se ofrece medirlos) y qué queda fuera de la medición (equipos pequeños y tareas sin equipo). */
   function avisoEquipos() {
@@ -274,12 +276,30 @@
 
   // ---------- Comparar ----------
   const CMP_ORDEN = ['plazo_p85', 'retrabajo', 'reabiertas', 'bloqueo', 'arrastradas'];
+  /**
+   * Dónde cae una cifra sobre la baseline de su propio equipo, de 0 a 100. La baseline ocupa siempre el centro (30 a 70)
+   * y a la derecha está siempre lo mejor: así se comparan equipos sin comparar sus cifras, que no son comparables.
+   */
+  function sobreSuBaseline(id, m) {
+    const ref = m.ref, dir = (cat().medidas[id] || {}).dir;
+    let z = ref.hi === ref.lo ? (m.valor === ref.lo ? 0.5 : m.valor > ref.lo ? 2 : -1) : (m.valor - ref.lo) / (ref.hi - ref.lo);
+    if (dir === 'menos') z = 1 - z;
+    return Math.max(3, Math.min(97, 30 + z * 40));
+  }
+  function celdaSobre(e, id) {
+    const m = e.medidas[id];
+    if (!m || !m.disponible || m.valor == null) return `<td class="sb-cel"><span class="faint small">${esc(m && !m.disponible ? t('medida.noSeMide') : t('comun.sinDatos'))}</span></td>`;
+    const titulo = nombreEquipo(e.nombre) + ' · ' + nombreMedida(id) + ': ' + K.conUnidad(id, m.valor) + ' · ' + K.rangoBanda(id, m);
+    if (!m.ref) return `<td class="sb-cel" title="${esc(titulo)}"><div class="sobre sin"></div><span class="small">${esc(valor(id, m.valor))}</span> <span class="faint tiny">${esc(m.sinHistorico ? t('medida.sinHistoricoCorto') : t('estado.sinBanda'))}</span></td>`;
+    return `<td class="sb-cel"><button class="sobre-btn" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" title="${esc(titulo)}" aria-label="${esc(titulo)}"><span class="sobre"><i class="sb-band"></i><b class="sb-now tone-${K.tonoDe(m)}" style="left:${sobreSuBaseline(id, m).toFixed(1)}%"></b></span><span class="small t-${K.tonoDe(m)}">${esc(valor(id, m.valor))}</span></button></td>`;
+  }
   function comparar() {
     const vm = S.vm, cols = vm.kpis;
-    // Cada equipo frente a su propia banda: una fila por equipo, sin ranking
-    const tabla = `<div class="ficha"><div class="table-wrap"><table class="cmp"><tr><th>${esc(t('comun.equipo'))}</th>${cols.map((id) => `<th>${esc(nombreMedida(id))}</th>`).join('')}</tr>
-      ${vm.equipos.map((e) => `<tr><td><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button></td>${cols.map((id) => { const m = e.medidas[id]; return `<td class="num">${m && m.disponible ? `<span class="pill tone-${K.tonoDe(m)}">${esc(valor(id, m.valor))}</span>` : `<span class="faint">${esc(t('comun.sinDatos'))}</span>`}</td>`; }).join('')}</tr>`).join('')}</table></div>
-      <div class="tiny muted" style="margin-top:8px">${esc(t('comparar.leyenda'))}</div></div>`;
+    // Cada equipo sobre su propia baseline: una fila por equipo (y el área), sin ranking. Todas las barras se leen igual.
+    const filas = (vm.equipos.length > 1 ? [vm.area] : []).concat(vm.equipos);
+    const tabla = `<div class="ficha"><div class="table-wrap"><table class="cmp cmp-bl"><tr><th>${esc(t('comun.equipo'))}</th>${cols.map((id) => `<th>${esc(nombreMedida(id))}</th>`).join('')}</tr>
+      ${filas.map((e) => `<tr${e === vm.area ? ' class="fila-area"' : ''}><td>${e === vm.area ? `<b>${esc(t('equipo.area'))}</b>` : `<button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button>`}</td>${cols.map((id) => celdaSobre(e, id)).join('')}</tr>`).join('')}</table></div>
+      <div class="bl-leyenda small muted"><span><i class="lg-band"></i>${esc(t('comparar.leyendaBanda'))}</span><span>${esc(t('comparar.leyendaLado'))}</span></div></div>`;
     const cmps = vm.comparaciones;
     const grupos = cmps.length ? cmps.map((c) => {
       const filas = CMP_ORDEN.filter((m) => c.medidas[m] && c.medidas[m].disponible).map((m) => {
@@ -296,6 +316,43 @@
       + K.sec(t('comparar.cadaEquipo')) + tabla + K.sec(t('comparar.grupos')) + `<div class="fichas">${grupos}</div>`;
   }
   EP.accion('fuentes-equipos', () => { S.fuentesTab = 'equipos'; EP.go('fuentes'); });
+
+  // ---------- Baseline: todos los equipos, cada indicador con su gráfico y su baseline sombreada ----------
+  /** Un indicador en la página Baseline: estado, cifra, su baseline y el gráfico de 16 semanas. */
+  function bloqueBaseline(e, id) {
+    const m = e.medidas[id], ok = m && m.disponible;
+    // Lo que no es la banda (límite fijo sin baseline, dato dudoso) en una línea; el texto entero, al pasar por encima
+    const por = ok && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? K.porque(id, m) : '';
+    const nota = por ? `<span class="t-why" title="${esc(por)}">${esc(K.primeraFrase(por))}</span>`
+      : ok && m.aviso ? `<span class="t-aviso" title="${esc(K.avisoTexto(m))}">${esc(K.avisoCorto(id, m))}</span>` : '';
+    const vent = K.ventanaDistinta(m);
+    return `<div class="bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
+      <div class="bl-cab"><span title="${esc(K.unidad(id))}">${esc(nombreMedida(id))}</span>${ok ? K.estadoChip(m) : ''}</div>
+      <div class="bl-cifras"><b class="t-${K.tonoDe(m)}">${esc(ok ? valor(id, m.valor) : t('comun.sinDatos'))}${vent ? `<small class="bl-vent">${esc(vent)}</small>` : ''}</b><span class="small muted">${esc(ok ? K.rango(id, m) : K.porque(id, m))}</span>${nota}</div>
+      ${ok ? K.grafico(id, m, { h: 52, sinEje: true }) : ''}</div>`;
+  }
+  function referencias() {
+    const vm = S.vm, eqs = EP.visibles(), dest = K.destacados();
+    const prov = eqs.filter(K.baselineProvisional);
+    // Toda el área primero (salvo en el rol Equipo, que solo ve el suyo)
+    const conArea = S.role === 'equipo' || eqs.length < 2 ? eqs : [vm.area].concat(eqs);
+    const fichas = conArea.map((e) => {
+      const area = e === vm.area;
+      const refs = dest.map((id) => e.medidas[id]).filter((m) => m && m.disponible && m.ref);
+      // La misma regla que el recuento del menú y el titular: entregas y bugs con sus semanas completas
+      const provisional = !refs.length || K.baselineProvisional(e);
+      const corta = refs.filter((m) => m.referencia !== 'establecida')[0];
+      const cab = (area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e) + K.equipoChip(e)) + (provisional ? K.chip('warn', t('ref.provisional')) : '');
+      // El área se calcula sin los equipos que aún no tienen baseline: se dice cuáles
+      const sinEllos = area && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span> ` : '';
+      const pie = sinEllos + (corta ? `<span class="small t-warn">${esc(t('ref.motivo', { n: corta.ref ? corta.ref.n : 0, r: vm.semanas.R }))}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`)
+        + (area ? '' : `<button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`);
+      return K.ficha(cab, `<div class="bls">${dest.map((id) => bloqueBaseline(e, id)).join('')}</div>`, pie, ` data-tipo="baseline" data-team="${esc(e.nombre)}"`);
+    }).join('');
+    const leyenda = `<div class="bl-leyenda small muted"><span><i class="lg-band"></i>${esc(t('ref.leyendaBanda', { r: vm.semanas.R }))}</span><span><i class="lg-linea"></i>${esc(t('ref.leyendaAhora', { k: vm.semanas.K }))}</span><span><i class="lg-corte"></i>${esc(t('ref.leyendaCorte'))}</span></div>`;
+    return K.statusBar(prov.length ? 'warn' : 'good', esc(prov.length ? t('ref.provisionalEn', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) }) : t('ref.todas')), [esc(t('ref.items1', { r: vm.semanas.R })), esc(t('ref.items2'))])
+      + leyenda + `<div class="fichas cols-1">${fichas}</div>`;
+  }
 
   // ---------- Calidad del dato ----------
   function calidad() {
@@ -441,5 +498,5 @@
   }
   EP.accion('bloqueo-estados', () => { if (!S.onboarded) { S.ob.step = 'revision'; S.ob.abierto = Object.assign({}, S.ob.abierto || {}, { estados: true }); EP.render(); window.scrollTo(0, 0); } else { S.fuentesTab = 'mapeo'; EP.go('fuentes'); } });
 
-  Object.assign(EP.vistas, { cabecera, resumen, equipos, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
+  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
 })();

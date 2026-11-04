@@ -74,3 +74,23 @@ test('seguimiento: una iniciativa recién empezada está midiendo y una futura, 
   assert.ok(s3.progreso > 0.4 && s3.progreso < 0.6, 'a mitad de la ventana de 8 semanas: ' + s3.progreso);
   assert.equal(s3.completa, false);
 });
+
+test('seguimiento: cada iniciativa trae la baseline de sus equipos antes de empezar, sacada solo de semanas sin el cambio', () => {
+  for (const x of r.iniciativas) {
+    const s = seguimiento(x.iniciativa, x.evaluacion, r.preparacion);
+    const previos = s.serie.filter((p) => p.fecha.getTime() <= s.inicio.getTime() && p.iniciativa != null).map((p) => p.iniciativa as number);
+    if (previos.length < 6) { assert.equal(s.baseline, null, x.iniciativa.id); continue; }
+    assert.ok(s.baseline, 'baseline de ' + x.iniciativa.id);
+    assert.equal(s.baseline!.n, previos.length);
+    assert.ok(s.baseline!.lo <= s.baseline!.med && s.baseline!.med <= s.baseline!.hi);
+    // Dentro de lo que se vio antes de empezar: nada del después entra en la baseline
+    assert.ok(s.baseline!.lo >= Math.min(...previos) && s.baseline!.hi <= Math.max(...previos));
+  }
+  assert.ok(r.iniciativas.some((x) => seguimiento(x.iniciativa, x.evaluacion, r.preparacion).baseline), 'al menos una con baseline');
+  // Una iniciativa que empieza antes de tener seis semanas de serie no tiene baseline: no se inventa una
+  const ctx = r.preparacion.ctx;
+  const temprano = ctx.semanas[2];
+  const dia = (d: Date) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const pronto = { ...iniciativas[0], id: 'pronto', equipos: ['Payments'], medidas_objetivo: [{ medida: 'retrabajo', direccion: 'bajar' }], fecha_inicio: dia(temprano) };
+  assert.equal(seguimiento(pronto, evaluarIniciativa(pronto, r.preparacion), r.preparacion).baseline, null);
+});

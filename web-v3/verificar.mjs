@@ -191,7 +191,7 @@ async function recorrer(p, etiqueta) {
   // Una ficha por equipo y, con más de un equipo, otra de toda el área
   ok('resumen: la baseline de cada equipo y la de toda el área', filasBl === (nEq + (nEq > 1 ? 1 : 0)) * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
   const textoMenu = await p.textContent('#nav');
-  ok('el menú dice Qué hacer y Datos, sin página de baseline', /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Baseline|Referencias|Baseline/.test(textoMenu), textoMenu);
+  ok('el menú dice Baseline, Qué hacer y Datos', /Baseline/.test(textoMenu) && /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Referencias|Línea base/.test(textoMenu), textoMenu);
   // Los gráficos de cada indicador están en la ficha de equipo
   await ir(p, 'equipos'); await p.waitForTimeout(100);
   ok('ficha de equipo con un gráfico por indicador destacado', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nK);
@@ -616,7 +616,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
       return { wipMal, filas: filas.length, texto: filas.map((x) => x.innerText).join(' | ').slice(0, 200), motivo: filas[0] ? filas[0].getAttribute('title') : '' };
     });
     ok('sin cambios de estado: el trabajo en curso no da alerta', !r.wipMal.length, JSON.stringify(r.wipMal));
-    ok('sin cambios de estado: el tiempo de ciclo dice en el baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
+    ok('sin cambios de estado: el tiempo de ciclo dice en la baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
     await p.context().close();
   }
   // Datos de ejemplo: sin baseline, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
@@ -1132,24 +1132,24 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
-// ---------- 16. Lenguaje: un solo término (baseline), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
+// ---------- 16. Lenguaje: un solo término (Baseline), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
 {
   const p = await pagina(1280, 720);
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
-  // Ninguna página dice "lo normal", "Baseline", "rango habitual", "franja", "Context" ni "KPI"
+  // Ninguna página dice "lo normal", "línea base", "rango habitual", "franja", "Context" ni "KPI"
   const malas = [];
   for (const rol of ['direccion', 'pmo', 'equipo']) {
     await fijarRol(p, rol);
     for (const v of await A(p, () => window.EP.POR_ROL[window.EP.S.role])) {
       await ir(p, v); await quieto(p);
       const txt = await A(p, () => document.querySelector('.content').innerText);
-      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
+      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|[Ll][ií]neas? base|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
       if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
     }
   }
-  ok('lenguaje: un solo término (baseline) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
+  ok('lenguaje: un solo término (Baseline) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
   await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
   const unidades = await A(p, () => [...document.querySelectorAll('.tile[data-medida]')].map((x) => ({ id: x.dataset.medida, u: (x.querySelector('.t-unit') || {}).textContent || '' })));
   ok('cifras con unidad y con las semanas que miran', unidades.length > 0 && unidades.every((x) => /semana/.test(x.u)), JSON.stringify(unidades));
@@ -1170,16 +1170,16 @@ const medirMaquetacion = () => {
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
-  // Primera visita: recorrido de tres pasos (Resumen, Equipos, Qué hacer) que se puede terminar
+  // Primera visita: recorrido de tres pasos (Resumen, Baseline, Qué hacer) que se puede terminar
   const pasos = [];
   for (let i = 0; i < 3; i++) { pasos.push(await A(p, () => ({ v: window.EP.S.view, paso: (document.querySelector('.recorrido .tiny') || {}).textContent || '' }))); await clic(p, '[data-action="recorrido-sig"]'); }
   const trasRecorrido = await A(p, () => ({ hay: !!document.querySelector('.recorrido'), hecho: !!window.EP.S.prefs.recorridoHecho }));
-  ok('recorrido de primera visita: Resumen, Equipos y Qué hacer, y no vuelve a salir', pasos.map((x) => x.v).join(',') === 'resumen,equipos,recomendaciones' && pasos.every((x, i) => x.paso.indexOf(String(i + 1)) >= 0) && !trasRecorrido.hay && trasRecorrido.hecho, JSON.stringify({ pasos, trasRecorrido }));
+  ok('recorrido de primera visita: Resumen, Baseline y Qué hacer, y no vuelve a salir', pasos.map((x) => x.v).join(',') === 'resumen,referencias,recomendaciones' && pasos.every((x, i) => x.paso.indexOf(String(i + 1)) >= 0) && !trasRecorrido.hay && trasRecorrido.hecho, JSON.stringify({ pasos, trasRecorrido }));
   await ir(p, 'resumen'); await quieto(p);
   const menu = () => A(p, () => [...document.querySelectorAll('#nav button')].filter((b) => !b.classList.contains('hidden')).map((b) => b.dataset.view));
   const menus = {};
   for (const rol of ['direccion', 'pmo', 'equipo']) { await fijarRol(p, rol); menus[rol] = (await menu()).join(','); }
-  ok('menú: el mismo para los tres roles, cinco entradas y Ajustes; el PMO empieza en el Resumen', pasos[0].v === 'resumen' && menus.direccion === menus.pmo && menus.pmo === menus.equipo && menus.pmo.split(',').length <= 6 && menus.pmo.indexOf('cortes') < 0 && menus.pmo.indexOf('referencias') < 0, JSON.stringify({ menus }));
+  ok('menú: el mismo para los tres roles, Baseline la segunda entrada, seis entradas y Ajustes; el PMO empieza en el Resumen', pasos[0].v === 'resumen' && menus.direccion === menus.pmo && menus.pmo === menus.equipo && menus.pmo.split(',').length <= 7 && menus.pmo.indexOf('cortes') < 0 && menus.pmo.split(',')[1] === 'referencias', JSON.stringify({ menus }));
   await fijarRol(p, 'pmo');
   await ir(p, 'recomendaciones'); await quieto(p);
   const tabsQh = await A(p, () => [...document.querySelectorAll('.sub-tabs .tab')].map((x) => x.dataset.view).join(','));
@@ -1314,6 +1314,110 @@ const medirMaquetacion = () => {
     ok('sin errores de consola en la sección de la auditoría (export con fallos)', !p.errores.length, p.errores.slice(0, 3).join(' | '));
     await p.context().close();
   }
+}
+
+// ---------- 19. La baseline como columna vertebral: página Baseline, Resumen, Qué hacer, Comparar e Iniciativas ----------
+{
+  const p = await pagina(1280, 800);
+  await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
+  await fijarIdioma(p, 'es'); await fijarRol(p, 'direccion');
+  // Página Baseline: toda el área y cada equipo, cada indicador destacado con su gráfico y el mismo color que su estado
+  await ir(p, 'referencias'); await quieto(p);
+  const bl = await A(p, () => {
+    const EP = window.EP, K = EP.kit, vm = EP.S.vm, dest = K.destacados();
+    const fichas = [...document.querySelectorAll('#page [data-tipo="baseline"]')];
+    const malTono = [], sinGrafico = [];
+    fichas.forEach((f) => f.querySelectorAll('.bl').forEach((b) => {
+      const e = b.dataset.team === vm.area.nombre ? vm.area : vm.equipos.find((x) => x.nombre === b.dataset.team), m = e && e.medidas[b.dataset.medida];
+      const tono = ((b.querySelector('.bl-cifras b') || {}).className || '').replace('t-', '');
+      if (tono !== K.tonoDe(m)) malTono.push(b.dataset.team + ':' + b.dataset.medida + ' ' + tono + '/' + K.tonoDe(m));
+      if (m && m.disponible && Array.isArray(m.serie) && !b.querySelector('svg.grafico')) sinGrafico.push(b.dataset.team + ':' + b.dataset.medida);
+    }));
+    const prov = EP.visibles().filter(K.baselineProvisional).length;
+    const cuenta = (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '';
+    return { fichas: fichas.length, equipos: EP.visibles().length, bloques: fichas.map((f) => f.querySelectorAll('.bl').length), dest: dest.length, primera: fichas[0] && fichas[0].dataset.team, area: vm.area.nombre,
+      malTono, sinGrafico, prov, cuenta, titular: document.querySelector('#page .status b').textContent, leyenda: !!document.querySelector('#page .bl-leyenda') };
+  });
+  ok('Baseline: toda el área primero y una ficha por equipo, cada una con sus indicadores destacados', bl.fichas === bl.equipos + 1 && bl.primera === bl.area && bl.bloques.every((n) => n === bl.dest) && bl.leyenda, JSON.stringify(bl));
+  ok('Baseline: cada indicador con su gráfico y la cifra del color de su estado', !bl.malTono.length && !bl.sinGrafico.length, JSON.stringify({ malTono: bl.malTono, sinGrafico: bl.sinGrafico }));
+  ok('Baseline: el titular y el número del menú cuentan los mismos equipos con baseline provisional', (bl.prov ? /provisional/.test(bl.titular) && bl.cuenta === String(bl.prov) : /Todas las baselines/.test(bl.titular) && !bl.cuenta), JSON.stringify({ prov: bl.prov, cuenta: bl.cuenta, titular: bl.titular }));
+  // Resumen: primero la baseline de cada equipo, después por dónde empezar (en el orden de Qué hacer) y al final las preguntas
+  await ir(p, 'resumen'); await quieto(p);
+  const res = await A(p, () => {
+    const h = [...document.querySelectorAll('#page .sec h2')].map((x) => x.textContent);
+    const filas = [...document.querySelectorAll('#page .que-hacer .rrow')].map((r) => r.querySelector('b').textContent);
+    return { h, filas, recs: window.EP.vistas.recsActivas(window.EP.visibles()).map((r) => r.titulo) };
+  });
+  const iB = res.h.indexOf('Cada equipo frente a su baseline'), iE = res.h.indexOf('Por dónde empezar'), iP = res.h.indexOf('Preguntas de dirección');
+  ok('Resumen: la baseline primero, después por dónde empezar y al final las preguntas de dirección', iB >= 0 && iB < iE && iE < iP, JSON.stringify(res.h));
+  ok('Resumen: por dónde empezar son las tres primeras de Qué hacer, en el mismo orden', res.filas.length === Math.min(3, res.recs.length) && res.filas.every((x, i) => x === res.recs[i]), JSON.stringify(res));
+  // Qué hacer: cada recomendación con medida enseña esa medida en sus equipos frente a su baseline, con la cifra del equipo
+  await ir(p, 'recomendaciones'); await quieto(p);
+  const qh = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, mal = [];
+    let con = 0, deberian = 0;
+    document.querySelectorAll('#page [data-rec]').forEach((f) => {
+      const r = vm.recs.find((x) => x.clave === f.dataset.rec);
+      const posibles = r && r.medida ? r.equipos.filter((n) => { const e = vm.equipos.find((x) => x.nombre === n), m = e && e.medidas[r.medida]; return m && m.disponible && m.ref && Array.isArray(m.serie); }) : [];
+      const minis = [...f.querySelectorAll('.mini-bl')];
+      if (posibles.length) deberian++;
+      if (minis.length) con++;
+      if (posibles.length && !minis.length) mal.push('sin gráfico: ' + r.titulo);
+      minis.forEach((x) => {
+        const e = vm.equipos.find((y) => y.nombre === x.dataset.team), m = e && e.medidas[x.dataset.medida];
+        if (!r || x.dataset.medida !== r.medida || r.equipos.indexOf(x.dataset.team) < 0) mal.push('otra medida o equipo: ' + x.dataset.team + ':' + x.dataset.medida);
+        else if (x.querySelector('.mini-cab b').textContent !== EP.valor(x.dataset.medida, m.valor) || !x.querySelector('svg.grafico .g-band')) mal.push('cifra o baseline: ' + x.dataset.team + ':' + x.dataset.medida);
+      });
+    });
+    return { con, deberian, mal };
+  });
+  ok('Qué hacer: cada recomendación con medida enseña su gráfico frente a la baseline de sus equipos, con su cifra', qh.deberian > 0 && qh.con === qh.deberian && !qh.mal.length, JSON.stringify(qh));
+  // Comparar: cada cifra sobre la baseline de su propio equipo; la baseline en el centro y lo mejor siempre a la derecha
+  await fijarRol(p, 'pmo'); await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
+  const cmp = await A(p, () => {
+    const EP = window.EP, K = EP.kit, vm = EP.S.vm, mal = [];
+    const marcas = [...document.querySelectorAll('#page .sobre-btn')];
+    marcas.forEach((b) => {
+      const e = b.dataset.team === vm.area.nombre ? vm.area : vm.equipos.find((x) => x.nombre === b.dataset.team), id = b.dataset.medida, m = e.medidas[id];
+      const dir = (window.CATALOGO.medidas[id] || {}).dir, x = parseFloat(b.querySelector('.sb-now').style.left);
+      const dentro = m.valor >= m.ref.lo && m.valor <= m.ref.hi, mejor = dir === 'menos' ? m.valor < m.ref.lo : m.valor > m.ref.hi;
+      const bien = dentro ? x >= 30 && x <= 70 : mejor ? x > 70 : x < 30;
+      if (!bien) mal.push(b.dataset.team + ':' + id + ' x=' + x);
+      if (!b.querySelector('.sb-now').classList.contains('tone-' + K.tonoDe(m))) mal.push('color ' + b.dataset.team + ':' + id);
+    });
+    return { n: marcas.length, filas: document.querySelectorAll('#page table.cmp-bl tr').length - 1, equipos: vm.equipos.length, mal };
+  });
+  ok('Comparar: cada cifra sobre su propia baseline (en el centro), lo mejor a la derecha y el color de su estado', cmp.n > 0 && cmp.filas === cmp.equipos + 1 && !cmp.mal.length, JSON.stringify(cmp));
+  // Iniciativas: el después se lee contra la baseline que tenían sus equipos antes de empezar
+  await ir(p, 'iniciativas'); await quieto(p);
+  const ini = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, mal = [];
+    let con = 0;
+    vm.iniciativas.forEach(({ ini, s }) => {
+      const card = [...document.querySelectorAll('#page .ficha.ini')].find((c) => c.querySelector('.f-title').textContent === ini.nombre);
+      if (!card) { mal.push('sin tarjeta: ' + ini.nombre); return; }
+      if (!s.baseline) { if (card.querySelector('.ini-bl')) mal.push('baseline inventada: ' + ini.nombre); return; }
+      con++;
+      if (!card.querySelector('.ini-chart .ic-bl')) mal.push('sin baseline en el gráfico: ' + ini.nombre);
+      if (s.despues == null) return;
+      const bl = s.baseline, esperado = s.despues >= bl.lo && s.despues <= bl.hi ? 'Dentro' : (s.direccion === 'bajar' ? s.despues < bl.lo : s.despues > bl.hi) ? 'Mejor' : 'Peor';
+      const chip = (card.querySelector('.ini-bl .chip') || {}).textContent || '';
+      if (chip.indexOf(esperado) !== 0) mal.push(ini.nombre + ': ' + chip + ' / ' + esperado);
+    });
+    return { n: vm.iniciativas.length, con, mal };
+  });
+  ok('Iniciativas: el gráfico y el después frente a la baseline de antes de empezar', ini.con > 0 && !ini.mal.length, JSON.stringify(ini));
+  // El rol Equipo ve solo la baseline de su equipo; en inglés, la página se llama igual
+  await fijarRol(p, 'equipo'); await ir(p, 'referencias'); await quieto(p);
+  const soloSuyo = await A(p, () => [...document.querySelectorAll('#page [data-tipo="baseline"]')].map((f) => f.dataset.team));
+  ok('Baseline en el rol Equipo: solo su equipo, sin toda el área', soloSuyo.length === 1 && soloSuyo[0] === (await A(p, () => window.EP.S.team)), JSON.stringify(soloSuyo));
+  await fijarIdioma(p, 'en'); await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
+  const en = await A(p, () => ({ menu: document.querySelector('#nav [data-view="referencias"]').textContent, titulo: document.getElementById('page-title').textContent, titular: document.querySelector('#page .status b').textContent }));
+  ok('Baseline en inglés', /Baseline/.test(en.menu) && en.titulo === 'Baseline' && /baselines? /i.test(en.titular), JSON.stringify(en));
+  await fijarIdioma(p, 'es');
+  await p.screenshot({ path: join(SALIDA, '19-baseline.png'), fullPage: true });
+  ok('sin errores de consola en la sección de la baseline', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
+  await p.context().close();
 }
 
 await navegador.close();

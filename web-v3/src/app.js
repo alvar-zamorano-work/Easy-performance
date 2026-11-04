@@ -320,15 +320,17 @@
   // ---------- navegación y render ----------
   // El mismo menú para todos los roles: el rol solo decide la página de inicio y, en Equipo, qué equipo se ve.
   // "Qué hacer" junta recomendaciones e iniciativas; "Datos", la calidad del dato y las fuentes. Cortes va en Labs.
-  // La página de baseline sale: la vista de toda el área está en el Resumen y los gráficos, en la ficha de cada equipo.
-  const PAGINAS = ['resumen', 'equipos', 'recomendaciones', 'iniciativas', 'epicas', 'calidad', 'fuentes', 'ajustes', 'cortes'];
+  // Baseline es la segunda entrada: medir a cada equipo contra su propia baseline es lo que diferencia al producto, y su
+  // página (todos los equipos con su gráfico y su baseline sombreada) es la que mejor lo enseña.
+  const PAGINAS = ['resumen', 'referencias', 'equipos', 'recomendaciones', 'iniciativas', 'epicas', 'calidad', 'fuentes', 'ajustes', 'cortes'];
   const POR_ROL = { direccion: PAGINAS, pmo: PAGINAS, equipo: PAGINAS };
   const INICIO_ROL = { direccion: 'resumen', pmo: 'resumen', equipo: 'equipos' };
   /** Grupo del menú de cada página (la entrada que se marca). */
   const GRUPO = { iniciativas: 'recomendaciones', fuentes: 'calidad' };
   /** Recorrido de la primera visita: tres pasos, cada uno en su página, con "Siguiente" y "Saltar".
    *  Se da por visto al empezar: si se recarga a medias no vuelve solo, se puede ver otra vez desde Ajustes. */
-  const PASOS = [null, 'resumen', 'equipos', 'recomendaciones'];
+  // El segundo paso es la Baseline: es lo que diferencia al producto y lo que hay que ver el primer día
+  const PASOS = [null, 'resumen', 'referencias', 'recomendaciones'];
   function empezarRecorrido() { S.recorrido = 1; S.prefs.recorridoHecho = true; guardarPrefs(); }
   function recorrido() {
     const n = S.recorrido; if (!n || S.view !== PASOS[n]) return '';
@@ -403,6 +405,8 @@
       const vt = visibles().map((e) => e.nombre);
       const cuentas = {
         recomendaciones: S.vm.recs.filter((r) => !S.dismissed[r.clave] && r.equipos.some((e) => vt.indexOf(e) >= 0)).length,
+        // Equipos con la baseline aún provisional (la misma regla que el titular de la página)
+        referencias: visibles().filter(EP.kit.baselineProvisional).length,
         calidad: S.vm.fiabilidad.revisar,
       };
       document.querySelectorAll('#nav button').forEach((b) => {
