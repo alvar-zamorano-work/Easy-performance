@@ -139,6 +139,17 @@ test('asistente: respuesta con cifras del paquete pasa; con una cifra inventada 
   assert.equal(validarChat(JSON.stringify(suelta), paq).ok, false);
 });
 
+test('asistente: un recuento de la página no apoya una cifra inventada como si fuera un porcentaje', () => {
+  // Con "9 de 10 equipos" entre las cifras de la página, 987 quedaba a menos del 2 % de 10 x 100 y pasaba
+  const extra = { fiabilidad: { comprobaciones: [{ id: 'historia', valor: '9 de 10 equipos', estado: 'revisar' }] } };
+  const mala = { respuesta: 'Payments termina 987 tareas por semana.', cifras: [{ equipo: 'Payments', medida: 'entregas', valor: 987 }] };
+  const res = validarChat(JSON.stringify(mala), paq, { extra });
+  assert.equal(res.ok, false);
+  // Una proporción de la página sí se puede citar en porcentaje
+  const pct = { respuesta: 'El 92 % de lo terminado trae el tiempo en cada estado.', cifras: [] };
+  assert.equal(validarChat(JSON.stringify(pct), paq, { extra: { tiempos: 0.92 } }).ok, true);
+});
+
 test('asistente: porcentajes guardados como fracción, fechas, nombres y ventanas no cuentan como cifras', () => {
   const rw = (paq.medidas.area as any).retrabajo.valor as number;
   const t = { respuesta: `En las últimas 8 semanas, el retrabajo del área es del ${Math.round(rw * 100)} %. Datos hasta el 2026-10-15. 2 equipos con alerta.`, cifras: [{ equipo: null, medida: 'retrabajo', valor: rw }] };

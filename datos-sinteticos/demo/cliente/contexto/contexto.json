@@ -1,0 +1,25 @@
+{
+  "documentos": [
+    {
+      "categoria": "metodo",
+      "titulo": "How the teams work",
+      "resumen": "Scrum with two-week sprints in all ten teams. Code review is mandatory. Platform and Digital Channels report to the same technology director.",
+      "fuente": "Interview with the team leads",
+      "fecha": "2026-10-26"
+    },
+    {
+      "categoria": "contratos",
+      "titulo": "Vendor contracts",
+      "resumen": "Vendor North runs Payments and Mobile App; Vendor South runs Lending. Both work on a capacity basis (fixed FTE per month), with no commitment on lead times.",
+      "fuente": "Technology management",
+      "fecha": "2026-10-26"
+    },
+    {
+      "categoria": "cambios",
+      "titulo": "Changes this quarter",
+      "resumen": "Payments changed its QA vendor in September. Mobile App is in the middle of a large release. Identity started using Jira in August.",
+      "fuente": "Technology management",
+      "fecha": "2026-10-26"
+    }
+  ]
+}

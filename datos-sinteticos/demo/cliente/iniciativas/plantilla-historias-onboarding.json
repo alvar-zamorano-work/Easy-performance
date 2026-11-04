@@ -1,0 +1,21 @@
+{
+  "id": "plantilla-historias-onboarding",
+  "nombre": "Story template with acceptance criteria in Onboarding",
+  "descripcion": "Every new story uses a template with context, acceptance criteria and references before it enters a sprint.",
+  "fecha_inicio": "2026-10-19",
+  "fecha_fin": null,
+  "equipos": [
+    "Onboarding"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "retrabajo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Rework below 6% in two months.",
+  "estado": "en_curso",
+  "origen": "retrabajo",
+  "evaluacion": null,
+  "notas": ""
+}

@@ -1,0 +1,21 @@
+{
+  "id": "pares-tarjetas",
+  "nombre": "Pair programming on complex stories in Cards",
+  "descripcion": "Stories of five points or more are developed in pairs from start to review.",
+  "fecha_inicio": "2026-07-06",
+  "fecha_fin": null,
+  "equipos": [
+    "Cards"
+  ],
+  "medidas_objetivo": [
+    {
+      "medida": "retrabajo",
+      "direccion": "bajar"
+    }
+  ],
+  "efecto_esperado": "Rework below 7% in two months.",
+  "estado": "en_curso",
+  "origen": "retrabajo",
+  "evaluacion": null,
+  "notas": ""
+}

@@ -169,8 +169,9 @@ async function recorrer(p, etiqueta) {
   ok('la demo entra directamente', await p.isVisible('#app') && await p.isVisible('#demo-band'));
   await recorrer(p, '1280');
   await fijarIdioma(p, 'es'); await fijarRol(p, 'pmo');
-  // Panel lateral
+  // Panel lateral (en un equipo con alguna recomendación, para poder abrir su caso)
   await ir(p, 'equipos'); await p.waitForTimeout(150);
+  await A(p, () => { const EP = window.EP, e = EP.S.vm.equipos.find((x) => EP.vistas.recsActivas([x]).length); if (e) { EP.S.team = e.nombre; EP.render(); } }); await p.waitForTimeout(150);
   await p.click('.tile[data-kind="medida"]'); await p.waitForTimeout(200);
   const filas = await p.$$eval('#drawer tr', (x) => x.length);
   ok('panel de una medida con su lista de tareas', filas > 2, filas + ' filas');
@@ -281,7 +282,9 @@ async function recorrer(p, etiqueta) {
   await p.waitForFunction(() => !window.EP.S.chat.busy);
   ok('respuesta con cifras del paquete se enseña', /cifras comprobadas/.test(await p.textContent('#assistant')) && /termina/.test(await p.textContent('#assistant')));
   modo = 'inventada';
-  await p.click('[data-chat="ask"]'); await p.waitForFunction(() => !window.EP.S.chat.busy);
+  // Se espera a que llegue la respuesta nueva: con un paquete grande la petición tarda en salir y busy aún no se ha puesto
+  const antesInventada = await A(p, () => window.EP.S.chat.msgs.length);
+  await p.click('[data-chat="ask"]'); await p.waitForFunction((n) => window.EP.S.chat.msgs.length >= n + 2 && !window.EP.S.chat.busy, antesInventada);
   ok('respuesta con una cifra inventada se rechaza', /no la enseño/.test(await p.textContent('#assistant')) && !/987/.test(await p.textContent('#assistant')));
   modo = 'error';
   await p.fill('#chat-input', 'Otra'); await p.press('#chat-input', 'Enter'); await p.waitForFunction(() => !window.EP.S.chat.busy);
@@ -1445,14 +1448,16 @@ const medirMaquetacion = () => {
   await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
   const estados = await A(p, () => {
     const EP = window.EP, vm = EP.S.vm, [a, b] = vm.equipos;
+    // Equipos que ya salían sin baseline completa antes de forzar estos dos (la demo tiene uno que lleva poco tiempo midiéndose)
+    const antes = Number((document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || 0);
     const ciclo = a.medidas.ciclo; a.medidas.ciclo = Object.assign({}, ciclo, { referencia: 'provisional', ref: Object.assign({}, ciclo.ref, { n: 8 }) });
     Object.keys(b.medidas).forEach((id) => { const m = b.medidas[id]; if (m) b.medidas[id] = Object.assign({}, m, { ref: undefined, referencia: 'sin' }); });
     EP.render();
     const ficha = (n) => { const f = document.querySelector(`#page [data-tipo="baseline"][data-team="${CSS.escape(n)}"]`); return { cab: f.querySelector('.f-head').innerText.replace(/\s+/g, ' '), pie: f.querySelector('.f-foot').innerText.replace(/\s+/g, ' ') }; };
-    return { a: a.nombre, b: b.nombre, fa: ficha(a.nombre), fb: ficha(b.nombre), titular: document.querySelector('#page .status b').textContent, menu: (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '' };
+    return { a: a.nombre, b: b.nombre, fa: ficha(a.nombre), fb: ficha(b.nombre), titular: document.querySelector('#page .status b').textContent, menu: (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '', antes };
   });
   ok('Baseline provisional: cabecera, pie, titular y menú dicen lo mismo', /Provisional/.test(estados.fa.cab) && /8 semanas/.test(estados.fa.pie) && estados.titular.indexOf('provisional en ' + estados.a) >= 0, JSON.stringify(estados));
-  ok('Sin baseline: "Aún sin baseline" en la cabecera, el pie y el titular, y el menú cuenta los dos equipos', /Aún sin baseline/.test(estados.fb.cab) && /Aún sin baseline/.test(estados.fb.pie) && !/calculada con/.test(estados.fb.pie) && estados.titular.indexOf('Aún sin baseline en ' + estados.b) >= 0 && estados.menu === '2', JSON.stringify(estados));
+  ok('Sin baseline: "Aún sin baseline" en la cabecera, el pie y el titular, y el menú cuenta los dos equipos más los que ya había', /Aún sin baseline/.test(estados.fb.cab) && /Aún sin baseline/.test(estados.fb.pie) && !/calculada con/.test(estados.fb.pie) && estados.titular.indexOf('Aún sin baseline en ' + estados.b) >= 0 && estados.menu === String(estados.antes + 2), JSON.stringify(estados));
   ok('sin errores de consola en la sección de la baseline', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
   await p.context().close();
 }

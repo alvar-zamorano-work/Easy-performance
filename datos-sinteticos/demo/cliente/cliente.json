@@ -1,0 +1,191 @@
+{
+  "version": 2,
+  "nombre": "Sample bank",
+  "sector": "banking",
+  "plataforma": "jira",
+  "mapeoEstados": {
+    "To Do": "pendiente",
+    "In Progress": "en_curso",
+    "In Review": "en_revision",
+    "Blocked": "bloqueado",
+    "Done": "terminado"
+  },
+  "equipos": {
+    "campo": "equipo",
+    "lista": [
+      {
+        "id": "pay",
+        "nombre": "Payments",
+        "tipo": "proveedor",
+        "proveedor": "Vendor North",
+        "area": "Platform",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 9,
+            "origen": "contrato"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "mob",
+        "nombre": "Mobile App",
+        "tipo": "proveedor",
+        "proveedor": "Vendor North",
+        "area": "Digital Channels",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 8,
+            "origen": "contrato"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "por",
+        "nombre": "Customer Portal",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Digital Channels",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 7,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "rsk",
+        "nombre": "Risk",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Platform",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 6,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "cor",
+        "nombre": "Core Banking",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Platform",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 10,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "crd",
+        "nombre": "Cards",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Digital Channels",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 7,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "onb",
+        "nombre": "Onboarding",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Digital Channels",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 5,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "len",
+        "nombre": "Lending",
+        "tipo": "proveedor",
+        "proveedor": "Vendor South",
+        "area": "Platform",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 5,
+            "origen": "contrato"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "frd",
+        "nombre": "Fraud",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Platform",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 5,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      },
+      {
+        "id": "idn",
+        "nombre": "Identity",
+        "tipo": "interno",
+        "proveedor": null,
+        "area": "Digital Channels",
+        "usa_sprints": true,
+        "fte": [
+          {
+            "periodo": "2026-10",
+            "valor": 4,
+            "origen": "declarado"
+          }
+        ],
+        "limites": {}
+      }
+    ]
+  },
+  "objetivos": [
+    "tardamos",
+    "arreglos",
+    "comparar",
+    "datos"
+  ],
+  "medidas": [
+    "ciclo",
+    "retrabajo",
+    "entregas",
+    "bugs",
+    "arrastradas"
+  ]
+}

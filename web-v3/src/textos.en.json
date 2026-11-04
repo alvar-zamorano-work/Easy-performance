@@ -850,7 +850,7 @@
  "resumen.sinRango": "No baseline yet for {m}: more weeks needed",
  "resumen.sinHistorico": "No history to compare {m}: the export does not say when the finished work started",
  "resumen.cambioLimite": "Over the limit: {m}",
- "medida.masivo": "Mass closure in the weeks measured: {dias}. If it was a board clean-up, these deliveries are not reliable.",
+ "medida.masivo": "Mass closure in the weeks measured: {dias}. If it was a board clean-up, deliveries and lead times in those weeks are not reliable.",
  "medida.masivoDia": "{n} tasks on {f}",
  "narr.revisar": "Before reading the figures, check the data for {e}.",
  "columnas.revisar": "Review columns",
