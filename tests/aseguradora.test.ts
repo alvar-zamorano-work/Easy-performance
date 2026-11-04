@@ -80,16 +80,16 @@ test('aseguradora: una iniciativa funciona y otra acaba de empezar', () => {
   assert.deepEqual(estados, { 'definicion-listo-siniestros': 'funciona', 'limite-wip-canal-digital': 'midiendo' });
 });
 
-test('aseguradora (auditoría UX): un retrabajo que baja frente a su línea base no es una alerta ni "mucho retrabajo"', () => {
+test('aseguradora (auditoría UX): un retrabajo que baja frente a su baseline no es una alerta ni "mucho retrabajo"', () => {
   const eq = (n: string) => r.modelo.equipos.find((e) => e.nombre === n)!;
-  // Digital Channel: 22 % con una línea base de 25 % a 35 %. Mejora; el límite fijo del 20 % queda como aviso
+  // Digital Channel: 22 % con una baseline de 25 % a 35 %. Mejora; el límite fijo del 20 % queda como aviso
   const dc = eq('Digital Channel').medidas.retrabajo;
-  assert.ok((dc.valor as number) < dc.ref!.lo, 'por debajo de su línea base');
+  assert.ok((dc.valor as number) < dc.ref!.lo, 'por debajo de su baseline');
   assert.equal(dc.estado, 'bien'); assert.equal(dc.estadoPor, 'banda'); assert.equal(dc.aviso!.limite, 0.2);
   assert.ok(!eq('Digital Channel').casos.some((c) => c.id === 'retrabajo'), 'sin "mucho retrabajo" en Digital Channel');
-  // Policies: 17 % con una línea base de 9 % a 12 %. Empeora: sí es una alerta y sí salta el caso
+  // Policies: 17 % con una baseline de 9 % a 12 %. Empeora: sí es una alerta y sí salta el caso
   const po = eq('Policies').medidas.retrabajo;
-  assert.ok((po.valor as number) > po.ref!.hi, 'por encima de su línea base');
+  assert.ok((po.valor as number) > po.ref!.hi, 'por encima de su baseline');
   assert.notEqual(po.estado, 'bien');
   assert.ok(eq('Policies').casos.some((c) => c.id === 'retrabajo'), '"mucho retrabajo" en Policies');
 });

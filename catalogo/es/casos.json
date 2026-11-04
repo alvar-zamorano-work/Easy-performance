@@ -33,7 +33,7 @@
           "esfuerzo": "Medio"
         }
       ],
-      "comprobar": "En dos semanas no debería quedar ninguna tarea por encima de la línea base del equipo.",
+      "comprobar": "En dos semanas no debería quedar ninguna tarea por encima de la baseline del equipo.",
       "respaldo": "Métricas de flujo: edad del trabajo en curso (Daniel Vacanti)."
     },
     "demasiado_a_la_vez": {
@@ -67,7 +67,7 @@
           "esfuerzo": "Bajo"
         }
       ],
-      "comprobar": "En cuatro semanas el trabajo en curso debería bajar y el tiempo de ciclo volver a su línea base.",
+      "comprobar": "En cuatro semanas el trabajo en curso debería bajar y el tiempo de ciclo volver a su baseline.",
       "respaldo": "Ley de Little y método Kanban."
     },
     "sprint_no_cumple": {

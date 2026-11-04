@@ -82,7 +82,7 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
   }
   let rel: Resultado | null = null;
   if (ref) {
-    const rango = Tx('its baseline (', 'su línea base (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
+    const rango = Tx('its baseline (', 'su baseline (') + fmt(ref.lo) + Tx(' to ', ' a ') + fmt(ref.hi) + ')';
     const borde = def.dir === 'menos' ? ref.hi : ref.lo;
     const tol = Math.max(Math.abs(borde) * 0.25, DELTA_MIN[id] || 0);
     const margen = Math.max(Math.abs(borde) * 0.1, (DELTA_MIN[id] || 0) / 2);
@@ -115,16 +115,16 @@ export function estadoMedida(id: string, v: number | null | undefined, ref: Rang
   if (rev) {
     if (abs && abs.estado !== 'bien') return abs;
     const texto = rev === 'cero'
-      ? Tx('Its baseline was zero: in those weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Su línea base era cero: en esas semanas el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
-      : Tx('More than three times its baseline (', 'Más del triple de su línea base (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
+      ? Tx('Its baseline was zero: in those weeks the team had no activity of this kind. Check whether the way work is recorded has changed before comparing.', 'Su baseline era cero: en esas semanas el equipo no tenía actividad de este tipo. Comprueba si ha cambiado cómo se registra el trabajo antes de comparar.')
+      : Tx('More than three times its baseline (', 'Más del triple de su baseline (') + fmt(ref!.lo) + Tx(' to ', ' a ') + fmt(ref!.hi) + Tx('). Check whether it was a board clean-up or a change in how work is recorded.', '). Comprueba si fue una limpieza del tablero o un cambio en cómo se registra el trabajo.');
     return { estado: 'sin', texto, por: 'banda', revisar: rev };
   }
-  // Con línea base, manda la línea base del equipo: cada equipo se compara consigo mismo. Un límite fijo del catálogo
+  // Con baseline, manda la baseline del equipo: cada equipo se compara consigo mismo. Un límite fijo del catálogo
   // superado no cambia el estado (un equipo que mejora no recibe una alerta): se guarda como aviso y se enseña aparte.
   if (rel) return abs && abs.estado !== 'bien' ? { ...rel, aviso: { estado: abs.estado, limite: abs.limite ?? null, texto: abs.texto } } : rel;
-  // Sin línea base todavía, el límite fijo es la única referencia y sí da el estado
+  // Sin baseline todavía, el límite fijo es la única referencia y sí da el estado
   if (abs) return abs;
-  return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la línea base de este equipo.') };
+  return { estado: 'sin', texto: Tx('Not enough weeks yet for this team\'s baseline.', 'Aún no hay semanas suficientes para tener la baseline de este equipo.') };
 }
 
 /** Estado de la referencia: establecida con las semanas completas, provisional con banda pero menos semanas. */

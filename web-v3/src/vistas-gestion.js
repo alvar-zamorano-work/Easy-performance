@@ -40,8 +40,11 @@
       opts.descartada ? `<button class="link small" data-action="rec-restore" data-id="${esc(r.clave)}">${esc(t('recs.restaurar'))}</button>` : `<button class="link small" data-action="rec-dismiss" data-id="${esc(r.clave)}">${esc(t('recs.descartar'))}</button>`,
     ].join('');
     const cab = `<div class="f-title">${esc(r.titulo)}</div>${r.fuente === 'ia' ? K.chip('info', t('recs.ia')) : K.nivelChip(r.nivel)}`;
+    // La evidencia, vista: la medida de la recomendación en sus equipos frente a su baseline (hasta dos)
+    const minis = K.conBaseline(r, 2);
     const cuerpo = `<div class="meta">${K.chip('neutral', K.paraQuien(r))}${r.ia && r.fuente !== 'ia' ? K.chip('info', t('recs.iaDeAcuerdo')) : ''}</div>`
       + (r.fuente === 'ia' ? `<div class="small"><b>${esc(t('recs.accion'))}</b> ${esc(r.ia.accion)}</div><div class="small"><b>${esc(t('recs.primerPaso'))}</b> ${esc(r.ia.primer_paso)}</div>` : `<div class="small muted">${esc(r.senal)}</div>`)
+      + (minis.length ? `<div class="minis">${minis.map((x) => K.miniBaseline(x.e, r.medida)).join('')}</div>` : '')
       + `<div class="evid">${ev}</div>`;
     return K.ficha(cab, cuerpo, `<div class="row">${botones}</div>`, ` data-rec="${esc(r.clave)}"`);
   }
@@ -117,14 +120,32 @@
     const pts = s.serie || [];
     const vals = pts.flatMap((p) => [p.iniciativa, p.control]).filter((v) => v != null);
     if (pts.length < 2 || !vals.length) return '';
+    // La baseline de sus equipos antes de empezar entra en la escala: el después se lee contra ella
+    const bl = s.baseline;
+    if (bl) vals.push(bl.lo, bl.hi);
     const W = 300, H = 90, lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo || 1) * 0.15;
     const x0 = new Date(pts[0].fecha).getTime(), x1 = new Date(pts[pts.length - 1].fecha).getTime() || x0 + 1;
     const x = (d) => ((new Date(d).getTime() - x0) / (x1 - x0 || 1)) * W;
     const y = (v) => H - ((v - (lo - pad)) / ((hi + pad) - (lo - pad))) * H;
     const linea = (k) => { let d = '', pen = false; pts.forEach((p) => { if (p[k] == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(p.fecha).toFixed(1) + ' ' + y(p[k]).toFixed(1) + ' '; pen = true; }); return d; };
     const lim = (v) => Math.max(0, Math.min(W, v)), xi = lim(x(s.inicio)), xd = lim(x(s.desdeDespues));
-    return `<svg class="ini-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('ini.grafico'))}"><rect class="ic-margen" x="${Math.max(0, xi).toFixed(1)}" y="0" width="${Math.max(0, xd - xi).toFixed(1)}" height="${H}"/><line class="ic-inicio" x1="${xi.toFixed(1)}" x2="${xi.toFixed(1)}" y1="0" y2="${H}"/><path class="ic-control" d="${linea('control')}"/><path class="ic-ini" d="${linea('iniciativa')}"/></svg>
-      <div class="stage-legend"><span><i class="sw-in_progress"></i>${esc(t('ini.leyendaIni'))}</span><span><i class="sw-todo"></i>${esc(t('ini.leyendaResto'))}</span><span><i class="sw-margen"></i>${esc(t('ini.leyendaMargen'))}</span></div>`;
+    // Franja de la baseline: oscura hasta el inicio (de donde sale) y clara después (contra lo que se mide)
+    const yb = bl ? [y(bl.hi), Math.max(1, y(bl.lo) - y(bl.hi))] : null;
+    const banda = yb ? `<rect class="ic-bl" x="0" y="${yb[0].toFixed(1)}" width="${xi.toFixed(1)}" height="${yb[1].toFixed(1)}"/><rect class="ic-bl-despues" x="${xi.toFixed(1)}" y="${yb[0].toFixed(1)}" width="${(W - xi).toFixed(1)}" height="${yb[1].toFixed(1)}"/>` : '';
+    return `<svg class="ini-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(t('ini.grafico'))}">${banda}<rect class="ic-margen" x="${Math.max(0, xi).toFixed(1)}" y="0" width="${Math.max(0, xd - xi).toFixed(1)}" height="${H}"/><line class="ic-inicio" x1="${xi.toFixed(1)}" x2="${xi.toFixed(1)}" y1="0" y2="${H}"/><path class="ic-control" d="${linea('control')}"/><path class="ic-ini" d="${linea('iniciativa')}"/></svg>
+      <div class="stage-legend"><span><i class="sw-in_progress"></i>${esc(t('ini.leyendaIni'))}</span>${bl ? `<span><i class="sw-bl"></i>${esc(t('ini.leyendaBaseline'))}</span>` : ''}<span><i class="sw-todo"></i>${esc(t('ini.leyendaResto'))}</span><span><i class="sw-margen"></i>${esc(t('ini.leyendaMargen'))}</span></div>`;
+  }
+  /** El después frente a la baseline de antes de empezar: mejor, dentro o peor (según la dirección que se busca). */
+  function frenteBaseline(s) {
+    const bl = s.baseline; if (!bl) return '';
+    const f = (v) => N.formatear(v, s.formato), rango = t('ini.baselineAntes', { lo: f(bl.lo), hi: f(bl.hi) });
+    // Con la ventana de después a medias, el después no es comparable con una baseline de ventanas completas: no se juzga
+    if (s.despues == null || !s.completa) return `<div class="small muted ini-bl">${esc(rango)}${s.despues != null ? ' · ' + esc(t('ini.frente.incompleta')) : ''}</div>`;
+    const bajar = s.direccion === 'bajar';
+    const donde = s.despues >= bl.lo && s.despues <= bl.hi ? 'dentro' : (bajar ? s.despues < bl.lo : s.despues > bl.hi) ? 'mejor' : 'peor';
+    // El estado compara con el resto de equipos; esto, con su propia historia. Si dicen cosas distintas, se explica
+    const nota = s.estado === 'funciona' && donde === 'peor' ? t('ini.frente.notaFuncionaPeor') : s.estado === 'empeora' && donde === 'mejor' ? t('ini.frente.notaEmpeoraMejor') : '';
+    return `<div class="small ini-bl">${K.chip({ mejor: 'good', dentro: 'neutral', peor: 'bad' }[donde], t('ini.frente.' + donde))} <span class="muted">${esc(rango)}</span>${nota ? `<span class="ini-nota">${esc(nota)}</span>` : ''}</div>`;
   }
   function iniciativas() {
     const vm = S.vm, nombres = EP.visibles().map((e) => e.nombre);
@@ -143,7 +164,7 @@
       return `<div class="ficha ini"><div class="f-head"><div class="f-title">${esc(ini.nombre)}</div>${K.chip(ESTADO_INI[s.estado], t('ini.estado.' + s.estado))}</div>
         <div class="f-body"><div class="meta">${ini.equipos.map((e) => K.chip('neutral', nombreEquipo(e))).join('')}${K.chip('info', nombreMedida(m))}${K.chip('neutral', t('ini.inicio', { f: fecha(s.inicio) }))}${s.confianza ? K.chip('neutral', t('ini.confianza', { c: t('conf.' + s.confianza) })) : ''}</div>
         <div class="progress"><div class="bar"><i class="tone-neutral" style="width:${Math.round(s.progreso * 100)}%"></i></div><span class="small muted">${esc(s.completa ? t('ini.completa') : t('ini.completaEl', { f: fecha(s.completaEl) }))}</span></div>
-        <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${s.control ? `<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}
+        <div class="before-after"><div><div class="m-l">${esc(t('ini.antes'))}</div><div class="m-v">${esc(f(s.antes))}</div></div><div class="arrow">›</div><div><div class="m-l">${esc(t('ini.despues'))}</div><div class="m-v">${esc(f(s.despues))}</div></div></div>${frenteBaseline(s)}${s.control ?`<div class="small muted" style="margin:6px 0">${esc(t('ini.resto'))}: ${esc(f(s.control.antes))} › ${esc(f(s.control.despues))}</div>` : ''}
         <p class="small">${esc(s.texto)}</p>${graficoIni(s)}${lect ? `<div class="notice info small"><b>${esc(t('ini.lecturaIa'))}</b> ${esc(lect.lectura)}</div>` : ''}</div>
         <div class="f-foot"><span class="tiny muted">${esc(cat().textos['iniciativa.aviso'] || '')}</span>${(propias.indexOf(ini.id) >= 0 || (EP.carpeta && EP.carpeta.enUso() && (S.extraIni || []).some((i) => i.id === ini.id))) && !S.demo ? `<button class="link small" data-action="ini-del" data-id="${esc(ini.id)}">${esc(t('comun.quitar'))}</button>` : ''}</div></div>`;
     }).join('');
@@ -572,7 +593,7 @@
   };
   /**
    * Lo que la página enseña aparte de la cifra y el asistente no debe contradecir: las cifras por revisar (y por qué) y
-   * los límites fijos superados sin alerta, que no cambian el estado porque manda la línea base.
+   * los límites fijos superados sin alerta, que no cambian el estado porque manda la baseline.
    */
   const marcasIa = (e) => ({
     estado: e.estado,

@@ -85,10 +85,10 @@ const fijarIdioma = async (p, l) => { await A(p, (l) => { const b = document.que
   ok('paso Qué mirar', /Qué quieres mirar primero/.test(await p.textContent('#onboarding')));
   altos.push(await alto());
   ok('la cabecera no salta entre pasos', Math.max(...altos) - Math.min(...altos) <= 1, altos.join(','));
-  // Quitar Predictability: los arrastrados salen de la línea base
+  // Quitar Predictability: los arrastrados salen de la baseline
   await p.click('input[data-change="ctx-obj"][value="predictability"]', { force: true }); await p.waitForTimeout(200); await quieto(p);
   const kpis = await A(p, () => window.EP.S.vm.kpis);
-  ok('Context cambia la línea base', !kpis.includes('arrastradas') && kpis.includes('bugs'), kpis.join(','));
+  ok('Context cambia la baseline', !kpis.includes('arrastradas') && kpis.includes('bugs'), kpis.join(','));
   await p.screenshot({ path: join(SALIDA, '03-que-mirar.png'), fullPage: true });
   await clic(p, '[data-action="ob-role"][data-role="pmo"]');
   await clic(p, '[data-action="ob-finish"]');
@@ -185,13 +185,13 @@ async function recorrer(p, etiqueta) {
     ok('panel: ' + nombre, t.length > 40 && !(await estado(p)).error);
     await p.keyboard.press('Escape'); await p.waitForTimeout(100);
   }
-  // Resumen centrado en la baseline: una fila por indicador y equipo, con su barra y su rango
+  // Resumen centrado en la baseline: arriba los indicadores de toda el área con su gráfico; debajo, una barra por indicador y equipo
   await ir(p, 'resumen'); await p.waitForTimeout(100);
   const filasBl = await p.$$eval('#page .fb', (x) => x.length), nEq = await A(p, () => window.EP.visibles().length), nK = await A(p, () => window.EP.kit.destacados().length);
-  // Una ficha por equipo y, con más de un equipo, otra de toda el área
-  ok('resumen: la baseline de cada equipo y la de toda el área', filasBl === (nEq + (nEq > 1 ? 1 : 0)) * nK && (await p.$$eval('#page .tile', (x) => x.length)) === 0, `${filasBl} filas`);
+  const kpisArea = await A(p, () => [...document.querySelectorAll('#page .kpis-heroe .tile')].filter((x) => x.dataset.team === window.EP.S.vm.area.nombre && x.querySelector('svg.grafico')).length);
+  ok('resumen: los indicadores de toda el área con su gráfico y la baseline de cada equipo en barras', kpisArea === nK && filasBl === (nEq > 1 ? nEq : 0) * nK, `${kpisArea} indicadores del área, ${filasBl} filas`);
   const textoMenu = await p.textContent('#nav');
-  ok('el menú dice Qué hacer y Datos, sin página de línea base', /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Línea base|Referencias|Baseline/.test(textoMenu), textoMenu);
+  ok('el menú dice Baseline, Qué hacer y Datos', /Baseline/.test(textoMenu) && /Qué hacer/.test(textoMenu) && /Datos/.test(textoMenu) && !/Referencias|Línea base/.test(textoMenu), textoMenu);
   // Los gráficos de cada indicador están en la ficha de equipo
   await ir(p, 'equipos'); await p.waitForTimeout(100);
   ok('ficha de equipo con un gráfico por indicador destacado', (await p.$$eval('#page svg.grafico', (x) => x.length)) >= nK);
@@ -616,11 +616,11 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
       return { wipMal, filas: filas.length, texto: filas.map((x) => x.innerText).join(' | ').slice(0, 200), motivo: filas[0] ? filas[0].getAttribute('title') : '' };
     });
     ok('sin cambios de estado: el trabajo en curso no da alerta', !r.wipMal.length, JSON.stringify(r.wipMal));
-    ok('sin cambios de estado: el tiempo de ciclo dice en el baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
+    ok('sin cambios de estado: el tiempo de ciclo dice en la baseline que no se puede medir y qué columna falta', r.filas > 0 && /no se puede medir/.test(r.texto) && /\[CHART\] Time in Status/.test(r.motivo || ''), JSON.stringify(r));
     await p.context().close();
   }
-  // Datos de ejemplo: sin línea base, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
-  // Con línea base manda la línea base (auditoría UX): el límite superado es un aviso y no pone chip de límite.
+  // Datos de ejemplo: sin baseline, lo que supera un límite fijo lo dice así ("Límite crítico", nunca "Fuera de rango").
+  // Con baseline manda la baseline (auditoría UX): el límite superado es un aviso y no pone chip de límite.
   {
     const p = await pagina(1280, 800);
     await clic(p, '[data-action="demo"]');
@@ -633,7 +633,7 @@ for (const [nombre, ruta] of [['con fallos', join(RAIZ, 'datos-sinteticos', 'fal
       window.EP.S.vm.equipos.forEach((e) => Object.entries(e.medidas).forEach(([id, m]) => { if (!m || !m.disponible || !m.aviso) return; avisos.push(e.nombre + ' ' + id); const c = window.EP.kit.estadoChip(m); if (c.indexOf(window.EP.t('estado.limite.critico')) >= 0 || c.indexOf(window.EP.t('estado.limite.atencion')) >= 0) avisoConChip.push(e.nombre + ' ' + id); }));
       return { malas, limite: conLimite, avisos: avisos.length, avisoConChip };
     });
-    ok('datos de ejemplo: con línea base, un límite fijo superado es un aviso sin chip de límite; sin ella, "Límite crítico" y nunca "Fuera de rango"', r.avisos > 0 && !r.avisoConChip.length && !r.malas.length, JSON.stringify(r));
+    ok('datos de ejemplo: con baseline, un límite fijo superado es un aviso sin chip de límite; sin ella, "Límite crítico" y nunca "Fuera de rango"', r.avisos > 0 && !r.avisoConChip.length && !r.malas.length, JSON.stringify(r));
     await p.context().close();
   }
 }
@@ -1132,24 +1132,24 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
-// ---------- 16. Lenguaje: un solo término (línea base), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
+// ---------- 16. Lenguaje: un solo término (Baseline), cifras con unidad, ayuda de cada página y Resumen en una pantalla ----------
 {
   const p = await pagina(1280, 720);
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="direccion"]'); await clic(p, '[data-action="ob-finish"]');
-  // Ninguna página dice "lo normal", "Baseline", "rango habitual", "franja", "Context" ni "KPI"
+  // Ninguna página dice "lo normal", "línea base", "rango habitual", "franja", "Context" ni "KPI"
   const malas = [];
   for (const rol of ['direccion', 'pmo', 'equipo']) {
     await fijarRol(p, rol);
     for (const v of await A(p, () => window.EP.POR_ROL[window.EP.S.role])) {
       await ir(p, v); await quieto(p);
       const txt = await A(p, () => document.querySelector('.content').innerText);
-      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|Baseline|baseline|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
+      const m = txt.match(/.{0,30}\b(lo normal|Lo normal|[Ll][ií]neas? base|rango habitual|lo habitual|habitual era|semanas de referencia|franja|Context|KPI)\b.{0,30}/);
       if (m) malas.push(rol + '/' + v + ': ' + m[0].replace(/\s+/g, ' '));
     }
   }
-  ok('lenguaje: un solo término (línea base) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
+  ok('lenguaje: un solo término (Baseline) y sin palabras en inglés en ninguna página', !malas.length, malas.slice(0, 3).join(' | '));
   await fijarRol(p, 'direccion'); await ir(p, 'equipos'); await quieto(p);
   const unidades = await A(p, () => [...document.querySelectorAll('.tile[data-medida]')].map((x) => ({ id: x.dataset.medida, u: (x.querySelector('.t-unit') || {}).textContent || '' })));
   ok('cifras con unidad y con las semanas que miran', unidades.length > 0 && unidades.every((x) => /semana/.test(x.u)), JSON.stringify(unidades));
@@ -1170,16 +1170,16 @@ const medirMaquetacion = () => {
   await p.setInputFiles('#file-input', join(RAIZ, 'datos-sinteticos', 'jira-ejemplo-completo-2026-10-12.csv')); await p.waitForTimeout(500); await quieto(p);
   if (await p.$('[data-action="ob-rev-ok"]')) await clic(p, '[data-action="ob-rev-ok"]');
   await clic(p, '[data-action="ob-role"][data-role="pmo"]'); await clic(p, '[data-action="ob-finish"]');
-  // Primera visita: recorrido de tres pasos (Resumen, Equipos, Qué hacer) que se puede terminar
+  // Primera visita: recorrido de tres pasos (Resumen, Baseline, Qué hacer) que se puede terminar
   const pasos = [];
   for (let i = 0; i < 3; i++) { pasos.push(await A(p, () => ({ v: window.EP.S.view, paso: (document.querySelector('.recorrido .tiny') || {}).textContent || '' }))); await clic(p, '[data-action="recorrido-sig"]'); }
   const trasRecorrido = await A(p, () => ({ hay: !!document.querySelector('.recorrido'), hecho: !!window.EP.S.prefs.recorridoHecho }));
-  ok('recorrido de primera visita: Resumen, Equipos y Qué hacer, y no vuelve a salir', pasos.map((x) => x.v).join(',') === 'resumen,equipos,recomendaciones' && pasos.every((x, i) => x.paso.indexOf(String(i + 1)) >= 0) && !trasRecorrido.hay && trasRecorrido.hecho, JSON.stringify({ pasos, trasRecorrido }));
+  ok('recorrido de primera visita: Resumen, Baseline y Qué hacer, y no vuelve a salir', pasos.map((x) => x.v).join(',') === 'resumen,referencias,recomendaciones' && pasos.every((x, i) => x.paso.indexOf(String(i + 1)) >= 0) && !trasRecorrido.hay && trasRecorrido.hecho, JSON.stringify({ pasos, trasRecorrido }));
   await ir(p, 'resumen'); await quieto(p);
   const menu = () => A(p, () => [...document.querySelectorAll('#nav button')].filter((b) => !b.classList.contains('hidden')).map((b) => b.dataset.view));
   const menus = {};
   for (const rol of ['direccion', 'pmo', 'equipo']) { await fijarRol(p, rol); menus[rol] = (await menu()).join(','); }
-  ok('menú: el mismo para los tres roles, cinco entradas y Ajustes; el PMO empieza en el Resumen', pasos[0].v === 'resumen' && menus.direccion === menus.pmo && menus.pmo === menus.equipo && menus.pmo.split(',').length <= 6 && menus.pmo.indexOf('cortes') < 0 && menus.pmo.indexOf('referencias') < 0, JSON.stringify({ menus }));
+  ok('menú: el mismo para los tres roles, Baseline la segunda entrada, seis entradas y Ajustes; el PMO empieza en el Resumen', pasos[0].v === 'resumen' && menus.direccion === menus.pmo && menus.pmo === menus.equipo && menus.pmo.split(',').length <= 7 && menus.pmo.indexOf('cortes') < 0 && menus.pmo.split(',')[1] === 'referencias', JSON.stringify({ menus }));
   await fijarRol(p, 'pmo');
   await ir(p, 'recomendaciones'); await quieto(p);
   const tabsQh = await A(p, () => [...document.querySelectorAll('.sub-tabs .tab')].map((x) => x.dataset.view).join(','));
@@ -1228,7 +1228,7 @@ const medirMaquetacion = () => {
   await p.context().close();
 }
 
-// ---------- 18. Auditoría UX (P0): manda la línea base, la fiabilidad llega a cada cifra y un estado por equipo ----------
+// ---------- 18. Auditoría UX (P0): manda la baseline, la fiabilidad llega a cada cifra y un estado por equipo ----------
 {
   const abrir = async (ruta) => {
     const p = await pagina(1440, 900);
@@ -1247,22 +1247,22 @@ const medirMaquetacion = () => {
   {
     const { p } = await abrir(join(RAIZ, 'datos-sinteticos', 'aseguradora', 'jira-aseguradora.csv'));
     const vm = await A(p, () => window.EP.S.vm.equipos.map((e) => ({ nombre: e.nombre, estado: e.estado, graves: e.graves.length, ret: e.medidas.retrabajo && { v: e.medidas.retrabajo.valor, lo: e.medidas.retrabajo.ref && e.medidas.retrabajo.ref.lo, estado: e.medidas.retrabajo.estado, aviso: !!e.medidas.retrabajo.aviso } })));
-    // Una mejora frente a su línea base no es una alerta: Digital Channel baja su retrabajo al 22 % (línea base 25 % a 35 %)
+    // Una mejora frente a su baseline no es una alerta: Digital Channel baja su retrabajo al 22 % (baseline 25 % a 35 %)
     const dc = vm.find((e) => e.nombre === 'Digital Channel');
-    ok('auditoría: un retrabajo que mejora frente a su línea base sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
+    ok('auditoría: un retrabajo que mejora frente a su baseline sale normal, con el límite fijo como aviso', dc.ret.v < dc.ret.lo && dc.ret.estado === 'bien' && dc.ret.aviso && dc.estado !== 'alerta', JSON.stringify(dc));
     const res = await filas(p);
     const dcEq = res.find((x) => x.equipo === 'Digital Channel'), dcFila = dcEq && dcEq.filas.find((f) => f.medida === 'retrabajo');
     ok('auditoría: en la barra, el límite fijo es una marca aparte y la cifra no sale en ámbar', !!dcFila && dcFila.lim && dcFila.tono !== 'warn' && dcFila.tono !== 'bad', JSON.stringify(dcFila || res.map((x) => x.equipo)));
-    // Donde hay línea base (la franja), se pinta también el margen
+    // Donde hay baseline (la franja), se pinta también el margen
     const conBanda = res.flatMap((x) => x.filas.filter((f) => f.banda).map((f) => Object.assign({ equipo: x.equipo }, f)));
-    ok('auditoría: la barra pinta el margen alrededor de la línea base', conBanda.length > 0 && conBanda.every((f) => f.margen), JSON.stringify(conBanda.filter((f) => !f.margen).map((f) => f.equipo + ':' + f.medida)));
-    // El pie de un equipo con una recomendación urgente: "dentro de su línea base" solo si no hay nada por revisar
+    ok('auditoría: la barra pinta el margen alrededor de la baseline', conBanda.length > 0 && conBanda.every((f) => f.margen), JSON.stringify(conBanda.filter((f) => !f.margen).map((f) => f.equipo + ':' + f.medida)));
+    // El pie de un equipo con una recomendación urgente: "dentro de su baseline" solo si no hay nada por revisar
     const pies = await A(p, () => {
       const V = window.EP.vistas, base = { nombre: 'X', cambios: [], graves: ['todo_urgente'], mejores: [], avisos: [], medidas: {}, estado: 'atencion' };
       return { limpio: V.pieFicha(Object.assign({}, base, { revisarDato: [] })), conDato: V.pieFicha(Object.assign({}, base, { revisarDato: ['ciclo'] })) };
     });
-    ok('auditoría: con una recomendación urgente y un dato por revisar, el pie no dice "dentro de su línea base"', /dentro de su línea base/i.test(pies.limpio) && !/dentro de su línea base/i.test(pies.conDato) && /Revisar el dato/.test(pies.conDato), JSON.stringify(pies));
-    // "Mucho retrabajo" no salta en un equipo que mejora frente a su línea base
+    ok('auditoría: con una recomendación urgente y un dato por revisar, el pie no dice "dentro de su baseline"', /dentro de su baseline/i.test(pies.limpio) && !/dentro de su baseline/i.test(pies.conDato) && /Revisar el dato/.test(pies.conDato), JSON.stringify(pies));
+    // "Mucho retrabajo" no salta en un equipo que mejora frente a su baseline
     const recs = await A(p, () => window.EP.S.vm.recs.filter((r) => r.id === 'retrabajo').map((r) => r.equipos));
     ok('auditoría: "Mucho retrabajo" solo en el equipo que empeora (Policies), no en Digital Channel', recs.length === 1 && recs[0].indexOf('Policies') >= 0 && recs[0].indexOf('Digital Channel') < 0, JSON.stringify(recs));
     // Un estado por equipo: con una recomendación urgente, nunca "Estable"; el mismo chip en el Resumen y en la presentación
@@ -1304,6 +1304,13 @@ const medirMaquetacion = () => {
           if (r.querySelector('.fb-v.t-good') || r.querySelector('.b-now.tone-good')) mal.push(e.nombre + ':' + id);
         });
       }));
+      // Los indicadores de toda el área (arriba): ni el gráfico ni el chip de una cifra dudosa en verde
+      document.querySelectorAll('#page .kpis-heroe .tile[data-medida]').forEach((x) => {
+        const e = x.dataset.team === S.vm.area.nombre ? S.vm.area : S.vm.equipos.find((y) => y.nombre === x.dataset.team), m = e && e.medidas[x.dataset.medida];
+        if (!m || m.revisar !== 'dato') return;
+        vistas.push(x.dataset.team + ':' + x.dataset.medida);
+        if (x.querySelector('.grafico .tone-good') || x.querySelector('.t-label .chip.good')) mal.push(x.dataset.team + ':' + x.dataset.medida);
+      });
       const a = S.vm.area;
       return { mal, vistas: vistas.length, area: Object.keys(a.medidas).filter((id) => a.medidas[id] && a.medidas[id].revisar === 'dato').map((id) => id + ' ' + Math.round((a.medidas[id].dudosoParte || 0) * 100) + '%'), areaNombre: a.nombre };
     });
@@ -1314,6 +1321,140 @@ const medirMaquetacion = () => {
     ok('sin errores de consola en la sección de la auditoría (export con fallos)', !p.errores.length, p.errores.slice(0, 3).join(' | '));
     await p.context().close();
   }
+}
+
+// ---------- 19. La baseline como columna vertebral: página Baseline, Resumen, Qué hacer, Comparar e Iniciativas ----------
+{
+  const p = await pagina(1280, 800);
+  await clic(p, '[data-action="demo"]'); await p.waitForTimeout(300); await quieto(p);
+  await fijarIdioma(p, 'es'); await fijarRol(p, 'direccion');
+  // Página Baseline: toda el área y cada equipo, cada indicador destacado con su gráfico y el mismo color que su estado
+  await ir(p, 'referencias'); await quieto(p);
+  const bl = await A(p, () => {
+    const EP = window.EP, K = EP.kit, vm = EP.S.vm, dest = K.destacados();
+    const fichas = [...document.querySelectorAll('#page [data-tipo="baseline"]')];
+    const malTono = [], sinGrafico = [];
+    fichas.forEach((f) => f.querySelectorAll('.bl').forEach((b) => {
+      const e = b.dataset.team === vm.area.nombre ? vm.area : vm.equipos.find((x) => x.nombre === b.dataset.team), m = e && e.medidas[b.dataset.medida];
+      const tono = ((b.querySelector('.bl-cifras b') || {}).className || '').replace('t-', '');
+      if (tono !== K.tonoDe(m)) malTono.push(b.dataset.team + ':' + b.dataset.medida + ' ' + tono + '/' + K.tonoDe(m));
+      if (m && m.disponible && Array.isArray(m.serie) && !b.querySelector('svg.grafico')) sinGrafico.push(b.dataset.team + ':' + b.dataset.medida);
+    }));
+    const prov = EP.visibles().filter(K.baselineProvisional).length;
+    const cuenta = (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '';
+    return { fichas: fichas.length, equipos: EP.visibles().length, bloques: fichas.map((f) => f.querySelectorAll('.bl').length), dest: dest.length, primera: fichas[0] && fichas[0].dataset.team, area: vm.area.nombre,
+      malTono, sinGrafico, prov, cuenta, titular: document.querySelector('#page .status b').textContent, leyenda: !!document.querySelector('#page .bl-leyenda') };
+  });
+  ok('Baseline: toda el área primero y una ficha por equipo, cada una con sus indicadores destacados', bl.fichas === bl.equipos + 1 && bl.primera === bl.area && bl.bloques.every((n) => n === bl.dest) && bl.leyenda, JSON.stringify(bl));
+  ok('Baseline: cada indicador con su gráfico y la cifra del color de su estado', !bl.malTono.length && !bl.sinGrafico.length, JSON.stringify({ malTono: bl.malTono, sinGrafico: bl.sinGrafico }));
+  ok('Baseline: el titular y el número del menú cuentan los mismos equipos con baseline provisional', (bl.prov ? /provisional/.test(bl.titular) && bl.cuenta === String(bl.prov) : /Todas las baselines/.test(bl.titular) && !bl.cuenta), JSON.stringify({ prov: bl.prov, cuenta: bl.cuenta, titular: bl.titular }));
+  // Resumen: primero la baseline de cada equipo, después por dónde empezar (en el orden de Qué hacer) y al final las preguntas
+  await ir(p, 'resumen'); await quieto(p);
+  const res = await A(p, () => {
+    const h = [...document.querySelectorAll('#page .sec h2')].map((x) => x.textContent);
+    const filas = [...document.querySelectorAll('#page .que-hacer .rrow')].map((r) => r.querySelector('b').textContent);
+    return { h, filas, recs: window.EP.vistas.recsActivas(window.EP.visibles()).map((r) => r.titulo) };
+  });
+  const iA = res.h.indexOf('Toda el área frente a su baseline'), iB = res.h.indexOf('Cada equipo frente a su baseline'), iE = res.h.indexOf('Por dónde empezar'), iP = res.h.indexOf('Preguntas de dirección');
+  ok('Resumen: primero toda el área y cada equipo frente a su baseline, después por dónde empezar y al final las preguntas', iA === 0 && iA < iB && iB < iE && iE < iP, JSON.stringify(res.h));
+  ok('Resumen: por dónde empezar son las tres primeras de Qué hacer, en el mismo orden', res.filas.length === Math.min(3, res.recs.length) && res.filas.every((x, i) => x === res.recs[i]), JSON.stringify(res));
+  // Qué hacer: cada recomendación con medida enseña esa medida en sus equipos frente a su baseline, con la cifra del equipo
+  await ir(p, 'recomendaciones'); await quieto(p);
+  const qh = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, mal = [];
+    let con = 0, deberian = 0;
+    document.querySelectorAll('#page [data-rec]').forEach((f) => {
+      const r = vm.recs.find((x) => x.clave === f.dataset.rec);
+      const posibles = r && r.medida ? r.equipos.filter((n) => { const e = vm.equipos.find((x) => x.nombre === n), m = e && e.medidas[r.medida]; return m && m.disponible && m.ref && Array.isArray(m.serie); }) : [];
+      const minis = [...f.querySelectorAll('.mini-bl')];
+      if (posibles.length) deberian++;
+      if (minis.length) con++;
+      if (posibles.length && !minis.length) mal.push('sin gráfico: ' + r.titulo);
+      minis.forEach((x) => {
+        const e = vm.equipos.find((y) => y.nombre === x.dataset.team), m = e && e.medidas[x.dataset.medida];
+        if (!r || x.dataset.medida !== r.medida || r.equipos.indexOf(x.dataset.team) < 0) mal.push('otra medida o equipo: ' + x.dataset.team + ':' + x.dataset.medida);
+        else if (x.querySelector('.mini-cab b').textContent !== EP.valor(x.dataset.medida, m.valor) || !x.querySelector('svg.grafico .g-band')) mal.push('cifra o baseline: ' + x.dataset.team + ':' + x.dataset.medida);
+      });
+    });
+    return { con, deberian, mal };
+  });
+  ok('Qué hacer: cada recomendación con medida enseña su gráfico frente a la baseline de sus equipos, con su cifra', qh.deberian > 0 && qh.con === qh.deberian && !qh.mal.length, JSON.stringify(qh));
+  // Comparar: cada cifra sobre la baseline de su propio equipo; la baseline en el centro y lo mejor siempre a la derecha.
+  // La posición se contrasta con lo que dice el semáforo del núcleo: "mejor que la baseline" a la derecha, peor a la izquierda.
+  const revisarComparar = () => A(p, () => {
+    const EP = window.EP, K = EP.kit, vm = EP.S.vm, mal = [];
+    const marcas = [...document.querySelectorAll('#page .sobre-btn')];
+    marcas.forEach((b) => {
+      const e = b.dataset.team === vm.area.nombre ? vm.area : vm.equipos.find((x) => x.nombre === b.dataset.team), id = b.dataset.medida, m = e.medidas[id];
+      const x = parseFloat(b.querySelector('.sb-now').style.left);
+      if (m.ref.hi > m.ref.lo && m.valor >= m.ref.lo && m.valor <= m.ref.hi && !(x >= 30 && x <= 70)) mal.push('dentro y fuera del centro ' + b.dataset.team + ':' + id + ' x=' + x);
+      if (m.lado === 'mejor' && !(x > 70)) mal.push('mejor y no a la derecha ' + b.dataset.team + ':' + id + ' x=' + x);
+      if (m.estadoPor === 'banda' && (m.estado === 'atencion' || m.estado === 'critico') && !(x < 30)) mal.push('peor y no a la izquierda ' + b.dataset.team + ':' + id + ' x=' + x);
+      if (!b.querySelector('.sb-now').classList.contains('tone-' + K.tonoDe(m))) mal.push('color ' + b.dataset.team + ':' + id);
+    });
+    const ids = [...new Set(marcas.map((b) => b.dataset.medida))];
+    return { n: marcas.length, ids, filas: document.querySelectorAll('#page table.cmp-bl tr').length - 1, equipos: vm.equipos.length, mal };
+  });
+  await fijarRol(p, 'pmo'); await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
+  const cmp = await revisarComparar();
+  ok('Comparar: cada cifra sobre su propia baseline (en el centro), lo mejor a la derecha, lo peor a la izquierda y el color de su estado', cmp.n > 0 && cmp.filas === cmp.equipos + 1 && !cmp.mal.length, JSON.stringify(cmp));
+  // Con el objetivo de coste: el coste por tarea no está en el catálogo y menos es mejor
+  await A(p, () => { const S = window.EP.S; S.cfg.contexto = Object.assign({}, window.EP.P.contexto(S.cfg, S.det), { objetivos: ['speed', 'quality', 'predictability', 'cost'], coste: true }); window.EP.recalcular(); window.EP.render(); }); await quieto(p);
+  await ir(p, 'equipos'); await A(p, () => document.querySelector('[data-team="__comparar"]').click()); await quieto(p);
+  const cmpCoste = await revisarComparar();
+  ok('Comparar con coste: el coste por tarea también se lee con menos es mejor', cmpCoste.ids.indexOf('coste') >= 0 && !cmpCoste.mal.length, JSON.stringify(cmpCoste));
+  // Iniciativas: el después se lee contra la baseline que tenían sus equipos antes de empezar
+  await ir(p, 'iniciativas'); await quieto(p);
+  const ini = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, mal = [];
+    let con = 0;
+    vm.iniciativas.forEach(({ ini, s }) => {
+      const card = [...document.querySelectorAll('#page .ficha.ini')].find((c) => c.querySelector('.f-title').textContent === ini.nombre);
+      if (!card) { mal.push('sin tarjeta: ' + ini.nombre); return; }
+      if (!s.baseline) { if (card.querySelector('.ini-bl')) mal.push('baseline inventada: ' + ini.nombre); return; }
+      con++;
+      if (!card.querySelector('.ini-chart .ic-bl')) mal.push('sin baseline en el gráfico: ' + ini.nombre);
+      const chipIni = card.querySelector('.ini-bl .chip');
+      if (!s.completa) { if (chipIni) mal.push('juzga con la ventana a medias: ' + ini.nombre); return; }
+      if (s.despues == null) return;
+      const bl = s.baseline, esperado = s.despues >= bl.lo && s.despues <= bl.hi ? 'Dentro' : (s.direccion === 'bajar' ? s.despues < bl.lo : s.despues > bl.hi) ? 'Mejor' : 'Peor';
+      const chip = (card.querySelector('.ini-bl .chip') || {}).textContent || '';
+      if (chip.indexOf(esperado) !== 0) mal.push(ini.nombre + ': ' + chip + ' / ' + esperado);
+      const contradice = (s.estado === 'funciona' && esperado === 'Peor') || (s.estado === 'empeora' && esperado === 'Mejor');
+      if (contradice !== !!card.querySelector('.ini-nota')) mal.push('contradicción sin explicar: ' + ini.nombre);
+    });
+    return { n: vm.iniciativas.length, con, mal };
+  });
+  ok('Iniciativas: el gráfico y el después frente a la baseline de antes de empezar', ini.con > 0 && !ini.mal.length, JSON.stringify(ini));
+  // El rol Equipo ve solo la baseline de su equipo; en inglés, la página se llama igual
+  await fijarRol(p, 'equipo'); await ir(p, 'referencias'); await quieto(p);
+  const soloSuyo = await A(p, () => [...document.querySelectorAll('#page [data-tipo="baseline"]')].map((f) => f.dataset.team));
+  ok('Baseline en el rol Equipo: solo su equipo, sin toda el área', soloSuyo.length === 1 && soloSuyo[0] === (await A(p, () => window.EP.S.team)), JSON.stringify(soloSuyo));
+  const ajenos = [];
+  for (const v of ['resumen', 'equipos', 'recomendaciones']) {
+    await ir(p, v); await quieto(p);
+    ajenos.push(...(await A(p, (v) => { const mio = window.EP.S.team; return [...document.querySelectorAll('#page .rrow-mini, #page .mini-bl')].map((x) => x.dataset.team).filter((n) => n !== mio).map((n) => v + ':' + n); }, v)));
+  }
+  ok('rol Equipo: ningún gráfico de otro equipo en el Resumen, Mi equipo ni Qué hacer', !ajenos.length, JSON.stringify(ajenos));
+  await fijarIdioma(p, 'en'); await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
+  const en = await A(p, () => ({ menu: document.querySelector('#nav [data-view="referencias"]').textContent, titulo: document.getElementById('page-title').textContent, titular: document.querySelector('#page .status b').textContent }));
+  ok('Baseline en inglés', /Baseline/.test(en.menu) && en.titulo === 'Baseline' && /baselines? /i.test(en.titular), JSON.stringify(en));
+  await fijarIdioma(p, 'es');
+  await p.screenshot({ path: join(SALIDA, '19-baseline.png'), fullPage: true });
+  // Un equipo con una cifra de baseline provisional y otro sin ninguna baseline (se fuerzan en la vista-modelo de la demo)
+  await fijarRol(p, 'direccion'); await ir(p, 'referencias'); await quieto(p);
+  const estados = await A(p, () => {
+    const EP = window.EP, vm = EP.S.vm, [a, b] = vm.equipos;
+    const ciclo = a.medidas.ciclo; a.medidas.ciclo = Object.assign({}, ciclo, { referencia: 'provisional', ref: Object.assign({}, ciclo.ref, { n: 8 }) });
+    Object.keys(b.medidas).forEach((id) => { const m = b.medidas[id]; if (m) b.medidas[id] = Object.assign({}, m, { ref: undefined, referencia: 'sin' }); });
+    EP.render();
+    const ficha = (n) => { const f = document.querySelector(`#page [data-tipo="baseline"][data-team="${CSS.escape(n)}"]`); return { cab: f.querySelector('.f-head').innerText.replace(/\s+/g, ' '), pie: f.querySelector('.f-foot').innerText.replace(/\s+/g, ' ') }; };
+    return { a: a.nombre, b: b.nombre, fa: ficha(a.nombre), fb: ficha(b.nombre), titular: document.querySelector('#page .status b').textContent, menu: (document.querySelector('#nav [data-view="referencias"] .count') || {}).textContent || '' };
+  });
+  ok('Baseline provisional: cabecera, pie, titular y menú dicen lo mismo', /Provisional/.test(estados.fa.cab) && /8 semanas/.test(estados.fa.pie) && estados.titular.indexOf('provisional en ' + estados.a) >= 0, JSON.stringify(estados));
+  ok('Sin baseline: "Aún sin baseline" en la cabecera, el pie y el titular, y el menú cuenta los dos equipos', /Aún sin baseline/.test(estados.fb.cab) && /Aún sin baseline/.test(estados.fb.pie) && !/calculada con/.test(estados.fb.pie) && estados.titular.indexOf('Aún sin baseline en ' + estados.b) >= 0 && estados.menu === '2', JSON.stringify(estados));
+  ok('sin errores de consola en la sección de la baseline', !p.errores.length && !Object.keys(await A(p, () => window.__faltan || {})).length, p.errores.slice(0, 3).join(' | '));
+  await p.context().close();
 }
 
 await navegador.close();

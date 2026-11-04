@@ -51,7 +51,7 @@ function sinTextos<T>(x: T): T {
 function sinNovedades(m: unknown): unknown {
   type M = Record<string, Record<string, unknown>>;
   const x = json(m) as { equipos: { medidas: M; kpis: M; series: Record<string, unknown>; calidad?: Record<string, unknown> }[] };
-  // Nov 2026 (auditoría UX): con línea base manda la línea base y el límite fijo superado queda como aviso. La v0 daba el
+  // Nov 2026 (auditoría UX): con baseline manda la baseline y el límite fijo superado queda como aviso. La v0 daba el
   // peor de los dos: para comparar, el estado se recompone con el aviso (mismas cifras, otra forma de enseñarlas).
   const ORDEN: Record<string, number> = { bien: 0, atencion: 1, critico: 2 };
   const conAviso = (v: Record<string, unknown>) => {
@@ -69,7 +69,7 @@ function sinNovedades(m: unknown): unknown {
   return x;
 }
 
-/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su línea base (20 % o más, pero
+/** Nov 2026 (auditoría UX): "Mucho retrabajo" ya no salta si el equipo está mejor que su baseline (20 % o más, pero
  *  por debajo de su franja). Solo en esos equipos cambia algo frente a la v0: ahí se quita el caso en los dos lados, y en
  *  todos los demás se sigue comparando. La regla nueva se comprueba también en aseguradora.test.ts. */
 type ConCasos = { equipos: { nombre: string; medidas: Record<string, { valor?: number | null; ref?: { lo: number } }>; casos?: { id: string }[] }[] };

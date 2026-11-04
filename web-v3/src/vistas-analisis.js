@@ -44,18 +44,25 @@
     if (prov.length) items.push(esc(t('resumen.provisionales', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) })));
     if (atencion.length) items.push(esc(t('resumen.atencionEn', { equipos: lista(atencion.map((e) => nombreEquipo(e.nombre))) })));
     const dest = K.destacados();
-    // Toda el área, primero (si hay más de un equipo a la vista): la vista que antes estaba en la página de línea base
-    const fichaArea = eqs.length > 1 && S.role !== 'equipo' ? K.ficha(`<div class="f-title">${esc(t('equipo.area'))}</div>`, `<div class="fbs">${dest.map((id) => K.filaBaseline(vm.area, id)).join('')}</div>`,
-      vm.areaSin && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span>` : '') : '';
-    const fichas = fichaArea + eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
-      `<span class="small muted">${esc(pieFicha(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('');
-    // Qué hacer: una línea con el número y el enlace (la lista está en Qué hacer, con un solo orden)
+    // Arriba, los indicadores de toda el área (o del equipo, si solo se ve uno), cada uno con su gráfico y su baseline sombreada
+    const conEquipos = eqs.length > 1 && S.role !== 'equipo', heroe = conEquipos ? vm.area : eqs[0];
+    const kpis = heroe ? K.sec(conEquipos ? t('resumen.areaBaseline') : t('resumen.equipoBaseline', { e: nombreEquipo(heroe.nombre) }), `<span class="muted small">${esc(t('resumen.heroeNota', { r: vm.semanas.R }))}</span>`)
+      + `<div class="tiles kpis-heroe">${dest.map((id) => K.tile(heroe, id)).join('')}</div>`
+      + (conEquipos && vm.areaSin && vm.areaSin.length ? `<p class="tiny muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</p>` : '') : '';
+    // Debajo, cada equipo frente a su baseline: una barra por indicador. El pie dice lo que ha salido de la baseline; el aviso de
+    // un límite fijo ya está en la barra (la marca discontinua) y entero al pasar por encima
+    const fichas = conEquipos ? eqs.map((e) => K.ficha(K.tituloEquipo(e) + K.equipoChip(e), `<div class="fbs">${dest.map((id) => K.filaBaseline(e, id)).join('')}</div>`,
+      `<span class="small muted" title="${esc(pieFicha(e))}">${esc(pieBase(e))}</span><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`)).join('') : '';
+    // Por dónde empezar: las tres primeras de Qué hacer, en el mismo orden; el enlace abre la lista entera sin filtros
     const altas = recs.filter((r) => r.nivel === 'alto').length;
     const cuenta = !recs.length ? t('recs.ninguna') : altas ? tn('resumen.queHacer', recs.length, { a: altas }) : tn('resumen.queHacerSinAltas', recs.length);
-    // El enlace abre la lista sin filtros: el número que se lee aquí es el que se ve allí
-    const queHacer = `<div class="ficha que-hacer"><div class="f-body row"><span>${esc(cuenta)}</span>${recs.length ? `<button class="btn sm primary" data-action="ver-que-hacer">${esc(t('resumen.verQueHacer'))}</button>` : ''}</div></div>`;
-    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos() + preguntas() + queHacer
-      + K.sec(t('resumen.baselineEquipos'), `<span class="muted small">${esc(t('resumen.baselineNota', { r: vm.semanas.R, k: vm.semanas.K }))}</span>`) + `<div class="fichas cols-2">${fichas}</div>`;
+    const empezar = K.sec(t('resumen.primero'), `<span class="muted small">${esc(cuenta)}</span>${recs.length ? ` <button class="link small" data-action="ver-que-hacer">${esc(t('resumen.verQueHacer'))}</button>` : ''}`)
+      + `<div class="ficha list que-hacer">${recs.length ? recs.slice(0, 3).map(K.recFila).join('') : `<p class="muted">${esc(t('recs.ninguna'))}</p>`}</div>`;
+    // Primero la baseline (lo que diferencia al producto): el área y cada equipo. Después qué hacer y al final las preguntas
+    const notaBl = `<span class="muted small">${esc(t('resumen.baselineNota'))}</span> <button class="link small" data-action="go" data-view="referencias">${esc(t('resumen.verBaseline'))}</button>`;
+    const equipos = fichas ? K.sec(t('resumen.baselineEquipos'), notaBl) + `<div class="fichas cols-2">${fichas}</div>` : '';
+    return K.statusBar(tono, titular, items) + (EP.cortes && EP.cortes.lineaResumen ? EP.cortes.lineaResumen() : '') + avisoEquipos()
+      + kpis + equipos + empezar + preguntas();
   }
   /** Equipos nuevos en este export (se ofrece medirlos) y qué queda fuera de la medición (equipos pequeños y tareas sin equipo). */
   function avisoEquipos() {
@@ -69,7 +76,7 @@
   /** Una línea por equipo: lo que ha cambiado, lo que hay que revisar o lo que va mejor de lo normal. Nunca "normal" si no lo es. */
   function pieFicha(e) {
     const base = pieBase(e);
-    // Un límite fijo superado sin alerta (manda la línea base) se dice al final, sin cambiar lo que dice la línea base
+    // Un límite fijo superado sin alerta (manda la baseline) se dice al final, sin cambiar lo que dice la baseline
     const avisos = (e.avisos || []).filter((x) => K.destacados().indexOf(x.id) >= 0).map((x) => nombreMedida(x.id));
     return avisos.length ? [base, t('resumen.avisoLimite', { m: lista(avisos) })].filter(Boolean).join(' · ') : base;
   }
@@ -83,7 +90,7 @@
     }
     const resto = pieSinCambios(e);
     if (!e.graves || !e.graves.length) return resto;
-    // Con una recomendación urgente: "dentro de su línea base" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
+    // Con una recomendación urgente: "dentro de su baseline" solo si de verdad lo está (nada por revisar, mejor ni sin rango)
     const r = lista(e.graves.map((id) => cat().casos[id] ? cat().casos[id].titulo : id));
     if (resto === t('resumen.fichaEstable')) return t('resumen.atencionPie', { r });
     return [t('resumen.atencionPieSolo', { r }), resto].join(' · ');
@@ -274,12 +281,32 @@
 
   // ---------- Comparar ----------
   const CMP_ORDEN = ['plazo_p85', 'retrabajo', 'reabiertas', 'bloqueo', 'arrastradas'];
+  /**
+   * Dónde cae una cifra sobre la baseline de su propio equipo, de 0 a 100. La baseline ocupa siempre el centro (30 a 70)
+   * y a la derecha está siempre lo mejor: así se comparan equipos sin comparar sus cifras, que no son comparables.
+   */
+  function sobreSuBaseline(id, m) {
+    const ref = m.ref, dir = K.dirDe(id), mg = m.margen || 0;
+    // Una baseline sin anchura (todas sus semanas iguales) se dibuja con su margen: lo que cae dentro del margen no salta al borde
+    const lo = ref.hi > ref.lo ? ref.lo : ref.lo - mg, hi = ref.hi > ref.lo ? ref.hi : ref.hi + mg;
+    let z = hi > lo ? (m.valor - lo) / (hi - lo) : m.valor === lo ? 0.5 : m.valor > lo ? 2 : -1;
+    if (dir === 'menos') z = 1 - z;
+    return Math.max(3, Math.min(97, 30 + z * 40));
+  }
+  function celdaSobre(e, id) {
+    const m = e.medidas[id];
+    if (!m || !m.disponible || m.valor == null) return `<td class="sb-cel"><span class="faint small">${esc(m && !m.disponible ? t('medida.noSeMide') : t('comun.sinDatos'))}</span></td>`;
+    const titulo = nombreEquipo(e.nombre) + ' · ' + nombreMedida(id) + ': ' + K.conUnidad(id, m.valor) + ' · ' + K.rangoBanda(id, m);
+    if (!m.ref) return `<td class="sb-cel" title="${esc(titulo)}"><div class="sobre sin"></div><span class="small">${esc(valor(id, m.valor))}</span> <span class="faint tiny">${esc(m.sinHistorico ? t('medida.sinHistoricoCorto') : t('estado.sinBanda'))}</span></td>`;
+    return `<td class="sb-cel"><button class="sobre-btn" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" title="${esc(titulo)}" aria-label="${esc(titulo)}"><span class="sobre"><i class="sb-band"></i><b class="sb-now tone-${K.tonoDe(m)}" style="left:${sobreSuBaseline(id, m).toFixed(1)}%"></b></span><span class="small t-${K.tonoDe(m)}">${esc(valor(id, m.valor))}</span></button></td>`;
+  }
   function comparar() {
     const vm = S.vm, cols = vm.kpis;
-    // Cada equipo frente a su propia banda: una fila por equipo, sin ranking
-    const tabla = `<div class="ficha"><div class="table-wrap"><table class="cmp"><tr><th>${esc(t('comun.equipo'))}</th>${cols.map((id) => `<th>${esc(nombreMedida(id))}</th>`).join('')}</tr>
-      ${vm.equipos.map((e) => `<tr><td><button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button></td>${cols.map((id) => { const m = e.medidas[id]; return `<td class="num">${m && m.disponible ? `<span class="pill tone-${K.tonoDe(m)}">${esc(valor(id, m.valor))}</span>` : `<span class="faint">${esc(t('comun.sinDatos'))}</span>`}</td>`; }).join('')}</tr>`).join('')}</table></div>
-      <div class="tiny muted" style="margin-top:8px">${esc(t('comparar.leyenda'))}</div></div>`;
+    // Cada equipo sobre su propia baseline: una fila por equipo (y el área), sin ranking. Todas las barras se leen igual.
+    const filas = (vm.equipos.length > 1 ? [vm.area] : []).concat(vm.equipos);
+    const tabla = `<div class="ficha"><div class="table-wrap"><table class="cmp cmp-bl"><tr><th>${esc(t('comun.equipo'))}</th>${cols.map((id) => `<th>${esc(nombreMedida(id))}</th>`).join('')}</tr>
+      ${filas.map((e) => `<tr${e === vm.area ? ' class="fila-area"' : ''}><td>${e === vm.area ? `<b>${esc(t('equipo.area'))}</b>` : `<button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(nombreEquipo(e.nombre))}</button>`}</td>${cols.map((id) => celdaSobre(e, id)).join('')}</tr>`).join('')}</table></div>
+      <div class="bl-leyenda small muted"><span><i class="lg-band"></i>${esc(t('comparar.leyendaBanda'))}</span><span>${esc(t('comparar.leyendaLado'))}</span></div></div>`;
     const cmps = vm.comparaciones;
     const grupos = cmps.length ? cmps.map((c) => {
       const filas = CMP_ORDEN.filter((m) => c.medidas[m] && c.medidas[m].disponible).map((m) => {
@@ -296,6 +323,44 @@
       + K.sec(t('comparar.cadaEquipo')) + tabla + K.sec(t('comparar.grupos')) + `<div class="fichas">${grupos}</div>`;
   }
   EP.accion('fuentes-equipos', () => { S.fuentesTab = 'equipos'; EP.go('fuentes'); });
+
+  // ---------- Baseline: todos los equipos, cada indicador con su gráfico y su baseline sombreada ----------
+  /** Un indicador en la página Baseline: estado, cifra, su baseline y el gráfico de 16 semanas. */
+  function bloqueBaseline(e, id) {
+    const m = e.medidas[id], ok = m && m.disponible;
+    // Lo que no es la banda (límite fijo sin baseline, dato dudoso) en una línea; el texto entero, al pasar por encima
+    const por = ok && m.estadoPor && m.estadoPor !== 'banda' && m.estado !== 'bien' ? K.porque(id, m) : '';
+    const nota = por ? `<span class="t-why" title="${esc(por)}">${esc(K.primeraFrase(por))}</span>`
+      : ok && m.aviso ? `<span class="t-aviso" title="${esc(K.avisoTexto(m))}">${esc(K.avisoCorto(id, m))}</span>` : '';
+    const vent = K.ventanaDistinta(m);
+    return `<div class="bl clickable" data-action="drill" data-kind="medida" data-team="${esc(e.nombre)}" data-medida="${esc(id)}" role="button" tabindex="0">
+      <div class="bl-cab"><span title="${esc(K.unidad(id))}">${esc(nombreMedida(id))}</span>${ok ? K.estadoChip(m) : ''}</div>
+      <div class="bl-cifras"><b class="t-${K.tonoDe(m)}">${esc(ok ? valor(id, m.valor) : t('comun.sinDatos'))}${vent ? `<small class="bl-vent">${esc(vent)}</small>` : ''}</b><span class="small muted">${esc(ok ? K.rango(id, m) : K.porque(id, m))}</span>${nota}</div>
+      ${ok ? K.grafico(id, m, { h: 52, sinEje: true }) : ''}</div>`;
+  }
+  function referencias() {
+    const vm = S.vm, eqs = EP.visibles(), dest = K.destacados();
+    const prov = eqs.filter((e) => K.estadoBaseline(e).estado === 'provisional'), sin = eqs.filter((e) => K.estadoBaseline(e).estado === 'sin');
+    // Toda el área primero (salvo en el rol Equipo, que solo ve el suyo)
+    const conArea = S.role === 'equipo' || eqs.length < 2 ? eqs : [vm.area].concat(eqs);
+    const fichas = conArea.map((e) => {
+      const area = e === vm.area;
+      // La misma regla en la cabecera, el pie, el titular y el número del menú. La cabecera solo dice lo de la baseline:
+      // el estado de cada cifra está en su chip.
+      const eb = K.estadoBaseline(e);
+      const cab = (area ? `<div class="f-title">${esc(t('equipo.area'))}</div>` : K.tituloEquipo(e)) + (eb.estado === 'sin' ? K.chip('warn', t('ref.sin')) : eb.estado === 'provisional' ? K.chip('warn', t('ref.provisional')) : '');
+      // El área se calcula sin los equipos que aún no tienen baseline: se dice cuáles
+      const sinEllos = area && vm.areaSin.length ? `<span class="small muted">${esc(t('ref.areaSin', { equipos: lista(vm.areaSin.map(nombreEquipo)) }))}</span> ` : '';
+      const motivo = eb.estado === 'sin' ? t('ref.sinPie') : eb.n ? t('ref.motivo', { n: eb.n, r: vm.semanas.R }) : eb.sinEn.length ? t('ref.sinEnMedidas', { m: lista(eb.sinEn.map(nombreMedida)) }) : '';
+      const pie = sinEllos + (motivo ? `<span class="small t-warn">${esc(motivo)}</span>` : `<span class="small muted">${esc(t('ref.pie', { r: vm.semanas.R }))}</span>`)
+        + (area ? '' : `<button class="link" data-action="open-team" data-team="${esc(e.nombre)}">${esc(t('resumen.abrirFicha'))}</button>`);
+      return K.ficha(cab, `<div class="bls">${dest.map((id) => bloqueBaseline(e, id)).join('')}</div>`, pie, ` data-tipo="baseline" data-team="${esc(e.nombre)}"`);
+    }).join('');
+    const leyenda = `<div class="bl-leyenda small muted"><span><i class="lg-band"></i>${esc(t('ref.leyendaBanda', { r: vm.semanas.R }))}</span><span><i class="lg-linea"></i>${esc(t('ref.leyendaAhora', { k: vm.semanas.K }))}</span><span><i class="lg-corte"></i>${esc(t('ref.leyendaCorte'))}</span></div>`;
+    const titular = [prov.length ? t('ref.provisionalEn', { equipos: lista(prov.map((e) => nombreEquipo(e.nombre))) }) : '', sin.length ? t('ref.sinEn', { equipos: lista(sin.map((e) => nombreEquipo(e.nombre))) }) : ''].filter(Boolean).join(' · ') || t('ref.todas');
+    return K.statusBar(prov.length || sin.length ? 'warn' : 'good', esc(titular), [esc(t('ref.items1', { r: vm.semanas.R })), esc(t('ref.items2'))])
+      + leyenda + `<div class="fichas cols-1">${fichas}</div>`;
+  }
 
   // ---------- Calidad del dato ----------
   function calidad() {
@@ -441,5 +506,5 @@
   }
   EP.accion('bloqueo-estados', () => { if (!S.onboarded) { S.ob.step = 'revision'; S.ob.abierto = Object.assign({}, S.ob.abierto || {}, { estados: true }); EP.render(); window.scrollTo(0, 0); } else { S.fuentesTab = 'mapeo'; EP.go('fuentes'); } });
 
-  Object.assign(EP.vistas, { cabecera, resumen, equipos, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
+  Object.assign(EP.vistas, { cabecera, resumen, equipos, referencias, epicas, calidad, cajon, recsActivas, bloqueoDuro, pieFicha, textoSinCambios });
 })();

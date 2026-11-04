@@ -8,6 +8,8 @@ import { fechaCorta, formatear } from './formato.ts';
 import { LATENCIA_DIAS, MEDIDAS_INICIATIVA, medidaEnVentana, type EvaluacionIniciativa } from './iniciativas.ts';
 import type { Preparacion } from './calcular.ts';
 import type { Iniciativa } from './modelo.ts';
+import { rangoDe } from './semaforo.ts';
+import type { Rango } from './tipos.ts';
 
 export type EstadoSeguimiento = 'planificada' | 'midiendo' | 'funciona' | 'sin_efecto' | 'empeora' | 'sin_datos';
 export interface PuntoSeguimiento { fecha: Date; iniciativa: number | null; control: number | null }
@@ -33,6 +35,11 @@ export interface Seguimiento {
   confianza: 'baja' | 'media' | 'alta' | null;
   /** Medida semana a semana con la ventana de la iniciativa, para los equipos que participan y para el resto. */
   serie: PuntoSeguimiento[];
+  /**
+   * Baseline de sus equipos antes de empezar: el rango de la medida (percentiles 15 a 85) en las semanas de la serie
+   * hasta el inicio. Con menos de 6 semanas, null. Es la referencia contra la que se lee el después.
+   */
+  baseline: Rango | null;
 }
 
 /** Confianza en texto. */
@@ -76,16 +83,20 @@ export function seguimiento(ini: Iniciativa, ev: EvaluacionIniciativa, p: Prepar
       serie.push({ fecha: t, iniciativa: medidaEnVentana(mo.medida, participan, v).valor, control: resto.length ? medidaEnVentana(mo.medida, resto, v).valor : null });
     }
   }
+  // La baseline de antes de empezar: cada punto es la medida de la ventana que acaba esa semana, así que hasta el inicio
+  // incluido son semanas sin el cambio
+  const previos = serie.filter((x) => x.fecha.getTime() <= inicio.getTime() && x.iniciativa != null).map((x) => x.iniciativa as number);
+  const conBase = { ...base, baseline: rangoDe(previos) || null };
 
-  if (!def) return { ...base, estado: 'sin_datos', texto: Tx('This measure cannot be tracked in an initiative.', 'Esta medida no se puede seguir en una iniciativa.'), serie };
-  if (inicio >= fin) return { ...base, estado: 'planificada', texto: Tx('Starts on ', 'Empieza el ') + fechaTxt(inicio) + Tx('. The first reading comes two weeks later.', '. La primera lectura llega dos semanas después.'), serie };
+  if (!def) return { ...conBase, estado: 'sin_datos', texto: Tx('This measure cannot be tracked in an initiative.', 'Esta medida no se puede seguir en una iniciativa.'), serie };
+  if (inicio >= fin) return { ...conBase, estado: 'planificada', texto: Tx('Starts on ', 'Empieza el ') + fechaTxt(inicio) + Tx('. The first reading comes two weeks later.', '. La primera lectura llega dos semanas después.'), serie };
   if (!r || !r.disponible) {
-    if (desdeDespues >= fin) return { ...base, estado: 'midiendo', texto: Tx('Running since ', 'En marcha desde el ') + fechaTxt(inicio) + Tx('. First reading from ', '. Primera lectura a partir del ') + fechaTxt(desdeDespues) + Tx(', after a two-week margin for the change to show.', ', tras dos semanas de margen para que el cambio se note.'), serie };
-    return { ...base, estado: 'sin_datos', texto: (r && r.motivo) || Tx('Not enough tasks to measure it.', 'No hay tareas suficientes para medirla.'), serie };
+    if (desdeDespues >= fin) return { ...conBase, estado: 'midiendo', texto: Tx('Running since ', 'En marcha desde el ') + fechaTxt(inicio) + Tx('. First reading from ', '. Primera lectura a partir del ') + fechaTxt(desdeDespues) + Tx(', after a two-week margin for the change to show.', ', tras dos semanas de margen para que el cambio se note.'), serie };
+    return { ...conBase, estado: 'sin_datos', texto: (r && r.motivo) || Tx('Not enough tasks to measure it.', 'No hay tareas suficientes para medirla.'), serie };
   }
   const cambio = F(r.antes) + Tx(' to ', ' a ') + F(r.despues) + (r.control && r.control.antes != null && r.control.despues != null ? Tx('; in the other teams, from ', '; en los demás equipos, de ') + F(r.control.antes) + Tx(' to ', ' a ') + F(r.control.despues) : '');
   const cola = r.ventanas && r.ventanas.completa ? Tx(' Evaluation complete.', ' Evaluación completa.') : Tx(' Evaluation complete on ', ' Evaluación completa el ') + fechaTxt(completaEl) + '.';
-  if (r.enDireccionEsperada === true && r.confianza !== 'baja') return { ...base, estado: 'funciona', texto: Tx('From ', 'De ') + cambio + Tx('. Confidence: ', '. Confianza: ') + CONFIANZA[r.confianza!]() + '.' + cola, serie };
-  if (r.enDireccionEsperada === false && r.confianza !== 'baja') return { ...base, estado: 'empeora', texto: Tx('Going the wrong way: from ', 'Va en la dirección contraria: de ') + cambio + Tx('. Confidence: ', '. Confianza: ') + CONFIANZA[r.confianza!]() + '.' + cola, serie };
-  return { ...base, estado: 'sin_efecto', texto: Tx('No clear effect yet: from ', 'Aún sin efecto claro: de ') + cambio + '.' + cola, serie };
+  if (r.enDireccionEsperada === true && r.confianza !== 'baja') return { ...conBase, estado: 'funciona', texto: Tx('From ', 'De ') + cambio + Tx('. Confidence: ', '. Confianza: ') + CONFIANZA[r.confianza!]() + '.' + cola, serie };
+  if (r.enDireccionEsperada === false && r.confianza !== 'baja') return { ...conBase, estado: 'empeora', texto: Tx('Going the wrong way: from ', 'Va en la dirección contraria: de ') + cambio + Tx('. Confidence: ', '. Confianza: ') + CONFIANZA[r.confianza!]() + '.' + cola, serie };
+  return { ...conBase, estado: 'sin_efecto', texto: Tx('No clear effect yet: from ', 'Aún sin efecto claro: de ') + cambio + '.' + cola, serie };
 }

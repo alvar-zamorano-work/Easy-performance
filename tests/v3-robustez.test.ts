@@ -105,12 +105,12 @@ test('semáforo: fuera de la banda por poco no se dice "dentro" (borde), y dentr
   assert.ok((encima.margen as number) > 0, 'margen');
 });
 
-test('semáforo: con línea base, un límite fijo superado es un aviso que dice si es por arriba o por abajo', () => {
-  // Más es mejor (estimación): el límite se pasa por abajo; dentro de su línea base, el estado sigue siendo normal
+test('semáforo: con baseline, un límite fijo superado es un aviso que dice si es por arriba o por abajo', () => {
+  // Más es mejor (estimación): el límite se pasa por abajo; dentro de su baseline, el estado sigue siendo normal
   const est = estadoMedida('estimacion', 0.04, { lo: 0.03, hi: 0.1, med: 0.06, n: 12 }, null, CATALOGO.medidas.estimacion);
   assert.equal(est.por, 'banda'); assert.equal(est.estado, 'bien');
   assert.ok(est.aviso, 'aviso'); assert.match(est.aviso!.texto, /debajo|below/); assert.equal(est.aviso!.limite, 0.05);
-  // Sin línea base todavía, el límite fijo es la única referencia y sí da el estado
+  // Sin baseline todavía, el límite fijo es la única referencia y sí da el estado
   const sinBase = estadoMedida('estimacion', 0.04, undefined, null, CATALOGO.medidas.estimacion);
   assert.equal(sinBase.por, 'limite'); assert.equal(sinBase.estado, 'critico');
   // Fuera de su banda y además sobre el límite: manda la banda (crítico) y el límite superado queda como aviso
@@ -122,7 +122,7 @@ test('semáforo: con línea base, un límite fijo superado es un aviso que dice 
   assert.equal(eq.por, 'limite_equipo'); assert.equal(eq.banda, 'critico');
 });
 
-test('semáforo: mejor de lo normal no es "normal", y con línea base un límite fijo superado no da alerta (es un aviso)', () => {
+test('semáforo: mejor de lo normal no es "normal", y con baseline un límite fijo superado no da alerta (es un aviso)', () => {
   const def = CATALOGO.medidas.entregas;
   const ref = { lo: 6, hi: 9, med: 7.5, n: 12 };
   assert.equal(estadoMedida('entregas', 8, ref, null, def).lado, undefined, 'dentro');
@@ -130,13 +130,13 @@ test('semáforo: mejor de lo normal no es "normal", y con línea base un límite
   assert.equal(mejor.estado, 'bien'); assert.equal(mejor.lado, 'mejor');
   const peor = estadoMedida('entregas', 4, ref, null, def);
   assert.ok(peor.estado === 'atencion' || peor.estado === 'critico');
-  // Retrabajo del 37 % con franja de 43 a 50 %: mejor que su línea base. El límite fijo del 30 % no lo convierte en alerta:
+  // Retrabajo del 37 % con franja de 43 a 50 %: mejor que su baseline. El límite fijo del 30 % no lo convierte en alerta:
   // queda como aviso, con el nivel que habría dado
   const ret = CATALOGO.medidas.retrabajo;
   const r = estadoMedida('retrabajo', 0.37, { lo: 0.43, hi: 0.5, med: 0.46, n: 12 }, null, ret);
   assert.equal(r.estado, 'bien'); assert.equal(r.lado, 'mejor'); assert.equal(r.por, 'banda');
   assert.equal(r.aviso!.estado, 'critico'); assert.equal(r.aviso!.limite, 0.3);
-  // Peor que su línea base y además sobre el límite: manda la línea base, y el aviso sigue ahí
+  // Peor que su baseline y además sobre el límite: manda la baseline, y el aviso sigue ahí
   const peorYLimite = estadoMedida('retrabajo', 0.6, { lo: 0.43, hi: 0.5, med: 0.46, n: 12 }, null, ret);
   assert.ok(peorYLimite.estado === 'atencion' || peorYLimite.estado === 'critico'); assert.equal(peorYLimite.por, 'banda'); assert.ok(peorYLimite.aviso);
 });

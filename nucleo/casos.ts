@@ -27,7 +27,7 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
   const cicloRef = M.ciclo && M.ciclo.ref, entRef = M.entregas && M.entregas.ref;
   if (wipRef && cicloRef && entRef && M.ciclo.valor != null && wipAct > wipRef.hi * 1.2 && M.ciclo.valor > cicloRef.med * 1.2 && M.entregas.valor! <= entRef.med * 1.25)
     add('demasiado_a_la_vez', wipAct > wipRef.hi * 1.6,
-      Tx('Work in progress is at ', 'El trabajo en curso está en ') + f(wipAct, 'num') + Tx(' tasks (its baseline was ', ' tareas (en su línea base era ') + f(wipRef.med, 'num') + Tx(') and lead time has gone from ', ') y el tiempo de ciclo ha pasado de ') + f(cicloRef.med, 'dias') + Tx(' to ', ' a ') + f(M.ciclo.valor, 'dias') + Tx(', with the same deliveries.', ', con las mismas entregas.'),
+      Tx('Work in progress is at ', 'El trabajo en curso está en ') + f(wipAct, 'num') + Tx(' tasks (its baseline was ', ' tareas (en su baseline era ') + f(wipRef.med, 'num') + Tx(') and lead time has gone from ', ') y el tiempo de ciclo ha pasado de ') + f(cicloRef.med, 'dias') + Tx(' to ', ' a ') + f(M.ciclo.valor, 'dias') + Tx(', with the same deliveries.', ', con las mismas entregas.'),
       { wip: wipAct, wipRef: wipRef.med, cicloAntes: cicloRef.med, cicloAhora: M.ciclo.valor });
   // 3 el sprint no se cumple
   const ult = eq.sprints.ultimos;
@@ -55,16 +55,16 @@ export function evaluarCasos(eq: InfoParcial, items: Derivada[], c: ContextoCalc
     add('mucha_espera', M.espera.valor > 0.65, f(M.espera.valor, 'pct') + Tx(' of lead time is waiting.', ' del tiempo de ciclo es espera.') + (top ? Tx(' Work stops most in "', ' Donde más se para el trabajo es en "') + top + '".' : ''), { parte: M.espera.valor, estado: top });
   }
   // 6 retrabajo
-  // Con línea base, no salta si el equipo está mejor que ella (un 22 % que baja de un 30 % habitual no es "mucho retrabajo");
-  // sí salta si está peor que su línea base, o alto y sin mejorar. Sin línea base, el umbral fijo del 20 %.
+  // Con baseline, no salta si el equipo está mejor que ella (un 22 % que baja de un 30 % habitual no es "mucho retrabajo");
+  // sí salta si está peor que su baseline, o alto y sin mejorar. Sin baseline, el umbral fijo del 20 %.
   const rt = M.retrabajo;
   const rtAlto = rt && rt.valor != null && (rt.ref ? (rt.valor > rt.ref.hi && rt.valor >= 0.12) || (rt.valor >= 0.2 && rt.valor >= rt.ref.lo) : rt.valor >= 0.2);
   if (rt && rt.valor != null && rtAlto)
-    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (its baseline was ', ' (en su línea base era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
+    add('retrabajo', rt.valor >= 0.3, f(rt.valor, 'pct') + Tx(' of the work done in the last 8 weeks went back at least once', ' de lo terminado en las últimas 8 semanas volvió atrás al menos una vez') + (rt.ref ? Tx(' (its baseline was ', ' (en su baseline era ') + f(rt.ref.med, 'pct') + ').' : '.'), { parte: rt.valor, habitual: rt.ref ? rt.ref.med : null });
   // 7 los errores se comen la capacidad
   const er = M.errores;
   if (er && er.valor != null && er.valor >= 0.3 && (!er.ref || er.valor > er.ref.med))
-    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + Tx(' of the work done in the last 8 weeks is bugs', ' de lo terminado en las últimas 8 semanas son errores') + (er.ref ? Tx(' (its baseline was ', ' (en su línea base era ') + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
+    add('errores_capacidad', er.valor >= 0.4, f(er.valor, 'pct') + Tx(' of the work done in the last 8 weeks is bugs', ' de lo terminado en las últimas 8 semanas son errores') + (er.ref ? Tx(' (its baseline was ', ' (en su baseline era ') + f(er.ref.med, 'pct') + ').' : '.'), { parte: er.valor, habitual: er.ref ? er.ref.med : null });
   // 8 todo llega al final del sprint
   if (eq.sprints.fiables && ult.length >= 3) {
     const fm = media(ult.map((x) => x.alFinal))!;

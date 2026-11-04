@@ -39,8 +39,8 @@
       "pregunta": "¿Cómo evoluciona cada medida?",
       "opciones": [
         {
-          "nombre": "Línea con su línea base",
-          "ayuda": "La zona sombreada es la línea base del equipo; lo que sale de ella llama la atención."
+          "nombre": "Línea con su baseline",
+          "ayuda": "La zona sombreada es la baseline del equipo; lo que sale de ella llama la atención."
         },
         {
           "nombre": "Columnas por semana",
